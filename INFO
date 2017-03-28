@@ -1,0 +1,19 @@
+Project: Sample Virtual Network Function (SAMPLEVNF)
+Project Creation Date: 
+Lifecycle State: Incubation
+Primary Contact: kannan.babu.ramia@intel.com
+Project Lead: deepak.s@intel.com
+Jira Name: Sample Virtual Network Function
+Jira Prefix: [SAMPLEVNF]
+mailing list tag:[samplevnf]
+Repo: samplevnf
+
+Committers:
+deepak.s@intel.com
+sonika.jindal@intel.com
+anand.b.jyoti@intel.com
+fbrockne@cisco.com
+shang.xiaodong@zte.com.cn
+
+Link to TSC approval: http://meetbot.opnfv.org/meetings/opnfv-meeting/2017/opnfv-meeting.2017-02-07-15.00.html 
+Link to approval of additional submitters: 
