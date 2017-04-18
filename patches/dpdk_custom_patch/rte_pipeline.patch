@@ -1,0 +1,88 @@
+--- lib/librte_pipeline/rte_pipeline.c	2016-08-10 21:50:46.625571187 +0530
++++ lib/librte_pipeline/rte_pipeline.c	2016-08-10 21:51:02.333571628 +0530
+@@ -1241,6 +1241,85 @@
+		}
+ }
+
++void
++rte_pipeline_action_handler_port_ext(struct rte_pipeline *p,
++                                        uint64_t pkts_mask,
++                                        struct rte_pipeline_table_entry **entries);
++
++void
++rte_pipeline_action_handler_port_ext(struct rte_pipeline *p,
++                                        uint64_t pkts_mask,
++                                        struct rte_pipeline_table_entry **entries)
++{
++        p->pkts_mask = pkts_mask;
++
++        if ((pkts_mask & (pkts_mask + 1)) == 0) {
++                uint64_t n_pkts = __builtin_popcountll(pkts_mask);
++                uint32_t i;
++
++                for (i = 0; i < n_pkts; i++) {
++                        struct rte_mbuf *pkt = p->pkts[i];
++                        uint32_t port_out_id = entries[i]->port_id;
++                        struct rte_port_out *port_out =
++                                &p->ports_out[port_out_id];
++
++                        /* Output port user actions */
++                        if (port_out->f_action == NULL) /* Output port TX */
++                                port_out->ops.f_tx(port_out->h_port, pkt);
++                        else {
++                                uint64_t pkt_mask = 1LLU << i;
++
++                                port_out->f_action(p,
++                                        p->pkts,
++                                        pkt_mask,
++                                        port_out->arg_ah);
++
++                                RTE_PIPELINE_STATS_AH_DROP_READ(p,
++                                        port_out->n_pkts_dropped_by_ah);
++
++                                /* Output port TX */
++                                if (pkt_mask & p->pkts_mask)
++                                        port_out->ops.f_tx(port_out->h_port,
++                                                pkt);
++                        }
++                }
++        } else {
++                uint32_t i;
++
++                for (i = 0;  i < RTE_PORT_IN_BURST_SIZE_MAX; i++) {
++                        uint64_t pkt_mask = 1LLU << i;
++                        struct rte_mbuf *pkt;
++                        struct rte_port_out *port_out;
++                        uint32_t port_out_id;
++
++                        if ((pkt_mask & pkts_mask) == 0)
++                                continue;
++
++                        pkt = p->pkts[i];
++                        port_out_id = entries[i]->port_id;
++                        port_out = &p->ports_out[port_out_id];
++
++                        /* Output port user actions */
++                        if (port_out->f_action == NULL) /* Output port TX */
++                                port_out->ops.f_tx(port_out->h_port, pkt);
++                        else {
++                                port_out->f_action(p,
++                                        p->pkts,
++                                        pkt_mask,
++                                        port_out->arg_ah);
++
++                                RTE_PIPELINE_STATS_AH_DROP_READ(p,
++                                        port_out->n_pkts_dropped_by_ah);
++
++                                /* Output port TX */
++                                if (pkt_mask & p->pkts_mask)
++                                        port_out->ops.f_tx(port_out->h_port,
++                                                pkt);
++                        }
++                }
++        }
++}
++
+ static inline void
+ rte_pipeline_action_handler_port_meta(struct rte_pipeline *p,
+		uint64_t pkts_mask)
