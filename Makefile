@@ -21,9 +21,10 @@ RTE_TARGET ?= x86_64-native-linuxapp-gcc
 
 TARGETS      := all clean
 VNF_DIR      := VNFs
+ACL          := $(VNF_DIR)/vACL
 CGNAPT       := $(VNF_DIR)/vCGNAPT
 
-subdirs      := $(CGNAPT)
+subdirs      := $(ACL) $(CGNAPT)
 
 .PHONY: $(TARGETS) $(subdirs)
 
