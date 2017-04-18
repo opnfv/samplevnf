@@ -1,0 +1,49 @@
+From fcbd40d4327b36725c4de9f33f57809edc359f4a Mon Sep 17 00:00:00 2001
+From: Qi Zhang <qi.z.zhang@intel.com>
+Date: Thu, 20 Oct 2016 04:40:13 +0800
+Subject: [PATCH] net/i40e: fix Rx hang when disable LLDP
+
+Remove stopping LLDP as a workaround for a known
+errata which can cause Rx hang.
+
+Ref: Item #70 from
+http://www.intel.com/content/www/us/en/embedded/products/networking/xl710-10-40-controller-spec-update.html
+
+Fixes: 4861cde46116 ("i40e: new poll mode driver")
+
+Signed-off-by: Qi Zhang <qi.z.zhang@intel.com>
+Acked-by: Jingjing Wu <jingjing.wu@intel.com>
+---
+ drivers/net/i40e/i40e_ethdev.c | 9 ---------
+ 1 file changed, 9 deletions(-)
+
+diff --git a/drivers/net/i40e/i40e_ethdev.c b/drivers/net/i40e/i40e_ethdev.c
+index ca515dd..bb81b15 100644
+--- a/drivers/net/i40e/i40e_ethdev.c
++++ b/drivers/net/i40e/i40e_ethdev.c
+@@ -1223,11 +1223,6 @@ eth_i40e_dev_uninit(struct rte_eth_dev *dev)
+ 	dev->rx_pkt_burst = NULL;
+ 	dev->tx_pkt_burst = NULL;
+ 
+-	/* Disable LLDP */
+-	ret = i40e_aq_stop_lldp(hw, true, NULL);
+-	if (ret != I40E_SUCCESS) /* Its failure can be ignored */
+-		PMD_INIT_LOG(INFO, "Failed to stop lldp");
+-
+ 	/* Clear PXE mode */
+ 	i40e_clear_pxe_mode(hw);
+ 
+@@ -9432,10 +9427,6 @@ i40e_dcb_init_configure(struct rte_eth_dev *dev, bool sw_dcb)
+ 	 * LLDP MIB change event.
+ 	 */
+ 	if (sw_dcb == TRUE) {
+-		ret = i40e_aq_stop_lldp(hw, TRUE, NULL);
+-		if (ret != I40E_SUCCESS)
+-			PMD_INIT_LOG(DEBUG, "Failed to stop lldp");
+-
+ 		ret = i40e_init_dcb(hw);
+ 		/* if sw_dcb, lldp agent is stopped, the return from
+ 		 * i40e_init_dcb we expect is failure with I40E_AQ_RC_EPERM
+-- 
+2.7.4
+
