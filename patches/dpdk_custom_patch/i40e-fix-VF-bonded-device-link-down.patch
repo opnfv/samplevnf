@@ -1,0 +1,251 @@
+diff --git a/drivers/net/i40e/i40e_ethdev.c b/drivers/net/i40e/i40e_ethdev.c
+index 9c1f542..13060db 100644
+--- a/drivers/net/i40e/i40e_ethdev.c
++++ b/drivers/net/i40e/i40e_ethdev.c
+@@ -5418,6 +5418,24 @@ i40e_dev_handle_vfr_event(struct rte_eth_dev *dev)
+ }
+ 
+ static void
++i40e_notify_all_vfs_link_status(struct rte_eth_dev *dev)
++{
++	struct i40e_pf *pf = I40E_DEV_PRIVATE_TO_PF(dev->data->dev_private);
++	struct i40e_virtchnl_pf_event event;
++	int i;
++
++	event.event = I40E_VIRTCHNL_EVENT_LINK_CHANGE;
++	event.event_data.link_event.link_status =
++		dev->data->dev_link.link_status;
++	event.event_data.link_event.link_speed =
++		dev->data->dev_link.link_speed;
++
++	for (i = 0; i < pf->vf_num; i++)
++		i40e_pf_host_send_msg_to_vf(&pf->vfs[i], I40E_VIRTCHNL_OP_EVENT,
++				I40E_SUCCESS, (uint8_t *)&event, sizeof(event));
++}
++
++static void
+ i40e_dev_handle_aq_msg(struct rte_eth_dev *dev)
+ {
+ 	struct i40e_hw *hw = I40E_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+@@ -5455,9 +5473,11 @@ i40e_dev_handle_aq_msg(struct rte_eth_dev *dev)
+ 			break;
+ 		case i40e_aqc_opc_get_link_status:
+ 			ret = i40e_dev_link_update(dev, 0);
+-			if (!ret)
++			if (!ret) {
++				i40e_notify_all_vfs_link_status(dev);
+ 				_rte_eth_dev_callback_process(dev,
+ 					RTE_ETH_EVENT_INTR_LSC);
++			}
+ 			break;
+ 		default:
+ 			PMD_DRV_LOG(ERR, "Request %u is not supported yet",
+diff --git a/drivers/net/i40e/i40e_ethdev.h b/drivers/net/i40e/i40e_ethdev.h
+index 92c8fad..61dfa93 100644
+--- a/drivers/net/i40e/i40e_ethdev.h
++++ b/drivers/net/i40e/i40e_ethdev.h
+@@ -599,7 +599,9 @@ int i40e_hash_filter_inset_select(struct i40e_hw *hw,
+ 			     struct rte_eth_input_set_conf *conf);
+ int i40e_fdir_filter_inset_select(struct i40e_pf *pf,
+ 			     struct rte_eth_input_set_conf *conf);
+-
++int i40e_pf_host_send_msg_to_vf(struct i40e_pf_vf *vf, uint32_t opcode,
++				uint32_t retval, uint8_t *msg,
++				uint16_t msglen);
+ void i40e_rxq_info_get(struct rte_eth_dev *dev, uint16_t queue_id,
+ 	struct rte_eth_rxq_info *qinfo);
+ void i40e_txq_info_get(struct rte_eth_dev *dev, uint16_t queue_id,
+diff --git a/drivers/net/i40e/i40e_ethdev_vf.c b/drivers/net/i40e/i40e_ethdev_vf.c
+index a616ae0..ba63a7f 100644
+--- a/drivers/net/i40e/i40e_ethdev_vf.c
++++ b/drivers/net/i40e/i40e_ethdev_vf.c
+@@ -126,8 +126,6 @@ static void i40evf_dev_promiscuous_enable(struct rte_eth_dev *dev);
+ static void i40evf_dev_promiscuous_disable(struct rte_eth_dev *dev);
+ static void i40evf_dev_allmulticast_enable(struct rte_eth_dev *dev);
+ static void i40evf_dev_allmulticast_disable(struct rte_eth_dev *dev);
+-static int i40evf_get_link_status(struct rte_eth_dev *dev,
+-				  struct rte_eth_link *link);
+ static int i40evf_init_vlan(struct rte_eth_dev *dev);
+ static int i40evf_dev_rx_queue_start(struct rte_eth_dev *dev,
+ 				     uint16_t rx_queue_id);
+@@ -1084,31 +1082,6 @@ i40evf_del_vlan(struct rte_eth_dev *dev, uint16_t vlanid)
+ 	return err;
+ }
+ 
+-static int
+-i40evf_get_link_status(struct rte_eth_dev *dev, struct rte_eth_link *link)
+-{
+-	struct i40e_vf *vf = I40EVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
+-	int err;
+-	struct vf_cmd_info args;
+-	struct rte_eth_link *new_link;
+-
+-	args.ops = (enum i40e_virtchnl_ops)I40E_VIRTCHNL_OP_GET_LINK_STAT;
+-	args.in_args = NULL;
+-	args.in_args_size = 0;
+-	args.out_buffer = vf->aq_resp;
+-	args.out_size = I40E_AQ_BUF_SZ;
+-	err = i40evf_execute_vf_cmd(dev, &args);
+-	if (err) {
+-		PMD_DRV_LOG(ERR, "fail to execute command OP_GET_LINK_STAT");
+-		return err;
+-	}
+-
+-	new_link = (struct rte_eth_link *)args.out_buffer;
+-	(void)rte_memcpy(link, new_link, sizeof(*link));
+-
+-	return 0;
+-}
+-
+ static const struct rte_pci_id pci_id_i40evf_map[] = {
+ 	{ RTE_PCI_DEVICE(I40E_INTEL_VENDOR_ID, I40E_DEV_ID_VF) },
+ 	{ RTE_PCI_DEVICE(I40E_INTEL_VENDOR_ID, I40E_DEV_ID_VF_HV) },
+@@ -2166,35 +2139,33 @@ i40evf_dev_link_update(struct rte_eth_dev *dev,
+ 	 * DPDK pf host provide interfacet to acquire link status
+ 	 * while Linux driver does not
+ 	 */
+-	if (vf->version_major == I40E_DPDK_VERSION_MAJOR)
+-		i40evf_get_link_status(dev, &new_link);
+-	else {
+-		/* Linux driver PF host */
+-		switch (vf->link_speed) {
+-		case I40E_LINK_SPEED_100MB:
+-			new_link.link_speed = ETH_SPEED_NUM_100M;
+-			break;
+-		case I40E_LINK_SPEED_1GB:
+-			new_link.link_speed = ETH_SPEED_NUM_1G;
+-			break;
+-		case I40E_LINK_SPEED_10GB:
+-			new_link.link_speed = ETH_SPEED_NUM_10G;
+-			break;
+-		case I40E_LINK_SPEED_20GB:
+-			new_link.link_speed = ETH_SPEED_NUM_20G;
+-			break;
+-		case I40E_LINK_SPEED_40GB:
+-			new_link.link_speed = ETH_SPEED_NUM_40G;
+-			break;
+-		default:
+-			new_link.link_speed = ETH_SPEED_NUM_100M;
+-			break;
+-		}
+-		/* full duplex only */
+-		new_link.link_duplex = ETH_LINK_FULL_DUPLEX;
+-		new_link.link_status = vf->link_up ? ETH_LINK_UP :
+-						     ETH_LINK_DOWN;
++
++	/* Linux driver PF host */
++	switch (vf->link_speed) {
++	case I40E_LINK_SPEED_100MB:
++		new_link.link_speed = ETH_SPEED_NUM_100M;
++		break;
++	case I40E_LINK_SPEED_1GB:
++		new_link.link_speed = ETH_SPEED_NUM_1G;
++		break;
++	case I40E_LINK_SPEED_10GB:
++		new_link.link_speed = ETH_SPEED_NUM_10G;
++		break;
++	case I40E_LINK_SPEED_20GB:
++		new_link.link_speed = ETH_SPEED_NUM_20G;
++		break;
++	case I40E_LINK_SPEED_40GB:
++		new_link.link_speed = ETH_SPEED_NUM_40G;
++		break;
++	default:
++		new_link.link_speed = ETH_SPEED_NUM_100M;
++		break;
+ 	}
++	/* full duplex only */
++	new_link.link_duplex = ETH_LINK_FULL_DUPLEX;
++	new_link.link_status = vf->link_up ? ETH_LINK_UP :
++					     ETH_LINK_DOWN;
++
+ 	i40evf_dev_atomic_write_link_status(dev, &new_link);
+ 
+ 	return 0;
+diff --git a/drivers/net/i40e/i40e_pf.c b/drivers/net/i40e/i40e_pf.c
+index d5b2d45..350f6a0 100644
+--- a/drivers/net/i40e/i40e_pf.c
++++ b/drivers/net/i40e/i40e_pf.c
+@@ -250,7 +250,7 @@ i40e_pf_host_vf_reset(struct i40e_pf_vf *vf, bool do_hw_reset)
+ 	return ret;
+ }
+ 
+-static int
++int
+ i40e_pf_host_send_msg_to_vf(struct i40e_pf_vf *vf,
+ 			    uint32_t opcode,
+ 			    uint32_t retval,
+@@ -847,18 +847,6 @@ i40e_pf_host_process_cmd_get_stats(struct i40e_pf_vf *vf)
+ 	return I40E_SUCCESS;
+ }
+ 
+-static void
+-i40e_pf_host_process_cmd_get_link_status(struct i40e_pf_vf *vf)
+-{
+-	struct rte_eth_dev *dev = I40E_VSI_TO_ETH_DEV(vf->pf->main_vsi);
+-
+-	/* Update link status first to acquire latest link change */
+-	i40e_dev_link_update(dev, 1);
+-	i40e_pf_host_send_msg_to_vf(vf, I40E_VIRTCHNL_OP_GET_LINK_STAT,
+-		I40E_SUCCESS, (uint8_t *)&dev->data->dev_link,
+-				sizeof(struct rte_eth_link));
+-}
+-
+ static int
+ i40e_pf_host_process_cmd_cfg_vlan_offload(
+ 					struct i40e_pf_vf *vf,
+@@ -909,6 +897,20 @@ send_msg:
+ 	return ret;
+ }
+ 
++static void
++i40e_notify_vf_link_status(struct rte_eth_dev *dev, struct i40e_pf_vf *vf)
++{
++	struct i40e_virtchnl_pf_event event;
++
++	event.event = I40E_VIRTCHNL_EVENT_LINK_CHANGE;
++	event.event_data.link_event.link_status =
++			dev->data->dev_link.link_status;
++	event.event_data.link_event.link_speed =
++			dev->data->dev_link.link_speed;
++	i40e_pf_host_send_msg_to_vf(vf, I40E_VIRTCHNL_OP_EVENT,
++			I40E_SUCCESS, (uint8_t *)&event, sizeof(event));
++}
++
+ void
+ i40e_pf_host_handle_vf_msg(struct rte_eth_dev *dev,
+ 			   uint16_t abs_vf_id, uint32_t opcode,
+@@ -964,6 +966,7 @@ i40e_pf_host_handle_vf_msg(struct rte_eth_dev *dev,
+ 	case I40E_VIRTCHNL_OP_ENABLE_QUEUES:
+ 		PMD_DRV_LOG(INFO, "OP_ENABLE_QUEUES received");
+ 		i40e_pf_host_process_cmd_enable_queues(vf, msg, msglen);
++		i40e_notify_vf_link_status(dev, vf);
+ 		break;
+ 	case I40E_VIRTCHNL_OP_DISABLE_QUEUES:
+ 		PMD_DRV_LOG(INFO, "OP_DISABLE_QUEUE received");
+@@ -993,10 +996,6 @@ i40e_pf_host_handle_vf_msg(struct rte_eth_dev *dev,
+ 		PMD_DRV_LOG(INFO, "OP_GET_STATS received");
+ 		i40e_pf_host_process_cmd_get_stats(vf);
+ 		break;
+-	case I40E_VIRTCHNL_OP_GET_LINK_STAT:
+-		PMD_DRV_LOG(INFO, "OP_GET_LINK_STAT received");
+-		i40e_pf_host_process_cmd_get_link_status(vf);
+-		break;
+ 	case I40E_VIRTCHNL_OP_CFG_VLAN_OFFLOAD:
+ 		PMD_DRV_LOG(INFO, "OP_CFG_VLAN_OFFLOAD received");
+ 		i40e_pf_host_process_cmd_cfg_vlan_offload(vf, msg, msglen);
+diff --git a/drivers/net/i40e/i40e_pf.h b/drivers/net/i40e/i40e_pf.h
+index 9c01829..cddc45c 100644
+--- a/drivers/net/i40e/i40e_pf.h
++++ b/drivers/net/i40e/i40e_pf.h
+@@ -59,9 +59,8 @@ enum i40e_virtchnl_ops_dpdk {
+ 	 * Keep some gap between Linux PF commands and
+ 	 * DPDK PF extended commands.
+ 	 */
+-	I40E_VIRTCHNL_OP_GET_LINK_STAT = I40E_VIRTCHNL_OP_VERSION +
++	I40E_VIRTCHNL_OP_CFG_VLAN_OFFLOAD = I40E_VIRTCHNL_OP_VERSION +
+ 						I40E_DPDK_OFFSET,
+-	I40E_VIRTCHNL_OP_CFG_VLAN_OFFLOAD,
+ 	I40E_VIRTCHNL_OP_CFG_VLAN_PVID,
+ 	I40E_VIRTCHNL_OP_CONFIG_VSI_QUEUES_EXT,
+ };
