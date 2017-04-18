@@ -1,0 +1,49 @@
+; Copyright (c) 2017 Intel Corporation
+;
+; Licensed under the Apache License, Version 2.0 (the "License");
+; you may not use this file except in compliance with the License.
+; You may obtain a copy of the License at
+;
+;      http:#www.apache.org/licenses/LICENSE-2.0
+;
+; Unless required by applicable law or agreed to in writing, software
+; distributed under the License is distributed on an "AS IS" BASIS,
+; WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+; See the License for the specific language governing permissions and
+; limitations under the License.
+
+link 0 down
+link 0 config 202.16.100.10 8
+link 0 up
+link 1 down
+link 1 config 172.16.40.10 8
+link 1 up
+
+;p 1 arpadd 1 172.16.40.20 00:00:00:00:00:04
+;p 1 arpadd 0 202.16.100.20 00:00:00:00:00:01
+
+p action add 0 accept
+p action add 0 fwd 0
+p action add 0 count
+
+p action add 1 accept
+p action add 1 fwd 1
+p action add 1 count
+
+p action add 2 drop
+p action add 2 count
+
+p action add 0 conntrack
+p action add 1 conntrack
+p action add 2 conntrack
+p action add 3 conntrack
+p action add 4 conntrack
+p action add 5 conntrack
+p action add 6 conntrack
+p action add 7 conntrack
+
+p vfw add 1 202.16.100.20 8 172.16.40.20 8 0 65535 67 69 0 0 2
+p vfw add 2 202.16.100.20 8 172.16.40.20 8 0 65535 0 65535 0 0 1
+p vfw add 2 172.16.40.20 8 202.16.100.20 8 0 65535 0 65535 0 0 0
+
+p vfw applyruleset
