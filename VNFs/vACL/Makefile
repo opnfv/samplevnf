@@ -17,7 +17,7 @@ $(error "Please define RTE_SDK environment variable")
 endif
 
 ifeq ($(VNF_DIR),)
-$(error "Please define ISB_DIR environment variable")
+$(error "Please define VNF_CORE environment variable")
 endif
 
 # Default target, can be overridden by command line or environment
@@ -28,38 +28,38 @@ DIRS-(CONFIG_RTE_LIBRTE_PIPELINE) += pipeline
 include $(RTE_SDK)/mk/rte.vars.mk
 
 # binary name
-APP = isb_acl_vnf
+APP = vACL
 
 
-VPATH += $(ISB_DIR)/common/vnf_common
-#VPATH += $(ISB_DIR)/common/VIL/arp
-VPATH += $(ISB_DIR)/common/VIL/conntrack
-VPATH += $(ISB_DIR)/common/VIL/pipeline_common
-VPATH += $(ISB_DIR)/common/VIL/pipeline_loadb
-VPATH += $(ISB_DIR)/common/VIL/pipeline_master
-VPATH += $(ISB_DIR)/common/VIL/pipeline_passthrough
+VPATH += $(VNF_CORE)/common/vnf_common
+#VPATH += $(VNF_CORE)/common/VIL/arp
+VPATH += $(VNF_CORE)/common/VIL/conntrack
+VPATH += $(VNF_CORE)/common/VIL/pipeline_common
+VPATH += $(VNF_CORE)/common/VIL/pipeline_loadb
+VPATH += $(VNF_CORE)/common/VIL/pipeline_master
+VPATH += $(VNF_CORE)/common/VIL/pipeline_passthrough
 VPATH += $(SRCDIR)/pipeline
-VPATH += $(ISB_DIR)/common/VIL/pipeline_txrx
-VPATH += $(ISB_DIR)/common/VIL/pipeline_arpicmp
+VPATH += $(VNF_CORE)/common/VIL/pipeline_txrx
+VPATH += $(VNF_CORE)/common/VIL/pipeline_arpicmp
 
 INC += $(wildcard *.h)
 INC += $(wildcard pipeline/*.h)
-INC += $(wildcard $(ISB_DIR)/common/vnf_common/*.h)
-#INC += $(wildcard $(ISB_DIR)/common/VIL/arp/*.h)
-INC += $(wildcard $(ISB_DIR)/common/VIL/pipeline_arpicmp/*.h)
-INC += $(wildcard $(ISB_DIR)/common/VIL/conntrack/*.h)
-INC += $(wildcard $(ISB_DIR)/common/VIL/pipeline_loadb/*.h)
-INC += $(wildcard $(ISB_DIR)/common/VIL/pipeline_common/*.h)
-INC += $(wildcard $(ISB_DIR)/common/VIL/pipeline_master/*.h)
-INC += $(wildcard $(ISB_DIR)/common/VIL/pipeline_passthrough/*.h)
-INC += $(wildcard $(ISB_DIR)/common/VIL/pipeline_txrx/*.h)
+INC += $(wildcard $(VNF_CORE)/common/vnf_common/*.h)
+#INC += $(wildcard $(VNF_CORE)/common/VIL/arp/*.h)
+INC += $(wildcard $(VNF_CORE)/common/VIL/pipeline_arpicmp/*.h)
+INC += $(wildcard $(VNF_CORE)/common/VIL/conntrack/*.h)
+INC += $(wildcard $(VNF_CORE)/common/VIL/pipeline_loadb/*.h)
+INC += $(wildcard $(VNF_CORE)/common/VIL/pipeline_common/*.h)
+INC += $(wildcard $(VNF_CORE)/common/VIL/pipeline_master/*.h)
+INC += $(wildcard $(VNF_CORE)/common/VIL/pipeline_passthrough/*.h)
+INC += $(wildcard $(VNF_CORE)/common/VIL/pipeline_txrx/*.h)
 
-CFLAGS += -I$(SRCDIR) -I$(SRCDIR)/pipeline -I$(ISB_DIR)/common/vnf_common
-CFLAGS += -I$(ISB_DIR)/common/VIL/arp -I$(ISB_DIR)/common/VIL/conntrack
-CFLAGS += -I$(ISB_DIR)/common/VIL/pipeline_common -I$(ISB_DIR)/common/VIL/pipeline_loadb
-CFLAGS += -I$(ISB_DIR)/common/VIL/pipeline_master -I$(ISB_DIR)/common/VIL/pipeline_passthrough
-CFLAGS += -I$(ISB_DIR)/common/VIL/pipeline_txrx
-CFLAGS += -I$(ISB_DIR)/common/VIL/pipeline_arpicmp
+CFLAGS += -I$(SRCDIR) -I$(SRCDIR)/pipeline -I$(VNF_CORE)/common/vnf_common
+CFLAGS += -I$(VNF_CORE)/common/VIL/arp -I$(VNF_CORE)/common/VIL/conntrack
+CFLAGS += -I$(VNF_CORE)/common/VIL/pipeline_common -I$(VNF_CORE)/common/VIL/pipeline_loadb
+CFLAGS += -I$(VNF_CORE)/common/VIL/pipeline_master -I$(VNF_CORE)/common/VIL/pipeline_passthrough
+CFLAGS += -I$(VNF_CORE)/common/VIL/pipeline_txrx
+CFLAGS += -I$(VNF_CORE)/common/VIL/pipeline_arpicmp
 
 # all source are stored in SRCS-y
 SRCS-$(CONFIG_RTE_LIBRTE_PIPELINE) := main.c
