@@ -650,7 +650,7 @@ void ftp_alg_dpi(
 	* with that NAPT entry egress and ingress can be added ,
 	* for further data channel communication
 	*/
-
+        #ifdef FTP_ALG
 	if (add_dynamic_cgnapt_entry_alg((struct pipeline *)p_nat,
 	&data_channel_key, &egress_entry, &ingress_entry) == 0){
 
@@ -666,6 +666,7 @@ void ftp_alg_dpi(
 		#endif
 		return;
 	}
+	#endif
 
 	tmp_tcp_paylod_size = rte_bswap16(ip_hdr->total_length) -
 			((thdr->data_off & 0xf0) >> 2) - ip_hdr_size_bytes;
@@ -796,6 +797,7 @@ void ftp_alg_dpi(
 			* for further data channel communication
 			*/
 
+                        #ifdef FTP_ALG
 			if (add_dynamic_cgnapt_entry_alg((struct pipeline *)
 				p_nat, &data_channel_key, &egress_entry,
 				&ingress_entry) == 0){
@@ -811,6 +813,7 @@ void ftp_alg_dpi(
 				#endif
 				return;
 			}
+                        #endif
 
 		tmp_tcp_paylod_size = rte_bswap16(ip_hdr->total_length) -
 					((thdr->data_off & 0xf0) >> 2) -
