@@ -245,7 +245,7 @@ build_vnfs()
      return
 	fi
 
-	if [ ! -d "$DPDK_DIR/x86_64-native-linux-gcc" ]; then
+	if [ ! -d "$DPDK_DIR/x86_64-native-linuxapp-gcc" ]; then
      echo "Please choose option '5 Build and Install DPDK'"
      return
 	fi
