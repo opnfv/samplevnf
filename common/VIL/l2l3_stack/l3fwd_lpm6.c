@@ -63,6 +63,7 @@ int lpm6_init(void)
 		.key_len = sizeof(struct l2_adj_key_ipv6),
 		.hash_func = rte_jhash,
 		.hash_func_init_val = 0,
+                .socket_id = rte_socket_id(),
 	};
 
 	l2_adj_ipv6_hash_handle = rte_hash_create(&l2_adj_ipv6_params);
@@ -82,6 +83,7 @@ int lpm6_init(void)
 		.hash_func = rte_jhash,
 		.hash_func_init_val = 0,
 		.extra_flag = 1,
+                .socket_id = rte_socket_id(),
 	};
 
 	/* Create FIB PATH Hash tables */

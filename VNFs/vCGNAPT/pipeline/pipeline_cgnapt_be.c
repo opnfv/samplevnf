@@ -93,6 +93,7 @@ struct rte_hash_parameters max_port_per_client_hash_params = {
 	.key_len = sizeof(struct max_port_per_client_key),
 	.hash_func = rte_jhash,
 	.hash_func_init_val = 0,
+        .socket_id = 0,
 };
 #ifdef CT_CGNAT
 struct rte_ct_cnxn_tracker *cgnat_cnxn_tracker;
@@ -128,6 +129,7 @@ struct rte_hash_parameters napt_common_table_hash_params = {
 	.hash_func = rte_jhash,
 	.hash_func_init_val = 0,
 	.extra_flag = 1,
+        .socket_id = 0,
 };
 
 /***** ARP local cache *****/
@@ -1049,6 +1051,7 @@ int create_napt_common_table(uint32_t nFlows)
 		return -1;
 	}
 
+        napt_common_table_hash_params.socket_id = rte_socket_id();
 	napt_common_table = rte_hash_create(&napt_common_table_hash_params);
 
 	if (napt_common_table == NULL) {
@@ -9774,6 +9777,7 @@ int init_max_port_per_client(
 
 	int i = 0;
 
+        max_port_per_client_hash_params.socket_id = rte_socket_id();
 	max_port_per_client_hash =
 		rte_hash_create(&max_port_per_client_hash_params);
 	if (!max_port_per_client_hash)

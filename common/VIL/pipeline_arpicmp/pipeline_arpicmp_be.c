@@ -115,6 +115,7 @@ static struct rte_hash_parameters arp_hash_params = {
 	.key_len = sizeof(struct arp_key_ipv4),
 	.hash_func = rte_jhash,
 	.hash_func_init_val = 0,
+        .socket_id = rte_socket_id(),
 };
 
 static struct rte_hash_parameters nd_hash_params = {
@@ -124,6 +125,7 @@ static struct rte_hash_parameters nd_hash_params = {
 	.key_len = sizeof(struct nd_key_ipv6),
 	.hash_func = rte_jhash,
 	.hash_func_init_val = 0,
+        .socket_id = rte_socket_id(),
 };
 
 struct rte_hash *arp_hash_handle;

@@ -753,6 +753,7 @@ app_init_link(struct app_params *app)
 			app->mempool_params[0].buffer_size;
 		port_config[i].mempool.cache_size =
 			app->mempool_params[0].cache_size;
+                app->mempool_params[0].cpu_socket_id = rte_socket_id();
 		port_config[i].mempool.cpu_socket_id =
 			app->mempool_params[0].cpu_socket_id;
 		memcpy(&port_config[i].port_conf, &p_link->conf,
@@ -793,6 +794,7 @@ app_init_swq(struct app_params *app)
 		if (app_swq_get_writers(app, p) == 1)
 			flags |= RING_F_SP_ENQ;
 
+                p->cpu_socket_id = rte_socket_id();
 		APP_LOG(app, HIGH, "Initializing %s...", p->name);
 		app->swq[i] = rte_ring_create(
 				p->name,
@@ -885,6 +887,7 @@ app_init_msgq(struct app_params *app)
 	for (i = 0; i < app->n_msgq; i++) {
 		struct app_msgq_params *p = &app->msgq_params[i];
 
+                p->cpu_socket_id = rte_socket_id();
 		APP_LOG(app, HIGH, "Initializing %s ...", p->name);
 		app->msgq[i] = rte_ring_create(
 				p->name,

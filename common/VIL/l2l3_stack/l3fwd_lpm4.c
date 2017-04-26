@@ -145,6 +145,7 @@ int lpm_init(void)
 		.key_len = sizeof(struct l2_adj_key_ipv4),
 		.hash_func = rte_jhash,
 		.hash_func_init_val = 0,
+                .socket_id = rte_socket_id(),
 	};
 
 	/* Create IPv4 L2 Adj Hash tables */
@@ -164,6 +165,7 @@ int lpm_init(void)
 		.key_len = sizeof(struct fib_path_key_ipv4),
 		.hash_func = rte_jhash,
 		.hash_func_init_val = 0,
+                .socket_id = rte_socket_id(),
 	};
 
 	/* Create FIB PATH Hash tables */

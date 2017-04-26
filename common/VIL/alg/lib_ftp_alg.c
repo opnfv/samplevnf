@@ -65,6 +65,7 @@ struct rte_hash_parameters ftp_alg_hash_params = {
 	.key_len = sizeof(struct ftp_alg_key),
 	.hash_func = rte_jhash,
 	.hash_func_init_val = 0,
+        .socket_id = 0,
 };
 
 struct rte_hash *ftp_alg_hash_handle;
@@ -78,6 +79,7 @@ printf("NAT FTP ALG initialization ...\n");
 
 	/* FTP ALG hash table initialization */
 
+	ftp_alg_hash_params.socket_id = rte_socket_id();
 	ftp_alg_hash_handle = rte_hash_create(&ftp_alg_hash_params);
 
 	#ifdef ALGDBG
