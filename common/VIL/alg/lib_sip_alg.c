@@ -147,7 +147,7 @@ void lib_sip_alg_init(void)
 	printf("NAT SIP ALG initialization ...\n");
 
 	/* SIP ALG hash table initialization */
-	sip_alg_hash_params.socket_id = SOCKET_ID_ANY;
+	sip_alg_hash_params.socket_id = app_get_socket_id();
 	sip_alg_hash_params.name = s;
 	sip_alg_hash_table = rte_hash_create(&sip_alg_hash_params);
 

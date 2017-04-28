@@ -49,7 +49,7 @@ enum PCP_RET pcp_init(void)
 		pcp_mbuf_pool = rte_pktmbuf_pool_create(
 				"pcp_mbuf_pool", 64, 32, 0,
 				RTE_MBUF_DEFAULT_BUF_SIZE,
-				rte_socket_id());
+				app_get_socket_id());
 
 		if (pcp_mbuf_pool == NULL) {
 			printf("PCP mbuf pool creation failed\n");

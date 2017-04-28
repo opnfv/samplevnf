@@ -56,6 +56,9 @@ enum {
 	VNF_PRV_PORT_ID,
 	VNF_PUB_PORT_ID,
 };
+
+extern int32_t app_get_socket_id(void);
+
 void show_ports_info(void);
 void trim(char *input);
 uint8_t get_in_port_dir(uint8_t in_port_id);

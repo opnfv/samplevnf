@@ -1121,7 +1121,7 @@ int napt_port_alloc_init(struct pipeline_cgnapt *p_nat)
 
 	port_alloc_ring[vnf_set_num] =
 		 rte_ring_create(napt_port_alloc_ring_name[vnf_set_num],
-			napt_port_alloc_elem_count, rte_socket_id(), 0);
+			napt_port_alloc_elem_count, app_get_socket_id(), 0);
 	p_nat->port_alloc_ring = port_alloc_ring[vnf_set_num];
 	if (p_nat->port_alloc_ring == NULL) {
 		printf("CGNAPT%d -  Failed to create port_alloc_ring\n",
@@ -1138,7 +1138,7 @@ int napt_port_alloc_init(struct pipeline_cgnapt *p_nat)
 				napt_port_alloc_elem_count,
 				sizeof(struct napt_port_alloc_elem),
 				0, 0, NULL, NULL, NULL,
-				NULL, rte_socket_id(), 0);
+				NULL, app_get_socket_id(), 0);
 	}
 
 	if (napt_port_pool == NULL) {
@@ -8793,7 +8793,7 @@ static void *pipeline_cgnapt_init(struct pipeline_params *params, void *arg)
 		cgnapt_icmp_pktmbuf_tx_pool =
 			rte_pktmbuf_pool_create("icmp_mbuf_tx_pool", 63, 32, 0,
 						RTE_MBUF_DEFAULT_BUF_SIZE,
-						rte_socket_id());
+						app_get_socket_id());
 		if (cgnapt_icmp_pktmbuf_tx_pool == NULL) {
 			PLOG(p, HIGH, "ICMP mbuf pool create failed.");
 			return NULL;
@@ -10246,7 +10246,7 @@ void *pipeline_cgnapt_msg_req_entry_dbg_handler(struct pipeline *p, void *msg)
 			cgnapt_test_pktmbuf_pool = rte_pktmbuf_pool_create(
 				"cgnapt_test_pktmbuf_pool", 63, 32, 0,
 				RTE_MBUF_DEFAULT_BUF_SIZE,
-				rte_socket_id());
+				app_get_socket_id());
 		}
 
 		if (cgnapt_test_pktmbuf_pool == NULL)

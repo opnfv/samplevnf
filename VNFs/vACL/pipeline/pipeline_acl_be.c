@@ -3317,8 +3317,8 @@ static void *pipeline_acl_init(struct pipeline_params *params,
 	/* If this is the first ACL thread, create common ACL Rule tables */
 	if (rte_ACL_hi_counter_block_in_use == 0) {
 
-		printf("Create ACL Tables rte_socket_id(): %i\n",
-		       rte_socket_id());
+		printf("Create ACL Tables app_get_socket_id(): %i\n",
+		       app_get_socket_id());
 
 		/* Create IPV4 ACL Rule Tables */
 		struct rte_table_acl_params common_ipv4_table_acl_params = {
@@ -3334,7 +3334,7 @@ static void *pipeline_acl_init(struct pipeline_params *params,
 
 		acl_rule_table_ipv4_active =
 		    rte_table_acl_ops.f_create(&common_ipv4_table_acl_params,
-					       rte_socket_id(),
+					       app_get_socket_id(),
 					       ipv4_entry_size);
 
 		if (acl_rule_table_ipv4_active == NULL) {
@@ -3349,7 +3349,7 @@ static void *pipeline_acl_init(struct pipeline_params *params,
 		common_ipv4_table_acl_params.name = "ACLIPV4B";
 		acl_rule_table_ipv4_standby =
 		    rte_table_acl_ops.f_create(&common_ipv4_table_acl_params,
-					       rte_socket_id(),
+					       app_get_socket_id(),
 					       ipv4_entry_size);
 
 		if (acl_rule_table_ipv4_standby == NULL) {
@@ -3374,7 +3374,7 @@ static void *pipeline_acl_init(struct pipeline_params *params,
 
 		acl_rule_table_ipv6_active =
 		    rte_table_acl_ops.f_create(&common_ipv6_table_acl_params,
-					       rte_socket_id(),
+					       app_get_socket_id(),
 					       ipv6_entry_size);
 
 		if (acl_rule_table_ipv6_active == NULL) {
@@ -3389,7 +3389,7 @@ static void *pipeline_acl_init(struct pipeline_params *params,
 		common_ipv6_table_acl_params.name = "ACLIPV6B";
 		acl_rule_table_ipv6_standby =
 		    rte_table_acl_ops.f_create(&common_ipv6_table_acl_params,
-					       rte_socket_id(),
+					       app_get_socket_id(),
 					       ipv6_entry_size);
 
 		if (acl_rule_table_ipv6_standby == NULL) {

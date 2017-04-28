@@ -77,7 +77,7 @@ void lib_ftp_alg_init(void)
 printf("NAT FTP ALG initialization ...\n");
 
 	/* FTP ALG hash table initialization */
-
+        ftp_alg_hash_params.socket_id = app_get_socket_id();
 	ftp_alg_hash_handle = rte_hash_create(&ftp_alg_hash_params);
 
 	#ifdef ALGDBG

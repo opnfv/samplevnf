@@ -290,8 +290,8 @@ static struct rte_acl_field_def field_format_ipv6[] = {
 void *lib_acl_create_active_standby_table_ipv4(uint8_t table_num,
 		uint32_t *libacl_n_rules)
 {
-	printf("Create LIBACL active IPV4 Tables rte_socket_id(): %i\n",
-			rte_socket_id());
+	printf("Create LIBACL active IPV4 Tables app_get_socket_id(): %i\n",
+			app_get_socket_id());
 
 	/* Create IPV4 LIBACL Rule Tables */
 	struct rte_table_acl_params common_ipv4_table_libacl_params = {
@@ -308,7 +308,7 @@ void *lib_acl_create_active_standby_table_ipv4(uint8_t table_num,
 	if (table_num == 2)
 		common_ipv4_table_libacl_params.name = "LIBACLIPV4B";
 	return	rte_table_acl_ops.f_create(&common_ipv4_table_libacl_params,
-			rte_socket_id(),
+			app_get_socket_id(),
 			ipv4_entry_size);
 
 
@@ -317,8 +317,8 @@ void *lib_acl_create_active_standby_table_ipv4(uint8_t table_num,
 void *lib_acl_create_active_standby_table_ipv6(uint8_t table_num,
 		uint32_t *libacl_n_rules)
 {
-	printf("Create LIBACL active IPV6 Tables rte_socket_id(): %i\n",
-			rte_socket_id());
+	printf("Create LIBACL active IPV6 Tables app_get_socket_id(): %i\n",
+			app_get_socket_id());
 	/* Create IPV6 LIBACL Rule Tables */
 	struct rte_table_acl_params common_ipv6_table_libacl_params = {
 		.name = "LIBACLIPV6A",
@@ -334,7 +334,7 @@ void *lib_acl_create_active_standby_table_ipv6(uint8_t table_num,
 	if (table_num == 2)
 		common_ipv6_table_libacl_params.name = "LIBACLIPV6B";
 	return	rte_table_acl_ops.f_create(&common_ipv6_table_libacl_params,
-			rte_socket_id(),
+			app_get_socket_id(),
 			ipv6_entry_size);
 
 

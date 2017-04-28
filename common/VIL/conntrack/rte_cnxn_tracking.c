@@ -23,6 +23,7 @@
 #include <rte_spinlock.h>
 #include "rte_cnxn_tracking.h"
 #include "rte_ct_tcp.h"
+#include "vnf_common.h"
 
 #define CNXN_TRX_DEBUG 0
 #define TESTING_TIMERS 0
@@ -1040,7 +1041,7 @@ rte_ct_initialize_cnxn_tracker_with_synproxy(
 		.hash_func = NULL,	/* use default hash */
 		.key_len = 40,
 		.hash_func_init_val = 0,
-		.socket_id = rte_socket_id(),
+		.socket_id = app_get_socket_id(),
 		.extra_flag = 1 /*This is needed for TSX memory*/
 	};
 

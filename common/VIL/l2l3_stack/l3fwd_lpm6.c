@@ -22,6 +22,7 @@
 #include "l2_proto.h"
 #include "lib_arp.h"
 #include "lib_icmpv6.h"
+#include "vnf_common.h"
 
 /* Declare Global variables */
 
@@ -49,7 +50,7 @@ int lpm6_init(void)
 
 	/* Create LPMv6 tables */
 	lpm6_table =
-			rte_table_lpm_ipv6_ops.f_create(&lpm6_params, rte_socket_id(),
+			rte_table_lpm_ipv6_ops.f_create(&lpm6_params, app_get_socket_id(),
 							sizeof(struct ipv6_fib_info));
 	if (lpm6_table == NULL) {
 		printf("Failed to create LPM IPV6 table\n");

@@ -3397,7 +3397,7 @@ static void *pipeline_arpicmp_init(struct pipeline_params *params,
 				"lib_arp_mbuf_tx_pool",
 				NB_ARPICMP_MBUF, 32,
 				0, RTE_MBUF_DEFAULT_BUF_SIZE,
-				rte_socket_id());
+				app_get_socket_id());
 
 	if (lib_arp_pktmbuf_tx_pool == NULL) {
 		printf("ARP mbuf pool create failed.\n");
@@ -3411,7 +3411,7 @@ static void *pipeline_arpicmp_init(struct pipeline_params *params,
 	}
 
 	/* ARP Table */
-	arp_hash_params.socket_id = rte_socket_id();
+	arp_hash_params.socket_id = app_get_socket_id();
 	arp_hash_params.entries = MAX_NUM_ARP_ENTRIES;
 	arp_hash_handle = rte_hash_create(&arp_hash_params);
 
@@ -3423,7 +3423,7 @@ static void *pipeline_arpicmp_init(struct pipeline_params *params,
 	printf("arp_hash_handle %p\n\n", (void *)arp_hash_handle);
 
 	/* ND IPv6 */
-	nd_hash_params.socket_id = rte_socket_id();
+	nd_hash_params.socket_id = app_get_socket_id();
 	nd_hash_params.entries = MAX_NUM_ND_ENTRIES;
 	nd_hash_handle = rte_hash_create(&nd_hash_params);
 

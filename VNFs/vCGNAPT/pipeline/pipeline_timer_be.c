@@ -418,7 +418,7 @@ static void *pipeline_timer_init(struct pipeline_params *params, void *arg)
 						 sizeof(struct rte_timer),
 						 0, 0,
 						 NULL, NULL,
-						 NULL, NULL, rte_socket_id(), 0);
+						 NULL, NULL, app_get_socket_id(), 0);
 	if (timer_mempool == NULL)
 		rte_panic("timer_mempool create error\n");
 
@@ -427,12 +427,12 @@ static void *pipeline_timer_init(struct pipeline_params *params, void *arg)
 								 sizeof(struct timer_key),
 								 0, 0,
 								 NULL, NULL,
-								 NULL, NULL, rte_socket_id(), 0);
+								 NULL, NULL, app_get_socket_id(), 0);
 	if (timer_key_mempool == NULL)
 		rte_panic("timer_key_mempool create error\n");
 
 	timer_ring = rte_ring_create("TIMER_RING",
-						 timer_ring_alloc_cnt, rte_socket_id(), 0);
+						 timer_ring_alloc_cnt, app_get_socket_id(), 0);
 
 	if (timer_ring == NULL)
 		rte_panic("timer_ring creation failed");

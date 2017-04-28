@@ -22,6 +22,7 @@
 #include "lib_arp.h"
 #include "lib_icmpv6.h"
 #include <inttypes.h>
+#include "vnf_common.h"
 
 /* Declare Global variables */
 
@@ -131,7 +132,7 @@ int lpm_init(void)
 
 	/* Create LPMv4 tables */
 	lpm4_table =
-			rte_table_lpm_ops.f_create(&lpm_params, rte_socket_id(),
+			rte_table_lpm_ops.f_create(&lpm_params, app_get_socket_id(),
 							 sizeof(struct fib_info));
 	if (lpm4_table == NULL) {
 		printf("Failed to create LPM IPV4 table\n");

@@ -2449,7 +2449,7 @@ void lib_arp_init(struct pipeline_params *params,
 	lib_arp_pktmbuf_tx_pool =
 			rte_pktmbuf_pool_create("lib_arp_mbuf_tx_pool", NB_ARPICMP_MBUF, 32,
 						0, RTE_MBUF_DEFAULT_BUF_SIZE,
-						rte_socket_id());
+						app_get_socket_id());
 
 	if (lib_arp_pktmbuf_tx_pool == NULL) {
 		RTE_LOG(INFO, LIBARP, "ARP mbuf pool create failed.\n");
@@ -2462,7 +2462,7 @@ void lib_arp_init(struct pipeline_params *params,
 		return;
 	}
 
-	arp_hash_params.socket_id = rte_socket_id();
+	arp_hash_params.socket_id = app_get_socket_id();
 	arp_hash_params.entries = MAX_NUM_ARP_ENTRIES;
 	arp_hash_params.key_len = sizeof(struct arp_key_ipv4);
 	arp_hash_handle = rte_hash_create(&arp_hash_params);
@@ -2483,7 +2483,7 @@ void lib_arp_init(struct pipeline_params *params,
 								 sizeof(struct rte_timer),
 								 0, 0,
 								 NULL, NULL,
-								 NULL, NULL, rte_socket_id(), 0);
+								 NULL, NULL, app_get_socket_id(), 0);
 	if (timer_mempool_arp == NULL) {
 		rte_panic("timer_mempool create error\n");
 	}
@@ -2491,7 +2491,7 @@ void lib_arp_init(struct pipeline_params *params,
 	list_add_type(ETHER_TYPE_ARP, process_arpicmp_pkt_parse);
 
 	/* ND IPv6 */
-	nd_hash_params.socket_id = rte_socket_id();
+	nd_hash_params.socket_id = app_get_socket_id();
 	nd_hash_params.entries = MAX_NUM_ND_ENTRIES;
 	nd_hash_params.key_len = sizeof(struct nd_key_ipv6);
 	nd_hash_handle = rte_hash_create(&nd_hash_params);

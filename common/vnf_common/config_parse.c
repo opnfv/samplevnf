@@ -31,6 +31,7 @@
 
 #include "app.h"
 #include "parser.h"
+#include "vnf_common.h"
 
 /**
  * Default config values
@@ -215,6 +216,15 @@ static const char app_usage[] =
 	"\t--preproc PREPROCESSOR: Configuration file pre-processor\n"
 	"\t--preproc-args ARGS: Arguments to be passed to pre-processor\n"
 	"\n";
+/*
+* Global socket ID for the VNF application is first link socket ID
+*/
+static int32_t app_socket_id;
+
+int32_t app_get_socket_id(void)
+{
+       return app_socket_id;
+}
 
 static void
 app_print_usage(char *prgname)
@@ -1158,6 +1168,7 @@ parse_pipeline_pktq_in(struct app_params *app,
 		} else if (validate_name(name, "SWQ", 1) == 0) {
 			type = APP_PKTQ_IN_SWQ;
 			id = APP_PARAM_ADD(app->swq_params, name);
+			app->swq_params[id].cpu_socket_id = p->socket_id;
 		} else if (validate_name(name, "TM", 1) == 0) {
 			type = APP_PKTQ_IN_TM;
 			id = APP_PARAM_ADD(app->tm_params, name);
@@ -2620,6 +2631,10 @@ app_config_parse(struct app_params *app, const char *file_name)
 	APP_PARAM_COUNT(app->sink_params, app->n_pktq_sink);
 	APP_PARAM_COUNT(app->msgq_params, app->n_msgq);
 	APP_PARAM_COUNT(app->pipeline_params, app->n_pipelines);
+
+	/* Initializing with global socket ID*/
+	app_socket_id = app->pipeline_params[1].socket_id;
+	app->mempool_params[0].cpu_socket_id = app_socket_id;
 
 #ifdef RTE_PORT_PCAP
 	for (i = 0; i < (int)app->n_pktq_source; i++) {
