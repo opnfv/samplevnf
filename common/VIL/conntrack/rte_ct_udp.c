@@ -33,17 +33,17 @@ enum rte_ct_packet_action rte_ct_udp_packet(struct rte_ct_cnxn_tracker *ct,
 		uint8_t  key_was_flipped)
 {
 	enum rte_ct_pkt_direction dir;
-
+	enum rte_ct_udp_states ustate = RTE_CT_UDP_UNREPLIED;
 	dir = (cd->key_is_client_order == !key_was_flipped);
 	/* printf("packet received verify"); */
-	if (dir == RTE_CT_DIR_REPLY &&
-			cd->connstatus == RTE_INIT_CONN) {
-		rte_ct_set_cnxn_timer_for_udp(ct, cd, RTE_CT_UDP_REPLIED);
+	if (dir == RTE_CT_DIR_REPLY && (
+			(cd->connstatus == RTE_INIT_CONN) ||
+			(cd->connstatus == RTE_ASSURED_CONN)))
+	{
+		ustate = RTE_CT_UDP_REPLIED;
 		cd->connstatus = RTE_ASSURED_CONN;
-	} else if (dir == RTE_CT_DIR_REPLY &&
-			cd->connstatus == RTE_ASSURED_CONN)
-		rte_ct_set_cnxn_timer_for_udp(ct, cd, RTE_CT_UDP_REPLIED);
-	else
-		rte_ct_set_cnxn_timer_for_udp(ct, cd, RTE_CT_UDP_UNREPLIED);
+	}
+	rte_ct_set_cnxn_timer_for_udp(ct, cd, ustate);
+
 	return RTE_CT_FORWARD_PACKET;
 }

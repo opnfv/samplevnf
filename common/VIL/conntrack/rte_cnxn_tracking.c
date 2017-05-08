@@ -52,7 +52,6 @@
 
 #define IP_VERSION_4 4
 #define IP_VERSION_6 6
-
 static void
 rte_ct_cnxn_tracker_batch_lookup_basic_type(
 	struct rte_ct_cnxn_tracker *ct,
@@ -1479,6 +1478,9 @@ rte_ct_cnxn_tracker_batch_lookup_basic_type(
 	int32_t positions[RTE_HASH_LOOKUP_BULK_MAX];
 	uint32_t i;
 	struct rte_ct_cnxn_data new_cnxn_data;
+	struct rte_ct_cnxn_data *cnxn_data_entry[RTE_HASH_LOOKUP_BULK_MAX];
+
+	rte_prefetch0(ct->hash_table_entries);
 
 	if (CNXN_TRX_DEBUG > 1) {
 		printf("Enter cnxn tracker %p", ct);
@@ -1631,6 +1633,35 @@ rte_ct_cnxn_tracker_batch_lookup_basic_type(
 		*pkts_mask = 0;
 		return;	/* unknown error, just discard all packets */
 	}
+
+	/* Pre-fetch hash table entries and counters to avoid LLC miss */
+	rte_prefetch0(ct->counters);
+	for (i = 0; i < packets_for_lookup; i++) {
+		struct rte_ct_cnxn_data *entry = NULL;
+		int hash_table_entry = positions[i];
+
+		if (hash_table_entry >= 0) {
+			/* Entry found for existing UDP/TCP connection */
+			entry = &ct->hash_table_entries[hash_table_entry];
+			rte_prefetch0(&entry->counters.packets_forwarded);
+			rte_prefetch0(entry);
+			rte_prefetch0(&entry->key_is_client_order);
+		}
+		else {
+			uint8_t pkt_index = compacting_map[i];
+			uint32_t *key = ct->hash_key_ptrs[pkt_index];
+			uint8_t protocol = *(key + 9);
+			if (protocol == UDP_PROTOCOL) {
+				/* Search in new connections only for UDP */
+				entry = rte_ct_search_new_connections(ct, key);
+				rte_prefetch0(&entry->counters.packets_forwarded);
+				rte_prefetch0(entry);
+				rte_prefetch0(&entry->key_is_client_order);
+			}
+		}
+		cnxn_data_entry[i] = entry;
+	}
+
 	for (i = 0; i < packets_for_lookup; i++) {
 		/* index into hash table entries */
 		int hash_table_entry = positions[i];
@@ -1689,7 +1720,7 @@ rte_ct_cnxn_tracker_batch_lookup_basic_type(
 				 */
 
 				struct rte_ct_cnxn_data *entry =
-				&ct->hash_table_entries[hash_table_entry];
+					cnxn_data_entry[i];
 
 				if (rte_ct_udp_packet
 						(ct, entry, pkts[pkt_index],
@@ -1704,7 +1735,7 @@ rte_ct_cnxn_tracker_batch_lookup_basic_type(
 				 */
 
 				struct rte_ct_cnxn_data *recent_entry =
-					rte_ct_search_new_connections(ct, key);
+					cnxn_data_entry[i];
 
 				if (recent_entry != NULL) {
 					if (rte_ct_udp_packet(ct, recent_entry,
