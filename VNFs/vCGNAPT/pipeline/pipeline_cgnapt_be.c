@@ -2465,12 +2465,12 @@ static int cgnapt_in_port_ah_mix(struct rte_pipeline *rte_p,
 
 		p_nat->naptedPktCount++;
 
-		#ifdef HW_CHECKSUM_REQ
+		#ifdef CHECKSUM_REQ
 			if (p_nat->hw_checksum_reqd)
 				hw_checksum(pkts[pkt_index], pkt_type);
 			else
-		#endif
 				sw_checksum(pkts[pkt_index], pkt_type);
+		#endif
 	}
 
 	if (p_nat->invalid_packets) {
@@ -4080,12 +4080,12 @@ pkt_work_cgnapt_ipv4_prv(
 
 	p_nat->naptedPktCount++;
 
-	#ifdef HW_CHECKSUM_REQ
+	#ifdef CHECKSUM_REQ
 		if (p_nat->hw_checksum_reqd)
 			hw_checksum(pkt, pkt_type);
 		else
-	#endif
 			sw_checksum(pkt, pkt_type);
+	#endif
 
 }
 
@@ -4490,12 +4490,12 @@ pkt_work_cgnapt_ipv4_pub(
 
 	p_nat->naptedPktCount++;
 
-	#ifdef HW_CHECKSUM_REQ
+	#ifdef CHECKSUM_REQ
 		if (p_nat->hw_checksum_reqd)
 			hw_checksum(pkt, pkt_type);
 		else
-	#endif
 			sw_checksum(pkt, pkt_type);
+	#endif
 }
 
 
@@ -4949,12 +4949,12 @@ pkt4_work_cgnapt_ipv4_prv(
 
 		p_nat->naptedPktCount++;
 
-		#ifdef HW_CHECKSUM_REQ
+		#ifdef CHECKSUM_REQ
 			if (p_nat->hw_checksum_reqd)
 				hw_checksum(pkt, pkt_type);
 			else
-		#endif
 				sw_checksum(pkt, pkt_type);
+		#endif
 	}
 }
 
@@ -5369,12 +5369,12 @@ pkt4_work_cgnapt_ipv4_pub(
 
 		p_nat->naptedPktCount++;
 
-		#ifdef HW_CHECKSUM_REQ
+		#ifdef CHECKSUM_REQ
 			if (p_nat->hw_checksum_reqd)
 				hw_checksum(pkt, pkt_type);
 			else
-		#endif
 				sw_checksum(pkt, pkt_type);
+		#endif
 	}
 }
 
@@ -6419,12 +6419,12 @@ pkt_work_cgnapt_ipv6_prv(
 
 	p_nat->naptedPktCount++;
 
-		#ifdef HW_CHECKSUM_REQ
+		#ifdef CHECKSUM_REQ
 			if (p_nat->hw_checksum_reqd)
 				hw_checksum(pkt, pkt_type);
 			else
-		#endif
 				sw_checksum(pkt, pkt_type);
+		#endif
 }
 
 
@@ -6638,12 +6638,12 @@ pkt_work_cgnapt_ipv6_pub(
 
 	p_nat->naptedPktCount++;
 
-		#ifdef HW_CHECKSUM_REQ
+		#ifdef CHECKSUM_REQ
 			if (p_nat->hw_checksum_reqd)
 				hw_checksum(pkt, pkt_type);
 			else
-		#endif
 				sw_checksum(pkt, pkt_type);
+		#endif
 }
 
 
@@ -6945,12 +6945,12 @@ pkt4_work_cgnapt_ipv6_prv(
 
 		p_nat->naptedPktCount++;
 
-		#ifdef HW_CHECKSUM_REQ
+		#ifdef CHECKSUM_REQ
 			if (p_nat->hw_checksum_reqd)
 				hw_checksum(pkt, pkt_type);
 			else
-		#endif
 				sw_checksum(pkt, pkt_type);
+		#endif
 	}
 }
 
@@ -7170,12 +7170,12 @@ pkt4_work_cgnapt_ipv6_pub(
 
 		p_nat->naptedPktCount++;
 
-		#ifdef HW_CHECKSUM_REQ
+		#ifdef CHECKSUM_REQ
 			if (p_nat->hw_checksum_reqd)
 				hw_checksum(pkt, pkt_type);
 			else
-		#endif
 				sw_checksum(pkt, pkt_type);
+		#endif
 	}
 }
 
