@@ -2420,6 +2420,7 @@ static void cmd_vfw_clearstats_parsed(__attribute__ ((unused))
               rte_vfw_counter_table[i].pkts_drop_ttl = 0;
               rte_vfw_counter_table[i].pkts_drop_bad_size = 0;
               rte_vfw_counter_table[i].pkts_drop_fragmented = 0;
+              rte_vfw_counter_table[i].pkts_drop_unsupported_type = 0;
               rte_vfw_counter_table[i].pkts_drop_without_arp_entry = 0;
               rte_vfw_counter_table[i].internal_time_sum = 0;
               rte_vfw_counter_table[i].external_time_sum = 0;
