@@ -486,7 +486,7 @@ void ifm_update_linkstatus(uint8_t port_id, uint16_t linkstatus)
 				status = rte_eth_dev_set_link_down(port_id);
 				if (status < 0)
 				{
-					rte_panic("(%" PRIu32 "): PMD set link down error %"
+					printf("(%" PRIu32 "): PMD set link down... continuing...%"
 							PRId32 "\n", port_id, status);
 				}
 			}
