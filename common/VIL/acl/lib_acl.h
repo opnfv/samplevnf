@@ -94,17 +94,6 @@ int lib_acl_parse_config(struct lib_acl *plib_acl,
 		char *arg_name, char *arg_value,
 		uint32_t *libacl_n_rules);
 uint64_t
-lib_acl_pkt_work_key(struct lib_acl *plib_acl,
-	struct rte_mbuf **pkts, uint64_t pkts_mask,
-	uint64_t *pkts_drop_without_rule,
-	void *plib_acl_rule_table_ipv4_active,
-	void *plib_acl_rule_table_ipv6_active,
-	struct pipeline_action_key *action_array_active,
-	struct action_counter_block (*p_action_counter_table)[action_array_max],
-	uint64_t *conntrack_mask,
-	uint64_t *connexist_mask,
-	int lib_acl_ipv4_enabled, int lib_acl_ipv6_enabled);
-uint64_t
 lib_acl_ipv4_pkt_work_key(struct lib_acl *plib_acl,
 	struct rte_mbuf **pkts, uint64_t pkts_mask,
 	uint64_t *pkts_drop_without_rule,
