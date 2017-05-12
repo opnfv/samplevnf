@@ -290,8 +290,8 @@ static struct rte_acl_field_def field_format_ipv6[] = {
 void *lib_acl_create_active_standby_table_ipv4(uint8_t table_num,
 		uint32_t *libacl_n_rules)
 {
-	printf("Create LIBACL active IPV4 Tables rte_socket_id(): %i\n",
-			rte_socket_id());
+	printf("Create LIBACL active IPV4 Tables app_get_socket_id(): %i\n",
+			app_get_socket_id());
 
 	/* Create IPV4 LIBACL Rule Tables */
 	struct rte_table_acl_params common_ipv4_table_libacl_params = {
@@ -308,7 +308,7 @@ void *lib_acl_create_active_standby_table_ipv4(uint8_t table_num,
 	if (table_num == 2)
 		common_ipv4_table_libacl_params.name = "LIBACLIPV4B";
 	return	rte_table_acl_ops.f_create(&common_ipv4_table_libacl_params,
-			rte_socket_id(),
+			app_get_socket_id(),
 			ipv4_entry_size);
 
 
@@ -317,8 +317,8 @@ void *lib_acl_create_active_standby_table_ipv4(uint8_t table_num,
 void *lib_acl_create_active_standby_table_ipv6(uint8_t table_num,
 		uint32_t *libacl_n_rules)
 {
-	printf("Create LIBACL active IPV6 Tables rte_socket_id(): %i\n",
-			rte_socket_id());
+	printf("Create LIBACL active IPV6 Tables app_get_socket_id(): %i\n",
+			app_get_socket_id());
 	/* Create IPV6 LIBACL Rule Tables */
 	struct rte_table_acl_params common_ipv6_table_libacl_params = {
 		.name = "LIBACLIPV6A",
@@ -334,7 +334,7 @@ void *lib_acl_create_active_standby_table_ipv6(uint8_t table_num,
 	if (table_num == 2)
 		common_ipv6_table_libacl_params.name = "LIBACLIPV6B";
 	return	rte_table_acl_ops.f_create(&common_ipv6_table_libacl_params,
-			rte_socket_id(),
+			app_get_socket_id(),
 			ipv6_entry_size);
 
 
@@ -417,376 +417,8 @@ int lib_acl_parse_config(struct lib_acl *plib_acl,
 	/* Parameter not processed in this parse function */
 	return 1;
 }
-/**
- * Main packet processing function.
- * 64 packet bit mask are used to identify which packets to forward.
- * Performs the following:
- *  - Burst lookup packets in the IPv4 ACL Rule Table.
- *  - Burst lookup packets in the IPv6 ACL Rule Table.
- *  - Lookup Action Table, perform actions.
- *  - Burst lookup Connection Tracking, if enabled.
- *  - Lookup MAC address.
- *  - Set bit mask.
- *  - Packets with bit mask set are forwarded
- *
- * @param p
- *  A pointer to the pipeline.
- * @param pkts
- *  A pointer to a burst of packets.
- * @param n_pkts
- *  Number of packets to process.
- * @param arg
- *  A pointer to pipeline specific data.
- *
- * @return
- *  0 on success, negative on error.
- */
-	uint64_t
-lib_acl_pkt_work_key(struct lib_acl *plib_acl,
-	struct rte_mbuf **pkts, uint64_t pkts_mask,
-	uint64_t *pkts_drop_without_rule,
-	void *plib_acl_rule_table_ipv4_active,
-	void *plib_acl_rule_table_ipv6_active,
-	struct pipeline_action_key *action_array_active,
-	struct action_counter_block (*p_action_counter_table)[action_array_max],
-	uint64_t *conntrack_mask,
-	uint64_t *connexist_mask,
-	int lib_acl_ipv4_enabled, int lib_acl_ipv6_enabled)
-{
-
-	uint64_t lookup_hit_mask = 0;
-	uint64_t lookup_hit_mask_ipv4 = 0;
-	uint64_t lookup_hit_mask_ipv6 = 0;
-	uint64_t lookup_miss_mask = 0;
-	int status;
 
 
-	if (lib_acl_ipv4_enabled) {
-		if (ACL_LIB_DEBUG)
-			printf("ACL IPV4 Lookup Mask Before = 0x%"PRIx64"\n",
-					pkts_mask);
-		status = rte_table_acl_ops.f_lookup(
-				plib_acl_rule_table_ipv4_active,
-				pkts, pkts_mask, &lookup_hit_mask_ipv4,
-				(void **) plib_acl->plib_acl_entries_ipv4);
-		if (status < 0)
-			printf("Lookup failed\n");
-		if (ACL_LIB_DEBUG)
-			printf("ACL IPV4 Lookup Mask After = 0x%"PRIx64"\n",
-					lookup_hit_mask_ipv4);
-	}
-
-	if (lib_acl_ipv6_enabled) {
-		if (ACL_LIB_DEBUG)
-			printf("ACL IPV6 Lookup Mask Before = 0x%"PRIx64"\n",
-					pkts_mask);
-		status = rte_table_acl_ops.f_lookup(
-				plib_acl_rule_table_ipv6_active,
-				pkts, pkts_mask, &lookup_hit_mask_ipv6,
-				(void **) plib_acl->plib_acl_entries_ipv6);
-		if (status < 0)
-			printf("Lookup Failed\n");
-		if (ACL_LIB_DEBUG)
-			printf("ACL IPV6 Lookup Mask After = 0x%"PRIx64"\n",
-					lookup_hit_mask_ipv6);
-	}
-
-	/* Merge lookup results since we process both IPv4 and IPv6 below */
-	lookup_hit_mask = lookup_hit_mask_ipv4 | lookup_hit_mask_ipv6;
-	if (ACL_LIB_DEBUG)
-		printf("ACL Lookup Mask After = 0x%"PRIx64"\n",
-				lookup_hit_mask);
-
-	lookup_miss_mask = pkts_mask & (~lookup_hit_mask);
-	pkts_mask = lookup_hit_mask;
-	*pkts_drop_without_rule += __builtin_popcountll(lookup_miss_mask);
-	if (ACL_LIB_DEBUG)
-		printf("pkt_work_acl_key pkts_drop: %" PRIu64 " n_pkts: %u\n",
-				*pkts_drop_without_rule,
-				__builtin_popcountll(lookup_miss_mask));
-	/* bitmap of packets left to process for ARP */
-	uint64_t pkts_to_process = lookup_hit_mask;
-
-	for (; pkts_to_process;) {
-		uint8_t pos = (uint8_t)__builtin_ctzll(pkts_to_process);
-		/* bitmask representing only this packet */
-		uint64_t pkt_mask = 1LLU << pos;
-		/* remove this packet from remaining list */
-		pkts_to_process &= ~pkt_mask;
-		struct rte_mbuf *pkt = pkts[pos];
-
-		uint8_t hdr_chk = RTE_MBUF_METADATA_UINT8(pkt, IP_START);
-
-		hdr_chk = hdr_chk >> IP_VERSION_CHECK;
-
-		if (hdr_chk == IPv4_HDR_VERSION) {
-
-			struct lib_acl_table_entry *entry =
-				(struct lib_acl_table_entry *)
-				plib_acl->plib_acl_entries_ipv4[pos];
-			uint16_t phy_port = entry->head.port_id;
-			uint32_t action_id = entry->action_id;
-
-			if (ACL_LIB_DEBUG)
-				printf("action_id = %u\n", action_id);
-
-			uint32_t dscp_offset = IP_START + IP_HDR_DSCP_OFST;
-
-			if (action_array_active[action_id].action_bitmap &
-					lib_acl_action_count) {
-				p_action_counter_table
-					[plib_acl->action_counter_index]
-					[action_id].packetCount++;
-				p_action_counter_table
-					[plib_acl->action_counter_index]
-					[action_id].byteCount +=
-					rte_pktmbuf_pkt_len(pkt);
-				if (ACL_LIB_DEBUG)
-					printf("Action Count   Packet Count: %"
-						PRIu64 "  Byte Count: %"
-						PRIu64 "\n"
-						, p_action_counter_table
-						[plib_acl->action_counter_index]
-						[action_id].packetCount,
-						p_action_counter_table
-						[plib_acl->action_counter_index]
-						[action_id].byteCount);
-			}
-
-			if (action_array_active[action_id].action_bitmap &
-					lib_acl_action_packet_drop) {
-
-				/* Drop packet by changing the mask */
-				if (ACL_LIB_DEBUG)
-					printf("ACL before drop pkt_mask %"
-							PRIx64", pkt_num %d\n",
-							pkts_mask, pos);
-				pkts_mask &= ~(1LLU << pos);
-				(*pkts_drop_without_rule)++;
-				if (ACL_LIB_DEBUG)
-					printf("ACL after drop pkt_mask %"PRIx64
-						", pkt_num %d, packet_drop%"
-						PRIu64"\n", pkts_mask, pos,
-						*pkts_drop_without_rule);
-			}
-
-			if (action_array_active[action_id].action_bitmap &
-					lib_acl_action_fwd) {
-				phy_port = action_array_active[action_id].
-					fwd_port;
-				entry->head.port_id = phy_port;
-				if (ACL_LIB_DEBUG)
-					printf("Action FWD  Port ID: %"
-							PRIu16"\n", phy_port);
-			}
-
-			if (action_array_active[action_id].action_bitmap &
-					lib_acl_action_nat) {
-				phy_port = action_array_active[action_id].
-					nat_port;
-				entry->head.port_id = phy_port;
-				if (ACL_LIB_DEBUG)
-					printf("Action NAT  Port ID: %"
-							PRIu16"\n", phy_port);
-			}
-
-			if (action_array_active[action_id].action_bitmap &
-					lib_acl_action_dscp) {
-
-				/* Set DSCP priority */
-				uint8_t *dscp = RTE_MBUF_METADATA_UINT8_PTR(pkt,
-						dscp_offset);
-				*dscp = action_array_active[action_id].
-					dscp_priority << 2;
-				if (ACL_LIB_DEBUG)
-					printf("Action DSCP   DSCP Priority: %"
-							PRIu16 "\n", *dscp);
-			}
-
-			if (action_array_active[action_id].action_bitmap &
-					lib_acl_action_packet_accept) {
-				if (ACL_LIB_DEBUG)
-					printf("Action Accept\n");
-
-				if (action_array_active[action_id].action_bitmap
-						& lib_acl_action_conntrack) {
-
-					/* Set conntrack bit for this pkt */
-					*conntrack_mask |= pkt_mask;
-					if (ACL_LIB_DEBUG)
-						printf("ACL CT enabled: 0x%"
-							PRIx64"  pkt_mask: 0x%"
-							PRIx64"\n",
-							*conntrack_mask,
-							pkt_mask);
-			}
-
-				if (action_array_active[action_id].action_bitmap
-						& lib_acl_action_connexist) {
-
-					/* Set conntrack bit for this pkt */
-					*conntrack_mask |= pkt_mask;
-
-					/* Set connexist bit for this pkt for
-					 * public -> private */
-					/* Private -> public packet will open
-					 * the connection */
-					if (action_array_active[action_id].
-							private_public ==
-							lib_acl_public_private)
-						*connexist_mask |= pkt_mask;
-
-					if (ACL_LIB_DEBUG)
-						printf("Connexist ENB CT:0x%"
-							PRIx64"  connexist: 0x%"
-							PRIx64"  pkt_mask: 0x%"
-							PRIx64"\n",
-							*conntrack_mask,
-							*connexist_mask,
-							pkt_mask);
-				}
-			}
-		}
-
-		if (hdr_chk == IPv6_HDR_VERSION) {
-
-			struct lib_acl_table_entry *entry =
-				(struct lib_acl_table_entry *)
-				plib_acl->plib_acl_entries_ipv6[pos];
-			uint16_t phy_port = entry->head.port_id;
-			uint32_t action_id = entry->action_id;
-
-			if (ACL_LIB_DEBUG)
-				printf("action_id = %u\n", action_id);
-
-			if (action_array_active[action_id].action_bitmap &
-					lib_acl_action_count) {
-				p_action_counter_table
-					[plib_acl->action_counter_index]
-					[action_id].packetCount++;
-				p_action_counter_table
-					[plib_acl->action_counter_index]
-					[action_id].byteCount +=
-					rte_pktmbuf_pkt_len(pkt);
-				if (ACL_LIB_DEBUG)
-					printf("Action Count   Packet Count: %"
-						PRIu64 "  Byte Count: %"
-						PRIu64 "\n",
-						p_action_counter_table
-						[plib_acl->action_counter_index]
-						[action_id].packetCount,
-						p_action_counter_table
-						[plib_acl->action_counter_index]
-						[action_id].byteCount);
-			}
-
-			if (action_array_active[action_id].action_bitmap &
-					lib_acl_action_packet_drop) {
-				/* Drop packet by changing the mask */
-				if (ACL_LIB_DEBUG)
-					printf("ACL before drop pkt_mask %"
-							PRIx64", pkt_num %d\n",
-							pkts_mask, pos);
-				pkts_mask &= ~(1LLU << pos);
-				(*pkts_drop_without_rule)++;
-				if (ACL_LIB_DEBUG)
-					printf("ACL after drop pkt_mask %"PRIx64
-						", pkt_num %d, packet_drop %"
-						PRIu64 "\n", pkts_mask, pos,
-						*pkts_drop_without_rule);
-
-			}
-
-			if (action_array_active[action_id].action_bitmap &
-					lib_acl_action_fwd) {
-				phy_port = action_array_active[action_id].
-					fwd_port;
-				entry->head.port_id = phy_port;
-				if (ACL_LIB_DEBUG)
-					printf("Action FWD  Port ID: %"
-							PRIu16"\n", phy_port);
-			}
-
-			if (action_array_active[action_id].action_bitmap &
-					lib_acl_action_nat) {
-				phy_port = action_array_active[action_id].
-					nat_port;
-				entry->head.port_id = phy_port;
-				if (ACL_LIB_DEBUG)
-					printf("Action NAT  Port ID: %"
-							PRIu16"\n", phy_port);
-			}
-
-			if (action_array_active[action_id].action_bitmap &
-					lib_acl_action_dscp) {
-
-				/* Set DSCP priority */
-				uint32_t dscp_offset = IP_START +
-					IP_HDR_DSCP_OFST_IPV6;
-				uint16_t *dscp = RTE_MBUF_METADATA_UINT16_PTR(
-						pkt, dscp_offset);
-				uint16_t temp = *dscp;
-				uint16_t dscp_value = (rte_bswap16(temp) &
-						0XF00F);
-				uint8_t dscp_store =
-					action_array_active
-					[action_id].dscp_priority << 2;
-				uint16_t dscp_temp = dscp_store;
-
-				dscp_temp = dscp_temp << 4;
-				*dscp = rte_bswap16(dscp_temp | dscp_value);
-				if (ACL_LIB_DEBUG)
-					printf("Action DSCP   DSCP Priority: %"
-							PRIu16"\n", *dscp);
-			}
-
-			if (action_array_active[action_id].action_bitmap
-					& lib_acl_action_packet_accept) {
-				if (ACL_LIB_DEBUG)
-					printf("Action Accept\n");
-
-				if (action_array_active[action_id].action_bitmap
-						& lib_acl_action_conntrack) {
-
-					/* Set conntrack bit for this pkt */
-					*conntrack_mask |= pkt_mask;
-					if (ACL_LIB_DEBUG)
-						printf("ACL CT enabled: 0x%"
-							PRIx64" pkt_mask: 0x%"
-							PRIx64"\n",
-							*conntrack_mask,
-							pkt_mask);
-				}
-
-				if (action_array_active[action_id].action_bitmap
-						& lib_acl_action_connexist) {
-
-					/* Set conntrack bit for this pkt */
-					*conntrack_mask |= pkt_mask;
-
-					/* Set connexist bit for this pkt for
-					 * public -> private */
-					/* Private -> public packet will open
-					 * the connection */
-					if (action_array_active[action_id].
-							private_public ==
-							lib_acl_public_private)
-						*connexist_mask |= pkt_mask;
-
-					if (ACL_LIB_DEBUG)
-						printf("Connexist ENB CT:0x%"
-							PRIx64"  connexist: 0x%"
-							PRIx64"  pkt_mask: 0x%"
-							PRIx64"\n",
-							*conntrack_mask,
-							*connexist_mask,
-							pkt_mask);
-				}
-			}
-		}
-	}
-	return pkts_mask;
-}
 /**
  * Main packet processing function.
  * 64 packet bit mask are used to identify which packets to forward.
