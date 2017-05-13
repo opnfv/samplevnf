@@ -769,9 +769,15 @@ app_init_link(struct app_params *app)
 						ETH_TXQ_FLAGS_NOXSUMUDP);
 		}
 
-		if (ifm_port_setup(p_link->pmd_id, &port_config[i]))
-			rte_panic("Port Setup Failed: %s - %" PRIu32
+		if (ifm_port_setup(p_link->pmd_id, &port_config[i])) {
+                        printf("Failed to configure port %s - %"PRIu32
+                               ".\n", p_link->name, p_link->pmd_id);
+                        printf("Try again with offload disabled....\n");
+                        port_config[i].tx_conf.txq_flags |= ETH_TXQ_FLAGS_NOOFFLOADS;
+                        if (ifm_port_setup (p_link->pmd_id, &port_config[i]))
+			    rte_panic("Port Setup Failed: %s - %" PRIu32
 					"\n", p_link->name, p_link->pmd_id);
+                }
 
 		app_link_up_internal(app, p_link);
 	}
