@@ -258,6 +258,30 @@ build_vnfs()
 	popd
 }
 
+#--- Add non intractive option to build vnfs
+if [[ "$1" = "--silient" ]];then
+    pushd $VNF_CORE
+
+    echo "Install required libraries..."
+    touch .agree
+    install_libs
+
+    echo "Download dpdk for VNF build..."
+    download_dpdk_zip
+
+    echo "Build dpdk..."
+    install_dpdk
+
+    echo "Setup hugepages..."
+    setup_hugepages
+
+    echo "build VNFS..."
+    build_vnfs
+
+    popd
+    exit
+fi
+
 SETUP_PROXY="setup_http_proxy"
 STEPS[1]="step_1"
 STEPS[2]="step_2"
