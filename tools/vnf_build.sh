@@ -262,6 +262,18 @@ build_vnfs()
 if [[ "$1" = "--silient" ]];then
     pushd $VNF_CORE
 
+    echo "Setup proxy if needed..."
+    http_proxy=$2
+    https_proxy=$3
+    if [[ "$http_proxy" != "" ]]; then
+         export http_proxy=$http_proxy
+         export https_proxy=$http_proxy
+    fi
+
+    if [[ "$https_proxy" != "" ]]; then
+         export https_proxy=$https_proxy
+    fi
+
     echo "Install required libraries..."
     touch .agree
     install_libs
