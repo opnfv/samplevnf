@@ -1,0 +1,1 @@
+cmd_/home/isb/samplevnf/dpdk/x86_64-native-linuxapp-gcc/build/lib/librte_eal/linuxapp/kni/built-in.o :=  rm -f /home/isb/samplevnf/dpdk/x86_64-native-linuxapp-gcc/build/lib/librte_eal/linuxapp/kni/built-in.o; ar rcsD /home/isb/samplevnf/dpdk/x86_64-native-linuxapp-gcc/build/lib/librte_eal/linuxapp/kni/built-in.o

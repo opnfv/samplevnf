@@ -1,0 +1,341 @@
+[EAL]
+n = 4
+
+[PIPELINE0]
+type = MASTER
+core = s0c0
+msgq_in = MSGQ-REQ-PIPELINE0
+msgq_out = MSGQ-RSP-PIPELINE0
+timer_period = 1
+
+[PIPELINE1]
+type = ARPICMP
+core = s0c1
+pktq_in = SWQ0
+pktq_out = TXQ0.0 TXQ1.0
+msgq_in = MSGQ-REQ-PIPELINE1
+msgq_out = MSGQ-RSP-PIPELINE1
+timer_period = 1
+arp_route_tbl = (98106414,FFFFFF00,0,98106414)
+arp_route_tbl = (98102814,FFFFFF00,1,98102814)
+nd_route_tbl = (0064:ff9b:0:0:0:0:9810:6414,120,0,0064:ff9b:0:0:0:0:9810:6414)
+nd_route_tbl = (0064:ff9b:0:0:0:0:9810:2814,120,1,0064:ff9b:0:0:0:0:9810:2814)
+pktq_in_prv = RXQ0.0
+prv_to_pub_map = (0, 1)
+ports_mac_list = 3c:fd:fe:a1:2c:7A 3c:fd:fe:a1:2c:7B
+
+[PIPELINE2]
+type = TIMER
+core = s0c2
+msgq_in = MSGQ-REQ-PIPELINE2
+msgq_out = MSGQ-RSP-PIPELINE2
+timer_period = 1
+n_flows = 1048576
+
+[PIPELINE3]
+type = TXRX
+core = s0c3
+pktq_in = RXQ0.0 RXQ1.0
+pktq_out = SWQ1 SWQ2 SWQ0
+msgq_in = MSGQ-REQ-PIPELINE3
+msgq_out = MSGQ-RSP-PIPELINE3
+timer_period = 1
+pipeline_txrx_type = RXRX
+dest_if_offset = 176
+
+[PIPELINE4]
+type = LOADB
+core = s0c4
+pktq_in = SWQ1 SWQ2
+pktq_out = SWQ3 SWQ4
+msgq_in = MSGQ-REQ-PIPELINE4
+msgq_out = MSGQ-RSP-PIPELINE4
+timer_period = 1
+outport_offset = 136
+n_vnf_threads = 1
+prv_que_handler = (0,)
+
+[PIPELINE5]
+type = CGNAPT
+core = s0c5
+pktq_in = SWQ3 SWQ4
+pktq_out = SWQ5 SWQ6
+msgq_in = MSGQ-REQ-PIPELINE5
+msgq_out = MSGQ-RSP-PIPELINE5
+timer_period = 100
+phyport_offset = 204
+n_flows = 1048576
+key_offset = 192
+key_size = 8
+hash_offset = 200
+max_clients_per_ip = 65535
+max_port_per_client = 10
+public_ip_port_range = 98103214:(1, 65535)
+vnf_set = (3,4,5)
+pkt_type = ipv4
+cgnapt_meta_offset = 128
+prv_que_handler = (0,)
+
+[PIPELINE6]
+type = TXRX
+core = s0c6
+pktq_in = SWQ5 SWQ6
+pktq_out = TXQ0.1 TXQ1.1
+msgq_in = MSGQ-REQ-PIPELINE6
+msgq_out = MSGQ-RSP-PIPELINE6
+timer_period = 1
+pipeline_txrx_type = TXTX
+dest_if_offset = 176
+
+[MEMPOOL0]
+buffer_size = 2304
+pool_size = 32768
+cache_size = 256
+cpu = 0
+
+[LINK0]
+; pmd_id = 0
+promisc = yes
+arp_q = 0
+tcp_syn_q = 0
+ip_local_q = 0
+tcp_local_q = 0
+udp_local_q = 0
+sctp_local_q = 0
+
+[LINK1]
+; pmd_id = 1
+promisc = yes
+arp_q = 0
+tcp_syn_q = 0
+ip_local_q = 0
+tcp_local_q = 0
+udp_local_q = 0
+sctp_local_q = 0
+
+[RXQ0.0]
+mempool = MEMPOOL0
+size = 128
+burst = 32
+
+[RXQ1.0]
+mempool = MEMPOOL0
+size = 128
+burst = 32
+
+[TXQ0.0]
+size = 512
+burst = 32
+dropless = no
+
+[TXQ1.0]
+size = 512
+burst = 32
+dropless = no
+
+[TXQ0.1]
+size = 512
+burst = 32
+dropless = no
+
+[TXQ1.1]
+size = 512
+burst = 32
+dropless = no
+
+[SWQ0]
+size = 256
+burst_read = 32
+burst_write = 32
+dropless = no
+n_retries = 0
+cpu = 0
+ipv4_frag = no
+ipv6_frag = no
+ipv4_ras = no
+ipv6_ras = no
+
+[SWQ1]
+size = 256
+burst_read = 32
+burst_write = 32
+dropless = no
+n_retries = 0
+cpu = 0
+ipv4_frag = no
+ipv6_frag = no
+ipv4_ras = no
+ipv6_ras = no
+
+[SWQ2]
+size = 256
+burst_read = 32
+burst_write = 32
+dropless = no
+n_retries = 0
+cpu = 0
+ipv4_frag = no
+ipv6_frag = no
+ipv4_ras = no
+ipv6_ras = no
+
+[SWQ3]
+size = 256
+burst_read = 32
+burst_write = 32
+dropless = no
+n_retries = 0
+cpu = 0
+ipv4_frag = no
+ipv6_frag = no
+ipv4_ras = no
+ipv6_ras = no
+
+[SWQ4]
+size = 256
+burst_read = 32
+burst_write = 32
+dropless = no
+n_retries = 0
+cpu = 0
+ipv4_frag = no
+ipv6_frag = no
+ipv4_ras = no
+ipv6_ras = no
+
+[SWQ5]
+size = 256
+burst_read = 32
+burst_write = 32
+dropless = no
+n_retries = 0
+cpu = 0
+ipv4_frag = no
+ipv6_frag = no
+ipv4_ras = no
+ipv6_ras = no
+
+[SWQ6]
+size = 256
+burst_read = 32
+burst_write = 32
+dropless = no
+n_retries = 0
+cpu = 0
+ipv4_frag = no
+ipv6_frag = no
+ipv4_ras = no
+ipv6_ras = no
+
+[MSGQ-REQ-PIPELINE0]
+size = 64
+cpu = 0
+
+[MSGQ-RSP-PIPELINE0]
+size = 64
+cpu = 0
+
+[MSGQ-REQ-CORE-s0c0]
+size = 64
+cpu = 0
+
+[MSGQ-RSP-CORE-s0c0]
+size = 64
+cpu = 0
+
+[MSGQ-REQ-PIPELINE1]
+size = 64
+cpu = 0
+
+[MSGQ-RSP-PIPELINE1]
+size = 64
+cpu = 0
+
+[MSGQ-REQ-CORE-s0c1]
+size = 64
+cpu = 0
+
+[MSGQ-RSP-CORE-s0c1]
+size = 64
+cpu = 0
+
+[MSGQ-REQ-PIPELINE2]
+size = 64
+cpu = 0
+
+[MSGQ-RSP-PIPELINE2]
+size = 64
+cpu = 0
+
+[MSGQ-REQ-CORE-s0c2]
+size = 64
+cpu = 0
+
+[MSGQ-RSP-CORE-s0c2]
+size = 64
+cpu = 0
+
+[MSGQ-REQ-PIPELINE3]
+size = 64
+cpu = 0
+
+[MSGQ-RSP-PIPELINE3]
+size = 64
+cpu = 0
+
+[MSGQ-REQ-CORE-s0c3]
+size = 64
+cpu = 0
+
+[MSGQ-RSP-CORE-s0c3]
+size = 64
+cpu = 0
+
+[MSGQ-REQ-PIPELINE4]
+size = 64
+cpu = 0
+
+[MSGQ-RSP-PIPELINE4]
+size = 64
+cpu = 0
+
+[MSGQ-REQ-CORE-s0c4]
+size = 64
+cpu = 0
+
+[MSGQ-RSP-CORE-s0c4]
+size = 64
+cpu = 0
+
+[MSGQ-REQ-PIPELINE5]
+size = 64
+cpu = 0
+
+[MSGQ-RSP-PIPELINE5]
+size = 64
+cpu = 0
+
+[MSGQ-REQ-CORE-s0c5]
+size = 64
+cpu = 0
+
+[MSGQ-RSP-CORE-s0c5]
+size = 64
+cpu = 0
+
+[MSGQ-REQ-PIPELINE6]
+size = 64
+cpu = 0
+
+[MSGQ-RSP-PIPELINE6]
+size = 64
+cpu = 0
+
+[MSGQ-REQ-CORE-s0c6]
+size = 64
+cpu = 0
+
+[MSGQ-RSP-CORE-s0c6]
+size = 64
+cpu = 0
+
