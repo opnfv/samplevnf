@@ -24,8 +24,9 @@ VNF_DIR      := VNFs
 ACL          := $(VNF_DIR)/vACL
 FW           := $(VNF_DIR)/vFW
 CGNAPT       := $(VNF_DIR)/vCGNAPT
+UDP_Replay   := $(VNF_DIR)/UDP_Replay
 
-subdirs      := $(ACL) $(CGNAPT) $(FW)
+subdirs      := $(ACL) $(CGNAPT) $(FW) $(UDP_Replay)
 
 .PHONY: $(TARGETS) $(subdirs)
 
