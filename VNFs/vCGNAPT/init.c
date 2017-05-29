@@ -24,6 +24,7 @@
 #include <rte_ip.h>
 #include <rte_eal.h>
 #include <rte_malloc.h>
+#include <rte_version.h>
 
 #include "app.h"
 #include "pipeline.h"
@@ -600,6 +601,8 @@ app_link_set_tcp_syn_filter(struct app_params *app, struct app_link_params *cp)
 	}
 }
 
+/* rte_eth_dev is removed in DPDK version 16.11 and onwards */
+#if RTE_VERSION < 0x100b0000
 static int
 app_link_is_virtual(__rte_unused struct app_link_params *p)
 {
@@ -611,6 +614,8 @@ app_link_is_virtual(__rte_unused struct app_link_params *p)
 }
 #endif
 
+#endif
+
 void
 app_link_up_internal(__rte_unused struct app_params *app, struct app_link_params *cp)
 {
@@ -619,11 +624,12 @@ app_link_up_internal(__rte_unused struct app_params *app, struct app_link_params
 	int status;
 	struct rte_eth_link link;
 
+#if RTE_VERSION < 0x100b0000
 	if (app_link_is_virtual(cp)) {
 		cp->state = 1;
 		return;
 	}
-
+#endif
 
 	/* For each link, add filters for IP of current link */
 	if (cp->ip != 0) {
@@ -739,10 +745,13 @@ app_link_down_internal(__rte_unused struct app_params *app, struct app_link_para
 	int status;
 	struct rte_eth_link link;
 
+#if RTE_VERSION < 0x100b0000
 	if (app_link_is_virtual(cp)) {
 		cp->state = 0;
 		return;
 	}
+#endif
+
 	rte_eth_link_get(cp->pmd_id, &link);
 	if (link.link_status) {
 		/* PMD link down */
