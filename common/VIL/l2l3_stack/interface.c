@@ -453,6 +453,7 @@ void ifm_update_linkstatus(uint8_t port_id, uint16_t linkstatus)
 		rte_eth_link_get(port_id, &link);
 		if (linkstatus == IFM_ETH_LINK_UP) {
 			port->admin_status = IFM_ETH_LINK_UP;
+			port->link_status = IFM_ETH_LINK_UP;
 			if(!link.link_status) {
 				if (rte_eth_dev_set_link_up(port_id) < 0) {
 					RTE_LOG(INFO, IFM,
@@ -481,6 +482,7 @@ void ifm_update_linkstatus(uint8_t port_id, uint16_t linkstatus)
 		{
 			int status;
 			port->admin_status = IFM_ETH_LINK_DOWN;
+			port->link_status = IFM_ETH_LINK_DOWN;
 			/* need to check the following if */
 			if(link.link_status) {
 				status = rte_eth_dev_set_link_down(port_id);

@@ -491,7 +491,7 @@ get_dest_mac_for_nexthop(uint32_t next_hop_ip,
 	arp_key.port_id = out_phy_port;
 	arp_key.ip = next_hop_ip;
 
-	arp_data = retrieve_arp_entry(arp_key);
+	arp_data = retrieve_arp_entry(arp_key, DYNAMIC_ARP);
 	if (arp_data == NULL) {
 		printf("ARP entry is not found for ip %x, port %d\n",
 					 next_hop_ip, out_phy_port);
