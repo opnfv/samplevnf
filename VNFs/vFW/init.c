@@ -24,6 +24,7 @@
 #include <rte_ip.h>
 #include <rte_eal.h>
 #include <rte_malloc.h>
+#include <rte_version.h>
 
 #include "app.h"
 #include "pipeline.h"
@@ -536,6 +537,8 @@ app_link_filter_sctp_del(struct app_link_params *l1, struct app_link_params *l2)
 		&filter);
 }
 
+/* rte_eth_dev is removed in DPDK version 16.11 and onwards */
+#if RTE_VERSION < 0x100b0000
 static int
 app_link_is_virtual(struct app_link_params *p)
 {
@@ -547,7 +550,7 @@ app_link_is_virtual(struct app_link_params *p)
 
         return 0;
 }
-
+#endif
 
 void
 app_link_up_internal(__rte_unused struct app_params *app,
@@ -556,11 +559,12 @@ app_link_up_internal(__rte_unused struct app_params *app,
 	if(app == NULL || cp == NULL)
 		printf("NULL Pointers");
 
+#if RTE_VERSION < 0x100b0000
         if (app_link_is_virtual(cp)) {
                 cp->state = 1;
                 return;
         }
-
+#endif
 	ifm_update_linkstatus(cp->pmd_id, IFM_ETH_LINK_UP);
 
 	/* Mark link as UP */
@@ -574,11 +578,12 @@ app_link_down_internal(__rte_unused struct app_params *app,
 	if(app == NULL || cp == NULL)
 		printf("NULL Pointers");
 
+#if RTE_VERSION < 0x100b0000
         if (app_link_is_virtual(cp)) {
                 cp->state = 0;
                 return;
         }
-
+#endif
 	ifm_update_linkstatus(cp->pmd_id, IFM_ETH_LINK_DOWN);
 	/* Mark link as DOWN */
 	cp->state = 0;
