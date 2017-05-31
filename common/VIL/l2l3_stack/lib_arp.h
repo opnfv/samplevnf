@@ -27,8 +27,8 @@
 #define ARP_TIMER_EXPIRY 1800	 /**< in Seconds, TIMER for ARP Expiry */
 #define TIMER_MILLISECOND 1
 #define RTE_LOGTYPE_LIBARP RTE_LOGTYPE_USER1
-#define MAX_ND_RT_ENTRY 16
-#define MAX_ARP_RT_ENTRY 16
+#define MAX_ND_RT_ENTRY 32
+#define MAX_ARP_RT_ENTRY 32
 
 /**
 * A structure for Route table entries of IPv4

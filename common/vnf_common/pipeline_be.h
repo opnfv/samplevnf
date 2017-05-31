@@ -183,31 +183,31 @@ pipeline_port_out_params_get_ops(struct pipeline_port_out_params  *p)
 }
 
 #ifndef PIPELINE_NAME_SIZE
-#define PIPELINE_NAME_SIZE                       32
+#define PIPELINE_NAME_SIZE                       64
 #endif
 
 #ifndef PIPELINE_MAX_PORT_IN
-#define PIPELINE_MAX_PORT_IN                     16
+#define PIPELINE_MAX_PORT_IN                     64
 #endif
 
 #ifndef PIPELINE_MAX_PORT_OUT
-#define PIPELINE_MAX_PORT_OUT                    16
+#define PIPELINE_MAX_PORT_OUT                    64
 #endif
 
 #ifndef PIPELINE_MAX_TABLES
-#define PIPELINE_MAX_TABLES                      16
+#define PIPELINE_MAX_TABLES                      64
 #endif
 
 #ifndef PIPELINE_MAX_MSGQ_IN
-#define PIPELINE_MAX_MSGQ_IN                     16
+#define PIPELINE_MAX_MSGQ_IN                     64
 #endif
 
 #ifndef PIPELINE_MAX_MSGQ_OUT
-#define PIPELINE_MAX_MSGQ_OUT                    16
+#define PIPELINE_MAX_MSGQ_OUT                    64
 #endif
 
 #ifndef PIPELINE_MAX_ARGS
-#define PIPELINE_MAX_ARGS                        32
+#define PIPELINE_MAX_ARGS                        64
 #endif
 
 struct pipeline_params {
