@@ -101,7 +101,8 @@ struct rte_ct_cnxn_tracker *cgnat_cnxn_tracker;
 /***** Common Port Allocation declarations *****/
 
 struct rte_ring *port_alloc_ring[MAX_CGNAPT_SETS] = { NULL, NULL, NULL, NULL,
-						NULL, NULL, NULL, NULL };
+						NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                                NULL, NULL, NULL, NULL};
 const char *napt_port_alloc_ring_name[MAX_CGNAPT_SETS] = {
 	"NAPT_PORT_ALLOC_0 ",
 	"NAPT_PORT_ALLOC_1 ",
@@ -110,7 +111,15 @@ const char *napt_port_alloc_ring_name[MAX_CGNAPT_SETS] = {
 	"NAPT_PORT_ALLOC_4 ",
 	"NAPT_PORT_ALLOC_5 ",
 	"NAPT_PORT_ALLOC_6 ",
-	"NAPT_PORT_ALLOC_7 "
+	"NAPT_PORT_ALLOC_7 ",
+	"NAPT_PORT_ALLOC_8 ",
+	"NAPT_PORT_ALLOC_9 ",
+	"NAPT_PORT_ALLOC_10 ",
+	"NAPT_PORT_ALLOC_11 ",
+	"NAPT_PORT_ALLOC_12 ",
+	"NAPT_PORT_ALLOC_13 ",
+	"NAPT_PORT_ALLOC_14 ",
+	"NAPT_PORT_ALLOC_16 "
 };
 
 int vnf_set_count = -1;

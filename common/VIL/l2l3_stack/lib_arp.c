@@ -57,7 +57,7 @@
 #define is_multicast_ipv4_addr(ipv4_addr) \
 	(((rte_be_to_cpu_32((ipv4_addr)) >> 24) & 0x000000FF) == 0xE0)
 
-extern uint8_t prv_in_port_a[16];
+extern uint8_t prv_in_port_a[PIPELINE_MAX_PORT_IN];
 extern uint32_t timer_lcore;
 uint32_t arp_timeout = ARP_TIMER_EXPIRY;
 
