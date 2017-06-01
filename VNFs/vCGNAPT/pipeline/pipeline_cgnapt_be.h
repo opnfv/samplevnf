@@ -560,7 +560,7 @@ struct pub_ip_range {
 int create_napt_common_table(uint32_t nFlows);
 struct rte_mempool *napt_port_pool;
 
-#define MAX_CGNAPT_SETS 8
+#define MAX_CGNAPT_SETS 16
 
 /**
  * A structure defining a bulk port allocation element.

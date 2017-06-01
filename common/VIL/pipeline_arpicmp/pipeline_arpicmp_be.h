@@ -61,8 +61,8 @@ struct ether_addr *get_link_hw_addr(uint8_t out_port);
 #endif
 
 
-#define MAX_ARP_RT_ENTRY 16
-#define MAX_ND_RT_ENTRY 16
+#define MAX_ARP_RT_ENTRY 32
+#define MAX_ND_RT_ENTRY 32
 
 #define ND_IPV6_ADDR_SIZE 16	/* 16 Byte of IPv6 Address */
 

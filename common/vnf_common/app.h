@@ -33,7 +33,7 @@
 #include "pipeline.h"
 
 #define APP_PARAM_NAME_SIZE                      PIPELINE_NAME_SIZE
-#define APP_LINK_PCI_BDF_SIZE                    16
+#define APP_LINK_PCI_BDF_SIZE                    32
 struct app_link_params *fdir_p_link;
 struct app_mempool_params {
 	char *name;
@@ -234,7 +234,7 @@ struct app_thread_pipeline_data {
 };
 
 #ifndef APP_MAX_THREAD_PIPELINES
-#define APP_MAX_THREAD_PIPELINES                 16
+#define APP_MAX_THREAD_PIPELINES                 32
 #endif
 
 #ifndef APP_THREAD_TIMER_PERIOD
@@ -262,7 +262,7 @@ struct app_thread_data {
 };
 
 #ifndef APP_MAX_LINKS
-#define APP_MAX_LINKS                            16
+#define APP_MAX_LINKS                            32
 #endif
 
 struct app_eal_params {
@@ -386,11 +386,11 @@ struct app_eal_params {
 #define APP_MAX_PKTQ_TM                          APP_MAX_LINKS
 
 #ifndef APP_MAX_PKTQ_SOURCE
-#define APP_MAX_PKTQ_SOURCE                      16
+#define APP_MAX_PKTQ_SOURCE                      32
 #endif
 
 #ifndef APP_MAX_PKTQ_SINK
-#define APP_MAX_PKTQ_SINK                        16
+#define APP_MAX_PKTQ_SINK                        32
 #endif
 
 #ifndef APP_MAX_MSGQ
