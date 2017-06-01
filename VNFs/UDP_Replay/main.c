@@ -1243,7 +1243,7 @@ simple_ipv4_replay_8pkts(struct rte_mbuf *m[8], uint8_t portid, struct lcore_con
                 /* if not already processed as a arp/icmp pkt */
                 if (a[i]) {
                         port->transmit_single_pkt(port, m[i]);
-                        tx_pkt_count[(uint64_t)port]++;
+                        tx_pkt_count[(uint64_t)portid]++;
                 }
         }
 
