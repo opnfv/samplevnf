@@ -42,19 +42,19 @@ This release supports following features as part of vFW:
 This is supported on Ubuntu 14.04 and Ubuntu 16.04 and kernel version less than 4.5
 
    VNFs on BareMetal support:
-     - OS: Ubuntu 14.04 or 16.04 LTS
-     - kernel: < 4.5
-     - http://releases.ubuntu.com/16.04/
-     - Download/Install the image: ubuntu-16.04.1-server-amd64.iso
+		OS: Ubuntu 14.04 or 16.04 LTS
+		kernel: < 4.5
+		http://releases.ubuntu.com/16.04/
+		Download/Install the image: ubuntu-16.04.1-server-amd64.iso
 
    VNFs on Standalone Hypervisor
-     - HOST OS: Ubuntu 14.04 or 16.04 LTS
-     - http://releases.ubuntu.com/16.04/
-     - Download/Install the image: ubuntu-16.04.1-server-amd64.iso
-         - OVS (DPDK) - 2.5
-           - kernel: < 4.5
-         - Hypervisor - KVM
-         - VM OS - Ubuntu 16.04/Ubuntu 14.04
+		HOST OS: Ubuntu 14.04 or 16.04 LTS
+		http://releases.ubuntu.com/16.04/
+		Download/Install the image: ubuntu-16.04.1-server-amd64.iso
+	     -   OVS (DPDK) - 2.5
+		   -   kernel: < 4.5
+	     -   Hypervisor - KVM
+	     -   VM OS - Ubuntu 16.04/Ubuntu 14.04
 
 5. Known Bugs and limitations
 =============================
@@ -74,5 +74,5 @@ Following would be possible enhancement functionalities
 7. References
 =============
 Following links provides additional information
-    .. _QUICKSTART: http://dpdk.org/doc/guides-16.04/linux_gsg/quick_start.html
-    .. _DPDKGUIDE: http://dpdk.org/doc/guides-16.04/prog_guide/index.html
+	.. _QUICKSTART: http://dpdk.org/doc/guides-16.04/linux_gsg/quick_start.html
+	.. _DPDKGUIDE: http://dpdk.org/doc/guides-16.04/prog_guide/index.html
