@@ -1049,8 +1049,9 @@ udp_replay_simple_replay(struct rte_mbuf *m, uint8_t portid, struct lcore_conf *
 	ether_addr_copy(&eth_hdr->s_addr, &tmp.s_addr);
 	ether_addr_copy(&eth_hdr->d_addr, &eth_hdr->s_addr);
 	ether_addr_copy(&tmp.s_addr, &eth_hdr->d_addr);
+        struct ether_hdr *eth_h = rte_pktmbuf_mtod(m, struct ether_hdr *);
 
-	if (RTE_ETH_IS_IPV4_HDR(m->packet_type)) {
+	if ((rte_cpu_to_be_16(eth_h->ether_type)) == ETHER_TYPE_IPv4) {
 		/* Handle IPv4 headers.*/
 		ipv4_hdr = rte_pktmbuf_mtod_offset(m, struct ipv4_hdr *,
 						   sizeof(struct ether_hdr));
@@ -1084,7 +1085,7 @@ udp_replay_simple_replay(struct rte_mbuf *m, uint8_t portid, struct lcore_conf *
 	udp_hdr->src_port = temp_udp.dst_port;
 
 		send_single_packet(m, dst_port);
-	} else if (RTE_ETH_IS_IPV6_HDR(m->packet_type)) {
+	} else if ((rte_cpu_to_be_16(eth_h->ether_type)) == ETHER_TYPE_IPv6) {
 		/* Handle IPv6 headers.*/
 		struct ipv6_hdr *ipv6_hdr,temp_ipv6;
 
@@ -1168,12 +1169,13 @@ get_dst_port(const struct lcore_conf *qconf, struct rte_mbuf *pkt,
 	uint8_t next_hop;
 	struct ipv6_hdr *ipv6_hdr;
 	struct ether_hdr *eth_hdr;
+        struct ether_hdr *eth_h = rte_pktmbuf_mtod(m, struct ether_hdr *);
 
-	if (RTE_ETH_IS_IPV4_HDR(pkt->packet_type)) {
+	if ((rte_cpu_to_be_16(eth_h->ether_type)) == ETHER_TYPE_IPv4) {
 		if (rte_lpm_lookup(qconf->ipv4_lookup_struct, dst_ipv4,
 				&next_hop) != 0)
 			next_hop = portid;
-	} else if (RTE_ETH_IS_IPV6_HDR(pkt->packet_type)) {
+	} else if ((rte_cpu_to_be_16(eth_h->ether_type)) == ETHER_TYPE_IPv6) {
 		eth_hdr = rte_pktmbuf_mtod(pkt, struct ether_hdr *);
 		ipv6_hdr = (struct ipv6_hdr *)(eth_hdr + 1);
 		if (rte_lpm6_lookup(qconf->ipv6_lookup_struct,
