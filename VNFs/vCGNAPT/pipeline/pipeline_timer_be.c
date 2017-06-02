@@ -59,6 +59,7 @@ struct rte_mempool *timer_mempool;
 struct rte_mempool *timer_key_mempool;
 static int timer_objs_mempool_count;
 static int timer_ring_alloc_cnt;
+static uint32_t timer_dyn_timeout = 30;
 uint64_t cgnapt_timeout;
 uint32_t timer_lcore;
 
@@ -312,6 +313,7 @@ pipeline_cgnapt_parse_args(struct pipeline_timer *p,
 {
 	uint32_t dequeue_loop_cnt_present = 0;
 	uint32_t n_flows_present = 0;
+	uint32_t timer_dyn_timeout_present = 0;
 	struct pipeline_timer *p_timer = (struct pipeline_timer *)p;
 	uint32_t i;
 
@@ -337,6 +339,16 @@ pipeline_cgnapt_parse_args(struct pipeline_timer *p,
 			p_timer->dequeue_loop_cnt = atoi(arg_value);
 			printf("dequeue_loop_cnt : %d\n",
 						 p_timer->dequeue_loop_cnt);
+			continue;
+		}
+
+		if (strcmp(arg_name, "timer_dyn_timeout") == 0) {
+			if (timer_dyn_timeout_present)
+				return -1;
+			timer_dyn_timeout_present = 1;
+
+			timer_dyn_timeout = atoi(arg_value);
+			printf("cgnapt dyn timeout: %d\n", timer_dyn_timeout);
 			continue;
 		}
 
@@ -403,13 +415,14 @@ static void *pipeline_timer_init(struct pipeline_params *params, void *arg)
 		return NULL;
 
 	p_timer->dequeue_loop_cnt = 100;
-	cgnapt_timeout = rte_get_tsc_hz() * CGNAPT_DYN_TIMEOUT;
-	printf("cgnapt_timerout%" PRIu64 "", cgnapt_timeout);
 
 	timer_lcore = rte_lcore_id();
 
 	if (pipeline_cgnapt_parse_args(p_timer, params))
 		return NULL;
+
+	cgnapt_timeout = rte_get_tsc_hz() * timer_dyn_timeout;
+	printf("cgnapt_timerout%" PRIu64 "\n", cgnapt_timeout);
 
 	/* Create port alloc buffer */
 
