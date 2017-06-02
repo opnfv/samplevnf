@@ -125,7 +125,7 @@ void timer_thread_dequeue(void)
 	struct timer_key *tk_ptr;
 	int ret;
 
-	ret = rte_ring_sc_dequeue(timer_ring, (void *)&tk_ptr);
+	ret = rte_ring_dequeue(timer_ring, (void *)&tk_ptr);
 	if (ret == -ENOENT)
 		return;
 
