@@ -1,4 +1,4 @@
-# Copyright (c) 2017 Intel Corporation
+# Copyright (c) 2016-2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,21 +16,24 @@ ifeq ($(RTE_SDK),)
 $(error "Please define RTE_SDK environment variable")
 endif
 
-# Default target, can be overridden by command line or environment
+# Default target, can be overriden by command line or environment
 RTE_TARGET ?= x86_64-native-linuxapp-gcc
 
-TARGETS      := all clean
-VNF_DIR      := VNFs
-ACL          := $(VNF_DIR)/vACL
-FW           := $(VNF_DIR)/vFW
-CGNAPT       := $(VNF_DIR)/vCGNAPT
-UDP_Replay   := $(VNF_DIR)/UDP_Replay
+include $(RTE_SDK)/mk/rte.vars.mk
 
-subdirs      := $(ACL) $(CGNAPT) $(FW) $(UDP_Replay)
+# binary name
+APP = UDP_Replay
 
-.PHONY: $(TARGETS) $(subdirs)
+# all source are stored in SRCS-y
+SRCS-y := main.c parse_obj_list.c
 
-$(TARGETS): $(subdirs)
+CFLAGS += -O3 $(USER_FLAGS)
+CFLAGS += $(WERROR_FLAGS)
 
-$(subdirs):
-	$(MAKE) -C $@ $(MAKECMDGOALS)
+# workaround for a gcc bug with noreturn attribute
+# http://gcc.gnu.org/bugzilla/show_bug.cgi?id=12603
+ifeq ($(CONFIG_RTE_TOOLCHAIN_GCC),y)
+CFLAGS_main.o += -Wno-return-type
+endif
+
+include $(RTE_SDK)/mk/rte.extapp.mk

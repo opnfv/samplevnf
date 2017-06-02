@@ -233,7 +233,7 @@ step_3()
 {
         TITLE="Build VNFs"
         CONFIG_NUM=1
-				TEXT[1]="Build all VNFs (vACL, vCGNAPT, vFW)"
+				TEXT[1]="Build all VNFs (vACL, vCGNAPT, vFW, UDP_Replay)"
         FUNC[1]="build_vnfs"
 }
 
