@@ -125,7 +125,7 @@ void timer_thread_dequeue(void)
 	struct timer_key *tk_ptr;
 	int ret;
 
-	ret = rte_ring_sc_dequeue(timer_ring, (void *)&tk_ptr);
+	ret = rte_ring_dequeue(timer_ring, (void *)&tk_ptr);
 	if (ret == -ENOENT)
 		return;
 
@@ -431,8 +431,8 @@ static void *pipeline_timer_init(struct pipeline_params *params, void *arg)
 	if (timer_key_mempool == NULL)
 		rte_panic("timer_key_mempool create error\n");
 
-	timer_ring = rte_ring_create("TIMER_RING",
-						 timer_ring_alloc_cnt, rte_socket_id(), 0);
+	timer_ring = rte_ring_create("TIMER_RING", timer_ring_alloc_cnt,
+			rte_socket_id(), RING_F_SC_DEQ);
 
 	if (timer_ring == NULL)
 		rte_panic("timer_ring creation failed");
