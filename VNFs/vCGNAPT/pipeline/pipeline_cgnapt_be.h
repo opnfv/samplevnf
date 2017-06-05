@@ -756,11 +756,6 @@ int pipeline_cgnapt_msg_req_entry_addm_pair(
 	uint8_t type, uint8_t src_ipv6[16]);
 
 /* CGNAPT Functions */
-extern void rte_pipeline_action_handler_port_ext(
-	struct rte_pipeline *p,
-	uint64_t pkts_mask,
-	struct rte_pipeline_table_entry **entries);
-
 uint64_t pkt_miss_cgnapt(
 	struct pipeline_cgnapt_entry_key *key,
 	struct rte_mbuf *pkt,
