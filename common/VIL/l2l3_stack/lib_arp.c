@@ -34,6 +34,7 @@
 #include <rte_jhash.h>
 #include <rte_cycles.h>
 #include <rte_timer.h>
+#include <tsx.h>
 #include "interface.h"
 #include "l2_proto.h"
 #include "lib_arp.h"
@@ -59,14 +60,19 @@
 
 extern uint8_t prv_in_port_a[PIPELINE_MAX_PORT_IN];
 extern uint32_t timer_lcore;
+extern int USE_RTM_LOCKS;
 uint32_t arp_timeout = ARP_TIMER_EXPIRY;
+uint32_t arp_buffer = ARP_BUF_DEFAULT;
 
 /*ND IPV6 */
 #define INADDRSZ 4
 #define IN6ADDRSZ 16
+#define MAX_PORTS	32
+
 static int my_inet_pton_ipv6(int af, const char *src, void *dst);
 static int inet_pton_ipv6(const char *src, unsigned char *dst);
 static int inet_pton_ipv4(const char *src, unsigned char *dst);
+static void local_arp_cache_init(void);
 extern void convert_prefixlen_to_netmask_ipv6(uint32_t depth,
 								uint8_t netmask_ipv6[]);
 
@@ -101,11 +107,70 @@ uint32_t lib_nd_duplicate_found;
 struct rte_mempool *lib_arp_pktmbuf_tx_pool;
 struct rte_mempool *lib_nd_pktmbuf_tx_pool;
 
-struct rte_mbuf *lib_arp_pkt;
+struct rte_mbuf *lib_arp_pkt[MAX_PORTS];
 struct rte_mbuf *lib_nd_pkt;
 
 uint8_t default_ether_addr[6] = { 0, 0, 0, 0, 1, 1 };
 uint8_t default_ip[4] = { 0, 0, 1, 1 };
+
+uint64_t start_tsc[4];
+uint64_t end_tsc[4];
+#define ticks_per_ms  (rte_get_tsc_hz()/1000)
+
+#define MAX_NUM_ARP_CACHE_MAC_ADDRESS		16
+
+/***** ARP local cache *****/
+struct arp_data *p_arp_data;
+//struct arp_cache arp_local_cache[MAX_PORTS];
+uint8_t arp_cache_hw_laddr_valid[MAX_NUM_ARP_CACHE_MAC_ADDRESS] = {
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0
+};
+
+void prefetch(void)
+{
+	rte_prefetch0(p_arp_data);
+}
+
+struct arp_entry_data *arp_data_ptr[MAX_NUM_ARP_CACHE_MAC_ADDRESS];
+
+struct ether_addr arp_cache_hw_laddr[MAX_NUM_ARP_CACHE_MAC_ADDRESS] = {
+        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
+        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
+        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
+        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
+        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
+        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
+        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
+        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
+        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
+        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
+        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
+        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
+        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
+        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
+        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
+        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} }
+};
+
+/**
+ * A structure defining the mbuf meta data for VFW.
+ */
+struct mbuf_arp_meta_data {
+/* output port stored for RTE_PIPELINE_ACTION_PORT_META */
+       uint32_t output_port;
+       struct rte_mbuf *next;       /* next pointer for chained buffers */
+} __rte_cache_aligned;
+
+static struct arp_entry_data arp_entry_data_default = {
+	.status = COMPLETE,
+	.num_pkts = 0,
+};
+
+/**
+ * memory pool for queued up user pkts.
+ */
+struct rte_mempool *arp_icmp_pktmbuf_tx_pool;
 
 static struct rte_hash_parameters arp_hash_params = {
 	.name = "ARP",
@@ -123,6 +188,24 @@ static struct rte_hash_parameters nd_hash_params = {
 	.key_len = sizeof(struct nd_key_ipv6),
 	.hash_func = rte_jhash,
 	.hash_func_init_val = 0,
+};
+
+struct ether_addr broadcast_ether_addr = {
+       .addr_bytes[0] = 0xFF,
+       .addr_bytes[1] = 0xFF,
+       .addr_bytes[2] = 0xFF,
+       .addr_bytes[3] = 0xFF,
+       .addr_bytes[4] = 0xFF,
+       .addr_bytes[5] = 0xFF,
+};
+
+static const struct ether_addr null_ether_addr = {
+    .addr_bytes[0] = 0x00,
+    .addr_bytes[1] = 0x00,
+    .addr_bytes[2] = 0x00,
+    .addr_bytes[3] = 0x00,
+    .addr_bytes[4] = 0x00,
+    .addr_bytes[5] = 0x00,
 };
 
 struct rte_hash *arp_hash_handle;
@@ -150,18 +233,18 @@ int timer_objs_mempool_count = 70000;
 #define MAX_NUM_ARP_ENTRIES 64
 #define MAX_NUM_ND_ENTRIES 64
 
-uint32_t get_nh(uint32_t, uint32_t *);
+inline uint32_t get_nh(uint32_t, uint32_t *, struct ether_addr *addr);
 void get_nh_ipv6(uint8_t ipv6[], uint32_t *port, uint8_t nhipv6[]);
 
 #define MAX_ARP_DATA_ENTRY_TABLE 7
 
 struct table_arp_entry_data arp_entry_data_table[MAX_ARP_DATA_ENTRY_TABLE] = {
-	{{0, 0, 0, 0, 0, 1}, 1, INCOMPLETE, IPv4(192, 168, 0, 2)},
-	{{0, 0, 0, 0, 0, 2}, 0, INCOMPLETE, IPv4(192, 168, 0, 3)},
-	{{0, 0, 0, 0, 0, 1}, 1, INCOMPLETE, IPv4(30, 40, 50, 60)},
-	{{0, 0, 0, 0, 0, 1}, 1, INCOMPLETE, IPv4(120, 0, 0, 2)},
-	{{0, 0, 0, 0, 0, 4}, 3, INCOMPLETE, IPv4(1, 1, 1, 4)},
-	{{0, 0, 0, 0, 0, 5}, 4, INCOMPLETE, IPv4(1, 1, 1, 5)},
+	{{0, 0, 0, 0, 0, 1}, 1, INCOMPLETE, IPv4(1, 1, 1, 1)},
+	{{0, 0, 0, 0, 0, 2}, 0, INCOMPLETE, IPv4(1, 1, 1, 2)},
+	{{0, 0, 0, 0, 0, 1}, 1, INCOMPLETE, IPv4(1, 1, 1, 3)},
+	{{0, 0, 0, 0, 0, 1}, 1, INCOMPLETE, IPv4(1, 1, 1, 4)},
+	{{0, 0, 0, 0, 0, 4}, 1, INCOMPLETE, IPv4(1, 1, 1, 5)},
+	{{0, 0, 0, 0, 0, 5}, 0, INCOMPLETE, IPv4(1, 1, 1, 6)},
 	{{0, 0, 0, 0, 0, 6}, 1, INCOMPLETE, IPv4(1, 1, 1, 7)},
 };
 
@@ -252,41 +335,51 @@ struct lib_nd_route_table_entry lib_nd_route_table[MAX_ND_RT_ENTRY] = {
 };
 
 struct lib_arp_route_table_entry lib_arp_route_table[MAX_ARP_RT_ENTRY] = {
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0}
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0}
 };
 
 void print_trace(void);
+
+uint32_t get_arp_buf(void)
+{
+       return arp_buffer;
+}
+
+uint8_t arp_cache_dest_mac_present(uint32_t out_port)
+{
+        return p_arp_data->arp_cache_hw_laddr_valid[out_port];
+}
 
 /* Obtain a backtrace and print it to stdout. */
 void print_trace(void)
@@ -307,30 +400,19 @@ void print_trace(void)
 	free(strings);
 }
 
-uint32_t get_nh(uint32_t ip, uint32_t *port)
+uint32_t get_nh(uint32_t ip, uint32_t *port, struct ether_addr *addr)
 {
 	int i = 0;
-	for (i = 0; i < MAX_ARP_RT_ENTRY; i++) {
-		if (((lib_arp_route_table[i].
-					ip & lib_arp_route_table[i].mask) ==
-				 (ip & lib_arp_route_table[i].mask))) {
+	for (i = 0; i < p_arp_data->lib_arp_route_ent_cnt; i++) {
+		if ((p_arp_data->lib_arp_route_table[i].nh_mask) ==
+				 (ip & p_arp_data->lib_arp_route_table[i].mask)) {
 
-			*port = lib_arp_route_table[i].port;
-			lib_arp_nh_found++;
-			return lib_arp_route_table[i].nh;
+			*port = p_arp_data->lib_arp_route_table[i].port;
+			if (arp_cache_dest_mac_present(*port))
+				ether_addr_copy(get_local_link_hw_addr(*port, p_arp_data->lib_arp_route_table[i].nh), addr);
+			return p_arp_data->lib_arp_route_table[i].nh;
 		}
-		if (ARPICMP_DEBUG)
-			printf("No nh match ip 0x%x, port %u, t_ip "
-						 "0x%x, t_port %u, mask 0x%x, r1 %x, r2 %x\n",
-						 ip, *port, lib_arp_route_table[i].ip,
-						 lib_arp_route_table[i].port,
-						 lib_arp_route_table[i].mask,
-						 (lib_arp_route_table[i].ip &
-				lib_arp_route_table[i].mask),
-						 (ip & lib_arp_route_table[i].mask));
 	}
-	if (ARPICMP_DEBUG)
-		printf("No NH - ip 0x%x, port %u\n", ip, *port);
 	lib_arp_no_nh_found++;
 	return 0;
 }
@@ -388,22 +470,30 @@ void get_nh_ipv6(uint8_t ipv6[], uint32_t *port, uint8_t nhipv6[])
 }
 
 /* Added for Multiport changes*/
-int get_dest_mac_addr_port(const uint32_t ipaddr,
+struct arp_entry_data *get_dest_mac_addr_port(const uint32_t ipaddr,
 				 uint32_t *phy_port, struct ether_addr *hw_addr)
 {
-	lib_arp_get_mac_req++;
+	struct arp_entry_data *ret_arp_data = NULL;
 	uint32_t nhip = 0;
+	uint8_t index;
 
-	nhip = get_nh(ipaddr, phy_port);
-	if (nhip == 0) {
+	//lib_arp_get_mac_req++;
+	nhip = get_nh(ipaddr, phy_port, hw_addr);
+	if (unlikely(nhip == 0)) {
 		if (ARPICMP_DEBUG)
 			printf("ARPICMP no nh found for ip %x, port %d\n",
 						 ipaddr, *phy_port);
-		//return 0;
-		return NH_NOT_FOUND;
+		return ret_arp_data;
 	}
 
-	struct arp_entry_data *ret_arp_data = NULL;
+	/* as part of optimization we store mac address in cache
+	 * & thus can be sent without having to retrieve
+	 */
+	if (arp_cache_dest_mac_present(*phy_port)) {
+		//arp_data_ptr[*phy_port]->n_last_update = time(NULL);
+		return &arp_entry_data_default;
+	}
+
 	struct arp_key_ipv4 tmp_arp_key;
 	tmp_arp_key.port_id = *phy_port;	/* Changed for Multi Port */
 	tmp_arp_key.ip = nhip;
@@ -412,117 +502,35 @@ int get_dest_mac_addr_port(const uint32_t ipaddr,
 		printf("%s: nhip: %x, phyport: %d\n", __FUNCTION__, nhip,
 					 *phy_port);
 
-	ret_arp_data = retrieve_arp_entry(tmp_arp_key);
+	ret_arp_data = retrieve_arp_entry(tmp_arp_key, DYNAMIC_ARP);
 	if (ret_arp_data == NULL) {
-		if (ARPICMP_DEBUG) {
-			printf
-					("ARPICMP no arp entry found for ip %x, port %d\n",
-					 ipaddr, *phy_port);
-			print_arp_table();
-		}
-		if (nhip != 0) {
-			if (ARPICMP_DEBUG)
-				printf("CG-NAPT requesting ARP for ip %x, "
-							 "port %d\n", nhip, *phy_port);
-			request_arp(*phy_port, nhip);	//Changed for Multiport
-
-		}
+	        if (ARPICMP_DEBUG && ipaddr)
+                {
+                       RTE_LOG(INFO, LIBARP,"ARPICMP no arp entry found for ip %x, port %u\n", ipaddr, *phy_port);
+                       print_arp_table();
+                }
 		lib_arp_no_arp_entry_found++;
-		return ARP_NOT_FOUND;
-	}
-	ether_addr_copy(&ret_arp_data->eth_addr, hw_addr);
-	lib_arp_arp_entry_found++;
-	if (ARPICMP_DEBUG)
-		printf("%s: ARPICMP hwaddr found\n", __FUNCTION__);
-	return ARP_FOUND;
-}
+	} else if (ret_arp_data->status == COMPLETE) {
+                ether_addr_copy(&ret_arp_data->eth_addr, hw_addr);
+		printf("Setting mac found for port:%d\n", *phy_port);
+		p_arp_data->arp_cache_hw_laddr_valid[*phy_port] = 1;
+		arp_data_ptr[*phy_port] = ret_arp_data;
+		//memcpy(&arp_cache_hw_laddr[*phy_port], hw_addr,
+		//	sizeof(struct ether_addr));
+		index = p_arp_data->arp_local_cache[*phy_port].num_nhip;
+		p_arp_data->arp_local_cache[*phy_port].nhip[index] = nhip;
+		ether_addr_copy(hw_addr, &p_arp_data->arp_local_cache[*phy_port].link_hw_laddr[index]);
+		p_arp_data->arp_local_cache[*phy_port].num_nhip++;
+		lib_arp_arp_entry_found++;
 
-int get_dest_mac_address(const uint32_t ipaddr, uint32_t *phy_port,
-			 struct ether_addr *hw_addr, uint32_t *nhip)
-{
-	lib_arp_get_mac_req++;
+		if (ARPICMP_DEBUG)
+			printf("%s: ARPICMP hwaddr found\n", __FUNCTION__);
+        }
 
-	*nhip = get_nh(ipaddr, phy_port);
-	if (*nhip == 0) {
-		if (ARPICMP_DEBUG && ipaddr)
-			RTE_LOG(INFO, LIBARP,
-				"ARPICMP no nh found for ip %x, port %d\n",
-				ipaddr, *phy_port);
-		return 0;
-	}
+	if (ret_arp_data)
+		ret_arp_data->n_last_update = time(NULL);
 
-	struct arp_entry_data *ret_arp_data = NULL;
-	struct arp_key_ipv4 tmp_arp_key;
-	tmp_arp_key.port_id = *phy_port;
-	tmp_arp_key.ip = *nhip;
-
-	ret_arp_data = retrieve_arp_entry(tmp_arp_key);
-	if (ret_arp_data == NULL) {
-		if (ARPICMP_DEBUG && ipaddr) {
-			RTE_LOG(INFO, LIBARP,
-				"ARPICMP no arp entry found for ip %x, port %d\n",
-				ipaddr, *phy_port);
-			print_arp_table();
-		}
-		lib_arp_no_arp_entry_found++;
-		return 0;
-	}
-	ether_addr_copy(&ret_arp_data->eth_addr, hw_addr);
-	lib_arp_arp_entry_found++;
-	return 1;
-
-}
-
-int get_dest_mac_addr(const uint32_t ipaddr,
-					uint32_t *phy_port, struct ether_addr *hw_addr)
-{
-	lib_arp_get_mac_req++;
-	uint32_t nhip = 0;
-
-	nhip = get_nh(ipaddr, phy_port);
-	if (nhip == 0) {
-		if (ARPICMP_DEBUG && ipaddr)
-			RTE_LOG(INFO, LIBARP,
-				"ARPICMP no nh found for ip %x, port %d\n",
-				ipaddr, *phy_port);
-		return 0;
-	}
-
-	struct arp_entry_data *ret_arp_data = NULL;
-	struct arp_key_ipv4 tmp_arp_key;
-	tmp_arp_key.port_id = *phy_port;
-	tmp_arp_key.ip = nhip;
-
-	ret_arp_data = retrieve_arp_entry(tmp_arp_key);
-	if (ret_arp_data == NULL) {
-		if (ARPICMP_DEBUG && ipaddr) {
-			printf
-					("ARPICMP no arp entry found for ip %x, port %d\n",
-					 ipaddr, *phy_port);
-			print_arp_table();
-		}
-
-		if (nhip != 0) {
-			if (ARPICMP_DEBUG > 4)
-				printf
-						("CG-NAPT requesting ARP for ip %x, port %d\n",
-						 nhip, *phy_port);
-			if (ifm_chk_port_ipv4_enabled(*phy_port)) {
-				request_arp(*phy_port, nhip);
-			} else {
-				if (ARPICMP_DEBUG)
-					RTE_LOG(INFO, LIBARP,
-						"%s: IP is not enabled on port %u, not sending ARP REQ\n\r",
-						__FUNCTION__, *phy_port);
-			}
-
-		}
-		lib_arp_no_arp_entry_found++;
-		return 0;
-	}
-	ether_addr_copy(&ret_arp_data->eth_addr, hw_addr);
-	lib_arp_arp_entry_found++;
-	return 1;
+	 return ret_arp_data;
 }
 
 int get_dest_mac_address_ipv6_port(uint8_t ipv6addr[], uint32_t *phy_port,
@@ -775,7 +783,7 @@ print_mbuf(const char *rx_tx, uint8_t portid, struct rte_mbuf *mbuf,
 	fflush(stdout);
 }
 
-struct arp_entry_data *retrieve_arp_entry(struct arp_key_ipv4 arp_key)
+struct arp_entry_data *retrieve_arp_entry(struct arp_key_ipv4 arp_key, uint8_t mode)
 {
 	struct arp_entry_data *ret_arp_data = NULL;
 	arp_key.filler1 = 0;
@@ -784,29 +792,85 @@ struct arp_entry_data *retrieve_arp_entry(struct arp_key_ipv4 arp_key)
 
 	int ret = rte_hash_lookup_data(arp_hash_handle, &arp_key,
 							 (void **)&ret_arp_data);
-	if (ret < 0) {
-		//      RTE_LOG(INFO, LIBARP,"arp-hash lookup failed ret %d, EINVAL %d, ENOENT %d\n", ret, EINVAL, ENOENT);
-	} else {
+	if (ret < 0 && (mode == DYNAMIC_ARP)) {
+	        if (ARPICMP_DEBUG)
+			RTE_LOG(INFO, LIBARP, "ARP entry not found for ip 0x%x\n",arp_key.ip);
 
-		if (ret_arp_data->mode == DYNAMIC_ARP) {
-			struct arp_timer_key callback_key;
-			callback_key.port_id = ret_arp_data->port;
-			callback_key.ip = ret_arp_data->ip;
-			/*lcore need to check which parameter need to be put */
-			if (rte_timer_reset(ret_arp_data->timer,
-							(arp_timeout * rte_get_tsc_hz()),
-							SINGLE, timer_lcore,
-							arp_timer_callback,
-							&callback_key) < 0)
-				if (ARPICMP_DEBUG)
-					RTE_LOG(INFO, LIBARP,
-						"Err : Timer already running\n");
+		/* add INCOMPLETE arp entry */
+		ret_arp_data = rte_malloc_socket(NULL, sizeof(struct arp_entry_data),
+				RTE_CACHE_LINE_SIZE, rte_socket_id());
+		ether_addr_copy(&null_ether_addr, &ret_arp_data->eth_addr);
+		ret_arp_data->status = INCOMPLETE;
+		ret_arp_data->port = arp_key.port_id;
+		ret_arp_data->ip = arp_key.ip;
+		ret_arp_data->mode = mode;
+		ret_arp_data->num_pkts = 0;
+		ret_arp_data->buffered_pkt_list_head = NULL;
+		ret_arp_data->buffered_pkt_list_tail = NULL;
+		rte_rwlock_init(&ret_arp_data->queue_lock);
+		rte_rwlock_write_lock(&ret_arp_data->queue_lock);
+
+                if (rte_mempool_get(timer_mempool_arp,
+			(void **) &(ret_arp_data->timer) ) < 0) {
+                        RTE_LOG(INFO, LIBARP,"Error in getting timer alloc buf\n");
+                        return NULL;
+                }
+
+        	ret_arp_data->buf_pkts = (struct rte_mbuf **)rte_zmalloc_socket(
+					NULL, sizeof(struct rte_mbuf *) * arp_buffer,
+					RTE_CACHE_LINE_SIZE, rte_socket_id());
+
+		rte_hash_add_key_data(arp_hash_handle, &arp_key, ret_arp_data);
+
+                rte_timer_init(ret_arp_data->timer);
+                struct arp_timer_key * callback_key =
+			 (struct arp_timer_key*) rte_malloc(NULL,
+                               sizeof(struct  arp_timer_key*),RTE_CACHE_LINE_SIZE);
+                callback_key->port_id = arp_key.port_id;
+                callback_key->ip = arp_key.ip;
+                if(ARPICMP_DEBUG)
+                      RTE_LOG(INFO, LIBARP,"TIMER STARTED FOR %u seconds\n",ARP_TIMER_EXPIRY);
+                if(rte_timer_reset(ret_arp_data->timer,
+                                        (PROBE_TIME * rte_get_tsc_hz() / 1000),
+                                        SINGLE,timer_lcore,
+                                        arp_timer_callback,
+                                        callback_key) < 0)
+                        if(ARPICMP_DEBUG)
+                        RTE_LOG(INFO, LIBARP,"Err : Timer already running\n");
+
+                ret_arp_data->timer_key = callback_key;
+
+		/* send arp request */
+		request_arp(arp_key.port_id, arp_key.ip);
+	} else {
+		if (ret_arp_data &&
+		 ret_arp_data->mode == DYNAMIC_ARP && ret_arp_data->status == STALE) {
+			ether_addr_copy(&null_ether_addr, &ret_arp_data->eth_addr);
+			ret_arp_data->status = PROBE;
+                	struct arp_timer_key * callback_key =
+				 (struct arp_timer_key*) rte_malloc(NULL,
+                               	sizeof(struct  arp_timer_key*),RTE_CACHE_LINE_SIZE);
+                	callback_key->port_id = arp_key.port_id;
+                	callback_key->ip = arp_key.ip;
+                	if(ARPICMP_DEBUG)
+                      		RTE_LOG(INFO, LIBARP,"TIMER STARTED FOR %u seconds\n",ARP_TIMER_EXPIRY);
+                	if(rte_timer_reset(ret_arp_data->timer,
+                                        (arp_timeout * rte_get_tsc_hz()),
+                                        SINGLE,timer_lcore,
+                                        arp_timer_callback,
+                                        callback_key) < 0)
+                        if(ARPICMP_DEBUG)
+                        	RTE_LOG(INFO, LIBARP,"Err : Timer already running\n");
+
+                	ret_arp_data->timer_key = callback_key;
+
+			/* send arp request */
+			request_arp(arp_key.port_id, arp_key.ip);
 		}
 
-		return ret_arp_data;
 	}
 
-	return NULL;
+	return ret_arp_data;
 }
 
 struct nd_entry_data *retrieve_nd_entry(struct nd_key_ipv6 nd_key)
@@ -847,6 +911,8 @@ struct nd_entry_data *retrieve_nd_entry(struct nd_key_ipv6 nd_key)
 	return NULL;
 }
 
+static const char* arp_status[] = {"INCOMPLETE", "COMPLETE", "PROBE", "STALE"};
+
 void print_arp_table(void)
 {
 	const void *next_key;
@@ -876,8 +942,7 @@ void print_arp_table(void)
 				 tmp_arp_data->eth_addr.addr_bytes[3],
 				 tmp_arp_data->eth_addr.addr_bytes[4],
 				 tmp_arp_data->eth_addr.addr_bytes[5],
-				 tmp_arp_data->status ==
-				 COMPLETE ? "COMPLETE" : "INCOMPLETE",
+				 arp_status[tmp_arp_data->status],
 				 (tmp_arp_data->ip >> 24),
 				 ((tmp_arp_data->ip & 0x00ff0000) >> 16),
 				 ((tmp_arp_data->ip & 0x0000ff00) >> 8),
@@ -885,13 +950,13 @@ void print_arp_table(void)
 	}
 
 	uint32_t i = 0;
-	printf("\nARP routing table has %d entries\n", arp_route_tbl_index);
+	printf("\nARP routing table has %d entries\n", p_arp_data->lib_arp_route_ent_cnt);
 	printf("\nIP_Address    Mask          Port    NH_IP_Address\n");
-	for (i = 0; i < arp_route_tbl_index; i++) {
+	for (i = 0; i < p_arp_data->lib_arp_route_ent_cnt; i++) {
 		printf("0x%x    0x%x    %d       0x%x\n",
-					 lib_arp_route_table[i].ip,
-					 lib_arp_route_table[i].mask,
-					 lib_arp_route_table[i].port, lib_arp_route_table[i].nh);
+					 p_arp_data->lib_arp_route_table[i].ip,
+					 p_arp_data->lib_arp_route_table[i].mask,
+					 p_arp_data->lib_arp_route_table[i].port, p_arp_data->lib_arp_route_table[i].nh);
 	}
 
 	printf
@@ -974,80 +1039,29 @@ void print_nd_table(void)
 	printf("ND table key len is %lu\n\n", sizeof(struct nd_key_ipv6));
 }
 
-void remove_arp_entry(uint32_t ipaddr, uint8_t portid, void *arg)
+void remove_arp_entry(struct arp_entry_data *ret_arp_data, void *arg)
 {
 
-	struct arp_key_ipv4 arp_key;
-	arp_key.port_id = portid;
-	arp_key.ip = ipaddr;
-	arp_key.filler1 = 0;
-	arp_key.filler2 = 0;
-	arp_key.filler3 = 0;
-
+	struct arp_timer_key *arp_key = (struct arp_timer_key *)arg;
 	lib_arp_delete_called++;
 
-	struct arp_entry_data *ret_arp_data = NULL;
-
-	int ret = rte_hash_lookup_data(arp_hash_handle, &arp_key,
-							 (void **)&ret_arp_data);
-	if (ret < 0) {
-//              RTE_LOG(INFO, LIBARP,"arp-hash lookup failed ret %d, EINVAL %d, ENOENT %d\n", ret, EINVAL, ENOENT);
-		return;
-	} else {
-		if (ret_arp_data->mode == DYNAMIC_ARP) {
-			if (ret_arp_data->retry_count == 3) {
-				rte_timer_stop(ret_arp_data->timer);
-				rte_free(ret_arp_data->timer_key);
-				if (ARPICMP_DEBUG) {
-					RTE_LOG(INFO, LIBARP,
-						"ARP Entry Deleted for IP :%d.%d.%d.%d , port %d\n",
-						(arp_key.ip >> 24),
-						((arp_key.ip & 0x00ff0000) >>
-						 16),
-						((arp_key.ip & 0x0000ff00) >>
-						 8),
-						((arp_key.ip & 0x000000ff)),
-						arp_key.port_id);
-				}
-				rte_hash_del_key(arp_hash_handle, &arp_key);
-				//print_arp_table();
-			} else {
-				ret_arp_data->retry_count++;
-				if (ARPICMP_DEBUG)
-					RTE_LOG(INFO, LIBARP,
-						"RETRY ARP..retry count : %u\n",
-						ret_arp_data->retry_count);
-				//print_arp_table();
-				if (ARPICMP_DEBUG)
-					RTE_LOG(INFO, LIBARP,
-						"TIMER STARTED FOR %u seconds\n",
-						ARP_TIMER_EXPIRY);
-				if (ifm_chk_port_ipv4_enabled
-						(ret_arp_data->port)) {
-					request_arp(ret_arp_data->port,
-								ret_arp_data->ip);
-				} else {
-					if (ARPICMP_DEBUG)
-						RTE_LOG(INFO, LIBARP,
-							"%s: IP is not enabled on port %u, not sending GARP\n\r",
-							__FUNCTION__,
-							ret_arp_data->port);
-				}
-				if (rte_timer_reset(ret_arp_data->timer,
-								(arp_timeout *
-								 rte_get_tsc_hz()), SINGLE,
-								timer_lcore,
-								arp_timer_callback,
-								arg) < 0)
-					if (ARPICMP_DEBUG)
-						RTE_LOG(INFO, LIBARP,
-							"Err : Timer already running\n");
-
-			}
-		} else {
-			rte_hash_del_key(arp_hash_handle, &arp_key);
-		}
+	rte_timer_stop(ret_arp_data->timer);
+	rte_free(ret_arp_data->timer_key);
+	rte_free(ret_arp_data->buf_pkts);
+        ret_arp_data->buf_pkts = NULL;
+	if (ARPICMP_DEBUG) {
+		RTE_LOG(INFO, LIBARP,
+			"ARP Entry Deleted for IP :%d.%d.%d.%d , port %d\n",
+			(arp_key->ip >> 24),
+			((arp_key->ip & 0x00ff0000) >>
+			 16),
+			((arp_key->ip & 0x0000ff00) >>
+			 8),
+			((arp_key->ip & 0x000000ff)),
+			arp_key->port_id);
 	}
+	rte_hash_del_key(arp_hash_handle, arp_key);
+	print_arp_table();
 }
 
 /* ND IPv6 */
@@ -1097,11 +1111,51 @@ void remove_nd_entry_ipv6(uint8_t ipv6addr[], uint8_t portid)
 	rte_hash_del_key(nd_hash_handle, &nd_key);
 }
 
+int
+arp_queue_unresolved_packet(struct arp_entry_data *ret_arp_data, struct rte_mbuf *pkt)
+{
+	if (ret_arp_data->num_pkts  == NUM_DESC) {
+		return 0;
+	}
+	ret_arp_data->buf_pkts[ret_arp_data->num_pkts++] = pkt;
+	return 0;
+}
+
+void
+arp_send_buffered_pkts(struct arp_entry_data *ret_arp_data,struct ether_addr *hw_addr, uint8_t port_id)
+{
+	l2_phy_interface_t *port = ifm_get_port(port_id);
+	struct rte_mbuf *pkt, *tmp;
+	uint8_t *eth_dest, *eth_src;
+	int i;
+
+	
+	if (!hw_addr || !ret_arp_data)
+		return;
+
+	for (i=0;i<(int)ret_arp_data->num_pkts;i++) {
+		pkt = ret_arp_data->buf_pkts[i];
+        	eth_dest = RTE_MBUF_METADATA_UINT8_PTR(pkt, MBUF_HDR_ROOM);
+        	eth_src = RTE_MBUF_METADATA_UINT8_PTR(pkt, MBUF_HDR_ROOM + 6);
+
+		memcpy(eth_dest, &hw_addr, sizeof(struct ether_addr));
+		memcpy(eth_src, get_link_hw_addr(port_id),
+                                sizeof(struct ether_addr));
+		port->transmit_single_pkt(port, pkt);
+		tmp = pkt;
+		rte_pktmbuf_free(tmp);
+	}
+	ret_arp_data->num_pkts = 0;
+	ret_arp_data->buffered_pkt_list_head = NULL;
+
+}
+
 void
 populate_arp_entry(const struct ether_addr *hw_addr, uint32_t ipaddr,
 			 uint8_t portid, uint8_t mode)
 {
 	struct arp_key_ipv4 arp_key;
+	struct arp_entry_data *new_arp_data;
 	arp_key.port_id = portid;
 	arp_key.ip = ipaddr;
 	arp_key.filler1 = 0;
@@ -1109,25 +1163,29 @@ populate_arp_entry(const struct ether_addr *hw_addr, uint32_t ipaddr,
 	arp_key.filler3 = 0;
 
 	lib_arp_populate_called++;
+	printf("populate_arp_entry ip %x, port %d\n", arp_key.ip, arp_key.port_id);
 
 	if (ARPICMP_DEBUG)
 		RTE_LOG(INFO, LIBARP, "populate_arp_entry ip %x, port %d\n",
 			arp_key.ip, arp_key.port_id);
 
-	struct arp_entry_data *new_arp_data = retrieve_arp_entry(arp_key);
+	new_arp_data = retrieve_arp_entry(arp_key, mode);
 	if (new_arp_data && ((new_arp_data->mode == STATIC_ARP
-                && mode == DYNAMIC_ARP) || (new_arp_data->mode == DYNAMIC_ARP
-                && mode == STATIC_ARP))) {
-                if (ARPICMP_DEBUG)
-                        RTE_LOG(INFO, LIBARP,"populate_arp_entry: ARP entry already exists(%d %d)\n",
-				new_arp_data->mode, mode);
+               	&& mode == DYNAMIC_ARP) || (new_arp_data->mode == DYNAMIC_ARP
+               	&& mode == STATIC_ARP))) {
+               	if (ARPICMP_DEBUG)
+                       	RTE_LOG(INFO, LIBARP,"populate_arp_entry: ARP entry already exists(%d %d)\n",
+			new_arp_data->mode, mode);
 
-                return;
-        }
+               	return;
+       	}
 
 	if (mode == DYNAMIC_ARP) {
+
 		if (new_arp_data
 				&& is_same_ether_addr(&new_arp_data->eth_addr, hw_addr)) {
+			printf("entry exists\n");
+
 			if (ARPICMP_DEBUG) {
 				RTE_LOG(INFO, LIBARP,
 					"arp_entry exists ip :%d.%d.%d.%d , port %d\n",
@@ -1139,67 +1197,57 @@ populate_arp_entry(const struct ether_addr *hw_addr, uint32_t ipaddr,
 			}
 			lib_arp_duplicate_found++;
 			new_arp_data->retry_count = 0;	// Reset
+			if (new_arp_data->status == STALE) {
+				new_arp_data->status = PROBE;
+				if (ifm_chk_port_ipv4_enabled
+					(new_arp_data->port)) {
+					request_arp(new_arp_data->port,
+							new_arp_data->ip);
+				} else {
+					if (ARPICMP_DEBUG)
+						RTE_LOG(INFO, LIBARP,
+						"%s: IP is not enabled on port %u, not sending GARP\n\r",
+						__FUNCTION__,
+						new_arp_data->port);
+				}
+			}
+			
 			if (rte_timer_reset(new_arp_data->timer,
-							(arp_timeout * rte_get_tsc_hz()),
-							SINGLE, timer_lcore,
-							arp_timer_callback,
-							new_arp_data->timer_key) < 0)
+						(arp_timeout * rte_get_tsc_hz()),
+						SINGLE, timer_lcore,
+						arp_timer_callback,
+						new_arp_data->timer_key) < 0) {
 				if (ARPICMP_DEBUG)
 					RTE_LOG(INFO, LIBARP,
 						"Err : Timer already running\n");
+			}
+			return;
+		} else {
+			ether_addr_copy(hw_addr, &new_arp_data->eth_addr);
+			if ((new_arp_data->status == INCOMPLETE) ||
+				(new_arp_data->status == PROBE)) {
+				new_arp_data->status = COMPLETE;
+				new_arp_data->mode = mode;
+				new_arp_data->n_confirmed = time(NULL);
+				//end_tsc[new_arp_data->port] = rte_rdtsc();
+				//printf("confirmed val is %x %dms\n",new_arp_data->ip, (end_tsc[new_arp_data->port] - start_tsc[new_arp_data->port] + ticks_per_ms/2)/ticks_per_ms);
+				new_arp_data->retry_count = 0;
+				if (rte_timer_reset(new_arp_data->timer,
+						(arp_timeout * rte_get_tsc_hz()),
+						SINGLE, timer_lcore,
+						arp_timer_callback,
+						new_arp_data->timer_key) < 0) {
+					if (ARPICMP_DEBUG)
+						RTE_LOG(INFO, LIBARP,
+						"Err : Timer already running\n");
+				}
+			}
 			return;
 		}
-
-		uint32_t size =
-				RTE_CACHE_LINE_ROUNDUP(sizeof(struct arp_entry_data));
-		new_arp_data = rte_zmalloc(NULL, size, RTE_CACHE_LINE_SIZE);
-		new_arp_data->eth_addr = *hw_addr;
-		new_arp_data->status = COMPLETE;
-		new_arp_data->port = portid;
-		new_arp_data->ip = ipaddr;
-		new_arp_data->mode = mode;
-		if (rte_mempool_get
-				(timer_mempool_arp, (void **)&(new_arp_data->timer)) < 0) {
-			RTE_LOG(INFO, LIBARP,
-				"TIMER - Error in getting timer alloc buffer\n");
-			return;
-		}
-
-		rte_hash_add_key_data(arp_hash_handle, &arp_key, new_arp_data);
-		if (ARPICMP_DEBUG) {
-			RTE_LOG(INFO, LIBARP,
-				"arp_entry exists ip :%d.%d.%d.%d , port %d\n",
-				(arp_key.ip >> 24),
-				((arp_key.ip & 0x00ff0000) >> 16),
-				((arp_key.ip & 0x0000ff00) >> 8),
-				((arp_key.ip & 0x000000ff)), arp_key.port_id);
-		}
-		// Call l3fwd module for resolving 2_adj structure.
-		resolve_l2_adj(ipaddr, portid, hw_addr);
-
-		rte_timer_init(new_arp_data->timer);
-		struct arp_timer_key *callback_key =
-				(struct arp_timer_key *)rte_malloc(NULL,
-									 sizeof(struct
-										arp_timer_key *),
-									 RTE_CACHE_LINE_SIZE);
-		callback_key->port_id = portid;
-		callback_key->ip = ipaddr;
-
-		if (ARPICMP_DEBUG)
-			RTE_LOG(INFO, LIBARP, "TIMER STARTED FOR %u seconds\n",
-				ARP_TIMER_EXPIRY);
-		if (rte_timer_reset
-				(new_arp_data->timer, (arp_timeout * rte_get_tsc_hz()),
-				 SINGLE, timer_lcore, arp_timer_callback, callback_key) < 0)
-			if (ARPICMP_DEBUG)
-				RTE_LOG(INFO, LIBARP,
-					"Err : Timer already running\n");
-
-		new_arp_data->timer_key = callback_key;
 	} else {
 		if (new_arp_data
-				&& is_same_ether_addr(&new_arp_data->eth_addr, hw_addr)) {
+                                && is_same_ether_addr(&new_arp_data->eth_addr, hw_addr)) {
+
 			if (ARPICMP_DEBUG) {
 				RTE_LOG(INFO, LIBARP,
 					"arp_entry exists ip :%d.%d.%d.%d , port %d\n",
@@ -1221,7 +1269,10 @@ populate_arp_entry(const struct ether_addr *hw_addr, uint32_t ipaddr,
 			new_arp_data->port = portid;
 			new_arp_data->ip = ipaddr;
 			new_arp_data->mode = mode;
-
+			new_arp_data->buffered_pkt_list_head = NULL;
+			new_arp_data->buffered_pkt_list_tail = NULL;
+			new_arp_data->num_pkts = 0;
+			
 			rte_hash_add_key_data(arp_hash_handle, &arp_key,
 								new_arp_data);
 			if (ARPICMP_DEBUG) {
@@ -1233,10 +1284,13 @@ populate_arp_entry(const struct ether_addr *hw_addr, uint32_t ipaddr,
 					((arp_key.ip & 0x000000ff)),
 					arp_key.port_id);
 			}
+			#ifdef L3_STACK_SUPPORT
 			// Call l3fwd module for resolving 2_adj structure.
 			resolve_l2_adj(ipaddr, portid, hw_addr);
+			#endif
 		}
 	}
+
 	if (ARPICMP_DEBUG) {
 		/* print entire hash table */
 		RTE_LOG(INFO, LIBARP,
@@ -1428,28 +1482,10 @@ void print_pkt1(struct rte_mbuf *pkt)
 	RTE_LOG(INFO, LIBARP, "\nPacket Contents...\n");
 	for (i = 0; i < 20; i++) {
 		for (j = 0; j < 20; j++)
-			RTE_LOG(INFO, LIBARP, "%02x ", rd[(20 * i) + j]);
+			printf("%02x ", rd[(20 * i) + j]);
 		RTE_LOG(INFO, LIBARP, "\n");
 	}
 }
-
-struct ether_addr broadcast_ether_addr = {
-	.addr_bytes[0] = 0xFF,
-	.addr_bytes[1] = 0xFF,
-	.addr_bytes[2] = 0xFF,
-	.addr_bytes[3] = 0xFF,
-	.addr_bytes[4] = 0xFF,
-	.addr_bytes[5] = 0xFF,
-};
-
-static const struct ether_addr null_ether_addr = {
-	.addr_bytes[0] = 0x00,
-	.addr_bytes[1] = 0x00,
-	.addr_bytes[2] = 0x00,
-	.addr_bytes[3] = 0x00,
-	.addr_bytes[4] = 0x00,
-	.addr_bytes[5] = 0x00,
-};
 
 #define MAX_NUM_MAC_ADDRESS 16
 struct ether_addr link_hw_addr[MAX_NUM_MAC_ADDRESS] = {
@@ -1473,7 +1509,7 @@ struct ether_addr link_hw_addr[MAX_NUM_MAC_ADDRESS] = {
 
 struct ether_addr *get_link_hw_addr(uint8_t out_port)
 {
-	return &link_hw_addr[out_port];
+	return &p_arp_data->link_hw_addr[out_port];
 }
 
 void request_arp(uint8_t port_id, uint32_t ip)
@@ -1484,7 +1520,7 @@ void request_arp(uint8_t port_id, uint32_t ip)
 
 	l2_phy_interface_t *link;
 	link = ifm_get_port(port_id);
-	struct rte_mbuf *arp_pkt = lib_arp_pkt;
+	struct rte_mbuf *arp_pkt = lib_arp_pkt[port_id];
 
 	if (arp_pkt == NULL) {
 		if (ARPICMP_DEBUG)
@@ -1492,7 +1528,6 @@ void request_arp(uint8_t port_id, uint32_t ip)
 				"Error allocating arp_pkt rte_mbuf\n");
 		return;
 	}
-
 	eth_h = rte_pktmbuf_mtod(arp_pkt, struct ether_hdr *);
 
 	ether_addr_copy(&broadcast_ether_addr, &eth_h->d_addr);
@@ -1507,12 +1542,12 @@ void request_arp(uint8_t port_id, uint32_t ip)
 	arp_h->arp_pln = sizeof(uint32_t);
 	arp_h->arp_op = CHECK_ENDIAN_16(ARP_OP_REQUEST);
 
-	ether_addr_copy((struct ether_addr *)
-			&link->macaddr[0], &arp_h->arp_data.arp_sha);
 	if (link && link->ipv4_list) {
 		arp_h->arp_data.arp_sip =
 				(((ipv4list_t *) (link->ipv4_list))->ipaddr);
 	}
+	ether_addr_copy((struct ether_addr *)
+			&link->macaddr[0], &arp_h->arp_data.arp_sha);
 	ether_addr_copy(&null_ether_addr, &arp_h->arp_data.arp_tha);
 	arp_h->arp_data.arp_tip = rte_cpu_to_be_32(ip);
 	if (ARPICMP_DEBUG)
@@ -1528,6 +1563,8 @@ void request_arp(uint8_t port_id, uint32_t ip)
 	}
 	if (link)
 		link->transmit_single_pkt(link, arp_pkt);
+//	start_tsc[port_id] = rte_rdtsc();
+	printf("Sent ARP Request %x \n", arp_h->arp_data.arp_tip);
 }
 
 struct rte_mbuf *request_echo(uint32_t port_id, uint32_t ip)
@@ -1537,7 +1574,7 @@ struct rte_mbuf *request_echo(uint32_t port_id, uint32_t ip)
 	struct icmp_hdr *icmp_h;
 	l2_phy_interface_t *port = ifm_get_port(port_id);
 
-	struct rte_mbuf *icmp_pkt = lib_arp_pkt;
+	struct rte_mbuf *icmp_pkt = lib_arp_pkt[port_id];
 	if (icmp_pkt == NULL) {
 		if (ARPICMP_DEBUG)
 			RTE_LOG(INFO, LIBARP,
@@ -1583,57 +1620,6 @@ struct rte_mbuf *request_echo(uint32_t port_id, uint32_t ip)
 	return icmp_pkt;
 }
 
-#if 0
-/**
- * Function to send ICMP dest unreachable msg
- *
- */
-struct rte_mbuf *send_icmp_dest_unreachable_msg(uint32_t src_ip,
-						uint32_t dest_ip)
-{
-	struct ether_hdr *eth_h;
-	struct ipv4_hdr *ip_h;
-	struct icmp_hdr *icmp_h;
-	struct rte_mbuf *icmp_pkt = lib_arp_pkt;
-
-	if (icmp_pkt == NULL) {
-		if (ARPICMP_DEBUG)
-			RTE_LOG(INFO, LIBARP,
-				"Error allocating icmp_pkt rte_mbuf\n");
-		return NULL;
-	}
-
-	eth_h = rte_pktmbuf_mtod(icmp_pkt, struct ether_hdr *);
-	ip_h = (struct ipv4_hdr *)((char *)eth_h + sizeof(struct ether_hdr));
-	icmp_h = (struct icmp_hdr *)((char *)ip_h + sizeof(struct ipv4_hdr));
-
-	ip_h->version_ihl = IP_VHL_DEF;
-	ip_h->type_of_service = 0;
-	ip_h->total_length =
-			rte_cpu_to_be_16(sizeof(struct ipv4_hdr) + sizeof(struct icmp_hdr));
-	ip_h->packet_id = 0xaabb;
-	ip_h->fragment_offset = 0x0000;
-	ip_h->time_to_live = 64;
-	ip_h->next_proto_id = 1;
-
-	ip_h->dst_addr = rte_bswap32(dest_ip);
-	ip_h->src_addr = rte_bswap32(src_ip);
-
-	ip_h->hdr_checksum = 0;
-	ip_h->hdr_checksum = rte_ipv4_cksum(ip_h);
-
-	icmp_h->icmp_type = 3;	/* Destination Unreachable */
-	icmp_h->icmp_code = 13;	/* Communication administratively prohibited */
-
-	icmp_h->icmp_cksum = ~rte_raw_cksum(icmp_h, sizeof(struct icmp_hdr));
-
-	icmp_pkt->pkt_len = sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) +
-			sizeof(struct icmp_hdr);
-	icmp_pkt->data_len = icmp_pkt->pkt_len;
-
-	return icmp_pkt;
-}
-#endif
 void
 process_arpicmp_pkt_parse(struct rte_mbuf **pkt, uint16_t pkt_num,
 				uint64_t pkt_mask, l2_phy_interface_t *port)
@@ -1671,7 +1657,6 @@ void process_arpicmp_pkt(struct rte_mbuf *pkt, l2_phy_interface_t *port)
 	uint32_t ip_addr;
 
 	uint32_t req_tip;
-
 	eth_h = rte_pktmbuf_mtod(pkt, struct ether_hdr *);
 
 	if (eth_h->ether_type == rte_cpu_to_be_16(ETHER_TYPE_ARP)) {
@@ -1703,6 +1688,7 @@ void process_arpicmp_pkt(struct rte_mbuf *pkt, l2_phy_interface_t *port)
 			if (arp_h->arp_data.arp_tip !=
 					((ipv4list_t *) (port->ipv4_list))->ipaddr) {
 				if (arp_h->arp_data.arp_tip == arp_h->arp_data.arp_sip) {
+					printf("gratuitous arp received\n");
 					populate_arp_entry(
 							(struct ether_addr *)&arp_h->arp_data.arp_sha,
 							rte_cpu_to_be_32(arp_h->arp_data.arp_sip),
@@ -1731,7 +1717,6 @@ void process_arpicmp_pkt(struct rte_mbuf *pkt, l2_phy_interface_t *port)
 					print_mbuf("RX", in_port_id, pkt,
 							 __LINE__);
 				}
-
 				populate_arp_entry((struct ether_addr *)
 							 &arp_h->arp_data.arp_sha,
 							 rte_cpu_to_be_32
@@ -1750,7 +1735,6 @@ void process_arpicmp_pkt(struct rte_mbuf *pkt, l2_phy_interface_t *port)
 				arp_h->arp_data.arp_sip = req_tip;
 				ether_addr_copy(&eth_h->d_addr,
 						&arp_h->arp_data.arp_tha);
-
 				if (ARPICMP_DEBUG)
 					print_mbuf("TX ARP REPLY PKT",
 							 port->pmdid, pkt, __LINE__);
@@ -1758,7 +1742,8 @@ void process_arpicmp_pkt(struct rte_mbuf *pkt, l2_phy_interface_t *port)
 				if (ARPICMP_DEBUG)
 					print_mbuf("TX", port->pmdid, pkt,
 							 __LINE__);
-
+				printf("replying arp pkt done\n");
+				//rte_pktmbuf_free(pkt);
 				return;
 			} else if (arp_h->arp_op ==
 					 rte_cpu_to_be_16(ARP_OP_REPLY)) {
@@ -1774,6 +1759,7 @@ void process_arpicmp_pkt(struct rte_mbuf *pkt, l2_phy_interface_t *port)
 										 arp_data.arp_sip),
 							 in_port_id, DYNAMIC_ARP);
 
+				//rte_pktmbuf_free(pkt);
 				return;
 			} else {
 				if (ARPICMP_DEBUG)
@@ -1901,7 +1887,7 @@ void process_arpicmp_pkt(struct rte_mbuf *pkt, l2_phy_interface_t *port)
 					arp_key.filler3 = 0;
 
 					struct arp_entry_data *arp_entry =
-							retrieve_arp_entry(arp_key);
+							retrieve_arp_entry(arp_key, DYNAMIC_ARP);
 					if (arp_entry == NULL) {
 						if (ARPICMP_DEBUG)
 							RTE_LOG(INFO, LIBARP,
@@ -1917,6 +1903,7 @@ void process_arpicmp_pkt(struct rte_mbuf *pkt, l2_phy_interface_t *port)
 
 		rte_pktmbuf_free(pkt);
 	}
+	printf("reached end of process_arpicmp\n");
 }
 
 /* int
@@ -2175,6 +2162,10 @@ static int arp_parse_args(struct pipeline_params *params)
 			continue;
 		}
 
+		if (strcmp(arg_name, "arp_buf") == 0) {
+			arp_buffer = atoi(arg_value);
+		}
+
 		/* prv_to_pub_map */
 		if (strcmp(arg_name, "prv_to_pub_map") == 0) {
 			if (prv_to_pub_map_present) {
@@ -2291,11 +2282,9 @@ static int arp_parse_args(struct pipeline_params *params)
 				}
 				//Populate the static arp_route_table
 				for (i = 0; i < MAC_NUM_BYTES; i++)
-					link_hw_addr
-							[link_hw_addr_array_idx].addr_bytes
-							[i] = byte[i];
+					p_arp_data->link_hw_addr[p_arp_data->link_hw_addr_array_idx].addr_bytes[i] = byte[i];
 
-				link_hw_addr_array_idx++;
+				p_arp_data->link_hw_addr_array_idx++;
 				token = strtok(NULL, " ");
 			}
 
@@ -2373,15 +2362,15 @@ static int arp_parse_args(struct pipeline_params *params)
 					 }
 				 */
 				//Populate the static arp_route_table
-				lib_arp_route_table[arp_route_tbl_index].ip =
-						dest_ip;
-				lib_arp_route_table[arp_route_tbl_index].mask =
-						mask;
-				lib_arp_route_table[arp_route_tbl_index].port =
-						tx_port;
-				lib_arp_route_table[arp_route_tbl_index].nh =
-						nh_ip;
-				arp_route_tbl_index++;
+			        struct lib_arp_route_table_entry *lentry =
+		                &p_arp_data->lib_arp_route_table
+                		[p_arp_data->lib_arp_route_ent_cnt];
+				lentry->ip = dest_ip;
+				lentry->mask = mask;
+				lentry->port = tx_port;
+				lentry->nh = nh_ip;
+				lentry->nh_mask = nh_ip & mask;
+				p_arp_data->lib_arp_route_ent_cnt++;
 				token = strtok(NULL, "(");
 			}
 
@@ -2481,12 +2470,50 @@ static int arp_parse_args(struct pipeline_params *params)
 	return 0;
 }
 
+static void local_arp_cache_init(void)
+{
+        int i, j, k;
+        for (i=0; i<MAX_PORTS;i++) {
+                for (j=0; j<MAX_NUM_LOCAL_MAC_ADDRESS;j++) {
+                        p_arp_data->arp_local_cache[i].nhip[j] = 0;
+                        for (k=0;k<6;k++)
+                                p_arp_data->arp_local_cache[i].link_hw_laddr[j].addr_bytes[k] = 0;
+                        p_arp_data->arp_local_cache[i].num_nhip = 0;
+                }
+        }
+}
+
+struct ether_addr *get_local_link_hw_addr(uint8_t out_port, uint32_t nhip)
+{
+        int i, limit;
+	uint32_t tmp;
+        struct ether_addr *x = NULL;
+        limit = p_arp_data->arp_local_cache[out_port].num_nhip;
+        for (i=0; i < limit; i++) {
+                tmp = p_arp_data->arp_local_cache[out_port].nhip[i];
+                if (tmp == nhip) {
+                	x = &p_arp_data->arp_local_cache[out_port].link_hw_laddr[i];
+                        return x;
+		}
+        }
+	return x;
+}
+
 void lib_arp_init(struct pipeline_params *params,
 			__rte_unused struct app_params *app)
 {
 
+	int i;
+	uint32_t size;
+	struct pipeline_cgnapt *p;
+
 	RTE_LOG(INFO, LIBARP, "ARP initialization ...\n");
 
+	/* create arp data for table entries */
+        size = RTE_CACHE_LINE_ROUNDUP(sizeof(struct arp_data));
+        p = rte_zmalloc(NULL, size, RTE_CACHE_LINE_SIZE);
+        p_arp_data = (struct arp_data *)p;
+	
 	/* Parse arguments */
 	if (arp_parse_args(params)) {
 		RTE_LOG(INFO, LIBARP, "arp_parse_args failed ...\n");
@@ -2504,9 +2531,20 @@ void lib_arp_init(struct pipeline_params *params,
 		return;
 	}
 
-	lib_arp_pkt = rte_pktmbuf_alloc(lib_arp_pktmbuf_tx_pool);
-	if (lib_arp_pkt == NULL) {
-		RTE_LOG(INFO, LIBARP, "ARP lib_arp_pkt alloc failed.\n");
+	for (i=0; i<MAX_PORTS; i++) {
+		lib_arp_pkt[i] = rte_pktmbuf_alloc(lib_arp_pktmbuf_tx_pool);
+		if (lib_arp_pkt[i] == NULL) {
+			RTE_LOG(INFO, LIBARP, "ARP lib_arp_pkt alloc failed.\n");
+			return;
+		}
+	}
+	/* create the arp_icmp mbuf rx pool */
+	arp_icmp_pktmbuf_tx_pool = rte_pktmbuf_pool_create("arp_icmp_mbuf_tx_pool", 
+					NB_ARPICMP_MBUF, 32, 0,
+					RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
+
+	if (arp_icmp_pktmbuf_tx_pool == NULL) {
+		RTE_LOG(INFO, LIBARP, "icmp_pktmbuf pool creation failed\n");
 		return;
 	}
 
@@ -2552,24 +2590,113 @@ void lib_arp_init(struct pipeline_params *params,
 			(void *)nd_hash_handle);
 	}
 
+        /* Initialize the local arp cache */
+        local_arp_cache_init();
+
 	return;
 }
 
 void arp_timer_callback(struct rte_timer *timer, void *arg)
 {
-	struct arp_timer_key *remove_key = (struct arp_timer_key *)arg;
+	struct arp_timer_key *timer_key = (struct arp_timer_key *)arg;
+        struct arp_key_ipv4 arp_key;
+        arp_key.port_id = timer_key->port_id;
+        arp_key.ip = timer_key->ip;
+        arp_key.filler1 = 0;
+        arp_key.filler2 = 0;
+        arp_key.filler3 = 0;
+
+	struct arp_entry_data *ret_arp_data = NULL;
+	time_t now;
+	if (ARPICMP_DEBUG) {
+		RTE_LOG(INFO, LIBARP, "arp_timer_callback ip %x, port %d\n",
+		arp_key.ip, arp_key.port_id);
+	}
+
+	int ret = rte_hash_lookup_data(arp_hash_handle, &arp_key,
+					 (void **)&ret_arp_data);
+	now = time(NULL);
+
 	if (ARPICMP_DEBUG)
-		RTE_LOG(INFO, LIBARP, "ARP TIMER callback : expire :%d\n",
-			(int)timer->expire);
-	if (ARPICMP_DEBUG)
-		RTE_LOG(INFO, LIBARP,
-			"Remove ARP Entry for IP :%d.%d.%d.%d , port %d\n",
-			(remove_key->ip >> 24),
-			((remove_key->ip & 0x00ff0000) >> 16),
-			((remove_key->ip & 0x0000ff00) >> 8),
-			((remove_key->ip & 0x000000ff)), remove_key->port_id);
-	remove_arp_entry((uint32_t) remove_key->ip,
-			 (uint8_t) remove_key->port_id, arg);
+		RTE_LOG(INFO, LIBARP, "ARP TIMER callback : expire :%d now:%ld\n",
+			(int)timer->expire, now);
+	if (ret < 0) {
+		printf("Should not have come here\n");
+		return;
+	} else {
+		if (ret_arp_data->mode == DYNAMIC_ARP) {
+			if (ret_arp_data->status == PROBE || 
+				ret_arp_data->status == INCOMPLETE) {
+				if (ret_arp_data->retry_count == 3) {
+					remove_arp_entry(ret_arp_data, arg);
+				} else {
+					ret_arp_data->retry_count++;
+					
+					if (ARPICMP_DEBUG) {
+						RTE_LOG(INFO, LIBARP,
+						"RETRY ARP..retry count : %u\n",
+						ret_arp_data->retry_count);
+
+						RTE_LOG(INFO, LIBARP,
+						"TIMER STARTED FOR %u seconds\n",
+							ARP_TIMER_EXPIRY);
+					}
+
+					if (ifm_chk_port_ipv4_enabled
+						(ret_arp_data->port)) {
+						//printf("inside arp timer callback numpkts:%d\n", ret_arp_data->num_pkts);
+						request_arp(ret_arp_data->port,
+								ret_arp_data->ip);
+					} else {
+						if (ARPICMP_DEBUG)
+							RTE_LOG(INFO, LIBARP,
+							"%s: IP is not enabled on port %u, not sending GARP\n\r",
+							__FUNCTION__,
+							ret_arp_data->port);
+					}
+					
+					if (rte_timer_reset(ret_arp_data->timer,
+								(PROBE_TIME *
+								 rte_get_tsc_hz()/ 1000),
+								SINGLE,
+								timer_lcore,
+								arp_timer_callback,
+								arg) < 0)
+					if (ARPICMP_DEBUG)
+						RTE_LOG(INFO, LIBARP,
+							"Err : Timer already running\n");
+
+				}
+			} else if (ret_arp_data->status == COMPLETE) {
+				if (now <= (ret_arp_data->n_confirmed + arp_timeout)) { 
+					if (rte_timer_reset(ret_arp_data->timer,
+								(arp_timeout *
+								 rte_get_tsc_hz()), SINGLE,
+								timer_lcore,
+								arp_timer_callback,
+								arg) < 0)
+					if (ARPICMP_DEBUG)
+						RTE_LOG(INFO, LIBARP,
+							"Err : Timer already running\n");
+				} else if (now <= (ret_arp_data->n_last_update + USED_TIME)) {
+					if (rte_timer_reset(ret_arp_data->timer,
+								(arp_timeout *
+								 rte_get_tsc_hz()), SINGLE,
+								timer_lcore,
+								arp_timer_callback,
+								arg) < 0)
+					if (ARPICMP_DEBUG)
+						RTE_LOG(INFO, LIBARP,
+							"Err : Timer already running\n");
+				} else {
+					ret_arp_data->status = STALE;
+					p_arp_data->arp_cache_hw_laddr_valid[ret_arp_data->port] = 0;
+				}
+			}
+		} else {
+			rte_hash_del_key(arp_hash_handle, &arp_key);
+		}
+	}
 	return;
 }
 
@@ -2595,6 +2722,7 @@ void create_arp_table(void)
 					 STATIC_ARP);
 	}
 	print_arp_table();
+
 	return;
 }
 
@@ -2618,7 +2746,7 @@ void send_gratuitous_arp(l2_phy_interface_t *port)
 	struct ether_hdr *eth_h;
 	struct arp_hdr *arp_h;
 
-	struct rte_mbuf *arp_pkt = lib_arp_pkt;
+	struct rte_mbuf *arp_pkt = lib_arp_pkt[port->pmdid];
 
 	if (port == NULL) {
 		RTE_LOG(INFO, LIBARP, "PORT ID DOWN.. %s\n", __FUNCTION__);

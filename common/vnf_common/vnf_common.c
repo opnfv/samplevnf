@@ -47,12 +47,13 @@ uint8_t is_port_index_privte(uint16_t phy_port)
 uint32_t get_prv_to_pub_port(uint32_t *ip_addr, uint8_t type)
 {
 	uint32_t dest_if = 0xff;
+	struct ether_addr addr;
 
 	switch (type) {
 	case 4:
 	{
 		uint32_t nhip;
-		nhip = get_nh(ip_addr[0], &dest_if);
+		nhip = get_nh(ip_addr[0], &dest_if, &addr);
 
 		if (nhip)
 			return dest_if;
@@ -75,12 +76,13 @@ uint32_t get_prv_to_pub_port(uint32_t *ip_addr, uint8_t type)
 uint32_t get_pub_to_prv_port(uint32_t *ip_addr, uint8_t type)
 {
 	uint32_t dest_if = 0xff;
+	struct ether_addr addr;
 
 	switch (type) {
 	case 4:
 	{
 		uint32_t nhip;
-		nhip = get_nh(ip_addr[0], &dest_if);
+		nhip = get_nh(ip_addr[0], &dest_if, &addr);
 
 		if (nhip)
 			return dest_if;

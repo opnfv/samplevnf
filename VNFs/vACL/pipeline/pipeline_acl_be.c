@@ -144,6 +144,7 @@ static void *pipeline_acl_msg_req_dbg_handler(struct pipeline *p, void *msg);
 static pipeline_msg_req_handler custom_handlers[] = {
 	[PIPELINE_ACL_MSG_REQ_DBG] = pipeline_acl_msg_req_dbg_handler,
 };
+uint64_t arp_pkts_mask;
 
 uint8_t ACL_DEBUG;
 uint32_t local_get_nh_ipv4(uint32_t ip,
@@ -154,8 +155,8 @@ uint32_t local_get_nh_ipv4(uint32_t ip,
 
 	for (i = 0; i < p_acl->local_lib_arp_route_ent_cnt; i++) {
 		if (((p_acl->local_lib_arp_route_table[i].ip &
-		      p_acl->local_lib_arp_route_table[i].mask) ==
-		     (ip & p_acl->local_lib_arp_route_table[i].mask))) {
+			p_acl->local_lib_arp_route_table[i].mask) ==
+			(ip & p_acl->local_lib_arp_route_table[i].mask))) {
 			*port = p_acl->local_lib_arp_route_table[i].port;
 
 			*nhip = p_acl->local_lib_arp_route_table[i].nh;
@@ -175,8 +176,8 @@ static void do_local_nh_ipv4_cache(uint32_t dest_if, struct pipeline_acl *p_acl)
 		if (lib_arp_route_table[i].port == dest_if) {
 
 			struct lib_arp_route_table_entry *lentry =
-			    &p_acl->local_lib_arp_route_table
-			    [p_acl->local_lib_arp_route_ent_cnt];
+				&p_acl->local_lib_arp_route_table
+				[p_acl->local_lib_arp_route_ent_cnt];
 
 			lentry->ip = lib_arp_route_table[i].ip;
 			lentry->mask = lib_arp_route_table[i].mask;
@@ -463,6 +464,7 @@ pkt_work_acl_key(struct rte_pipeline *p,
 	uint64_t conntrack_mask = 0;
 	uint64_t connexist_mask = 0;
 	uint32_t dest_address = 0;
+	arp_pkts_mask = 0;
 	int dest_if = 0;
 	int status;
 	uint64_t pkts_drop_mask, pkts_mask = RTE_LEN2MASK(n_pkts, uint64_t);
@@ -918,103 +920,57 @@ pkt_work_acl_key(struct rte_pipeline *p,
 								       nhip));
 			uint32_t packet_length = rte_pktmbuf_pkt_len(pkt);
 			*nhip = 0;
-			if (is_phy_port_privte(phy_port)) {
-				dest_address = rte_bswap32(*dst_addr);
-				ret =
-				    local_get_nh_ipv4(dest_address, &dest_if,
-						      nhip, p_acl);
-				if (!ret) {
-					dest_if =
-					    get_prv_to_pub_port(&dest_address,
-								IP_VERSION_4);
-					do_local_nh_ipv4_cache(dest_if, p_acl);
+			struct arp_entry_data *ret_arp_data = NULL;
+			ret_arp_data = get_dest_mac_addr_port
+			    (dest_address, &dest_if, (struct ether_addr *) eth_dest);
+			*port_out_id = p_acl->port_out_id[dest_if];
+			if (arp_cache_dest_mac_present(dest_if)) {
+				ether_addr_copy(get_link_hw_addr(dest_if), (struct ether_addr *)eth_src);
+				arp_data_ptr[dest_if]->n_last_update = time(NULL);
+
+				if (unlikely(ret_arp_data && ret_arp_data->num_pkts)) {
+					printf("sending buffered packets\n");
+					arp_send_buffered_pkts(ret_arp_data,
+					(struct ether_addr *)eth_dest, *port_out_id);
+
 				}
-				*port_out_id = p_acl->port_out_id[dest_if];
 			} else {
-				dest_address = rte_bswap32(*dst_addr);
+				if (unlikely(ret_arp_data == NULL)) {
 
-				ret = local_get_nh_ipv4(dest_address, &dest_if,
-							nhip, p_acl);
-				if (!ret) {
-					dest_if =
-					    get_pub_to_prv_port(&dest_address,
-								IP_VERSION_4);
-					do_local_nh_ipv4_cache(dest_if, p_acl);
-				};
-				*port_out_id = p_acl->port_out_id[dest_if];
-			}
-			/* port = ACL_PRV_PORT_ID; */
+					printf("%s: NHIP Not Found, "
+					"outport_id: %d\n", __func__,
+					*port_out_id);
 
-			int ret_mac = 0;
-
-			ret_mac = get_dest_mac_addr_port
-			    (dest_address, &dest_if, &hw_addr);
-			if (ret_mac == ARP_FOUND) {
-				if (ACL_DEBUG) {
-					printf("MAC found for ip 0x%x,  "
-				"port %d - %02x:%02x:%02x:%02x:%02x:%02x\n",
-					     dest_address, phy_port,
-					     hw_addr.addr_bytes[0],
-					     hw_addr.addr_bytes[1],
-					     hw_addr.addr_bytes[2],
-					     hw_addr.addr_bytes[3],
-					     hw_addr.addr_bytes[4],
-					     hw_addr.addr_bytes[5]);
-					printf("Dest MAC before -  "
-					"%02x:%02x:%02x:%02x:%02x:%02x\n",
-					     eth_dest[0], eth_dest[1],
-					     eth_dest[2], eth_dest[3],
-					     eth_dest[4], eth_dest[5]);
-				}
-
-				memcpy(eth_dest, &hw_addr,
-				       sizeof(struct ether_addr));
-				if (ACL_DEBUG) {
-					printf("PktP %p, dest_macP %p\n", pkt,
-					       eth_dest);
-					printf("Dest MAC after -  "
-					"%02x:%02x:%02x:%02x:%02x:%02x\n",
-					     eth_dest[0], eth_dest[1],
-					     eth_dest[2], eth_dest[3],
-					     eth_dest[4], eth_dest[5]);
-				}
-				if (is_phy_port_privte(phy_port))
-					memcpy(eth_src,
-					       get_link_hw_addr(dest_if),
-					       sizeof(struct ether_addr));
-				else
-					memcpy(eth_src,
-					       get_link_hw_addr(dest_if),
-					       sizeof(struct ether_addr));
-				p_acl->counters->tpkts_processed++;
-				p_acl->counters->bytes_processed +=
-				    packet_length;
-			}
-
-			else {
-				if (*nhip != 0) {
+					/* Drop the pkt */
+					pkts_mask &= ~(1LLU << pos);
 					if (ACL_DEBUG)
-						printf("ACL requesting ARP for "
-							"ip %x, port %d\n",
-						     dest_address, phy_port);
-					if (ret_mac == ARP_NOT_FOUND)
-						request_arp(dest_if, *nhip);
-
-		/*      request_arp(p_acl->links_map[phy_port], *nhip); */
+						printf("ACL after drop pkt_mask  "
+						"%lu, pkt_num %d\n",
+						pkts_mask, pos);
+						p_acl->counters->pkts_drop++;
+						continue;
 				}
-				/* Drop packet by changing the mask */
-				if (ACL_DEBUG)
-					printf("ACL before drop pkt_mask  "
+
+				if (ret_arp_data->status == INCOMPLETE ||
+					ret_arp_data->status == PROBE) {
+					if (ret_arp_data->num_pkts >= NUM_DESC) {
+						/* Drop the pkt */
+						pkts_mask &= ~(1LLU << pos);
+						if (ACL_DEBUG)
+							printf("ACL after drop pkt_mask  "
 							"%lu, pkt_num %d\n",
-					     pkts_mask, pos);
-				pkts_mask &= ~(1LLU << pos);
-				if (ACL_DEBUG)
-					printf("ACL after drop pkt_mask  "
-							"%lu, pkt_num %d\n",
-					     pkts_mask, pos);
-				p_acl->counters->pkts_drop++;
+							pkts_mask, pos);
+						p_acl->counters->pkts_drop++;
+						continue;
+					} else {
+						arp_pkts_mask |= pkt_mask;
+						arp_queue_unresolved_packet(ret_arp_data, pkt);
+						continue;
+					}
+				}
 			}
-		}
+
+		} /* end of if (hdr_chk == IPv4_HDR_VERSION) */
 
 		if (hdr_chk == IPv6_HDR_VERSION) {
 
@@ -1053,7 +1009,7 @@ pkt_work_acl_key(struct rte_pipeline *p,
 			uint8_t nhip[16];
 
 			nhip[0] =
-			    RTE_MBUF_METADATA_UINT8(pkt,
+			RTE_MBUF_METADATA_UINT8(pkt,
 						    META_DATA_OFFSET +
 						    offsetof(struct
 							     mbuf_acl_meta_data,
@@ -1176,6 +1132,11 @@ pkt_work_acl_key(struct rte_pipeline *p,
 	rte_pipeline_ah_packet_drop(p, pkts_drop_mask);
 	keep_mask = pkts_mask;
 
+	if (arp_pkts_mask) {
+		keep_mask &= ~(arp_pkts_mask);
+		rte_pipeline_ah_packet_hijack(p, arp_pkts_mask);
+	}
+
 	/* don't bother measuring if traffic very low, might skew stats */
 	uint32_t packets_this_iteration = __builtin_popcountll(pkts_mask);
 
@@ -1238,6 +1199,7 @@ pkt_work_acl_ipv4_key(struct rte_pipeline *p,
 	uint64_t conntrack_mask = 0;
 	uint64_t connexist_mask = 0;
 	uint32_t dest_address = 0;
+	arp_pkts_mask = 0;
 	int dest_if = 0;
 	int status;
 	uint64_t pkts_drop_mask, pkts_mask = RTE_LEN2MASK(n_pkts, uint64_t);
@@ -1711,76 +1673,56 @@ pkt_work_acl_ipv4_key(struct rte_pipeline *p,
 				*port_out_id = p_acl->port_out_id[dest_if];
 			}
 			/* port = ACL_PRV_PORT_ID; */
-			int ret_mac = 0;
 
-			ret_mac = get_dest_mac_addr_port
-			    (dest_address, &dest_if, &hw_addr);
+			struct arp_entry_data *ret_arp_data = NULL;
+			ret_arp_data = get_dest_mac_addr_port
+			    (dest_address, &dest_if, (struct ether_addr *)eth_dest);
+			*port_out_id = p_acl->port_out_id[dest_if];
 
-			if (ret_mac == ARP_FOUND) {
-				if (ACL_DEBUG) {
-					printf("MAC found for ip 0x%x, port  "
-					"%d - %02x:%02x:%02x:%02x:%02x:%02x\n",
-					     dest_address, phy_port,
-					     hw_addr.addr_bytes[0],
-					     hw_addr.addr_bytes[1],
-					     hw_addr.addr_bytes[2],
-					     hw_addr.addr_bytes[3],
-					     hw_addr.addr_bytes[4],
-					     hw_addr.addr_bytes[5]);
-					printf("Dest MAC before -  "
-					"%02x:%02x:%02x:%02x:%02x:%02x\n",
-					     eth_dest[0], eth_dest[1],
-					     eth_dest[2], eth_dest[3],
-					     eth_dest[4], eth_dest[5]);
+			if (arp_cache_dest_mac_present(dest_if)) {
+				ether_addr_copy(get_link_hw_addr(dest_if), (struct ether_addr *)eth_src);
+				arp_data_ptr[dest_if]->n_last_update = time(NULL);
+
+				if (unlikely(ret_arp_data && ret_arp_data->num_pkts)) {
+					printf("sending buffered packets\n");
+					arp_send_buffered_pkts(ret_arp_data,
+					(struct ether_addr *)eth_dest, *port_out_id);
+
 				}
+			} else {
+				if (unlikely(ret_arp_data == NULL)) {
 
-				memcpy(eth_dest, &hw_addr,
-				       sizeof(struct ether_addr));
-				if (ACL_DEBUG) {
-					printf("PktP %p, dest_macP %p\n", pkt,
-					       eth_dest);
-					printf("Dest MAC after -  "
-					"%02x:%02x:%02x:%02x:%02x:%02x\n",
-					     eth_dest[0], eth_dest[1],
-					     eth_dest[2], eth_dest[3],
-					     eth_dest[4], eth_dest[5]);
-				}
-				if (is_phy_port_privte(phy_port))
-					memcpy(eth_src,
-					       get_link_hw_addr(dest_if),
-					       sizeof(struct ether_addr));
-				else
-					memcpy(eth_src,
-					       get_link_hw_addr(dest_if),
-					       sizeof(struct ether_addr));
-				p_acl->counters->tpkts_processed++;
-				p_acl->counters->bytes_processed +=
-				    packet_length;
-			}
+					printf("%s: NHIP Not Found, "
+					"outport_id: %d\n", __func__,
+					*port_out_id);
 
-			else {
-				if (*nhip != 0) {
+					/* Drop the pkt */
+					pkts_mask &= ~(1LLU << pos);
 					if (ACL_DEBUG)
-						printf("ACL requesting ARP for "
-							"ip %x, port %d\n",
-						     dest_address, phy_port);
-					if (ret_mac == ARP_NOT_FOUND)
-						request_arp(dest_if, *nhip);
-
-			/*  request_arp(p_acl->links_map[phy_port], *nhip); */
+						printf("ACL after drop pkt_mask  "
+						"%lu, pkt_num %d\n",
+						pkts_mask, pos);
+						p_acl->counters->pkts_drop++;
+					continue;
 				}
-				/* Drop packet by changing the mask */
-				if (ACL_DEBUG)
-					printf
-					    ("ACL before drop pkt_mask  "
+
+				if (ret_arp_data->status == INCOMPLETE ||
+				ret_arp_data->status == PROBE) {
+					if (ret_arp_data->num_pkts >= NUM_DESC) {
+						/* Drop the pkt */
+						pkts_mask &= ~(1LLU << pos);
+						if (ACL_DEBUG)
+							printf("ACL after drop pkt_mask  "
 							"%lu, pkt_num %d\n",
-					     pkts_mask, pos);
-				pkts_mask &= ~(1LLU << pos);
-				if (ACL_DEBUG)
-					printf("ACL after drop pkt_mask  "
-							"%lu, pkt_num %d\n",
-					     pkts_mask, pos);
-				p_acl->counters->pkts_drop++;
+							pkts_mask, pos);
+						p_acl->counters->pkts_drop++;
+						continue;
+					} else {
+					arp_pkts_mask |= pkt_mask;
+					arp_queue_unresolved_packet(ret_arp_data, pkt);
+					continue;
+					}
+				}
 			}
 		}
 #if 0
@@ -1923,6 +1865,11 @@ pkt_work_acl_ipv4_key(struct rte_pipeline *p,
 	rte_pipeline_ah_packet_drop(p, pkts_drop_mask);
 	keep_mask = pkts_mask;
 
+	if (arp_pkts_mask) {
+		keep_mask &= ~(arp_pkts_mask);
+		rte_pipeline_ah_packet_hijack(p, arp_pkts_mask);
+	}
+
 	/* don't bother measuring if traffic very low, might skew stats */
 	uint32_t packets_this_iteration = __builtin_popcountll(pkts_mask);
 
@@ -1934,7 +1881,7 @@ pkt_work_acl_ipv4_key(struct rte_pipeline *p,
 	}
 	if (ACL_DEBUG)
 		printf("Leaving pkt_work_acl_key pkts_mask = %p\n",
-		       (void *)pkts_mask);
+			(void *)pkts_mask);
 
 	return 0;
 }
@@ -1983,6 +1930,7 @@ pkt_work_acl_ipv6_key(struct rte_pipeline *p,
 	uint64_t conntrack_mask = 0;
 	uint64_t connexist_mask = 0;
 	uint32_t dest_address = 0;
+	arp_pkts_mask = 0;
 	int dest_if = 0;
 	int status;
 	uint64_t pkts_drop_mask, pkts_mask = RTE_LEN2MASK(n_pkts, uint64_t);
@@ -2690,6 +2638,11 @@ pkt_work_acl_ipv6_key(struct rte_pipeline *p,
 	pkts_drop_mask = keep_mask & ~pkts_mask;
 	rte_pipeline_ah_packet_drop(p, pkts_drop_mask);
 	keep_mask = pkts_mask;
+
+	if (arp_pkts_mask) {
+		keep_mask &= ~(arp_pkts_mask);
+		rte_pipeline_ah_packet_hijack(p, arp_pkts_mask);
+	}
 
 	/* don't bother measuring if traffic very low, might skew stats */
 	uint32_t packets_this_iteration = __builtin_popcountll(pkts_mask);

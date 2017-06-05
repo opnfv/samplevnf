@@ -92,9 +92,7 @@ cmd_arp_add_parsed(void *parsed_result,
 					 rte_cpu_to_be_32(params->ip.addr.
 								ipv4.s_addr),
 					 params->port_id
-				#ifndef VNF_ACL
 					 , STATIC_ARP
-				#endif
 				);
 	} else {
 		memcpy(ipv6, params->ip.addr.ipv6.s6_addr, 16);
@@ -167,13 +165,17 @@ cmd_arp_del_parsed(void *parsed_result,
 	remove_arp_entry(rte_bswap32(req->key.key.ipv4.ip),
 		req->key.key.ipv4.port_id);
 	#endif
+	struct arp_key_ipv4 arp_key;
+        arp_key.port_id = params->port_id;
+        arp_key.ip = rte_cpu_to_be_32(params->ip.addr.ipv4.s_addr);
+        arp_key.filler1 = 0;
+        arp_key.filler2 = 0;
+        arp_key.filler3 = 0;
+
+        struct arp_entry_data *new_arp_data = retrieve_arp_entry(arp_key, STATIC_ARP);
+
 	if (params->ip.family == AF_INET) {
-		remove_arp_entry(rte_cpu_to_be_32(params->ip.addr.ipv4.s_addr),
-				 params->port_id
-				#ifndef VNF_ACL
-				 , NULL
-				#endif
-				 );
+		remove_arp_entry(new_arp_data, &arp_key);
 	} else {
 		memcpy(ipv6, params->ip.addr.ipv6.s6_addr, 16);
 		remove_nd_entry_ipv6(ipv6, params->port_id);
@@ -235,7 +237,7 @@ cmd_arp_req_parsed(void *parsed_result,
 	key.filler2 = 0;
 	key.filler3 = 0;
 
-	struct arp_entry_data *arp_data = retrieve_arp_entry(key);
+	struct arp_entry_data *arp_data = retrieve_arp_entry(key, STATIC_ARP);
 
 	if (arp_data) {
 		if (ARPICMP_DEBUG)
@@ -318,22 +320,24 @@ struct cmd_arp_ls_result {
 	cmdline_fixed_string_t p_string;
 	uint32_t p;
 	cmdline_fixed_string_t arp_string;
+	uint32_t ip_type;
 };
 
 static void
 cmd_arp_ls_parsed(__rte_unused void *parsed_result,
 			__rte_unused struct cmdline *cl, __rte_unused void *data)
 {
-	printf("\nARP table ...\n");
-	printf("-------------\n");
-	print_arp_table();
+	struct cmd_arp_ls_result *params = parsed_result;
 
-	printf
-			("............................................................\n");
-
-	printf("\nND IPv6 table:\n");
-	printf("--------------\n");
-	print_nd_table();
+	if (!params->ip_type) {
+		printf("\nARP table ...\n");
+		printf("-------------\n");
+		print_arp_table();
+	} else {
+		printf("\nND IPv6 table:\n");
+		printf("--------------\n");
+		print_nd_table();
+	}
 }
 
 static cmdline_parse_token_string_t cmd_arp_ls_p_string =
@@ -347,6 +351,9 @@ static cmdline_parse_token_string_t cmd_arp_ls_arp_string =
 TOKEN_STRING_INITIALIZER(struct cmd_arp_ls_result, arp_string,
 			 "arpls");
 
+static cmdline_parse_token_num_t cmd_arp_ls_ip_type =
+TOKEN_NUM_INITIALIZER(struct cmd_arp_ls_result, ip_type, UINT32);
+
 static cmdline_parse_inst_t cmd_arp_ls = {
 	.f = cmd_arp_ls_parsed,
 	.data = NULL,
@@ -355,6 +362,7 @@ static cmdline_parse_inst_t cmd_arp_ls = {
 			 (void *)&cmd_arp_ls_p_string,
 			 (void *)&cmd_arp_ls_p,
 			 (void *)&cmd_arp_ls_arp_string,
+			 (void *)&cmd_arp_ls_ip_type,
 			 NULL,
 			 },
 };
