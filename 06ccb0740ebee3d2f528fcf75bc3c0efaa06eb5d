@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5aaae553_ed2b8792",
+        "filename": "VNFs/vCGNAPT/pipeline/pipeline_timer_be.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 115,
+      "author": {
+        "id": 6507
+      },
+      "writtenOn": "2017-06-05T14:02:45Z",
+      "side": 1,
+      "message": "Please add a version check, so that VNFs work with old and new dpdk?",
+      "revId": "06ccb0740ebee3d2f528fcf75bc3c0efaa06eb5d",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
