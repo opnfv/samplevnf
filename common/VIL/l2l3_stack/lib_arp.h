@@ -24,11 +24,15 @@
 
 #define ND_IPV6_ADDR_SIZE 16	/**< 16 Byte of IPv6 Address. */
 #define ND_IPV6_TIMER_EXPIRY 300  /**< in Seconds, Timer for ND IPv6 Expiry */
-#define ARP_TIMER_EXPIRY 1800	 /**< in Seconds, TIMER for ARP Expiry */
+#define ARP_TIMER_EXPIRY 20	 /**< in Seconds, TIMER for ARP Expiry */
 #define TIMER_MILLISECOND 1
 #define RTE_LOGTYPE_LIBARP RTE_LOGTYPE_USER1
 #define MAX_ND_RT_ENTRY 32
 #define MAX_ARP_RT_ENTRY 32
+#define NUM_DESC                (get_arp_buf())
+#define ARP_BUF_DEFAULT                30000
+#define PROBE_TIME             500
+#undef L3_STACK_SUPPORT
 
 /**
 * A structure for Route table entries of IPv4
@@ -39,6 +43,15 @@ struct lib_arp_route_table_entry {
 	uint32_t mask;	/**< mask */
 	uint32_t port;	/**< Physical port */
 	uint32_t nh;	/**< next hop */
+	uint32_t nh_mask;
+};
+
+#define MAX_LOCAL_MAC_ADDRESS	       32
+#define MAX_PORTS                      32
+struct arp_cache {
+        uint32_t nhip[MAX_LOCAL_MAC_ADDRESS];
+        struct ether_addr link_hw_laddr[MAX_LOCAL_MAC_ADDRESS];
+        uint32_t num_nhip;
 };
 
 /**
@@ -52,8 +65,28 @@ struct lib_nd_route_table_entry {
 	uint8_t nhipv6[16];	/**< next hop Ipv6 */
 };
 
+struct arp_data {
+	struct lib_arp_route_table_entry
+            lib_arp_route_table[MAX_ARP_RT_ENTRY];
+	uint8_t lib_arp_route_ent_cnt;
+	struct lib_nd_route_table_entry
+            lib_nd_route_table[MAX_ARP_RT_ENTRY];
+	uint8_t lib_nd_route_ent_cnt;
+	struct arp_cache arp_local_cache[MAX_PORTS];
+	struct ether_addr link_hw_addr[MAX_LOCAL_MAC_ADDRESS];
+	uint32_t link_hw_addr_array_idx;
+	uint8_t arp_cache_hw_laddr_valid[MAX_LOCAL_MAC_ADDRESS];
+} __rte_cache_aligned;
+
+uint8_t arp_cache_dest_mac_present(uint32_t out_port);
+
 extern struct lib_nd_route_table_entry lib_nd_route_table[MAX_ND_RT_ENTRY];
 extern struct lib_arp_route_table_entry lib_arp_route_table[MAX_ARP_RT_ENTRY];
+extern struct ether_addr *get_local_link_hw_addr(uint8_t out_port, uint32_t nhip);
+extern struct arp_cache arp_local_cache[MAX_PORTS];
+extern void prefetch(void);
+extern struct arp_entry_data *arp_data_ptr[16];
+uint32_t get_arp_buf(void);
 
 enum {
 	ARP_FOUND,
@@ -116,8 +149,15 @@ struct arp_timer_key {
 
 extern uint32_t ARPICMP_DEBUG;
 
-#define COMPLETE   1 /**< ARP entry populated and echo reply recieved. */
-#define INCOMPLETE 0 /**< ARP entry populated and either awaiting echo reply or stale entry. */
+enum {
+	INCOMPLETE,
+	COMPLETE,
+	PROBE,
+	STALE
+};
+#define USED_TIME	5
+//#define COMPLETE   1 /**< ARP entry populated and echo reply recieved. */
+//#define INCOMPLETE 0 /**< ARP entry populated and either awaiting echo reply or stale entry. */
 
 extern uint32_t NDIPV6_DEBUG;  /**< ND IPv6 */
 
@@ -142,6 +182,14 @@ struct arp_entry_data {
 	uint8_t retry_count;			/**< retry count for ARP*/
 	struct rte_timer *timer;    /**< Timer Associated with ARP*/
 	struct arp_timer_key *timer_key;
+        struct rte_ring *queue;     /** pkts queued */
+        rte_rwlock_t queue_lock;    /** queue lock */
+	struct rte_mbuf **buf_pkts;
+	struct rte_mbuf *buffered_pkt_list_head;
+	struct rte_mbuf *buffered_pkt_list_tail;
+	uint32_t num_pkts;
+	uint32_t n_confirmed;
+	uint32_t n_last_update;
 } __attribute__ ((packed));
 
 /**
@@ -198,8 +246,7 @@ struct table_nd_entry_data {
 * 0 if failure, and 1 if success
 */
 
-int get_dest_mac_address(const uint32_t ipaddr, uint32_t *phy_port,
-			 struct ether_addr *hw_addr, uint32_t *nhip);
+struct arp_entry_data *get_dest_mac_address(const uint32_t ipaddr, uint32_t *phy_port, struct ether_addr *hw_addr, uint32_t *nhip);
 /**
 * To get the destination MAC address andnext hop for the ip address  and outgoing port
 * @param1 ip addr
@@ -213,7 +260,7 @@ int get_dest_mac_address(const uint32_t ipaddr, uint32_t *phy_port,
 * @return
 * 0 if failure, and 1 if success
 */
-int get_dest_mac_addr_port(const uint32_t ipaddr,
+struct arp_entry_data *get_dest_mac_addr_port(const uint32_t ipaddr,
 				 uint32_t *phy_port, struct ether_addr *hw_addr);
 
 /**
@@ -262,6 +309,9 @@ int get_dest_mac_address_ipv6(uint8_t ipv6addr[], uint32_t *phy_port,
 int get_dest_mac_address_ipv6_port(uint8_t ipv6addr[], uint32_t *phy_port,
 					 struct ether_addr *hw_addr,
 					 uint8_t nhipv6[]);
+int arp_queue_unresolved_packet(struct arp_entry_data * arp_data,
+                        struct rte_mbuf * m);
+extern void arp_send_buffered_pkts(struct arp_entry_data *ret_arp_data,struct ether_addr *hw_addr, uint8_t port_id);
 
 /**
 * To get hardware link address
@@ -292,7 +342,7 @@ void print_nd_table(void);
 * @param portid
 * Port id
 */
-void remove_arp_entry(uint32_t ipaddr, uint8_t portid, void *arg);
+void remove_arp_entry(struct arp_entry_data *ret_arp_data, void *arg);
 
 /**
 * Removes ND entry from Nd Table
@@ -387,7 +437,7 @@ void process_arpicmp_pkt(struct rte_mbuf *pkt, l2_phy_interface_t *port);
 * @Param arp_key
 * Arp key to validate entry
 */
-struct arp_entry_data *retrieve_arp_entry(const struct arp_key_ipv4 arp_key);
+struct arp_entry_data *retrieve_arp_entry(const struct arp_key_ipv4 arp_key, uint8_t mode);
 
 /**
 * ND IPv6
@@ -492,7 +542,7 @@ void set_arptimeout(uint32_t timeout_val);
 * @Param
 * timeout_val to set
 */
-uint32_t get_nh(uint32_t, uint32_t *);
+uint32_t get_nh(uint32_t, uint32_t *, struct ether_addr *addr);
 /**
 * To get nexthop for ipv6
 * @Param ipv6

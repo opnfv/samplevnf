@@ -177,6 +177,7 @@ __rte_cache_aligned;
   * to avoid useless table lookup
   */
 /***** ARP local cache *****/
+#if 0
 uint8_t link_hw_laddr_valid[MAX_NUM_LOCAL_MAC_ADDRESS] = {
        0, 0, 0, 0, 0, 0, 0, 0,
        0, 0, 0, 0, 0, 0, 0, 0
@@ -200,6 +201,8 @@ static struct ether_addr link_hw_laddr[MAX_NUM_LOCAL_MAC_ADDRESS] = {
        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} }
 };
+#endif
+uint64_t arp_pkts_mask;
 
 /* Start TSC measurement */
 /* Prefetch counters and pipe before this function */
@@ -228,11 +231,11 @@ static inline void end_tsc_measure(
        }
 }
 
-static struct ether_addr *get_local_link_hw_addr(uint8_t out_port)
-{
-       return &link_hw_laddr[out_port];
-}
-
+//static struct ether_addr *get_local_link_hw_addr(uint8_t out_port)
+//{
+//       return &link_hw_laddr[out_port];
+//}
+#if 0
 static uint8_t local_dest_mac_present(uint8_t out_port)
 {
        return link_hw_laddr_valid[out_port];
@@ -284,6 +287,7 @@ static void do_local_nh_ipv4_cache(uint32_t dest_if,
               }
        }
 }
+#endif
 static uint32_t local_get_nh_ipv6(
        uint8_t *ip,
        uint32_t *port,
@@ -897,15 +901,11 @@ pkt4_work_vfw_arp_ipv4_packets(struct rte_mbuf **pkts,
               struct pipeline_vfw *vfw_pipe)
 {
 
-       uint32_t ret;
-       int ret_mac;
        uint8_t i;
 
-       struct ether_addr hw_addr;
        struct mbuf_tcp_meta_data *meta_data_addr;
        struct ether_hdr *ehdr;
        struct rte_mbuf *pkt;
-       uint16_t phy_port;
 
        for (i = 0; i < 4; i++) {
               uint32_t dest_if = INVALID_DESTIF;
@@ -919,7 +919,6 @@ pkt4_work_vfw_arp_ipv4_packets(struct rte_mbuf **pkts,
 
               int must_reverse = ((synproxy_reply_mask & pkt_mask) != 0);
 
-              phy_port = pkt->port;
               meta_data_addr = (struct mbuf_tcp_meta_data *)
                      RTE_MBUF_METADATA_UINT32_PTR(pkt, META_DATA_OFFSET);
               ehdr = rte_vfw_get_ether_addr(pkt);
@@ -930,7 +929,9 @@ pkt4_work_vfw_arp_ipv4_packets(struct rte_mbuf **pkts,
               uint32_t nhip = 0;
 
               uint32_t dest_address = rte_bswap32(ihdr->dst_addr);
-
+              if (must_reverse)
+                     rte_sp_exchange_mac_addresses(ehdr);
+#if 0
               ret = local_get_nh_ipv4(dest_address, &dest_if,
                             &nhip, vfw_pipe);
               if (must_reverse) {
@@ -995,55 +996,52 @@ pkt4_work_vfw_arp_ipv4_packets(struct rte_mbuf **pkts,
                      ether_addr_copy(get_link_hw_addr(dest_if),
                                    &ehdr->s_addr);
               } else {
-                     ret_mac = get_dest_mac_addr_port(dest_address,
-                                   &dest_if, &hw_addr);
-                     if (ret_mac == ARP_FOUND) {
+#endif
+	struct arp_entry_data *ret_arp_data = NULL;
+        ret_arp_data = get_dest_mac_addr_port(dest_address,
+                       &dest_if, &ehdr->d_addr);
+        meta_data_addr->output_port =  vfw_pipe->outport_id[dest_if];
 
-                            link_hw_laddr_valid[dest_if] = 1;
-                            memcpy(&link_hw_laddr[dest_if], &hw_addr,
-                                          sizeof(struct ether_addr));
+        if (arp_cache_dest_mac_present(dest_if)) {
 
-                            ether_addr_copy(&hw_addr, &ehdr->d_addr);
-                            ether_addr_copy(get_link_hw_addr(dest_if),
-                                          &ehdr->s_addr);
+                ether_addr_copy(get_link_hw_addr(dest_if), &ehdr->s_addr);
+                arp_data_ptr[dest_if]->n_last_update = time(NULL);
 
-                            if (vfw_debug >= DEBUG_LEVEL_4) {
-                                   char buf[HW_ADDR_SIZE];
+                if (unlikely(ret_arp_data && ret_arp_data->num_pkts)) {
 
-                                   ether_format_addr(buf, sizeof(buf),
-                                                 &hw_addr);
-                                   printf("MAC found for ip 0x%"
-                                          PRIx32", dest_if %d: %s, ",
-                                          dest_address,
-                                          dest_if, buf);
-                                   ether_format_addr(buf, sizeof(buf),
-                                                 &ehdr->s_addr);
-                                   printf("new eth hdr src: %s, ", buf);
-                                   ether_format_addr(buf, sizeof(buf),
-                                                 &ehdr->d_addr);
-                                   printf("new eth hdr dst: %s\n", buf);
+                        printf("sending buffered packets\n");
+                        arp_send_buffered_pkts(ret_arp_data,
+                                 &ehdr->d_addr, vfw_pipe->outport_id[dest_if]);
+
                             }
 
                      } else {
+                if (unlikely(ret_arp_data == NULL)) {
 
-                            if (vfw_debug >= DEBUG_LEVEL_4) {
-                                   char buf[HW_ADDR_SIZE];
+                        printf("%s: NHIP Not Found, nhip:%x , "
+                        "outport_id: %d\n", __func__, nhip,
+                        vfw_pipe->outport_id[dest_if]);
 
-                                   ether_format_addr(buf, sizeof(buf),
-                                          &hw_addr);
-                                   printf("MAC NOT FOUND for ip 0x%"
-                                          PRIx32", dest_if %"
-                                          PRId16": %s, ",
-                                          dest_address,
-                                          dest_if, buf);
+                        /* Drop the pkt */
+                        vfw_pipe->counters->
+                                 pkts_drop_without_arp_entry++;
+                        continue;
                             }
+		if (ret_arp_data->status == INCOMPLETE ||
+                           ret_arp_data->status == PROBE) {
+                                if (ret_arp_data->num_pkts >= NUM_DESC) {
                             /* ICMP req sent, drop packet by
                              * changing the mask */
-                            *pkts_mask &= ~pkt_mask;
-                            vfw_pipe->
-                                   counters->pkts_drop_without_arp_entry++;
+                        	vfw_pipe->counters->
+                                	 pkts_drop_without_arp_entry++;
+                                        continue;
+                                } else {
+                                        arp_pkts_mask |= pkt_mask;
+                                        arp_queue_unresolved_packet(ret_arp_data, pkt);
+                                        continue;
                      }
               }
+	}
        }
 }
 
@@ -1074,15 +1072,11 @@ pkt_work_vfw_arp_ipv4_packets(struct rte_mbuf *pkts,
               struct pipeline_vfw *vfw_pipe)
 {
 
-       uint32_t ret;
        uint32_t dest_if = INVALID_DESTIF;
-       int ret_mac;
 
-       struct ether_addr hw_addr;
        struct mbuf_tcp_meta_data *meta_data_addr;
        struct ether_hdr *ehdr;
        struct rte_mbuf *pkt;
-       uint16_t phy_port;
        uint64_t pkt_mask = 1LLU << pkt_num;
 
        pkt = pkts;
@@ -1091,7 +1085,6 @@ pkt_work_vfw_arp_ipv4_packets(struct rte_mbuf *pkts,
 
               int must_reverse = ((synproxy_reply_mask & pkt_mask) != 0);
 
-              phy_port = pkt->port;
               meta_data_addr = (struct mbuf_tcp_meta_data *)
                      RTE_MBUF_METADATA_UINT32_PTR(pkt, META_DATA_OFFSET);
               ehdr = rte_vfw_get_ether_addr(pkt);
@@ -1102,7 +1095,10 @@ pkt_work_vfw_arp_ipv4_packets(struct rte_mbuf *pkts,
               uint32_t nhip = 0;
 
               uint32_t dest_address = rte_bswap32(ihdr->dst_addr);
+              if (must_reverse)
+                     rte_sp_exchange_mac_addresses(ehdr);
 
+#if 0
               ret = local_get_nh_ipv4(dest_address, &dest_if,
                             &nhip, vfw_pipe);
               if (must_reverse) {
@@ -1167,53 +1163,50 @@ pkt_work_vfw_arp_ipv4_packets(struct rte_mbuf *pkts,
                      ether_addr_copy(get_link_hw_addr(dest_if),
                                    &ehdr->s_addr);
               } else {
-                     ret_mac = get_dest_mac_addr_port(dest_address,
-                                   &dest_if, &hw_addr);
-                     if (ret_mac) {
-                            link_hw_laddr_valid[dest_if] = 1;
-                            memcpy(&link_hw_laddr[dest_if], &hw_addr,
-                                          sizeof(struct ether_addr));
+#endif
+	struct arp_entry_data *ret_arp_data = NULL;
+                     ret_arp_data = get_dest_mac_addr_port(dest_address,
+                                   &dest_if, &ehdr->d_addr);
+              		meta_data_addr->output_port =  vfw_pipe->outport_id[dest_if];
+        if (arp_cache_dest_mac_present(dest_if)) {
 
-                            ether_addr_copy(&hw_addr, &ehdr->d_addr);
-                            ether_addr_copy(get_link_hw_addr(dest_if),
-                                          &ehdr->s_addr);
+                ether_addr_copy(get_link_hw_addr(dest_if), &ehdr->s_addr);
+                arp_data_ptr[dest_if]->n_last_update = time(NULL);
 
-                            if (vfw_debug >= DEBUG_LEVEL_4) {
-                                   char buf[HW_ADDR_SIZE];
+                if (unlikely(ret_arp_data && ret_arp_data->num_pkts)) {
 
-                                   ether_format_addr(buf, sizeof(buf),
-                                                 &hw_addr);
-                                   printf("MAC found for ip 0x%"
-                                          PRIx32", dest_if %d: %s, ",
-                                          dest_address,
-                                          dest_if, buf);
-                                   ether_format_addr(buf, sizeof(buf),
-                                                 &ehdr->s_addr);
-                                   printf("new eth hdr src: %s, ", buf);
-                                   ether_format_addr(buf, sizeof(buf),
-                                                 &ehdr->d_addr);
-                                   printf("new eth hdr dst: %s\n", buf);
+                        printf("sending buffered packets\n");
+                        arp_send_buffered_pkts(ret_arp_data,
+                                 &ehdr->d_addr, vfw_pipe->outport_id[dest_if]);
+
                             }
 
                      } else {
-                            if (vfw_debug >= DEBUG_LEVEL_4) {
-                                   char buf[HW_ADDR_SIZE];
+                if (unlikely(ret_arp_data == NULL)) {
 
-                                   ether_format_addr(buf, sizeof(buf),
-                                                 &hw_addr);
-                                   printf("MAC NOT FOUND for ip 0x%"
-                                                 PRIx32", dest_if %"
-                                                 PRId16": %s, ",
-                                                 dest_address,
-                                                 dest_if, buf);
+                        printf("%s: NHIP Not Found, nhip:%x , "
+                        "outport_id: %d\n", __func__, nhip,
+                        vfw_pipe->outport_id[dest_if]);
+
+                        vfw_pipe->counters->
+                                pkts_drop_without_arp_entry++;
+                        return;
                             }
+		if (ret_arp_data->status == INCOMPLETE ||
+                           ret_arp_data->status == PROBE) {
+                                if (ret_arp_data->num_pkts >= NUM_DESC) {
                             /* ICMP req sent, drop packet by
                              * changing the mask */
-                            *pkts_mask &= ~pkt_mask;
-                            vfw_pipe->
-                                   counters->pkts_drop_without_arp_entry++;
+                        		vfw_pipe->counters->
+                                		pkts_drop_without_arp_entry++;
+                                        return;
+                                } else {
+                                        arp_pkts_mask |= pkt_mask;
+                                        arp_queue_unresolved_packet(ret_arp_data, pkt);
+                                        return;
                      }
               }
+	}
 
        }
 }
@@ -1569,7 +1562,6 @@ rte_vfw_arp_ipv4_packets(struct rte_mbuf **pkts,
 
        uint32_t ret;
        uint32_t dest_if = INVALID_DESTIF;
-       int ret_mac;
        for (; pkts_to_arp;) {
               struct ether_addr hw_addr;
               struct mbuf_tcp_meta_data *meta_data_addr;
@@ -1596,7 +1588,9 @@ rte_vfw_arp_ipv4_packets(struct rte_mbuf **pkts,
               uint32_t nhip = 0;
 
               uint32_t dest_address = rte_bswap32(ihdr->dst_addr);
-
+              if (must_reverse)
+                     rte_sp_exchange_mac_addresses(ehdr);
+#if 0
               ret = local_get_nh_ipv4(dest_address, &dest_if,
                             &nhip, vfw_pipe);
               if (must_reverse) {
@@ -1661,57 +1655,52 @@ rte_vfw_arp_ipv4_packets(struct rte_mbuf **pkts,
                      ether_addr_copy(get_link_hw_addr(dest_if),
                                    &ehdr->s_addr);
               } else {
-                     ret_mac = get_dest_mac_addr_port(dest_address,
-                                   &dest_if, &hw_addr);
-                     if (ret_mac) {
-                            link_hw_laddr_valid[dest_if] = 1;
-                            memcpy(&link_hw_laddr[dest_if], &hw_addr,
-                                          sizeof(struct ether_addr));
+#endif
+		struct arp_entry_data *ret_arp_data = NULL;
+                     ret_arp_data = get_dest_mac_addr_port(dest_address,
+                                   &dest_if, &ehdr->d_addr);
+              	meta_data_addr->output_port =  vfw_pipe->outport_id[dest_if];
+        if (arp_cache_dest_mac_present(dest_if)) {
 
-                            ether_addr_copy(&hw_addr, &ehdr->d_addr);
-                            ether_addr_copy(get_link_hw_addr(dest_if),
-                                          &ehdr->s_addr);
+                ether_addr_copy(get_link_hw_addr(dest_if), &ehdr->s_addr);
+                arp_data_ptr[dest_if]->n_last_update = time(NULL);
 
-                            if (vfw_debug >= DEBUG_LEVEL_4) {
-                                   char buf[HW_ADDR_SIZE];
+                if (unlikely(ret_arp_data && ret_arp_data->num_pkts)) {
 
-                                   ether_format_addr(buf, sizeof(buf),
-                                                 &hw_addr);
-                                   printf("MAC found for ip 0x%"
-                                          PRIx32", dest_if %d: %s, ",
-                                          dest_address,
-                                          dest_if, buf);
-                                   ether_format_addr(buf, sizeof(buf),
-                                                 &ehdr->s_addr);
-                                   printf("new eth hdr src: %s, ", buf);
-                                   ether_format_addr(buf, sizeof(buf),
-                                                 &ehdr->d_addr);
-                                   printf("new eth hdr dst: %s\n", buf);
+                        printf("sending buffered packets\n");
+                        p_nat->naptedPktCount += ret_arp_data->num_pkts;
+                        arp_send_buffered_pkts(ret_arp_data,
+                                 &ehdr->d_addr, vfw_pipe->outport_id[dest_if]);
+
                             }
 
                      } else {
-                            if (unlikely(ret_mac == 0))
-                                   request_arp(meta_data_addr->output_port,
-                                          nhip);
+                if (unlikely(ret_arp_data == NULL)) {
 
-                            if (vfw_debug >= DEBUG_LEVEL_4) {
-                                   char buf[HW_ADDR_SIZE];
+                        printf("%s: NHIP Not Found, nhip:%x , "
+                        "outport_id: %d\n", __func__, nhip,
+                        vfw_pipe->outport_id[dest_if]);
 
-                            ether_format_addr(buf, sizeof(buf),
-                                          &hw_addr);
-                            printf("MAC NOT FOUND for ip 0x%"
-                                          PRIx32", dest_if %"
-                                          PRId16": %s, ",
-                                          dest_address,
-                                          dest_if, buf);
+                        /* Drop the pkt */
+                                   vfw_pipe->counters->
+                                          pkts_drop_without_arp_entry++;
+                        continue;
                      }
+		if (ret_arp_data->status == INCOMPLETE ||
+                           ret_arp_data->status == PROBE) {
+                                if (ret_arp_data->num_pkts >= NUM_DESC) {
                      /* ICMP req sent, drop packet by
                       * changing the mask */
-                     pkts_mask &= ~pkt_mask;
-                     vfw_pipe->
-                            counters->pkts_drop_without_arp_entry++;
+                                   	vfw_pipe->counters->
+                                          pkts_drop_without_arp_entry++;
+                                        continue;
+                                } else {
+                                        arp_pkts_mask |= pkt_mask;
+                                        arp_queue_unresolved_packet(ret_arp_data, pkt);
+                                        continue;
               }
 }
+	}
 
        }
 
@@ -2072,6 +2061,7 @@ vfw_port_in_action_ipv4(struct rte_pipeline *p,
        uint64_t packet_mask_in = RTE_LEN2MASK(n_pkts, uint64_t);
        uint64_t pkts_drop_mask;
        uint64_t hijack_mask = 0;
+       arp_pkts_mask = 0;
        uint64_t synproxy_reply_mask = 0;       /* for synproxy */
        uint64_t keep_mask = packet_mask_in;
 
@@ -2206,6 +2196,9 @@ vfw_port_in_action_ipv4(struct rte_pipeline *p,
        }
 
        /* Update mask before returning, so that bad packets are dropped */
+        if (arp_pkts_mask) {
+                rte_pipeline_ah_packet_hijack(p, arp_pkts_mask);
+        }
 
        pkts_drop_mask = packet_mask_in & ~keep_mask;
 
