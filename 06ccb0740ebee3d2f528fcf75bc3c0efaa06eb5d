@@ -16,6 +16,24 @@
       "revId": "06ccb0740ebee3d2f528fcf75bc3c0efaa06eb5d",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5aaae553_48b409f2",
+        "filename": "VNFs/vCGNAPT/pipeline/pipeline_timer_be.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 115,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-06-06T04:04:54Z",
+      "side": 1,
+      "message": "The rte_ring_enqueue( )  function in-turn calls rte_ring_mp_enqueue( ) based on the flag set during the creation of the ring queue. \nAs we have correctly set the flag (not setting the SP Flag means, it is MP enqueue), the changes done here works for 16.04 and also upward compatible.\n\nDo let me know if my above description is acceptable. \n\nFollowing the code snippet from 16.04..\n\nstatic inline int __attribute__((always_inline))\nrte_ring_enqueue(struct rte_ring *r, void *obj)\n{\n               if (r-\u003eprod.sp_enqueue)\n                              return rte_ring_sp_enqueue(r, obj);\n               else\n                              return rte_ring_mp_enqueue(r, obj);\n}",
+      "parentUuid": "5aaae553_ed2b8792",
+      "revId": "06ccb0740ebee3d2f528fcf75bc3c0efaa06eb5d",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
     }
   ]
 }
