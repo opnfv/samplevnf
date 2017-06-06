@@ -2646,7 +2646,7 @@ main(int argc, char **argv)
 		fflush(stdout);
 
 		nb_rx_queue = get_port_n_rx_queues(portid);
-		n_tx_queue = nb_lcores;
+                n_tx_queue = nb_rx_queue;
 		if (n_tx_queue > MAX_TX_QUEUE_PER_PORT)
 			n_tx_queue = MAX_TX_QUEUE_PER_PORT;
 		printf("Creating queues: nb_rxq=%d nb_txq=%u... ",
@@ -2673,7 +2673,7 @@ main(int argc, char **argv)
 
 		/* init one TX queue per couple (lcore,port) */
 		queueid = 0;
-		for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
+		for (lcore_id = 0; lcore_id < n_tx_queue; lcore_id++) {
 			if (rte_lcore_is_enabled(lcore_id) == 0)
 				continue;
 
