@@ -63,7 +63,7 @@ uint32_t get_prv_to_pub_port(uint32_t *ip_addr, uint8_t type)
 	case 6:
 	{
 		uint8_t nhipv6[16];
-		get_nh_ipv6((uint8_t *)ip_addr, &dest_if, &nhipv6[0]);
+		get_nh_ipv6((uint8_t *)ip_addr, &dest_if, &nhipv6[0], &addr);
 		if (dest_if != 0xff)
 			return dest_if;
 		return 0xff;
@@ -92,7 +92,7 @@ uint32_t get_pub_to_prv_port(uint32_t *ip_addr, uint8_t type)
 	case 6:
 	{
 		uint8_t nhipv6[16];
-		get_nh_ipv6((uint8_t *)ip_addr, &dest_if, &nhipv6[0]);
+		get_nh_ipv6((uint8_t *)ip_addr, &dest_if, &nhipv6[0], &addr);
 		if (dest_if != 0xff)
 			return dest_if;
 		return 0xff;
