@@ -31,9 +31,7 @@
 #include <cmdline.h>
 
 #include "pipeline_common_fe.h"
-#ifndef VNF_ACL
 #include "interface.h"
-#endif
 
 int
 app_pipeline_ping(struct app_params *app,
@@ -359,10 +357,8 @@ app_link_config(struct app_params *app,
 	/* Save link parameters */
 	p->ip = ip;
 	p->depth = depth;
-        #ifndef VNF_ACL
         if (ifm_add_ipv4_port(link_id, rte_bswap32(ip), depth) == IFM_FAILURE)
             return -1;
-        #endif
 
 	return 0;
 }
@@ -468,10 +464,8 @@ app_link_config_ipv6(struct app_params *app,
 		ipv6[6], ipv6[7], ipv6[8], ipv6[9], ipv6[10], ipv6[11],
 		ipv6[12], ipv6[13], ipv6[14], ipv6[15]);
 */
-        #ifndef VNF_ACL
 	if (ifm_add_ipv6_port(link_id, ipv6, depth) == IFM_FAILURE)
 		return -1;
-        #endif
 	return 0;
 }
 
@@ -1276,9 +1270,7 @@ cmd_link_ls_parsed(
                 if (p)
 		print_link_info(p);
 	}
-	#ifndef VNF_ACL
         print_interface_details();
-	#endif
 }
 
 cmdline_parse_token_string_t cmd_link_ls_link_string =

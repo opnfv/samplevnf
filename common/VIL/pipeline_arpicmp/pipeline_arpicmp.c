@@ -28,9 +28,7 @@
 
 #include "app.h"
 #include "vnf_common.h"
-#ifndef VNF_ACL
 #include "lib_arp.h"
-#endif
 
 #include <rte_ip.h>
 #include <rte_udp.h>
@@ -97,9 +95,7 @@ cmd_arp_add_parsed(void *parsed_result,
 	} else {
 		memcpy(ipv6, params->ip.addr.ipv6.s6_addr, 16);
 		populate_nd_entry(&params->macaddr, ipv6, params->port_id
-				#ifndef VNF_ACL
 				, STATIC_ND
-				#endif
 				);
 	}
 }
@@ -155,30 +151,25 @@ cmd_arp_del_parsed(void *parsed_result,
 			 __rte_unused struct cmdline *cl, __rte_unused void *data)
 {
 	struct cmd_arp_del_result *params = parsed_result;
-	uint8_t ipv6[16];
-
-	#if 0
-	struct pipeline_arp_icmp_arp_key key;
-	key.type = PIPELINE_ARP_ICMP_ARP_IPV4;
-	key.key.ipv4.ip = rte_cpu_to_be_32(params->ip.addr.ipv4.s_addr);
-	key.key.ipv4.port_id = params->port_id;
-	remove_arp_entry(rte_bswap32(req->key.key.ipv4.ip),
-		req->key.key.ipv4.port_id);
-	#endif
-	struct arp_key_ipv4 arp_key;
-        arp_key.port_id = params->port_id;
-        arp_key.ip = rte_cpu_to_be_32(params->ip.addr.ipv4.s_addr);
-        arp_key.filler1 = 0;
-        arp_key.filler2 = 0;
-        arp_key.filler3 = 0;
-
-        struct arp_entry_data *new_arp_data = retrieve_arp_entry(arp_key, STATIC_ARP);
 
 	if (params->ip.family == AF_INET) {
+		struct arp_key_ipv4 arp_key;
+		arp_key.port_id = params->port_id;
+		arp_key.ip = rte_cpu_to_be_32(params->ip.addr.ipv4.s_addr);
+		arp_key.filler1 = 0;
+		arp_key.filler2 = 0;
+		arp_key.filler3 = 0;
+		struct arp_entry_data *new_arp_data = retrieve_arp_entry(arp_key, STATIC_ARP);
 		remove_arp_entry(new_arp_data, &arp_key);
 	} else {
-		memcpy(ipv6, params->ip.addr.ipv6.s6_addr, 16);
-		remove_nd_entry_ipv6(ipv6, params->port_id);
+		struct nd_key_ipv6 nd_key;
+		nd_key.port_id = params->port_id;
+		memcpy(&nd_key.ipv6[0], params->ip.addr.ipv6.s6_addr, 16);
+		nd_key.filler1 = 0;
+		nd_key.filler2 = 0;
+		nd_key.filler3 = 0;
+		struct nd_entry_data *new_nd_data = retrieve_nd_entry(nd_key, STATIC_ND);
+		remove_nd_entry_ipv6(new_nd_data, &nd_key);
 	}
 }
 
@@ -250,11 +241,7 @@ cmd_arp_req_parsed(void *parsed_result,
 		printf("ARP - requesting arp for ip 0x%x, port %d\n",
 					 params->ip.addr.ipv4.s_addr, params->port_id);
 
-	#ifdef VNF_ACL
-	request_arp_wrap(params->port_id, params->ip.addr.ipv4.s_addr);
-	#else
 	request_arp(params->port_id, params->ip.addr.ipv4.s_addr);
-	#endif
 	/*give pipeline number too*/
 }
 
@@ -401,7 +388,6 @@ static cmdline_parse_inst_t cmd_show_ports_info = {
 			 },
 };
 
-#ifndef VNF_ACL
 struct cmd_arp_dbg_result {
 	cmdline_fixed_string_t arpdbg_str;
 	uint32_t flag;
@@ -479,7 +465,6 @@ cmdline_parse_inst_t cmd_arp_timer = {
 		NULL,
 	},
 };
-#endif
 
 /*
  * Forwarding of packets in I/O mode.
@@ -2106,10 +2091,8 @@ static cmdline_parse_ctx_t pipeline_cmds[] = {
 /*      (cmdline_parse_inst_t *) & cmd_set_hash_input_set_5,*/
 	(cmdline_parse_inst_t *) &cmd_set_hash_global_config,
 	(cmdline_parse_inst_t *) &cmd_set_sym_hash_ena_per_port,
-	#ifndef VNF_ACL
 	(cmdline_parse_inst_t *) &cmd_arp_dbg,
 	(cmdline_parse_inst_t *) &cmd_arp_timer,
-	#endif
 	NULL,
 };
 

@@ -111,3 +111,4 @@ struct rte_mbuf *lib_icmpv6_pkt;
  *  port - port structure
  */
 void process_icmpv6_pkt(struct rte_mbuf *pkt, l2_phy_interface_t *port);
+extern struct rte_mbuf *lib_nd_pkt[MAX_PORTS];
