@@ -184,7 +184,7 @@ void process_icmpv6_pkt(struct rte_mbuf *pkt, l2_phy_interface_t *port)
 		nd_key.filler3 = 0;
 
 		/*Validate if key-value pair already exists in the hash table for ND IPv6 */
-		struct nd_entry_data *new_nd_data = retrieve_nd_entry(nd_key);
+		struct nd_entry_data *new_nd_data = retrieve_nd_entry(nd_key, DYNAMIC_ND);
 		if (new_nd_data == NULL) {
 			printf
 					("Received unsolicited ICMPv6 echo reply on port %d\n",
@@ -209,6 +209,7 @@ void process_icmpv6_pkt(struct rte_mbuf *pkt, l2_phy_interface_t *port)
 
 		for (i = 0; i < ND_IPV6_ADDR_SIZE; i++)
 			src_ipv6[i] = ipv6_h->src_addr[i];
+
 		for (i = 0; i < ND_IPV6_ADDR_SIZE; i++)
 			dst_ipv6[i] = ipv6_h->dst_addr[i];
 
@@ -217,6 +218,7 @@ void process_icmpv6_pkt(struct rte_mbuf *pkt, l2_phy_interface_t *port)
 		/*  Check for Multicast Address */
 		if ((IPV6_MULTICAST & ((multi_addr << 8) | dst_ipv6[1]))
 				|| !memcmp(&port->macaddr[0], &eth_h->d_addr, 6)) {
+
 			populate_nd_entry(src_hw_addr, src_ipv6, port->pmdid,
 						DYNAMIC_ND);
 
@@ -346,6 +348,9 @@ struct rte_mbuf *request_icmpv6_echo(uint8_t ipv6[], l2_phy_interface_t *port)
 			sizeof(struct ether_hdr) + sizeof(struct ipv6_hdr) + 64;
 	icmpv6_pkt->data_len = icmpv6_pkt->pkt_len;
 
+	if (port)
+		port->transmit_single_pkt(port, icmpv6_pkt);
+
 	return icmpv6_pkt;
 }
 
@@ -357,12 +362,16 @@ struct rte_mbuf *request_nd(uint8_t ipv6[], l2_phy_interface_t *port)
 	struct icmpv6_nd_hdr *icmpv6_nd_h;
 	int i;
 
-	struct rte_mbuf *icmpv6_pkt = lib_icmpv6_pkt;
+	struct rte_mbuf *icmpv6_pkt = lib_nd_pkt[port->pmdid];
+	//struct rte_mbuf *icmpv6_pkt = lib_icmpv6_pkt;
 	if (icmpv6_pkt == NULL) {
 		if (ARPICMP_DEBUG)
 			printf("Error allocating icmpv6_pkt rte_mbuf\n");
 		return NULL;
 	}
+
+	uint8_t dst_ip[] = {255, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 255, 16, 100, 20};
+	uint8_t dst_mac[] = {51,51,255, 16, 100, 20};
 
 	eth_h = rte_pktmbuf_mtod(icmpv6_pkt, struct ether_hdr *);
 
@@ -375,24 +384,41 @@ struct rte_mbuf *request_nd(uint8_t ipv6[], l2_phy_interface_t *port)
 
 	ether_addr_copy((struct ether_addr *)&port->macaddr[0], &eth_h->s_addr);
 	eth_h->ether_type = rte_bswap16(0x86dd);
+
 	for (i = 0; i < 6; i++) {
-		eth_h->d_addr.addr_bytes[i] = 0;
+		//eth_h->d_addr.addr_bytes[i] = 0;
+		if (i < 3)
+			eth_h->d_addr.addr_bytes[i] = dst_mac[i];
+		else
+			eth_h->d_addr.addr_bytes[i] = ipv6[i];
 	}
 
-	ipv6_h->vtc_flow = 0x60000000;
+	for (i=13; i<16; i++)
+		dst_ip[i] = ipv6[i];
+
+	uint8_t *addr = ((ipv6list_t *) (port->ipv6_list))->ipaddr;
+
+	ipv6_h->vtc_flow = rte_bswap32(0x60000000);
 	ipv6_h->payload_len = rte_bswap16(32);
 	ipv6_h->proto = 58;
-	ipv6_h->hop_limits = 64;
+	ipv6_h->hop_limits = 255;
 
 	for (i = 0; i < 16; i++) {
-		ipv6_h->src_addr[i] = 0x0;
-		ipv6_h->dst_addr[i] = ipv6[i];
+		//ipv6_h->src_addr[i] = 0x0;
+		//ipv6_h->dst_addr[i] = ipv6[i];
+		//ipv6_h->src_addr[i] = src_ip[i];
+		ipv6_h->src_addr[i] = *(addr + i);
+		ipv6_h->dst_addr[i] = dst_ip[i];
 	}
 
 	icmpv6_h->icmpv6_type = ICMPV6_NEIGHBOR_SOLICITATION;
 	icmpv6_h->icmpv6_code = 0;
 
 	icmpv6_nd_h->icmpv6_reserved = 0x0;
+	icmpv6_nd_h->icmpv6_reserved |=
+			rte_cpu_to_be_32
+			(NEIGHBOR_ROUTER_OVERRIDE_SET);
+
 	for (i = 0; i < ND_IPV6_ADDR_SIZE; i++)
 		icmpv6_nd_h->target_ipv6[i] = ipv6[i];
 	icmpv6_nd_h->type = e_Source_Link_Layer_Address;
@@ -401,10 +427,13 @@ struct rte_mbuf *request_nd(uint8_t ipv6[], l2_phy_interface_t *port)
 
 	icmpv6_h->icmpv6_cksum = 0;
 	icmpv6_h->icmpv6_cksum = ~icmpv6_ipv6_nd_checksum(icmpv6_pkt);
-
 	icmpv6_pkt->pkt_len =
 			sizeof(struct ether_hdr) + sizeof(struct ipv6_hdr) + 32;
 	icmpv6_pkt->data_len = icmpv6_pkt->pkt_len;
+
+	if (port) {
+		port->transmit_single_pkt(port, icmpv6_pkt);
+	}
 
 	return icmpv6_pkt;
 }
