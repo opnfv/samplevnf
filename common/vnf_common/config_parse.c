@@ -92,12 +92,10 @@ static const struct app_link_params link_params_default = {
 			.mq_mode = ETH_MQ_TX_NONE,
 		},
 		.lpbk_mode = 0,
-		#ifndef VNF_ACL
 		#ifdef LSC_GRARP
                 .intr_conf = {
                      .lsc = 1, /**< lsc interrupt feature enabled */
                 }
-		#endif
 		#endif
 	},
 

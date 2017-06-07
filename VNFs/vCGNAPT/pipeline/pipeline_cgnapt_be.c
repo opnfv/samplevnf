@@ -83,7 +83,7 @@ uint8_t n_cgnapt_pipeline;
 struct pipeline_cgnapt *global_pnat;
 
 uint64_t arp_pkts_mask;
-extern struct arp_entry_data *arp_data_ptr[16];
+
 /* To know egress or ingress port */
 static uint8_t cgnapt_in_port_egress_prv[PIPELINE_MAX_PORT_IN];
 static uint8_t cgnapt_prv_que_port_index[PIPELINE_MAX_PORT_IN];
@@ -192,10 +192,6 @@ static uint32_t local_get_nh_ipv6(
 	uint8_t nhip[],
 	struct pipeline_cgnapt *p_nat);
 
-static void do_local_nh_ipv6_cache(
-	uint32_t dest_if,
-	struct pipeline_cgnapt *p_nat);
-
 static uint8_t check_arp_icmp(
 	struct rte_mbuf *pkt,
 	uint64_t pkt_mask,
@@ -226,36 +222,6 @@ uint64_t nextPowerOf2(uint64_t n)
 void remove_local_cache(uint8_t port)
 {
 	link_hw_laddr_valid[port] = 0;
-}
-
-/**
- * Function to get MAC addr of local link
- *
- * @params out_port
- *  Physical port number
- *
- * @return
- *  Outport Link MAC addr
- */
-
-//struct ether_addr *get_local_link_hw_addr(uint8_t out_port)
-//{
-//	return &link_hw_laddr[out_port];
-//}
-
-/**
- * Function to get MAC addr from array instead of hash table
- *
- * @params out_port
- *  Physical port number
- *
- * @return
- *  Outport Link MAC addr
- */
-
-uint8_t local_dest_mac_present(uint8_t out_port)
-{
-	return link_hw_laddr_valid[out_port];
 }
 
 /**
@@ -308,26 +274,7 @@ static void do_local_nh_ipv4_cache(
 	uint32_t dest_if,
 	struct pipeline_cgnapt *p_nat)
 {
-
-	/* Search for the entry and do local copy */
-	int i;
-
-	for (i = 0; i < MAX_ARP_RT_ENTRY; i++) {
-		if (lib_arp_route_table[i].port == dest_if) {
-
-			struct lib_arp_route_table_entry *lentry =
-				&p_nat->local_lib_arp_route_table
-					[p_nat->local_lib_arp_route_ent_cnt];
-
-			lentry->ip   = lib_arp_route_table[i].ip;
-			lentry->mask = lib_arp_route_table[i].mask;
-			lentry->port = lib_arp_route_table[i].port;
-			lentry->nh   = lib_arp_route_table[i].nh;
-
-			p_nat->local_lib_arp_route_ent_cnt++;
-						break;
-		}
-	}
+	return;
 }
 
 
@@ -388,45 +335,6 @@ static uint32_t local_get_nh_ipv6(
 			return 0;
 }
 
-
-/**
- * Function to make local copy for NH of type IPv6
- *
- * @params dest_if
- *  Physical port number
- * @params p_nat
- *  CGNAPT pipeline ptr
- *
- */
-
-static void do_local_nh_ipv6_cache(
-	uint32_t dest_if,
-	struct pipeline_cgnapt *p_nat)
-{
-		/* Search for the entry and do local copy */
-	int i, l;
-	for (i = 0; i < MAX_ND_RT_ENTRY; i++) {
-
-		if (lib_nd_route_table[i].port == dest_if) {
-
-			struct lib_nd_route_table_entry *lentry =
-				&p_nat->local_lib_nd_route_table
-					[p_nat->local_lib_nd_route_ent_cnt];
-
-			for (l = 0; l < 16; l++) {
-				lentry->ipv6[l]   =
-					lib_nd_route_table[i].ipv6[l];
-				lentry->nhipv6[l] =
-					lib_nd_route_table[i].nhipv6[l];
-			}
-			lentry->depth = lib_nd_route_table[i].depth;
-			lentry->port  = lib_nd_route_table[i].port;
-
-			p_nat->local_lib_nd_route_ent_cnt++;
-			break;
-			} //if
-		} //for
-}
 
 #ifdef SIP_ALG
 /* Commented code may be required for future usage, Please keep it*/
@@ -918,7 +826,7 @@ void sw_checksum(struct rte_mbuf *pkt, enum PKT_TYPE ver)
 	}
 }
 
-void print_pkt_info(uint8_t *eth_dest, struct ether_addr *hw_addr, 
+void print_pkt_info(uint8_t *eth_dest, struct ether_addr *hw_addr,
 		uint32_t dest_address, uint32_t port_id, struct rte_mbuf *pkt)
 {
 
@@ -1713,7 +1621,6 @@ void print_common_table(void)
  * @return
  *  int that is not checked by caller
  */
-
 static int cgnapt_in_port_ah_mix(struct rte_pipeline *rte_p,
 				 struct rte_mbuf **pkts,
 				 uint32_t n_pkts, void *arg)
@@ -2206,14 +2113,15 @@ static int cgnapt_in_port_ah_mix(struct rte_pipeline *rte_p,
 			*outport_id = p_nat->outport_id[dest_if];
 			struct arp_entry_data *ret_arp_data;
 			ret_arp_data = get_dest_mac_addr_port(dest_address,
-				&dest_if, (struct ether_addr *)&hw_addr);
+				&dest_if, (struct ether_addr *)eth_dest);
 
 			if (unlikely(ret_arp_data == NULL)) {
 
+				#ifdef CGNAPT_DEBUGGING
 				printf("%s: NHIP Not Found, nhip: %x, "
 				"outport_id: %d\n", __func__, nhip,
 				*outport_id);
-
+				#endif
 				/* Drop the pkt */
 				p_nat->invalid_packets |= pkt_mask;
 				p_nat->naptDroppedPktCount++;
@@ -2225,7 +2133,7 @@ static int cgnapt_in_port_ah_mix(struct rte_pipeline *rte_p,
 			}
 
 			if (ret_arp_data->status == COMPLETE) {
-				
+
 				if (ret_arp_data->num_pkts) {
 					p_nat->naptedPktCount += ret_arp_data->num_pkts;
 					arp_send_buffered_pkts(ret_arp_data,
@@ -2266,7 +2174,7 @@ static int cgnapt_in_port_ah_mix(struct rte_pipeline *rte_p,
 					print_pkt(pkts[pkt_index]);
 				#endif
 
-			} else if (ret_arp_data->status == INCOMPLETE || 
+			} else if (ret_arp_data->status == INCOMPLETE ||
 				ret_arp_data->status == PROBE) {
 				if (ret_arp_data->num_pkts >= NUM_DESC) {
 					/* Drop the pkt */
@@ -2353,74 +2261,61 @@ static int cgnapt_in_port_ah_mix(struct rte_pipeline *rte_p,
 			memcpy((uint8_t *) &dst_addr[0],
 					 &entry->data.u.prv_ipv6[0], 16);
 			memset(nh_ipv6, 0, 16);
+			struct nd_entry_data *ret_nd_data = NULL;
+			ret_nd_data = get_dest_mac_address_ipv6_port((uint8_t *)
+                                &dst_addr[0], &dest_if,
+                                &hw_addr, &nh_ipv6[0]);
+			*outport_id = p_nat->outport_id[dest_if];
 
-			ret = local_get_nh_ipv6((uint8_t *)&dst_addr[0],
-				&dest_if, &nh_ipv6[0], p_nat);
+			if (nd_cache_dest_mac_present(dest_if)) {
+				ether_addr_copy(get_link_hw_addr(dest_if),
+					(struct ether_addr *)eth_src);
+				update_nhip_access(dest_if);
 
-			if (!ret) {
-				dest_if = get_prv_to_pub_port(
-						&dst_addr[0],
-						IP_VERSION_6);
-				if (dest_if == INVALID_DESTIF) {
-					p_nat->invalid_packets |=
-						1LLU << pkt_index;
-					p_nat->naptDroppedPktCount++;
+				if (unlikely(ret_nd_data && ret_nd_data->num_pkts)) {
+					p_nat->naptedPktCount += ret_nd_data->num_pkts;
+					nd_send_buffered_pkts(ret_nd_data,
+						 (struct ether_addr *)eth_dest,
+						 *outport_id);
+				}
+			} else {
+				if (unlikely(ret_nd_data == NULL)) {
+
 					#ifdef CGNAPT_DEBUGGING
-					p_nat->naptDroppedPktCount6++;
+					printf("%s: NHIP Not Found, "
+					"outport_id: %d\n", __func__,
+					*outport_id);
+					#endif
+
+					/* Drop the pkt */
+					p_nat->invalid_packets |= pkt_mask;
+					p_nat->naptDroppedPktCount++;
+
+					#ifdef CGNAPT_DEBUGGING
+					p_nat->naptDroppedPktCount4++;
 					#endif
 					continue;
 				}
-				do_local_nh_ipv6_cache(dest_if, p_nat);
-			}
-			*outport_id = p_nat->outport_id[dest_if];
 
-			if (get_dest_mac_address_ipv6_port((uint8_t *)
-				&dst_addr[0], &dest_if,
-				&hw_addr, &nh_ipv6[0])){
+				if (ret_nd_data->status == INCOMPLETE ||
+					ret_nd_data->status == PROBE) {
+					if (ret_nd_data->num_pkts >= NUM_DESC) {
+						/* Drop the pkt */
+						p_nat->invalid_packets |= pkt_mask;
+						p_nat->naptDroppedPktCount++;
 
-				#ifdef CGNAPT_DBG_PRNT
-				if (CGNAPT_DEBUG > 2) {
-				printf("MAC found for ip 0x%x, port %d - "
-				"%02x:%02x:%02x:%02x:%02x:%02x\n",
-				dest_address, *outport_id,
-				hw_addr.addr_bytes[0],
-				hw_addr.addr_bytes[1], hw_addr.addr_bytes[2],
-				hw_addr.addr_bytes[3], hw_addr.addr_bytes[4],
-				hw_addr.addr_bytes[5]);
-
-				printf("Dest MAC before - "
-				"%02x:%02x:%02x:%02x:%02x:%02x\n",
-				eth_dest[0], eth_dest[1], eth_dest[2],
-				eth_dest[3], eth_dest[4], eth_dest[5]);
+						#ifdef CGNAPT_DEBUGGING
+						p_nat->naptDroppedPktCount4++;
+						#endif
+						continue;
+					} else {
+						arp_pkts_mask |= pkt_mask;
+						nd_queue_unresolved_packet(ret_nd_data,
+							 pkts[pkt_index]);
+						continue;
+					}
 				}
-				#endif
-					memcpy(eth_dest, &hw_addr,
-						sizeof(struct ether_addr));
-					memcpy(eth_src, get_link_hw_addr(
-						dest_if),
-						sizeof(struct ether_addr));
 
-			#ifdef CGNAPT_DBG_PRNT
-			if (CGNAPT_DEBUG > 2) {
-				printf("Dest MAC after - "
-				"%02x:%02x:%02x:%02x:%02x:%02x\n",
-				eth_dest[0], eth_dest[1], eth_dest[2],
-				eth_dest[3], eth_dest[4], eth_dest[5]);
-			}
-			#endif
-
-			#ifdef CGNAPT_DBG_PRNT
-			if (CGNAPT_DEBUG > 4)
-				print_pkt(pkts[pkt_index]);
-			#endif
-			} else {
-
-				p_nat->invalid_packets |= pkt_mask;
-				p_nat->naptDroppedPktCount++;
-				#ifdef CGNAPT_DEBUGGING
-				p_nat->naptDroppedPktCount4++;
-				#endif
-				continue;
 			}
 
 			#ifdef NAT_ONLY_CONFIG_REQ
@@ -2455,13 +2350,15 @@ static int cgnapt_in_port_ah_mix(struct rte_pipeline *rte_p,
 				*outport_id = p_nat->outport_id[dest_if];
 				struct arp_entry_data *ret_arp_data;
 				ret_arp_data = get_dest_mac_addr_port(dest_address,
-					&dest_if, (struct ether_addr *)&hw_addr);
+					&dest_if, (struct ether_addr *)eth_dest);
 
 				if (unlikely(ret_arp_data == NULL)) {
 
+					#ifdef CGNAPT_DEBUGGING
 					printf("%s: NHIP Not Found, nhip: %x, "
 					"outport_id: %d\n", __func__, nhip,
 					*outport_id);
+					#endif
 
 					/* Drop the pkt */
 					p_nat->invalid_packets |= pkt_mask;
@@ -2492,9 +2389,9 @@ static int cgnapt_in_port_ah_mix(struct rte_pipeline *rte_p,
 					printf("MAC found for ip 0x%x, port %d - "
 					"%02x:%02x:%02x:%02x:%02x:%02x\n",
 					dest_address, *outport_id,
-				 	hw_addr.addr_bytes[0], hw_addr.addr_bytes[1],
-				 	hw_addr.addr_bytes[2], hw_addr.addr_bytes[3],
-				 	hw_addr.addr_bytes[4], hw_addr.addr_bytes[5]);
+					hw_addr.addr_bytes[0], hw_addr.addr_bytes[1],
+					hw_addr.addr_bytes[2], hw_addr.addr_bytes[3],
+					hw_addr.addr_bytes[4], hw_addr.addr_bytes[5]);
 
 					printf("Dest MAC before - "
 					"%02x:%02x:%02x:%02x:%02x:%02x\n",
@@ -2517,7 +2414,7 @@ static int cgnapt_in_port_ah_mix(struct rte_pipeline *rte_p,
 						print_pkt(pkts[pkt_index]);
 					#endif
 
-				} else if (ret_arp_data->status == INCOMPLETE || 
+				} else if (ret_arp_data->status == INCOMPLETE ||
 					ret_arp_data->status == PROBE) {
 					arp_queue_unresolved_packet(ret_arp_data,
 						pkts[pkt_index]);
@@ -2672,9 +2569,6 @@ static int cgnapt_in_port_ah_ipv4_prv(struct rte_pipeline *rte_p,
 			rte_prefetch0(&napt_hash_tbl_entries
 						[p_nat->lkup_indx[j]]);
 	}
-
-	//prefetch();
-
 
 	for (i = 0; i < (n_pkts & (~0x3LLU)); i += 4)
 		pkt4_work_cgnapt_ipv4_prv(pkts, i, arg, p_nat);
@@ -3941,15 +3835,14 @@ pkt_work_cgnapt_ipv4_prv(
 	dest_address = rte_bswap32(*dst_addr);
 	uint32_t nhip = 0;
 	struct arp_entry_data *ret_arp_data = NULL;
-	ret_arp_data = get_dest_mac_addr_port(dest_address, &dest_if, (struct ether_addr *)eth_dest);
+	ret_arp_data = get_dest_mac_addr_port(dest_address,
+		 &dest_if, (struct ether_addr *)eth_dest);
 	*outport_id = p_nat->outport_id[dest_if];
 
 	if (arp_cache_dest_mac_present(dest_if)) {
 		ether_addr_copy(get_link_hw_addr(dest_if),(struct ether_addr *)eth_src);
-		arp_data_ptr[dest_if]->n_last_update = time(NULL);
-
+		update_nhip_access(dest_if);
 		if (unlikely(ret_arp_data && ret_arp_data->num_pkts)) {
-			printf("sending buffered packets\n");
 			p_nat->naptedPktCount += ret_arp_data->num_pkts;
 			arp_send_buffered_pkts(ret_arp_data,
 				 (struct ether_addr *)eth_dest, *outport_id);
@@ -3959,9 +3852,11 @@ pkt_work_cgnapt_ipv4_prv(
 
 		if (unlikely(ret_arp_data == NULL)) {
 
+			#ifdef CGNAPT_DEBUGGING
 			printf("%s: NHIP Not Found, nhip:%x , "
 			"outport_id: %d\n", __func__, nhip,
 			*outport_id);
+			#endif
 
 			/* Drop the pkt */
 			p_nat->invalid_packets |= pkt_mask;
@@ -3973,7 +3868,7 @@ pkt_work_cgnapt_ipv4_prv(
 			return;
 		}
 
-		if (ret_arp_data->status == INCOMPLETE || 
+		if (ret_arp_data->status == INCOMPLETE ||
 			   ret_arp_data->status == PROBE) {
 				if (ret_arp_data->num_pkts >= NUM_DESC) {
 					/* Drop the pkt */
@@ -4288,15 +4183,15 @@ pkt_work_cgnapt_ipv4_pub(
 
 	dest_address = entry->data.u.prv_ip;
 	struct arp_entry_data *ret_arp_data = NULL;
-	ret_arp_data = get_dest_mac_addr_port(dest_address, &dest_if, (struct ether_addr *)eth_dest);
+	ret_arp_data = get_dest_mac_addr_port(dest_address,
+		 &dest_if, (struct ether_addr *)eth_dest);
 	*outport_id = p_nat->outport_id[dest_if];
 
 	if (arp_cache_dest_mac_present(dest_if)) {
 		ether_addr_copy(get_link_hw_addr(dest_if), (struct ether_addr *)eth_src);
-		arp_data_ptr[dest_if]->n_last_update = time(NULL);
+		update_nhip_access(dest_if);
 
 		if (ret_arp_data && ret_arp_data->num_pkts) {
-			printf("sending buffered packets\n");
 			p_nat->naptedPktCount += ret_arp_data->num_pkts;
 			arp_send_buffered_pkts(ret_arp_data,
 				 (struct ether_addr *)eth_dest, *outport_id);
@@ -4308,9 +4203,12 @@ pkt_work_cgnapt_ipv4_pub(
 
 			/* Commented code may be required for debug
 			 * and future use, Please keep it */
+
+			#ifdef CGNAPT_DEBUGGING
 			printf("%s: NHIP Not Found, nhip: %x, "
 			"outport_id: %d\n", __func__, nhip,
 			*outport_id);
+			#endif
 
 			/* Drop the pkt */
 			p_nat->invalid_packets |= pkt_mask;
@@ -4323,7 +4221,7 @@ pkt_work_cgnapt_ipv4_pub(
 
 		}
 
-		if (ret_arp_data->status == INCOMPLETE || 
+		if (ret_arp_data->status == INCOMPLETE ||
 			ret_arp_data->status == PROBE) {
 			if (ret_arp_data->num_pkts >= NUM_DESC) {
 				/* Drop the pkt */
@@ -4723,14 +4621,15 @@ pkt4_work_cgnapt_ipv4_prv(
 		dest_address = rte_bswap32(*dst_addr);
 		struct arp_entry_data *ret_arp_data = NULL;
 		uint64_t start, end;
-		ret_arp_data = get_dest_mac_addr_port(dest_address, &dest_if, (struct ether_addr *)eth_dest);
+		ret_arp_data = get_dest_mac_addr_port(dest_address,
+			 &dest_if, (struct ether_addr *)eth_dest);
 		*outport_id = p_nat->outport_id[dest_if];
 		if (arp_cache_dest_mac_present(dest_if)) {
-			ether_addr_copy(get_link_hw_addr(dest_if), (struct ether_addr *)eth_src);
-			arp_data_ptr[dest_if]->n_last_update = time(NULL);
-		
+			ether_addr_copy(get_link_hw_addr(dest_if),
+				 (struct ether_addr *)eth_src);
+			update_nhip_access(dest_if);
+
 			if (ret_arp_data && ret_arp_data->num_pkts) {
-				printf("sending buffered packets\n");
 				p_nat->naptedPktCount += ret_arp_data->num_pkts;
 				arp_send_buffered_pkts(ret_arp_data,
 					 (struct ether_addr *)eth_dest, *outport_id);
@@ -4740,9 +4639,11 @@ pkt4_work_cgnapt_ipv4_prv(
 
 			if (unlikely(ret_arp_data == NULL)) {
 
+				#ifdef CGNAPT_DEBUGGING
 				printf("%s: ARP Not Found, nhip: %x, "
 				"outport_id: %d\n", __func__, nhip,
 				*outport_id);
+				#endif
 
 				/* Drop the pkt */
 				p_nat->invalid_packets |= pkt_mask;
@@ -4755,7 +4656,7 @@ pkt4_work_cgnapt_ipv4_prv(
 
 			}
 
-			if (ret_arp_data->status == INCOMPLETE || 
+			if (ret_arp_data->status == INCOMPLETE ||
 				ret_arp_data->status == PROBE) {
 				if (ret_arp_data->num_pkts >= NUM_DESC) {
 					/* Drop the pkt */
@@ -5086,15 +4987,15 @@ pkt4_work_cgnapt_ipv4_pub(
 		}
 		dest_address = entry->data.u.prv_ip;
 		struct arp_entry_data *ret_arp_data = NULL;
-		ret_arp_data = get_dest_mac_addr_port(dest_address, &dest_if, (struct ether_addr *)eth_dest);
+		ret_arp_data = get_dest_mac_addr_port(dest_address,
+			 &dest_if, (struct ether_addr *)eth_dest);
 		*outport_id = p_nat->outport_id[dest_if];
 
 	if (arp_cache_dest_mac_present(dest_if)) {
 		ether_addr_copy(get_link_hw_addr(dest_if), (struct ether_addr *)eth_src);
-		arp_data_ptr[dest_if]->n_last_update = time(NULL);
-		
+		update_nhip_access(dest_if);
+
 		if (ret_arp_data && ret_arp_data->num_pkts) {
-			printf("sending buffered packets\n");
 			p_nat->naptedPktCount += ret_arp_data->num_pkts;
 			arp_send_buffered_pkts(ret_arp_data,
 				 (struct ether_addr *)eth_dest, *outport_id);
@@ -5104,9 +5005,11 @@ pkt4_work_cgnapt_ipv4_pub(
 
 		if (unlikely(ret_arp_data == NULL)) {
 
+			#ifdef CGNAPT_DEBUGGING
 			printf("%s: NHIP Not Found, nhip: %x, "
 			"outport_id: %d\n", __func__, nhip,
 			*outport_id);
+			#endif
 
 			/* Drop the pkt */
 			p_nat->invalid_packets |= pkt_mask;
@@ -5118,7 +5021,7 @@ pkt4_work_cgnapt_ipv4_pub(
 			continue;
 		}
 
-		if (ret_arp_data->status == INCOMPLETE || 
+		if (ret_arp_data->status == INCOMPLETE ||
 			ret_arp_data->status == PROBE) {
 			if (ret_arp_data->num_pkts >= NUM_DESC) {
 				/* Drop the pkt */
@@ -6234,23 +6137,6 @@ pkt_work_cgnapt_ipv6_prv(
 		dest_address = rte_bswap32(*dst_addr);
 		/*Multiport Changes */
 	uint32_t nhip = 0;
-	uint32_t ret;
-	ret = local_get_nh_ipv4(dest_address, &dest_if, &nhip, p_nat);
-	if (!ret) {
-		dest_if = get_prv_to_pub_port(&dest_address, IP_VERSION_4);
-
-		if (dest_if == INVALID_DESTIF) {
-			p_nat->invalid_packets |= pkt_mask;
-			p_nat->naptDroppedPktCount++;
-			#ifdef CGNAPT_DEBUGGING
-			p_nat->naptDroppedPktCount6++;
-			#endif
-			return;
-		}
-
-		do_local_nh_ipv4_cache(dest_if, p_nat);
-	}
-		*outport_id = p_nat->outport_id[dest_if];
 
 		#ifdef CGNAPT_DBG_PRNT
 		if (CGNAPT_DEBUG > 2)
@@ -6273,18 +6159,30 @@ pkt_work_cgnapt_ipv6_prv(
 	}
 	#endif
 
-	if (local_dest_mac_present(dest_if)) {
-		memcpy(eth_src, get_link_hw_addr(dest_if),
-				sizeof(struct ether_addr));
+	struct arp_entry_data *ret_arp_data;
+	ret_arp_data = get_dest_mac_addr_port(dest_address,
+		 &dest_if, (struct ether_addr *)eth_dest);
+	*outport_id = p_nat->outport_id[dest_if];
+	if (arp_cache_dest_mac_present(dest_if)) {
+		ether_addr_copy(get_link_hw_addr(dest_if),
+			(struct ether_addr *)eth_src);
+		update_nhip_access(dest_if);
+
+		if (unlikely(ret_arp_data && ret_arp_data->num_pkts)) {
+			p_nat->naptedPktCount += ret_arp_data->num_pkts;
+			arp_send_buffered_pkts(ret_arp_data,
+				 (struct ether_addr *)eth_dest, *outport_id);
+
+		}
 	} else {
-		struct arp_entry_data *ret_arp_data;
-		ret_arp_data = get_dest_mac_addr_port(dest_address, &dest_if, (struct ether_addr *)&hw_addr);
 
 		if (unlikely(ret_arp_data == NULL)) {
 
-			printf("%s: NHIP Not Found, nhip: %x, "
+			#ifdef CGNAPT_DEBUGGING
+			printf("%s: NHIP Not Found, nhip:%x , "
 			"outport_id: %d\n", __func__, nhip,
 			*outport_id);
+			#endif
 
 			/* Drop the pkt */
 			p_nat->invalid_packets |= pkt_mask;
@@ -6296,42 +6194,22 @@ pkt_work_cgnapt_ipv6_prv(
 			return;
 		}
 
-		if (ret_arp_data->status == COMPLETE) {
+		if (ret_arp_data->status == INCOMPLETE ||
+			   ret_arp_data->status == PROBE) {
+			if (ret_arp_data->num_pkts >= NUM_DESC) {
+				/* Drop the pkt */
+				p_nat->invalid_packets |= pkt_mask;
+				p_nat->naptDroppedPktCount++;
 
-			#ifdef CGNAPT_DBG_PRNT
-			if (CGNAPT_DEBUG > 2) {
-			printf("MAC found for ip 0x%x, port %d - %02x:%02x: "
-			"%02x:%02x:%02x:%02x\n", dest_address,
-			*outport_id,
-			hw_addr.addr_bytes[0], hw_addr.addr_bytes[1],
-			hw_addr.addr_bytes[2], hw_addr.addr_bytes[3],
-			hw_addr.addr_bytes[4], hw_addr.addr_bytes[5]);
-
-			printf("Dest MAC before - %02x:%02x:%02x:%02x: "
-			"%02x:%02x\n", eth_dest[0], eth_dest[1],
-			eth_dest[2], eth_dest[3],
-			eth_dest[4], eth_dest[5]);
+				#ifdef CGNAPT_DEBUGGING
+				p_nat->naptDroppedPktCount4++;
+				#endif
+				return;
+			} else {
+				arp_pkts_mask |= pkt_mask;
+				arp_queue_unresolved_packet(ret_arp_data, pkt);
+				return;
 			}
-			#endif
-
-			//memcpy(eth_dest, &hw_addr, sizeof(struct ether_addr));
-
-			#ifdef CGNAPT_DBG_PRNT
-			if (CGNAPT_DEBUG > 2) {
-				printf("Dest MAC after - "
-				"%02x:%02x:%02x:%02x:%02x:%02x\n",
-				eth_dest[0], eth_dest[1], eth_dest[2], eth_dest[3],
-				eth_dest[4], eth_dest[5]);
-			}
-			#endif
-
-			memcpy(eth_src, get_link_hw_addr(dest_if),
-				 sizeof(struct ether_addr));
-		} else if (ret_arp_data->status == INCOMPLETE || 
-			ret_arp_data->status == PROBE) {
-			arp_queue_unresolved_packet(ret_arp_data,
-				pkt);
-			return;
 		}
 	}
 
@@ -6454,91 +6332,70 @@ pkt_work_cgnapt_ipv6_pub(
 			#endif
 			return;
 		}
+	}
+	memcpy(&dest_addr_ipv6[0], &entry->data.u.prv_ipv6[0], 16);
+	uint8_t nhipv6[16];
 
-		memcpy(&dest_addr_ipv6[0], &entry->data.u.prv_ipv6[0], 16);
-		uint8_t nhipv6[16];
-		int ret;
-		ret = local_get_nh_ipv6(&dest_addr_ipv6[0], &dest_if,
-				&nhipv6[0], p_nat);
-		if (!ret) {
-			dest_if = get_prv_to_pub_port((uint32_t *)
-					&dest_addr_ipv6[0],
-					IP_VERSION_6);
+	memset(nh_ipv6, 0, 16);
+	struct nd_entry_data *ret_nd_data = NULL;
+	ret_nd_data = get_dest_mac_address_ipv6_port(
+                &dest_addr_ipv6[0],
+                &dest_if,
+                (struct ether_addr *)eth_dest,
+                &nh_ipv6[0]);
 
-		if (dest_if == INVALID_DESTIF) {
+	*outport_id = p_nat->outport_id[dest_if];
+
+	if (nd_cache_dest_mac_present(dest_if)) {
+		ether_addr_copy(get_link_hw_addr(dest_if),
+			(struct ether_addr *)eth_src);
+		update_nhip_access(dest_if);
+
+		if (unlikely(ret_nd_data && ret_nd_data->num_pkts)) {
+			p_nat->naptedPktCount += ret_nd_data->num_pkts;
+			nd_send_buffered_pkts(ret_nd_data,
+				 (struct ether_addr *)eth_dest, *outport_id);
+
+		}
+	} else {
+		if (unlikely(ret_nd_data == NULL)) {
+
+			#ifdef CGNAPT_DEBUGGING
+			printf("%s: NHIP Not Found, "
+			"outport_id: %d\n", __func__,
+			*outport_id);
+			#endif
+
+			/* Drop the pkt */
 			p_nat->invalid_packets |= pkt_mask;
 			p_nat->naptDroppedPktCount++;
+
 			#ifdef CGNAPT_DEBUGGING
-			p_nat->naptDroppedPktCount6++;
+			p_nat->naptDroppedPktCount4++;
 			#endif
 			return;
 		}
 
-			do_local_nh_ipv6_cache(dest_if, p_nat);
+		if (ret_nd_data->status == INCOMPLETE ||
+			   ret_nd_data->status == PROBE) {
+			if (ret_nd_data->num_pkts >= NUM_DESC) {
+				/* Drop the pkt */
+				p_nat->invalid_packets |= pkt_mask;
+				p_nat->naptDroppedPktCount++;
+
+				#ifdef CGNAPT_DEBUGGING
+				p_nat->naptDroppedPktCount4++;
+				#endif
+				return;
+			} else {
+				arp_pkts_mask |= pkt_mask;
+				nd_queue_unresolved_packet(ret_nd_data, pkt);
+				return;
+			}
 		}
-		*outport_id = p_nat->outport_id[dest_if];
+
 	}
 
-	#ifdef CGNAPT_DEBUGGING
-	static int static_count;
-
-	if (static_count++ < 10) {
-		print_pkt(pkt);
-		my_print_entry(entry);
-		printf("dest-offset:%d\n", DST_ADR_OFST_IP4);
-		printf("dest_add:%x\n", entry->data.u.prv_ip);
-		printf("DST_ADR_OFST_IP6:%d\n", DST_ADR_OFST_IP6);
-	}
-	#endif
-
-	memset(nh_ipv6, 0, 16);
-	if (get_dest_mac_address_ipv6_port(
-		&dest_addr_ipv6[0],
-		&dest_if,
-		&hw_addr,
-		&nh_ipv6[0])) {
-
-		#ifdef CGNAPT_DBG_PRNT
-		if (CGNAPT_DEBUG > 2) {
-			printf("MAC found for ip 0x%x, port %d - "
-			"%02x:%02x:%02x:%02x:%02x:%02x\n",
-			*((uint32_t *)dest_addr_ipv6 + 12),
-			*outport_id,
-			hw_addr.addr_bytes[0],
-			hw_addr.addr_bytes[1], hw_addr.addr_bytes[2],
-			hw_addr.addr_bytes[3], hw_addr.addr_bytes[4],
-			hw_addr.addr_bytes[5]);
-
-			printf("Dest MAC before - "
-			"%02x:%02x:%02x:%02x:%02x:%02x\n",
-			eth_dest[0], eth_dest[1], eth_dest[2],
-			eth_dest[3], eth_dest[4], eth_dest[5]);
-		}
-		#endif
-
-		memcpy(eth_dest, &hw_addr, sizeof(struct ether_addr));
-
-		#ifdef CGNAPT_DBG_PRNT
-		if (CGNAPT_DEBUG > 2) {
-			printf("Dest MAC after - "
-			"%02x:%02x:%02x:%02x:%02x:%02x\n",
-			eth_dest[0], eth_dest[1], eth_dest[2], eth_dest[3],
-			eth_dest[4], eth_dest[5]);
-		}
-		#endif
-
-		memcpy(eth_src, get_link_hw_addr(dest_if),
-				 sizeof(struct ether_addr));
-	} else {
-		p_nat->invalid_packets |= pkt_mask;
-		p_nat->naptDroppedPktCount++;
-
-		#ifdef CGNAPT_DEBUGGING
-		p_nat->naptDroppedPktCount4++;
-		#endif
-
-		return;
-	}
 	/* Ingress */
 	{
 
@@ -6759,23 +6616,6 @@ pkt4_work_cgnapt_ipv6_prv(
 			dest_address = rte_bswap32(*dst_addr);
 	uint32_t nhip;
 	uint32_t ret;
-	ret = local_get_nh_ipv4(dest_address, &dest_if, &nhip, p_nat);
-	if (!ret) {
-		dest_if = get_prv_to_pub_port(&dest_address, IP_VERSION_4);
-
-		if (dest_if == INVALID_DESTIF) {
-			p_nat->invalid_packets |= pkt_mask;
-			p_nat->naptDroppedPktCount++;
-			#ifdef CGNAPT_DEBUGGING
-			p_nat->naptDroppedPktCount6++;
-			#endif
-			continue;
-		}
-
-		do_local_nh_ipv4_cache(dest_if, p_nat);
-	}
-		*outport_id = p_nat->outport_id[dest_if];
-
 		#ifdef CGNAPT_DBG_PRNT
 			if (CGNAPT_DEBUG > 2)
 				printf("Egress: \tphy_port:%d\t"
@@ -6801,64 +6641,59 @@ pkt4_work_cgnapt_ipv6_prv(
 
 	{
 		struct arp_entry_data *ret_arp_data;
-		ret_arp_data = get_dest_mac_addr_port(dest_address, &dest_if, (struct ether_addr *)&hw_addr);
+		ret_arp_data = get_dest_mac_addr_port(dest_address,
+			 &dest_if, (struct ether_addr *)eth_dest);
+		*outport_id = p_nat->outport_id[dest_if];
 
-		if (unlikely(ret_arp_data == NULL)) {
+		if (arp_cache_dest_mac_present(dest_if)) {
+			ether_addr_copy(get_link_hw_addr(dest_if),
+				(struct ether_addr *)eth_src);
+			update_nhip_access(dest_if);
 
-			printf("%s: NHIP Not Found, nhip: %x, "
-			"outport_id: %d\n", __func__, nhip,
-			*outport_id);
+			if (unlikely(ret_arp_data && ret_arp_data->num_pkts)) {
+				p_nat->naptedPktCount += ret_arp_data->num_pkts;
+				arp_send_buffered_pkts(ret_arp_data,
+					 (struct ether_addr *)eth_dest, *outport_id);
 
-			/* Drop the pkt */
-			p_nat->invalid_packets |= pkt_mask;
-			p_nat->naptDroppedPktCount++;
-
-			#ifdef CGNAPT_DEBUGGING
-			p_nat->naptDroppedPktCount4++;
-			#endif
-			continue;
-		}
-
-		if (ret_arp_data->status == COMPLETE) {
-
-			#ifdef CGNAPT_DBG_PRNT
-			if (CGNAPT_DEBUG > 2) {
-				printf("MAC found for ip 0x%x, port %d - "
-				"%02x:%02x:%02x:%02x:%02x:%02x\n",
-				dest_address, *outport_id,
-					 hw_addr.addr_bytes[0],
-					 hw_addr.addr_bytes[1],
-					 hw_addr.addr_bytes[2],
-					 hw_addr.addr_bytes[3],
-					 hw_addr.addr_bytes[4],
-					 hw_addr.addr_bytes[5]
-					);
-
-				printf("Dest MAC before - "
-				"%02x:%02x:%02x:%02x:%02x:%02x\n",
-				eth_dest[0], eth_dest[1], eth_dest[2],
-				eth_dest[3], eth_dest[4], eth_dest[5]);
 			}
-			#endif
+		} else {
 
-			//memcpy(eth_dest, &hw_addr, sizeof(struct ether_addr));
+			if (unlikely(ret_arp_data == NULL)) {
 
-			#ifdef CGNAPT_DBG_PRNT
-			if (CGNAPT_DEBUG > 2) {
-				printf("Dest MAC after - "
-				"%02x:%02x:%02x:%02x:%02x:%02x\n",
-				eth_dest[0], eth_dest[1], eth_dest[2],
-				eth_dest[3], eth_dest[4], eth_dest[5]);
+				#ifdef CGNAPT_DEBUGGING
+				printf("%s: NHIP Not Found, nhip:%x , "
+				"outport_id: %d\n", __func__, nhip,
+				*outport_id);
+				#endif
+
+				/* Drop the pkt */
+				p_nat->invalid_packets |= pkt_mask;
+				p_nat->naptDroppedPktCount++;
+
+				#ifdef CGNAPT_DEBUGGING
+				p_nat->naptDroppedPktCount4++;
+				#endif
+				return;
 			}
-			#endif
 
-			memcpy(eth_src, get_link_hw_addr(dest_if),
-					 sizeof(struct ether_addr));
-		} else if (ret_arp_data->status == INCOMPLETE || 
-			ret_arp_data->status == PROBE) {
-			arp_queue_unresolved_packet(ret_arp_data,
-				pkt);
-			continue;
+			if (ret_arp_data->status == INCOMPLETE ||
+			   ret_arp_data->status == PROBE) {
+				if (ret_arp_data->num_pkts >= NUM_DESC) {
+					/* Drop the pkt */
+					p_nat->invalid_packets |= pkt_mask;
+					p_nat->naptDroppedPktCount++;
+
+					#ifdef CGNAPT_DEBUGGING
+					p_nat->naptDroppedPktCount4++;
+					#endif
+					return;
+				} else {
+					arp_pkts_mask |= pkt_mask;
+					arp_queue_unresolved_packet(ret_arp_data, pkt);
+					return;
+				}
+			}
+
 		}
 	}
 
@@ -6991,26 +6826,6 @@ pkt4_work_cgnapt_ipv6_pub(
 			memcpy(&dest_addr_ipv6[0], &entry->data.u.prv_ipv6[0],
 					 16);
 			uint8_t nhipv6[16];
-			int ret;
-			ret = local_get_nh_ipv6(&dest_addr_ipv6[0], &dest_if,
-				&nhipv6[0], p_nat);
-			if (!ret) {
-				dest_if = get_prv_to_pub_port((uint32_t *)
-					&dest_addr_ipv6[0], IP_VERSION_6);
-
-				if (dest_if == INVALID_DESTIF) {
-					p_nat->invalid_packets |= pkt_mask;
-					p_nat->naptDroppedPktCount++;
-					#ifdef CGNAPT_DEBUGGING
-					p_nat->naptDroppedPktCount6++;
-					#endif
-					return;
-				}
-
-				do_local_nh_ipv6_cache(dest_if, p_nat);
-			}
-
-			*outport_id = p_nat->outport_id[dest_if];
 		}/* end of ingress */
 
 		#ifdef CGNAPT_DEBUGGING
@@ -7026,49 +6841,61 @@ pkt4_work_cgnapt_ipv6_pub(
 		#endif
 
 		memset(nh_ipv6, 0, 16);
-		if (get_dest_mac_address_ipv6
-			(&dest_addr_ipv6[0], &dest_if,
-			 &hw_addr, &nh_ipv6[0])) {
-			#ifdef CGNAPT_DBG_PRNT
-			if (CGNAPT_DEBUG > 2) {
-				printf("MAC found for ip 0x%x, port %d - "
-				"%02x:%02x:%02x:%02x:%02x:%02x\n",
-				*((uint32_t *)dest_addr_ipv6 + 12),
-				*outport_id,
-				hw_addr.addr_bytes[0], hw_addr.addr_bytes[1],
-				hw_addr.addr_bytes[2], hw_addr.addr_bytes[3],
-				hw_addr.addr_bytes[4], hw_addr.addr_bytes[5]);
+		struct nd_entry_data *ret_nd_data = NULL;
+		ret_nd_data = get_dest_mac_address_ipv6_port
+				(&dest_addr_ipv6[0], &dest_if,
+				(struct ether_addr *)eth_dest, &nh_ipv6[0]);
 
-				printf("Dest MAC before - "
-				"%02x:%02x:%02x:%02x:%02x:%02x\n",
-				eth_dest[0], eth_dest[1], eth_dest[2],
-				eth_dest[3], eth_dest[4], eth_dest[5]);
+		*outport_id = p_nat->outport_id[dest_if];
+
+		if (nd_cache_dest_mac_present(dest_if)) {
+			ether_addr_copy(get_link_hw_addr(dest_if),
+				(struct ether_addr *)eth_src);
+			update_nhip_access(dest_if);
+
+			if (unlikely(ret_nd_data && ret_nd_data->num_pkts)) {
+				p_nat->naptedPktCount += ret_nd_data->num_pkts;
+				nd_send_buffered_pkts(ret_nd_data,
+				 (struct ether_addr *)eth_dest, *outport_id);
 			}
-			#endif
-
-			memcpy(eth_dest, &hw_addr, sizeof(struct ether_addr));
-
-			#ifdef CGNAPT_DBG_PRNT
-			if (CGNAPT_DEBUG > 2) {
-				printf("Dest MAC after - "
-				"%02x:%02x:%02x:%02x:%02x:%02x\n",
-				eth_dest[0], eth_dest[1], eth_dest[2],
-				eth_dest[3], eth_dest[4], eth_dest[5]);
-			}
-			#endif
-
-			memcpy(eth_src,
-					 get_link_hw_addr(dest_if),
-					 sizeof(struct ether_addr));
 		} else {
-			p_nat->invalid_packets |= pkt_mask;
-			p_nat->naptDroppedPktCount++;
+			if (unlikely(ret_nd_data == NULL)) {
 
-			#ifdef CGNAPT_DEBUGGING
-			p_nat->naptDroppedPktCount4++;
-			#endif
+				#ifdef CGNAPT_DEBUGGING
+				printf("%s: NHIP Not Found "
+				"outport_id: %d\n", __func__,
+				*outport_id);
+				#endif
 
-			continue;
+				/* Drop the pkt */
+				p_nat->invalid_packets |= pkt_mask;
+				p_nat->naptDroppedPktCount++;
+
+				#ifdef CGNAPT_DEBUGGING
+				p_nat->naptDroppedPktCount4++;
+				#endif
+				continue;
+			}
+
+			if (ret_nd_data->status == INCOMPLETE ||
+				   ret_nd_data->status == PROBE) {
+
+				if (ret_nd_data->num_pkts >= NUM_DESC) {
+					/* Drop the pkt */
+					p_nat->invalid_packets |= pkt_mask;
+					p_nat->naptDroppedPktCount++;
+
+					#ifdef CGNAPT_DEBUGGING
+					p_nat->naptDroppedPktCount4++;
+					#endif
+					continue;
+				} else {
+					arp_pkts_mask |= pkt_mask;
+					nd_queue_unresolved_packet(ret_nd_data, pkt);
+					continue;
+				}
+			}
+
 		}
 
 		{
@@ -7142,6 +6969,7 @@ static int cgnapt_in_port_ah_ipv6_prv(struct rte_pipeline *rte_p,
 	p_nat->pkt_burst_cnt = 0;	/* for dynamic napt */
 	p_nat->valid_packets = rte_p->pkts_mask;	/*n_pkts; */
 	p_nat->invalid_packets = 0;
+	arp_pkts_mask = 0;
 
 	#ifdef CGNAPT_DBG_PRNT
 	if (CGNAPT_DEBUG > 1)
@@ -7159,6 +6987,11 @@ static int cgnapt_in_port_ah_ipv6_prv(struct rte_pipeline *rte_p,
 		pkt_work_cgnapt_key_ipv6_prv(pkts[i], i, arg, p_nat);
 
 	p_nat->valid_packets &= ~(p_nat->invalid_packets);
+
+	if (arp_pkts_mask) {
+		p_nat->valid_packets &= ~(arp_pkts_mask);
+		rte_pipeline_ah_packet_hijack(rte_p, arp_pkts_mask);
+	}
 
 	if (unlikely(p_nat->valid_packets == 0)) {
 		/* no suitable packet for lookup */
@@ -7255,6 +7088,7 @@ static int cgnapt_in_port_ah_ipv6_pub(struct rte_pipeline *rte_p,
 	p_nat->pkt_burst_cnt = 0;	/* for dynamic napt */
 	p_nat->valid_packets = rte_p->pkts_mask;	/*n_pkts; */
 	p_nat->invalid_packets = 0;
+	arp_pkts_mask = 0;
 
 	#ifdef CGNAPT_DBG_PRNT
 	if (CGNAPT_DEBUG > 1)
@@ -7272,6 +7106,11 @@ static int cgnapt_in_port_ah_ipv6_pub(struct rte_pipeline *rte_p,
 		pkt_work_cgnapt_key_ipv6_pub(pkts[i], i, arg, p_nat);
 
 	p_nat->valid_packets &= ~(p_nat->invalid_packets);
+
+	if (arp_pkts_mask) {
+		p_nat->valid_packets &= ~(arp_pkts_mask);
+		rte_pipeline_ah_packet_hijack(rte_p, arp_pkts_mask);
+	}
 
 	if (unlikely(p_nat->valid_packets == 0)) {
 		/* no suitable packet for lookup */
@@ -9183,11 +9022,6 @@ pipeline_cgnapt_msg_req_entry_addm_pair(
 		second_key.port = 0xffff;
 	}
 	#endif
-
-	//if (CGNAPT_DEBUG > 2)
-		//printf("key.ip %x, key.port %d", key.ip, key.port);
-		//printf("key.pid %d, in_type %d,", key.pid, type);
-		//printf("entry_type %d\n", entry.data.type);
 
 	int32_t position = rte_hash_add_key(napt_common_table, &key);
 

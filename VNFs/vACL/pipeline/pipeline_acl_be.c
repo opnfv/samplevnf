@@ -166,30 +166,6 @@ uint32_t local_get_nh_ipv4(uint32_t ip,
 	return 0;
 }
 
-static void do_local_nh_ipv4_cache(uint32_t dest_if, struct pipeline_acl *p_acl)
-{
-
-	/* Search for the entry and do local copy */
-	int i;
-
-	for (i = 0; i < MAX_ARP_RT_ENTRY; i++) {
-		if (lib_arp_route_table[i].port == dest_if) {
-
-			struct lib_arp_route_table_entry *lentry =
-				&p_acl->local_lib_arp_route_table
-				[p_acl->local_lib_arp_route_ent_cnt];
-
-			lentry->ip = lib_arp_route_table[i].ip;
-			lentry->mask = lib_arp_route_table[i].mask;
-			lentry->port = lib_arp_route_table[i].port;
-			lentry->nh = lib_arp_route_table[i].nh;
-
-			p_acl->local_lib_arp_route_ent_cnt++;
-			break;
-		}
-	}
-}
-
 static uint32_t local_get_nh_ipv6(uint8_t *ip,
 				  uint32_t *port,
 				  uint8_t nhip[], struct pipeline_acl *p_acl)
@@ -238,32 +214,6 @@ static uint32_t local_get_nh_ipv6(uint8_t *ip,
                 depthflags1 = 0;
         }
         return 0;
-}
-void do_local_nh_ipv6_cache(uint32_t dest_if, struct pipeline_acl *p_acl)
-{
-	/* Search for the entry and do local copy */
-	int i, l;
-
-	for (i = 0; i < MAX_ND_RT_ENTRY; i++) {
-
-		if (lib_nd_route_table[i].port == dest_if) {
-
-			struct lib_nd_route_table_entry *lentry =
-			    &p_acl->local_lib_nd_route_table
-			    [p_acl->local_lib_nd_route_ent_cnt];
-
-			for (l = 0; l < 16; l++) {
-				lentry->ipv6[l] = lib_nd_route_table[i].ipv6[l];
-				lentry->nhipv6[l] =
-				    lib_nd_route_table[i].nhipv6[l];
-			}
-			lentry->depth = lib_nd_route_table[i].depth;
-			lentry->port = lib_nd_route_table[i].port;
-
-			p_acl->local_lib_nd_route_ent_cnt++;
-			break;
-		}		/* if */
-	}			/* for */
 }
 
 static uint8_t check_arp_icmp(struct rte_mbuf *pkt,
@@ -925,9 +875,9 @@ pkt_work_acl_key(struct rte_pipeline *p,
 			    (dest_address, &dest_if, (struct ether_addr *) eth_dest);
 			*port_out_id = p_acl->port_out_id[dest_if];
 			if (arp_cache_dest_mac_present(dest_if)) {
-				ether_addr_copy(get_link_hw_addr(dest_if), (struct ether_addr *)eth_src);
-				arp_data_ptr[dest_if]->n_last_update = time(NULL);
-
+				ether_addr_copy(get_link_hw_addr(dest_if),
+					 (struct ether_addr *)eth_src);
+				update_nhip_access(dest_if);
 				if (unlikely(ret_arp_data && ret_arp_data->num_pkts)) {
 					printf("sending buffered packets\n");
 					arp_send_buffered_pkts(ret_arp_data,
@@ -936,7 +886,7 @@ pkt_work_acl_key(struct rte_pipeline *p,
 				}
 			} else {
 				if (unlikely(ret_arp_data == NULL)) {
-
+					if (ACL_DEBUG)
 					printf("%s: NHIP Not Found, "
 					"outport_id: %d\n", __func__,
 					*port_out_id);
@@ -964,7 +914,8 @@ pkt_work_acl_key(struct rte_pipeline *p,
 						continue;
 					} else {
 						arp_pkts_mask |= pkt_mask;
-						arp_queue_unresolved_packet(ret_arp_data, pkt);
+						arp_queue_unresolved_packet(ret_arp_data,
+									 pkt);
 						continue;
 					}
 				}
@@ -1026,105 +977,60 @@ pkt_work_acl_key(struct rte_pipeline *p,
 			}
 			memcpy(dest_address, *dst_addr, sizeof(dest_address));
 			memset(nhip, 0, sizeof(nhip));
-			ret = local_get_nh_ipv6(&dest_address[0], &dest_if,
-						&nhip[0], p_acl);
 
-			if (is_phy_port_privte(phy_port)) {
-				if (!ret) {
-					dest_if = get_prv_to_pub_port((
-								       uint32_t
-								       *)
-					      &dest_address[0], IP_VERSION_6);
-					do_local_nh_ipv6_cache(dest_if, p_acl);
-					*port_out_id =
-					    p_acl->port_out_id[dest_if];
+			struct nd_entry_data *ret_nd_data = NULL;
+			ret_nd_data = get_dest_mac_address_ipv6_port
+			    (dest_address, &dest_if, &hw_addr, &nhip[0]);
+			*port_out_id = p_acl->port_out_id[dest_if];
+			if (nd_cache_dest_mac_present(dest_if)) {
+				ether_addr_copy(get_link_hw_addr(dest_if),
+					(struct ether_addr *)eth_src);
+				update_nhip_access(dest_if);
+
+				if (unlikely(ret_nd_data && ret_nd_data->num_pkts)) {
+					printf("sending buffered packets\n");
+					p_acl->counters->tpkts_processed +=
+						 ret_nd_data->num_pkts;
+					nd_send_buffered_pkts(ret_nd_data,
+					(struct ether_addr *)eth_dest, *port_out_id);
 				}
-				//              port = ACL_PUB_PORT_ID;
-
 			} else {
-				if (!ret) {
-					dest_if = get_pub_to_prv_port((
-								       uint32_t
-								       *)
-					      &dest_address[0], IP_VERSION_6);
-					do_local_nh_ipv6_cache(dest_if, p_acl);
-					*port_out_id =
-					    p_acl->port_out_id[dest_if];
-				}
-//               port = ACL_PRV_PORT_ID;
-
-			}
-
-			if (get_dest_mac_address_ipv6_port
-			    (dest_address, &dest_if, &hw_addr, &nhip[0])) {
-				if (ACL_DEBUG) {
-					printf("MAC found for  port %d - "
-					" %02x:%02x:%02x:%02x:%02x:%02x\n",
-					     phy_port, hw_addr.addr_bytes[0],
-					     hw_addr.addr_bytes[1],
-					     hw_addr.addr_bytes[2],
-					     hw_addr.addr_bytes[3],
-					     hw_addr.addr_bytes[4],
-					     hw_addr.addr_bytes[5]);
-					printf("Dest MAC before -  "
-					"%02x:%02x:%02x:%02x:%02x:%02x\n",
-					     eth_dest[0], eth_dest[1],
-					     eth_dest[2], eth_dest[3],
-					     eth_dest[4], eth_dest[5]);
-				}
-				memcpy(eth_dest, &hw_addr,
-				       sizeof(struct ether_addr));
-				if (ACL_DEBUG) {
-					printf("PktP %p, dest_macP %p\n", pkt,
-					       eth_dest);
-					printf("Dest MAC after -  "
-				"%02x:%02x:%02x:%02x:%02x:%02x\n",
-					     eth_dest[0], eth_dest[1],
-					     eth_dest[2], eth_dest[3],
-					     eth_dest[4], eth_dest[5]);
-				}
-				if (is_phy_port_privte(phy_port))
-					memcpy(eth_src,
-					       get_link_hw_addr(dest_if),
-					       sizeof(struct ether_addr));
-				else
-					memcpy(eth_src,
-					       get_link_hw_addr(dest_if),
-					       sizeof(struct ether_addr));
-
-/* memcpy(eth_src, get_link_hw_addr(p_acl->links_map[phy_port]), */
-/*		   sizeof(struct ether_addr)); */
-				p_acl->counters->tpkts_processed++;
-				p_acl->counters->bytes_processed +=
-				    packet_length;
-			}
-
-			else {
-
-#if 0
-			/* Request next neighbor for Ipv6 is yet to be done. */
-				if (*nhip != 0) {
+				if (unlikely(ret_nd_data == NULL)) {
 					if (ACL_DEBUG)
-						printf
-				    ("ACL requesting ARP for ip %x, port %d\n",
-						     dest_address, phy_port);
-
-			/* request_arp(p_acl->links_map[phy_port], *nhip); */
+						printf("ACL before drop pkt_mask  "
+						"%lu, pkt_num %d\n", pkts_mask, pos);
+					pkts_mask &= ~(1LLU << pos);
+					if (ACL_DEBUG)
+						printf("ACL after drop pkt_mask  "
+						"%lu, pkt_num %d\n", pkts_mask, pos);
+					p_acl->counters->pkts_drop++;
+					continue;
 				}
-#endif
-				/* Drop packet by changing the mask */
-				if (ACL_DEBUG)
-					printf("ACL before drop pkt_mask  "
-							"%lu, pkt_num %d\n",
-					     pkts_mask, pos);
-				pkts_mask &= ~(1LLU << pos);
-				if (ACL_DEBUG)
-					printf("ACL after drop pkt_mask  "
-							"%lu, pkt_num %d\n",
-					     pkts_mask, pos);
-				p_acl->counters->pkts_drop++;
+
+				if (ret_nd_data->status == INCOMPLETE ||
+					ret_nd_data->status == PROBE) {
+					if (ret_nd_data->num_pkts >= NUM_DESC) {
+						/* Drop the pkt */
+						if (ACL_DEBUG)
+							printf("ACL before drop pkt_mask  "
+							"%lu, pkt_num %d\n", pkts_mask, pos);
+						pkts_mask &= ~(1LLU << pos);
+						if (ACL_DEBUG)
+							printf("ACL after drop pkt_mask  "
+							"%lu, pkt_num %d\n", pkts_mask, pos);
+						p_acl->counters->pkts_drop++;
+						continue;
+					} else {
+						arp_pkts_mask |= pkt_mask;
+						nd_queue_unresolved_packet(ret_nd_data,
+										 pkt);
+						continue;
+					}
+				}
+
 			}
-		}
+
+		} /* if (hdr_chk == IPv6_HDR_VERSION) */
 
 	}
 
@@ -1645,44 +1551,16 @@ pkt_work_acl_ipv4_key(struct rte_pipeline *p,
 								       nhip));
 			uint32_t packet_length = rte_pktmbuf_pkt_len(pkt);
 			*nhip = 0;
-			if (is_phy_port_privte(phy_port)) {
-				dest_address = rte_bswap32(*dst_addr);
-				ret =
-				    local_get_nh_ipv4(dest_address, &dest_if,
-						      nhip, p_acl);
-				if (!ret) {
-					dest_if =
-					    get_prv_to_pub_port(&dest_address,
-								IP_VERSION_4);
-					do_local_nh_ipv4_cache(dest_if, p_acl);
-				}
-				*port_out_id = p_acl->port_out_id[dest_if];
-			}
-			/* port = ACL_PUB_PORT_ID; */
-			else {
-				dest_address = rte_bswap32(*dst_addr);
-
-				ret = local_get_nh_ipv4(dest_address, &dest_if,
-							nhip, p_acl);
-				if (!ret) {
-					dest_if =
-					    get_pub_to_prv_port(&dest_address,
-								IP_VERSION_4);
-					do_local_nh_ipv4_cache(dest_if, p_acl);
-				};
-				*port_out_id = p_acl->port_out_id[dest_if];
-			}
-			/* port = ACL_PRV_PORT_ID; */
-
+			dest_address = rte_bswap32(*dst_addr);
 			struct arp_entry_data *ret_arp_data = NULL;
 			ret_arp_data = get_dest_mac_addr_port
 			    (dest_address, &dest_if, (struct ether_addr *)eth_dest);
 			*port_out_id = p_acl->port_out_id[dest_if];
 
 			if (arp_cache_dest_mac_present(dest_if)) {
-				ether_addr_copy(get_link_hw_addr(dest_if), (struct ether_addr *)eth_src);
-				arp_data_ptr[dest_if]->n_last_update = time(NULL);
-
+				ether_addr_copy(get_link_hw_addr(dest_if),
+					 (struct ether_addr *)eth_src);
+				update_nhip_access(dest_if);
 				if (unlikely(ret_arp_data && ret_arp_data->num_pkts)) {
 					printf("sending buffered packets\n");
 					arp_send_buffered_pkts(ret_arp_data,
@@ -1692,6 +1570,7 @@ pkt_work_acl_ipv4_key(struct rte_pipeline *p,
 			} else {
 				if (unlikely(ret_arp_data == NULL)) {
 
+					if (ACL_DEBUG)
 					printf("%s: NHIP Not Found, "
 					"outport_id: %d\n", __func__,
 					*port_out_id);
@@ -1833,17 +1712,6 @@ pkt_work_acl_ipv4_key(struct rte_pipeline *p,
 
 			else {
 
-#if 0
-			/* Request next neighbor for Ipv6 is yet to be done. */
-				if (*nhip != 0) {
-					if (ACL_DEBUG)
-						printf
-				    ("ACL requesting ARP for ip %x, port %d\n",
-						     dest_address, phy_port);
-
-			/* request_arp(p_acl->links_map[phy_port], *nhip); */
-				}
-#endif
 				/* Drop packet by changing the mask */
 				if (ACL_DEBUG)
 					printf("ACL before drop pkt_mask "
@@ -2331,151 +2199,6 @@ pkt_work_acl_ipv6_key(struct rte_pipeline *p,
 		uint8_t hdr_chk =
 		    RTE_MBUF_METADATA_UINT8(pkt, MBUF_HDR_ROOM + ETH_HDR_SIZE);
 		hdr_chk = hdr_chk >> IP_VERSION_CHECK;
-#if 0
-		if (hdr_chk == IPv4_HDR_VERSION) {
-
-			struct acl_table_entry *entry =
-			    (struct acl_table_entry *)
-			    p_acl->acl_entries_ipv4[pos];
-			uint16_t phy_port = entry->head.port_id;
-			uint32_t *port_out_id =
-			    RTE_MBUF_METADATA_UINT32_PTR(pkt,
-							 META_DATA_OFFSET +
-							 offsetof(struct
-							  mbuf_acl_meta_data,
-								  output_port));
-			/*  *port_out_id = p_acl->links_map[phy_port]; */
-			if (is_phy_port_privte(phy_port))
-				*port_out_id = ACL_PUB_PORT_ID;
-			else
-				*port_out_id = ACL_PRV_PORT_ID;
-			if (ACL_DEBUG)
-				printf
-				    ("phy_port = %i,links_map[phy_port] = %i\n",
-				     phy_port, p_acl->links_map[phy_port]);
-
-	/* header room + eth hdr size + dst_adr offset in ip header */
-			uint32_t dst_addr_offset =
-			    MBUF_HDR_ROOM + ETH_HDR_SIZE + IP_HDR_DST_ADR_OFST;
-			uint32_t *dst_addr =
-			    RTE_MBUF_METADATA_UINT32_PTR(pkt, dst_addr_offset);
-			uint8_t *eth_dest =
-			    RTE_MBUF_METADATA_UINT8_PTR(pkt, MBUF_HDR_ROOM);
-			uint8_t *eth_src =
-			    RTE_MBUF_METADATA_UINT8_PTR(pkt, MBUF_HDR_ROOM + 6);
-			struct ether_addr hw_addr;
-			uint32_t dest_address = rte_bswap32(*dst_addr);
-			uint32_t *nhip = RTE_MBUF_METADATA_UINT32_PTR(pkt,
-							      META_DATA_OFFSET
-								      +
-								      offsetof
-								      (struct
-						       mbuf_acl_meta_data,
-								       nhip));
-			uint32_t packet_length = rte_pktmbuf_pkt_len(pkt);
-			*nhip = 0;
-			if (is_phy_port_privte(phy_port)) {
-				dest_address = rte_bswap32(*dst_addr);
-				ret =
-				    local_get_nh_ipv4(dest_address, &dest_if,
-						      nhip, p_acl);
-				if (!ret) {
-					dest_if =
-					    get_prv_to_pub_port(&dest_address,
-								IP_VERSION_4);
-					do_local_nh_ipv4_cache(dest_if, p_acl);
-				}
-				*port_out_id = p_acl->port_out_id[dest_if];
-			}
-			/* port = ACL_PUB_PORT_ID; */
-			else {
-				dest_address = rte_bswap32(*dst_addr);
-
-				ret = local_get_nh_ipv4(dest_address, &dest_if,
-							nhip, p_acl);
-				if (!ret) {
-					dest_if =
-					    get_pub_to_prv_port(&dest_address,
-								IP_VERSION_4);
-					do_local_nh_ipv4_cache(dest_if, p_acl);
-				};
-				*port_out_id = p_acl->port_out_id[dest_if];
-			}
-			/* port = ACL_PRV_PORT_ID; */
-
-			if (get_dest_mac_addr_port
-			    (dest_address, &dest_if, &hw_addr)) {
-				if (ACL_DEBUG) {
-					printf("MAC found for ip 0x%x, port "
-					" %d - %02x:%02x:%02x:%02x:%02x:%02x\n",
-					     dest_address, phy_port,
-					     hw_addr.addr_bytes[0],
-					     hw_addr.addr_bytes[1],
-					     hw_addr.addr_bytes[2],
-					     hw_addr.addr_bytes[3],
-					     hw_addr.addr_bytes[4],
-					     hw_addr.addr_bytes[5]);
-					printf("Dest MAC before -  "
-					"%02x:%02x:%02x:%02x:%02x:%02x\n",
-					     eth_dest[0], eth_dest[1],
-					     eth_dest[2], eth_dest[3],
-					     eth_dest[4], eth_dest[5]);
-				}
-
-				memcpy(eth_dest, &hw_addr,
-				       sizeof(struct ether_addr));
-				if (ACL_DEBUG) {
-					printf("PktP %p, dest_macP %p\n", pkt,
-					       eth_dest);
-					printf("Dest MAC after -  "
-					"%02x:%02x:%02x:%02x:%02x:%02x\n",
-					     eth_dest[0], eth_dest[1],
-					     eth_dest[2], eth_dest[3],
-					     eth_dest[4], eth_dest[5]);
-				}
-				if (is_phy_port_privte(phy_port))
-					memcpy(eth_src,
-					       get_link_hw_addr(dest_if),
-					       sizeof(struct ether_addr));
-				else
-					memcpy(eth_src,
-					       get_link_hw_addr(dest_if),
-					       sizeof(struct ether_addr));
-				p_acl->counters->tpkts_processed++;
-				p_acl->counters->bytes_processed +=
-				    packet_length;
-			}
-
-			else {
-				if (*nhip != 0) {
-
-					if (ACL_DEBUG)
-
-						printf("ACL requesting ARP for "
-							" ip %x, port %d\n",
-						     dest_address, phy_port);
-					if (is_phy_port_privte(phy_port))
-						request_arp(dest_if, *nhip);
-
-					else
-						request_arp(dest_if, *nhip);
-
-			/*  request_arp(p_acl->links_map[phy_port], *nhip); */
-				}
-				/* Drop packet by changing the mask */
-				if (ACL_DEBUG)
-					printf("ACL before drop pkt_mask  "
-						"%lu, pkt_num %d\n",
-					     pkts_mask, pos);
-				pkts_mask &= ~(1LLU << pos);
-				if (ACL_DEBUG)
-					printf("ACL after drop pkt_mask  "
-						"%lu, pkt_num %d\n",
-					     pkts_mask, pos);
-				p_acl->counters->pkts_drop++;
-			}
-		}
-#endif
 
 		if (hdr_chk == IPv6_HDR_VERSION) {
 
@@ -2531,109 +2254,62 @@ pkt_work_acl_ipv6_key(struct rte_pipeline *p,
 			}
 			memcpy(dest_address, *dst_addr, sizeof(dest_address));
 			memset(nhip, 0, sizeof(nhip));
-			ret = local_get_nh_ipv6(&dest_address[0], &dest_if,
-						&nhip[0], p_acl);
+			struct nd_entry_data *ret_nd_data = NULL;
+			ret_nd_data = get_dest_mac_address_ipv6_port
+			    (dest_address, &dest_if, &hw_addr, &nhip[0]);
+			*port_out_id = p_acl->port_out_id[dest_if];
 
-			if (is_phy_port_privte(phy_port)) {
-				if (!ret) {
-					dest_if = get_prv_to_pub_port((
-								       uint32_t
-								       *)
-					      &dest_address[0], IP_VERSION_6);
-					do_local_nh_ipv6_cache(dest_if, p_acl);
+			if (nd_cache_dest_mac_present(dest_if)) {
+				ether_addr_copy(get_link_hw_addr(dest_if),
+					(struct ether_addr *)eth_src);
+				update_nhip_access(dest_if);
+
+				if (unlikely(ret_nd_data && ret_nd_data->num_pkts)) {
+					printf("sending buffered packets\n");
+					p_acl->counters->tpkts_processed +=
+						 ret_nd_data->num_pkts;
+					nd_send_buffered_pkts(ret_nd_data,
+					(struct ether_addr *)eth_dest, *port_out_id);
 				}
-				//          port = ACL_PUB_PORT_ID;
-					*port_out_id =
-					    p_acl->port_out_id[dest_if];
-
 			} else {
-				if (!ret) {
-					dest_if = get_pub_to_prv_port((
-								       uint32_t
-								       *)
-					      &dest_address[0], IP_VERSION_6);
-					do_local_nh_ipv6_cache(dest_if, p_acl);
+				if (unlikely(ret_nd_data == NULL)) {
+					if (ACL_DEBUG)
+						printf("ACL before drop pkt_mask  "
+						"%lu, pkt_num %d\n", pkts_mask, pos);
+					pkts_mask &= ~(1LLU << pos);
+					if (ACL_DEBUG)
+						printf("ACL after drop pkt_mask  "
+						"%lu, pkt_num %d\n", pkts_mask, pos);
+					p_acl->counters->pkts_drop++;
+					continue;
 				}
-				//           port = ACL_PRV_PORT_ID;
-					*port_out_id =
-					    p_acl->port_out_id[dest_if];
+
+				if (ret_nd_data->status == INCOMPLETE ||
+					ret_nd_data->status == PROBE) {
+					if (ret_nd_data->num_pkts >= NUM_DESC) {
+						/* Drop the pkt */
+						if (ACL_DEBUG)
+							printf("ACL before drop pkt_mask  "
+							"%lu, pkt_num %d\n", pkts_mask, pos);
+						pkts_mask &= ~(1LLU << pos);
+						if (ACL_DEBUG)
+							printf("ACL after drop pkt_mask  "
+							"%lu, pkt_num %d\n", pkts_mask, pos);
+						p_acl->counters->pkts_drop++;
+						continue;
+					} else {
+						arp_pkts_mask |= pkt_mask;
+						nd_queue_unresolved_packet(ret_nd_data,
+										 pkt);
+						continue;
+					}
+				}
 
 			}
 
-			if (get_dest_mac_address_ipv6_port
-			    (dest_address, &dest_if, &hw_addr, &nhip[0])) {
-				if (ACL_DEBUG) {
-					printf("MAC found for  port %d  "
-					"- %02x:%02x:%02x:%02x:%02x:%02x\n",
-					     phy_port, hw_addr.addr_bytes[0],
-					     hw_addr.addr_bytes[1],
-					     hw_addr.addr_bytes[2],
-					     hw_addr.addr_bytes[3],
-					     hw_addr.addr_bytes[4],
-					     hw_addr.addr_bytes[5]);
-					printf("Dest MAC before - "
-					" %02x:%02x:%02x:%02x:%02x:%02x\n",
-					     eth_dest[0], eth_dest[1],
-					     eth_dest[2], eth_dest[3],
-					     eth_dest[4], eth_dest[5]);
-				}
-				memcpy(eth_dest, &hw_addr,
-				       sizeof(struct ether_addr));
-				if (ACL_DEBUG) {
-					printf("PktP %p, dest_macP %p\n", pkt,
-					       eth_dest);
-					printf("Dest MAC after - "
-					" %02x:%02x:%02x:%02x:%02x:%02x\n",
-					     eth_dest[0], eth_dest[1],
-					     eth_dest[2], eth_dest[3],
-					     eth_dest[4], eth_dest[5]);
-				}
-				if (is_phy_port_privte(phy_port))
-					memcpy(eth_src,
-					       get_link_hw_addr(dest_if),
-					       sizeof(struct ether_addr));
-				else
-					memcpy(eth_src,
-					       get_link_hw_addr(dest_if),
-					       sizeof(struct ether_addr));
-
-		/*
-		 * memcpy(eth_src, get_link_hw_addr(p_acl->links_map[phy_port]),
-		 * sizeof(struct ether_addr));
-		 */
-				p_acl->counters->tpkts_processed++;
-				p_acl->counters->bytes_processed +=
-				    packet_length;
-			}
-
-			else {
-
-#if 0
-			/* Request next neighbor for Ipv6 is yet to be done. */
-			if (*nhip != 0) {
-			if (ACL_DEBUG)
-				printf
-				    ("ACL requesting ARP for ip %x, port %d\n",
-						     dest_address, phy_port);
-
-			/* request_arp(p_acl->links_map[phy_port], *nhip); */
-				}
-#endif
-				/* Drop packet by changing the mask */
-				if (ACL_DEBUG)
-					printf("ACL before drop pkt_mask "
-						" %lu, pkt_num %d\n",
-					     pkts_mask, pos);
-				pkts_mask &= ~(1LLU << pos);
-				if (ACL_DEBUG)
-					printf("ACL after drop pkt_mask "
-						" %lu, pkt_num %d\n",
-					     pkts_mask, pos);
-				p_acl->counters->pkts_drop++;
-			}
 		}
 
-	}
+	} /* end of for loop */
 
 	pkts_drop_mask = keep_mask & ~pkts_mask;
 	rte_pipeline_ah_packet_drop(p, pkts_drop_mask);
