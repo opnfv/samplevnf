@@ -54,7 +54,7 @@
 #define IP_VERSION_4 0x40
 #define IP_HDRLEN  0x05		/**< default IP header length == five 32-bits words. */
 #define IP_VHL_DEF (IP_VERSION_4 | IP_HDRLEN)
-
+#define MAX_POOL		32
 #define is_multicast_ipv4_addr(ipv4_addr) \
 	(((rte_be_to_cpu_32((ipv4_addr)) >> 24) & 0x000000FF) == 0xE0)
 
@@ -63,6 +63,7 @@ extern uint32_t timer_lcore;
 extern int USE_RTM_LOCKS;
 uint32_t arp_timeout = ARP_TIMER_EXPIRY;
 uint32_t arp_buffer = ARP_BUF_DEFAULT;
+uint32_t nd_buffer = ARP_BUF_DEFAULT;
 
 /*ND IPV6 */
 #define INADDRSZ 4
@@ -73,6 +74,7 @@ static int my_inet_pton_ipv6(int af, const char *src, void *dst);
 static int inet_pton_ipv6(const char *src, unsigned char *dst);
 static int inet_pton_ipv4(const char *src, unsigned char *dst);
 static void local_arp_cache_init(void);
+struct ether_addr *get_nd_local_link_hw_addr(uint8_t out_port, uint8_t nhip[]);
 extern void convert_prefixlen_to_netmask_ipv6(uint32_t depth,
 								uint8_t netmask_ipv6[]);
 
@@ -108,7 +110,7 @@ struct rte_mempool *lib_arp_pktmbuf_tx_pool;
 struct rte_mempool *lib_nd_pktmbuf_tx_pool;
 
 struct rte_mbuf *lib_arp_pkt[MAX_PORTS];
-struct rte_mbuf *lib_nd_pkt;
+struct rte_mbuf *lib_nd_pkt[MAX_PORTS];
 
 uint8_t default_ether_addr[6] = { 0, 0, 0, 0, 1, 1 };
 uint8_t default_ip[4] = { 0, 0, 1, 1 };
@@ -127,31 +129,16 @@ uint8_t arp_cache_hw_laddr_valid[MAX_NUM_ARP_CACHE_MAC_ADDRESS] = {
         0, 0, 0, 0, 0, 0, 0, 0
 };
 
-void prefetch(void)
+/**
+ * handler lock.
+ */
+rte_rwlock_t arp_hash_handle_lock;
+rte_rwlock_t nd_hash_handle_lock;
+
+void update_nhip_access(uint8_t dest_if)
 {
-	rte_prefetch0(p_arp_data);
+	p_arp_data->update_tsc[dest_if] = rte_rdtsc();
 }
-
-struct arp_entry_data *arp_data_ptr[MAX_NUM_ARP_CACHE_MAC_ADDRESS];
-
-struct ether_addr arp_cache_hw_laddr[MAX_NUM_ARP_CACHE_MAC_ADDRESS] = {
-        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
-        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
-        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
-        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
-        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
-        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
-        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
-        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
-        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
-        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
-        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
-        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
-        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
-        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
-        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
-        {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} }
-};
 
 /**
  * A structure defining the mbuf meta data for VFW.
@@ -163,6 +150,11 @@ struct mbuf_arp_meta_data {
 } __rte_cache_aligned;
 
 static struct arp_entry_data arp_entry_data_default = {
+	.status = COMPLETE,
+	.num_pkts = 0,
+};
+
+static struct nd_entry_data nd_entry_data_default = {
 	.status = COMPLETE,
 	.num_pkts = 0,
 };
@@ -234,7 +226,7 @@ int timer_objs_mempool_count = 70000;
 #define MAX_NUM_ND_ENTRIES 64
 
 inline uint32_t get_nh(uint32_t, uint32_t *, struct ether_addr *addr);
-void get_nh_ipv6(uint8_t ipv6[], uint32_t *port, uint8_t nhipv6[]);
+void get_nh_ipv6(uint8_t ipv6[], uint32_t *port, uint8_t nhipv6[], struct ether_addr *hw_addr);
 
 #define MAX_ARP_DATA_ENTRY_TABLE 7
 
@@ -334,41 +326,6 @@ struct lib_nd_route_table_entry lib_nd_route_table[MAX_ND_RT_ENTRY] = {
 	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} }
 };
 
-struct lib_arp_route_table_entry lib_arp_route_table[MAX_ARP_RT_ENTRY] = {
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0}
-};
-
 void print_trace(void);
 
 uint32_t get_arp_buf(void)
@@ -376,9 +333,19 @@ uint32_t get_arp_buf(void)
        return arp_buffer;
 }
 
+uint32_t get_nd_buf(void)
+{
+	return nd_buffer;
+}
+
 uint8_t arp_cache_dest_mac_present(uint32_t out_port)
 {
         return p_arp_data->arp_cache_hw_laddr_valid[out_port];
+}
+
+uint8_t nd_cache_dest_mac_present(uint32_t out_port)
+{
+	return p_arp_data->nd_cache_hw_laddr_valid[out_port];
 }
 
 /* Obtain a backtrace and print it to stdout. */
@@ -409,7 +376,9 @@ uint32_t get_nh(uint32_t ip, uint32_t *port, struct ether_addr *addr)
 
 			*port = p_arp_data->lib_arp_route_table[i].port;
 			if (arp_cache_dest_mac_present(*port))
-				ether_addr_copy(get_local_link_hw_addr(*port, p_arp_data->lib_arp_route_table[i].nh), addr);
+				ether_addr_copy(
+				get_local_link_hw_addr(*port,
+				p_arp_data->lib_arp_route_table[i].nh), addr);
 			return p_arp_data->lib_arp_route_table[i].nh;
 		}
 	}
@@ -418,7 +387,7 @@ uint32_t get_nh(uint32_t ip, uint32_t *port, struct ether_addr *addr)
 }
 
 /*ND IPv6 */
-void get_nh_ipv6(uint8_t ipv6[], uint32_t *port, uint8_t nhipv6[])
+void get_nh_ipv6(uint8_t ipv6[], uint32_t *port, uint8_t nhipv6[], struct ether_addr *hw_addr)
 {
 	int i = 0;
 	uint8_t netmask_ipv6[16], netip_nd[16], netip_in[16];
@@ -456,6 +425,11 @@ void get_nh_ipv6(uint8_t ipv6[], uint32_t *port, uint8_t nhipv6[])
 			for (j = 0; j < 16; j++)
 				nhipv6[j] = lib_nd_route_table[i].nhipv6[j];
 
+			if (nd_cache_dest_mac_present(*port)) {
+				ether_addr_copy(
+				get_nd_local_link_hw_addr(*port, nhipv6),
+				(struct ether_addr *)hw_addr);
+			}
 			return;
 		}
 
@@ -465,7 +439,7 @@ void get_nh_ipv6(uint8_t ipv6[], uint32_t *port, uint8_t nhipv6[])
 		depthflags1 = 0;
 	}
 	if (NDIPV6_DEBUG)
-		printf("No NH - ip 0x%x, port %u\n", ipv6[0], *port);
+		printf("No NH - ip 0x%x, \n", ipv6[0]);
 	lib_nd_no_nh_found++;
 }
 
@@ -477,7 +451,6 @@ struct arp_entry_data *get_dest_mac_addr_port(const uint32_t ipaddr,
 	uint32_t nhip = 0;
 	uint8_t index;
 
-	//lib_arp_get_mac_req++;
 	nhip = get_nh(ipaddr, phy_port, hw_addr);
 	if (unlikely(nhip == 0)) {
 		if (ARPICMP_DEBUG)
@@ -490,7 +463,6 @@ struct arp_entry_data *get_dest_mac_addr_port(const uint32_t ipaddr,
 	 * & thus can be sent without having to retrieve
 	 */
 	if (arp_cache_dest_mac_present(*phy_port)) {
-		//arp_data_ptr[*phy_port]->n_last_update = time(NULL);
 		return &arp_entry_data_default;
 	}
 
@@ -511,39 +483,38 @@ struct arp_entry_data *get_dest_mac_addr_port(const uint32_t ipaddr,
                 }
 		lib_arp_no_arp_entry_found++;
 	} else if (ret_arp_data->status == COMPLETE) {
+		rte_rwlock_write_lock(&ret_arp_data->queue_lock);
                 ether_addr_copy(&ret_arp_data->eth_addr, hw_addr);
-		printf("Setting mac found for port:%d\n", *phy_port);
 		p_arp_data->arp_cache_hw_laddr_valid[*phy_port] = 1;
-		arp_data_ptr[*phy_port] = ret_arp_data;
-		//memcpy(&arp_cache_hw_laddr[*phy_port], hw_addr,
-		//	sizeof(struct ether_addr));
 		index = p_arp_data->arp_local_cache[*phy_port].num_nhip;
 		p_arp_data->arp_local_cache[*phy_port].nhip[index] = nhip;
 		ether_addr_copy(hw_addr, &p_arp_data->arp_local_cache[*phy_port].link_hw_laddr[index]);
 		p_arp_data->arp_local_cache[*phy_port].num_nhip++;
+		rte_rwlock_write_unlock(&ret_arp_data->queue_lock);
 		lib_arp_arp_entry_found++;
-
 		if (ARPICMP_DEBUG)
 			printf("%s: ARPICMP hwaddr found\n", __FUNCTION__);
         }
 
 	if (ret_arp_data)
-		ret_arp_data->n_last_update = time(NULL);
+		p_arp_data->update_tsc[*phy_port] = rte_rdtsc();
 
 	 return ret_arp_data;
 }
 
-int get_dest_mac_address_ipv6_port(uint8_t ipv6addr[], uint32_t *phy_port,
-					 struct ether_addr *hw_addr, uint8_t nhipv6[])
+struct nd_entry_data *get_dest_mac_address_ipv6_port(uint8_t ipv6addr[],
+			 uint32_t *phy_port, struct ether_addr *hw_addr, uint8_t nhipv6[])
 {
 	int i = 0, j = 0, flag = 0;
+	uint8_t index;
 	lib_nd_get_mac_req++;
 
-	get_nh_ipv6(ipv6addr, phy_port, nhipv6);
+	get_nh_ipv6(ipv6addr, phy_port, nhipv6, hw_addr);
 	for (j = 0; j < 16; j++) {
 		if (nhipv6[j])
 			flag++;
 	}
+
 	if (flag == 0) {
 		if (NDIPV6_DEBUG)
 			printf("NDIPV6 no nh found for ipv6 "
@@ -562,73 +533,41 @@ int get_dest_mac_address_ipv6_port(uint8_t ipv6addr[], uint32_t *phy_port,
 	struct nd_key_ipv6 tmp_nd_key;
 	tmp_nd_key.port_id = *phy_port;
 
+	if (nd_cache_dest_mac_present(*phy_port)) {
+		return &nd_entry_data_default;
+	}
+
+
 	for (i = 0; i < 16; i++)
 		tmp_nd_key.ipv6[i] = nhipv6[i];
 
-	ret_nd_data = retrieve_nd_entry(tmp_nd_key);
+	ret_nd_data = retrieve_nd_entry(tmp_nd_key, DYNAMIC_ND);
 	if (ret_nd_data == NULL) {
 		if (NDIPV6_DEBUG) {
 			printf("NDIPV6 no nd entry found for ip %x, port %d\n",
 						 ipv6addr[0], *phy_port);
 		}
 		lib_nd_no_arp_entry_found++;
-		return 0;
-	}
-	ether_addr_copy(&ret_nd_data->eth_addr, hw_addr);
-	lib_nd_nd_entry_found++;
-	return 1;
-}
+		return NULL;
+	} else if (ret_nd_data->status == COMPLETE) {
+		rte_rwlock_write_lock(&ret_nd_data->queue_lock);
+		ether_addr_copy(&ret_nd_data->eth_addr, hw_addr);
+		p_arp_data->nd_cache_hw_laddr_valid[*phy_port] = 1;
+		index = p_arp_data->nd_local_cache[*phy_port].num_nhip;
+		rte_mov16(&p_arp_data->nd_local_cache[*phy_port].nhip[index][0],
+				 &nhipv6[0]);
+		ether_addr_copy(hw_addr,
+			&p_arp_data->nd_local_cache[*phy_port].link_hw_laddr[index]);
+		p_arp_data->nd_local_cache[*phy_port].num_nhip++;
 
-int get_dest_mac_address_ipv6(uint8_t ipv6addr[], uint32_t *phy_port,
-						struct ether_addr *hw_addr, uint8_t nhipv6[])
-{
-	int i = 0, j = 0, flag = 0;
-	lib_nd_get_mac_req++;
-
-	get_nh_ipv6(ipv6addr, phy_port, nhipv6);
-	for (j = 0; j < 16; j++) {
-		if (nhipv6[j]) {
-			flag++;
-		}
-	}
-	if (flag == 0) {
-		if (NDIPV6_DEBUG && ipv6addr)
-			RTE_LOG(INFO, LIBARP,
-				"NDIPV6 no nh found for ipv6 %x, port %d\n",
-				ipv6addr[0], *phy_port);
-		return 0;
+		lib_nd_nd_entry_found++;
+		rte_rwlock_write_unlock(&ret_nd_data->queue_lock);
 	}
 
-	struct nd_entry_data *ret_nd_data = NULL;
-	struct nd_key_ipv6 tmp_nd_key;
-	tmp_nd_key.port_id = *phy_port;
+	if (ret_nd_data)
+		p_arp_data->update_tsc[*phy_port] = rte_rdtsc();
 
-	for (i = 0; i < 16; i++) {
-		tmp_nd_key.ipv6[i] = nhipv6[i];
-	}
-
-	ret_nd_data = retrieve_nd_entry(tmp_nd_key);
-	if (ret_nd_data == NULL) {
-		if (NDIPV6_DEBUG && ipv6addr) {
-			RTE_LOG(INFO, LIBARP,
-				"NDIPV6 no nd entry found for ip %x, port %d\n",
-				ipv6addr[0], *phy_port);
-		}
-		if (flag != 0) {
-			if (ARPICMP_DEBUG > 4)
-				printf
-						("Requesting ARP for ipv6 addr and port %d\n",
-						 *phy_port);
-			request_nd(&nhipv6[0], ifm_get_port(*phy_port));
-
-		}
-
-		lib_nd_no_arp_entry_found++;
-		return 0;
-	}
-	ether_addr_copy(&ret_nd_data->eth_addr, hw_addr);
-	lib_nd_nd_entry_found++;
-	return 1;
+	return ret_nd_data;
 }
 
 /**
@@ -783,6 +722,91 @@ print_mbuf(const char *rx_tx, uint8_t portid, struct rte_mbuf *mbuf,
 	fflush(stdout);
 }
 
+/**
+ * Add entry in ND table.
+ *
+ * @param nd_key
+ *      key.
+ * @param ret_nd_data
+ *      return nd entry from table.
+ *
+ */
+static int add_nd_data(struct nd_key_ipv6 *nd_key,
+                struct nd_entry_data *ret_nd_data)
+{
+        int ret;
+        struct nd_entry_data *tmp_nd_data = NULL;
+        rte_rwlock_write_lock(&nd_hash_handle_lock);
+        /* Check for value while locked */
+        ret = rte_hash_lookup_data(nd_hash_handle, nd_key, (void **)&tmp_nd_data);
+
+        if (ret == -ENOENT) {
+                /* entry not yet added, do so now */
+                ret = rte_hash_add_key_data(nd_hash_handle, nd_key, ret_nd_data);
+                if (ret) {
+                        /* We panic here because either:
+                         * ret == -EINVAL and a parameter got messed up, or
+                         * ret == -ENOSPC and the hash table isn't big enough
+                         */
+                        rte_panic("ND: Error on entry add for %s", rte_strerror(abs(ret)));
+                }
+        } else if (ret < 0) {
+                /* We panic here because ret == -EINVAL and a parameter got
+                 * messed up, or dpdk hash lib changed and this needs corrected */
+                rte_panic("ARP: Error on entry add for %s", rte_strerror(abs(ret)));
+        } else {
+                /* entry already exists */
+                ret = EEXIST;
+        }
+
+        rte_rwlock_write_unlock(&nd_hash_handle_lock);
+        return ret;
+}
+
+/**
+ * Add entry in ARP table.
+ *
+ * @param arp_key
+ *      key.
+ * @param ret_arp_data
+ *      return arp entry from table.
+ *
+ */
+static int add_arp_data(struct arp_key_ipv4 *arp_key,
+                struct arp_entry_data *ret_arp_data) {
+        int ret;
+        struct arp_entry_data *tmp_arp_data = NULL;
+        rte_rwlock_write_lock(&arp_hash_handle_lock);
+        /* Check for value while locked */
+        ret = rte_hash_lookup_data(arp_hash_handle, arp_key, (void **)&tmp_arp_data);
+
+        if (ret == -ENOENT) {
+                /* entry not yet added, do so now */
+                ret = rte_hash_add_key_data(arp_hash_handle, arp_key, ret_arp_data);
+                if (ret) {
+                        /* We panic here because either:
+                         * ret == -EINVAL and a parameter got messed up, or
+                         * ret == -ENOSPC and the hash table isn't big enough
+                         */
+                        rte_panic("ARP: Error on entry add for %s - %s",
+                                        inet_ntoa(*(struct in_addr *)&arp_key->ip),
+                                        rte_strerror(abs(ret)));
+                }
+        } else if (ret < 0) {
+                /* We panic here because ret == -EINVAL and a parameter got
+                 * messed up, or dpdk hash lib changed and this needs corrected */
+                rte_panic("ARP: Error on entry add for %s - %s",
+                                inet_ntoa(*(struct in_addr *)&arp_key->ip),
+                                rte_strerror(abs(ret)));
+        } else {
+                /* entry already exists */
+                ret = EEXIST;
+        }
+
+        rte_rwlock_write_unlock(&arp_hash_handle_lock);
+        return ret;
+}
+
 struct arp_entry_data *retrieve_arp_entry(struct arp_key_ipv4 arp_key, uint8_t mode)
 {
 	struct arp_entry_data *ret_arp_data = NULL;
@@ -805,13 +829,23 @@ struct arp_entry_data *retrieve_arp_entry(struct arp_key_ipv4 arp_key, uint8_t m
 		ret_arp_data->ip = arp_key.ip;
 		ret_arp_data->mode = mode;
 		ret_arp_data->num_pkts = 0;
-		ret_arp_data->buffered_pkt_list_head = NULL;
-		ret_arp_data->buffered_pkt_list_tail = NULL;
 		rte_rwlock_init(&ret_arp_data->queue_lock);
 		rte_rwlock_write_lock(&ret_arp_data->queue_lock);
 
+		/* attempt to add arp_entry to hash */
+		ret = add_arp_data(&arp_key, ret_arp_data);
+
+		if (ret == EEXIST) {
+			rte_rwlock_write_unlock(&ret_arp_data->queue_lock);
+			rte_free(ret_arp_data);
+			/* Some other thread has 'beat' this thread in
+				creation of arp_data, try again */
+                        return NULL;
+		}
+
                 if (rte_mempool_get(timer_mempool_arp,
 			(void **) &(ret_arp_data->timer) ) < 0) {
+			rte_rwlock_write_unlock(&ret_arp_data->queue_lock);
                         RTE_LOG(INFO, LIBARP,"Error in getting timer alloc buf\n");
                         return NULL;
                 }
@@ -820,7 +854,11 @@ struct arp_entry_data *retrieve_arp_entry(struct arp_key_ipv4 arp_key, uint8_t m
 					NULL, sizeof(struct rte_mbuf *) * arp_buffer,
 					RTE_CACHE_LINE_SIZE, rte_socket_id());
 
-		rte_hash_add_key_data(arp_hash_handle, &arp_key, ret_arp_data);
+		if (ret_arp_data->buf_pkts == NULL) {
+			rte_rwlock_write_unlock(&ret_arp_data->queue_lock);
+                        RTE_LOG(INFO, LIBARP,"Could not allocate buf for queueing\n");
+                        return NULL;
+		}
 
                 rte_timer_init(ret_arp_data->timer);
                 struct arp_timer_key * callback_key =
@@ -842,9 +880,11 @@ struct arp_entry_data *retrieve_arp_entry(struct arp_key_ipv4 arp_key, uint8_t m
 
 		/* send arp request */
 		request_arp(arp_key.port_id, arp_key.ip);
+		rte_rwlock_write_unlock(&ret_arp_data->queue_lock);
 	} else {
 		if (ret_arp_data &&
 		 ret_arp_data->mode == DYNAMIC_ARP && ret_arp_data->status == STALE) {
+			rte_rwlock_write_lock(&ret_arp_data->queue_lock);
 			ether_addr_copy(&null_ether_addr, &ret_arp_data->eth_addr);
 			ret_arp_data->status = PROBE;
                 	struct arp_timer_key * callback_key =
@@ -866,6 +906,7 @@ struct arp_entry_data *retrieve_arp_entry(struct arp_key_ipv4 arp_key, uint8_t m
 
 			/* send arp request */
 			request_arp(arp_key.port_id, arp_key.ip);
+			rte_rwlock_write_unlock(&ret_arp_data->queue_lock);
 		}
 
 	}
@@ -873,7 +914,7 @@ struct arp_entry_data *retrieve_arp_entry(struct arp_key_ipv4 arp_key, uint8_t m
 	return ret_arp_data;
 }
 
-struct nd_entry_data *retrieve_nd_entry(struct nd_key_ipv6 nd_key)
+struct nd_entry_data *retrieve_nd_entry(struct nd_key_ipv6 nd_key, uint8_t mode)
 {
 	struct nd_entry_data *ret_nd_data = NULL;
 	nd_key.filler1 = 0;
@@ -884,31 +925,109 @@ struct nd_entry_data *retrieve_nd_entry(struct nd_key_ipv6 nd_key)
 	/*Find a nd IPv6 key-data pair in the hash table for ND IPv6 */
 	int ret = rte_hash_lookup_data(nd_hash_handle, &nd_key,
 							 (void **)&ret_nd_data);
-	if (ret < 0) {
-/*		RTE_LOG(INFO, LIBARP,"nd-hash: no lookup Entry Found - ret %d, EINVAL %d, ENOENT %d\n",
-				ret, EINVAL, ENOENT);*/
+	if (ret < 0 && (mode == DYNAMIC_ND)) {
+	        if (ARPICMP_DEBUG)
+			RTE_LOG(INFO, LIBARP, "ND entry not found for ip \n");
+
+		/* add INCOMPLETE arp entry */
+		ret_nd_data = rte_malloc_socket(NULL, sizeof(struct nd_entry_data),
+				RTE_CACHE_LINE_SIZE, rte_socket_id());
+		ether_addr_copy(&null_ether_addr, &ret_nd_data->eth_addr);
+		ret_nd_data->status = INCOMPLETE;
+		ret_nd_data->port = nd_key.port_id;
+
+		for (i = 0; i < ND_IPV6_ADDR_SIZE; i++)
+			ret_nd_data->ipv6[i] = nd_key.ipv6[i];
+		ret_nd_data->mode = mode;
+		ret_nd_data->num_pkts = 0;
+		rte_rwlock_init(&ret_nd_data->queue_lock);
+		rte_rwlock_write_lock(&ret_nd_data->queue_lock);
+
+		/* attempt to add arp_entry to hash */
+		ret = add_nd_data(&nd_key, ret_nd_data);
+
+		if (ret == EEXIST) {
+			rte_rwlock_write_unlock(&ret_nd_data->queue_lock);
+			rte_free(ret_nd_data);
+			/* Some other thread has 'beat' this thread in
+				creation of arp_data, try again */
+                        return NULL;
+		}
+
+
+                if (rte_mempool_get(timer_mempool_arp,
+			(void **) &(ret_nd_data->timer) ) < 0) {
+                        RTE_LOG(INFO, LIBARP,"Error in getting timer alloc buf\n");
+			rte_rwlock_write_unlock(&ret_nd_data->queue_lock);
+                        return NULL;
+                }
+
+		ret_nd_data->buf_pkts = (struct rte_mbuf **)rte_zmalloc_socket(
+					NULL, sizeof(struct rte_mbuf *) * nd_buffer,
+					RTE_CACHE_LINE_SIZE, rte_socket_id());
+
+		if (ret_nd_data->buf_pkts == NULL) {
+			rte_rwlock_write_unlock(&ret_nd_data->queue_lock);
+                        RTE_LOG(INFO, LIBARP,"Could not allocate buf for queueing\n");
+                        return NULL;
+		}
+
+                rte_timer_init(ret_nd_data->timer);
+                struct nd_timer_key * callback_key =
+			 (struct nd_timer_key*) rte_malloc(NULL,
+                               sizeof(struct  nd_timer_key*),RTE_CACHE_LINE_SIZE);
+                callback_key->port_id = nd_key.port_id;
+		for (i = 0; i < ND_IPV6_ADDR_SIZE; i++) {
+			callback_key->ipv6[i] = ret_nd_data->ipv6[i];
+		}
+
+		if(ARPICMP_DEBUG) {
+			RTE_LOG(INFO, LIBARP,"TIMER STARTED FOR %u seconds\n",
+			ARP_TIMER_EXPIRY);
+		}
+
+		if(rte_timer_reset(ret_nd_data->timer,
+			(PROBE_TIME * rte_get_tsc_hz() / 1000),
+			SINGLE,timer_lcore,
+			nd_timer_callback,
+			callback_key) < 0)
+		if(ARPICMP_DEBUG)
+			RTE_LOG(INFO, LIBARP,"Err : Timer already running\n");
+
+                ret_nd_data->timer_key = callback_key;
+		/* send nd request */
+		request_nd(callback_key->ipv6, ifm_get_port(callback_key->port_id));
+		rte_rwlock_write_unlock(&ret_nd_data->queue_lock);
 	} else {
-		if (ret_nd_data->mode == DYNAMIC_ND) {
-			struct nd_timer_key callback_key;
-			callback_key.port_id = ret_nd_data->port;
+		if (ret_nd_data &&
+		 ret_nd_data->mode == DYNAMIC_ND && ret_nd_data->status == STALE) {
+			rte_rwlock_write_lock(&ret_nd_data->queue_lock);
+			ether_addr_copy(&null_ether_addr, &ret_nd_data->eth_addr);
+			ret_nd_data->status = PROBE;
+			struct nd_timer_key * callback_key =
+			 (struct nd_timer_key*) rte_malloc(NULL,
+                               sizeof(struct  nd_timer_key*),RTE_CACHE_LINE_SIZE);
 
+			callback_key->port_id = nd_key.port_id;
 			for (i = 0; i < ND_IPV6_ADDR_SIZE; i++) {
-				callback_key.ipv6[i] = ret_nd_data->ipv6[i];
-
+				callback_key->ipv6[i] = ret_nd_data->ipv6[i];
 			}
 
 			if (rte_timer_reset
-					(ret_nd_data->timer,
-					 (arp_timeout * rte_get_tsc_hz()), SINGLE,
-					 timer_lcore, nd_timer_callback, &callback_key) < 0)
-				if (ARPICMP_DEBUG)
-					RTE_LOG(INFO, LIBARP,
-						"Err : Timer already running\n");
-		}
-		return ret_nd_data;
-	}
+				(ret_nd_data->timer,
+				 (arp_timeout * rte_get_tsc_hz()), SINGLE,
+				 timer_lcore, nd_timer_callback, callback_key) < 0)
+			if (ARPICMP_DEBUG)
+				RTE_LOG(INFO, LIBARP,
+					"Err : Timer already running\n");
+			ret_nd_data->timer_key = callback_key;
 
-	return NULL;
+			/* send nd request */
+			request_nd(callback_key->ipv6, ifm_get_port(callback_key->port_id));
+			rte_rwlock_write_unlock(&ret_nd_data->queue_lock);
+		}
+	}
+	return ret_nd_data;
 }
 
 static const char* arp_status[] = {"INCOMPLETE", "COMPLETE", "PROBE", "STALE"};
@@ -919,13 +1038,10 @@ void print_arp_table(void)
 	void *next_data;
 	uint32_t iter = 0;
 
-	printf
-			("------------------------ ARP CACHE -----------------------------------------\n");
-	printf
-			("----------------------------------------------------------------------------\n");
+	printf("------------------------ ARP CACHE ------------------------------------\n");
+	printf("-----------------------------------------------------------------------\n");
 	printf("\tport  hw addr            status     ip addr\n");
-	printf
-			("----------------------------------------------------------------------------\n");
+	printf("-----------------------------------------------------------------------\n");
 
 	while (rte_hash_iterate(arp_hash_handle, &next_key, &next_data, &iter)
 				 >= 0) {
@@ -934,8 +1050,8 @@ void print_arp_table(void)
 				(struct arp_entry_data *)next_data;
 		struct arp_key_ipv4 tmp_arp_key;
 		memcpy(&tmp_arp_key, next_key, sizeof(struct arp_key_ipv4));
-		printf
-				("\t%4d  %02X:%02X:%02X:%02X:%02X:%02X  %10s %d.%d.%d.%d\n",
+		printf("\t%4d  %02X:%02X:%02X:%02X:%02X:%02X"
+			"  %10s %d.%d.%d.%d\n",
 				 tmp_arp_data->port, tmp_arp_data->eth_addr.addr_bytes[0],
 				 tmp_arp_data->eth_addr.addr_bytes[1],
 				 tmp_arp_data->eth_addr.addr_bytes[2],
@@ -956,11 +1072,12 @@ void print_arp_table(void)
 		printf("0x%x    0x%x    %d       0x%x\n",
 					 p_arp_data->lib_arp_route_table[i].ip,
 					 p_arp_data->lib_arp_route_table[i].mask,
-					 p_arp_data->lib_arp_route_table[i].port, p_arp_data->lib_arp_route_table[i].nh);
+					 p_arp_data->lib_arp_route_table[i].port,
+					 p_arp_data->lib_arp_route_table[i].nh);
 	}
 
-	printf
-			("\nARP Stats: Total Queries %u, ok_NH %u, no_NH %u, ok_Entry %u, no_Entry %u, PopulateCall %u, Del %u, Dup %u\n",
+	printf("\nARP Stats: Total Queries %u, ok_NH %u, no_NH %u, ok_Entry %u,"
+		" no_Entry %u, PopulateCall %u, Del %u, Dup %u\n",
 			 lib_arp_get_mac_req, lib_arp_nh_found, lib_arp_no_nh_found,
 			 lib_arp_arp_entry_found, lib_arp_no_arp_entry_found,
 			 lib_arp_populate_called, lib_arp_delete_called,
@@ -976,12 +1093,10 @@ void print_nd_table(void)
 	void *next_data;
 	uint32_t iter = 0;
 	uint8_t ii = 0, j = 0, k = 0;
-	printf
-			("------------------------------------------------------------------------------------------------------\n");
+	printf("-----------------------------------------------------------------------\n");
 	printf("\tport  hw addr            status         ip addr\n");
 
-	printf
-			("------------------------------------------------------------------------------------------------------\n");
+	printf("-----------------------------------------------------------------------\n");
 	while (rte_hash_iterate(nd_hash_handle, &next_key, &next_data, &iter) >=
 				 0) {
 
@@ -997,8 +1112,7 @@ void print_nd_table(void)
 					 tmp_nd_data->eth_addr.addr_bytes[3],
 					 tmp_nd_data->eth_addr.addr_bytes[4],
 					 tmp_nd_data->eth_addr.addr_bytes[5],
-					 tmp_nd_data->status ==
-					 COMPLETE ? "COMPLETE" : "INCOMPLETE");
+					 arp_status[tmp_nd_data->status]);
 		printf("\t\t\t\t\t\t");
 		for (ii = 0; ii < ND_IPV6_ADDR_SIZE; ii += 2) {
 			printf("%02X%02X ", tmp_nd_data->ipv6[ii],
@@ -1010,8 +1124,8 @@ void print_nd_table(void)
 	uint32_t i = 0;
 	printf("\n\nND IPV6 routing table has %d entries\n",
 				 nd_route_tbl_index);
-	printf
-			("\nIP_Address						Depth          Port				NH_IP_Address\n");
+	printf("\nIP_Address						Depth");
+	printf("          Port				NH_IP_Address\n");
 	for (i = 0; i < nd_route_tbl_index; i++) {
 		printf("\n");
 
@@ -1030,8 +1144,8 @@ void print_nd_table(void)
 						 lib_nd_route_table[i].ipv6[k + 1]);
 		}
 	}
-	printf
-			("\nND IPV6 Stats: \nTotal Queries %u, ok_NH %u, no_NH %u, ok_Entry %u, no_Entry %u, PopulateCall %u, Del %u, Dup %u\n",
+	printf("\nND IPV6 Stats: \nTotal Queries %u, ok_NH %u,"
+		" no_NH %u, ok_Entry %u, no_Entry %u, PopulateCall %u, Del %u, Dup %u\n",
 			 lib_nd_get_mac_req, lib_nd_nh_found, lib_nd_no_nh_found,
 			 lib_nd_nd_entry_found, lib_nd_no_arp_entry_found,
 			 lib_nd_populate_called, lib_nd_delete_called,
@@ -1053,10 +1167,8 @@ void remove_arp_entry(struct arp_entry_data *ret_arp_data, void *arg)
 		RTE_LOG(INFO, LIBARP,
 			"ARP Entry Deleted for IP :%d.%d.%d.%d , port %d\n",
 			(arp_key->ip >> 24),
-			((arp_key->ip & 0x00ff0000) >>
-			 16),
-			((arp_key->ip & 0x0000ff00) >>
-			 8),
+			((arp_key->ip & 0x00ff0000) >> 16),
+			((arp_key->ip & 0x0000ff00) >>  8),
 			((arp_key->ip & 0x000000ff)),
 			arp_key->port_id);
 	}
@@ -1065,59 +1177,41 @@ void remove_arp_entry(struct arp_entry_data *ret_arp_data, void *arg)
 }
 
 /* ND IPv6 */
-void remove_nd_entry_ipv6(uint8_t ipv6addr[], uint8_t portid)
+void remove_nd_entry_ipv6(struct nd_entry_data *ret_nd_data, void *arg)
 {
 	int i = 0;
-	struct nd_entry_data *ret_nd_data = NULL;
-	struct nd_key_ipv6 nd_key;
-	nd_key.port_id = portid;
-
-	for (i = 0; i < ND_IPV6_ADDR_SIZE; i++) {
-		nd_key.ipv6[i] = ipv6addr[i];
-	}
-
-	nd_key.filler1 = 0;
-	nd_key.filler2 = 0;
-	nd_key.filler3 = 0;
+	struct nd_timer_key *timer_key = (struct nd_timer_key *)arg;
 
 	lib_nd_delete_called++;
 
-	if (NDIPV6_DEBUG) {
-		RTE_LOG(INFO, LIBARP,
-			"Deletes rte hash table nd entry for port %d ipv6=",
-			nd_key.port_id);
-		for (i = 0; i < ND_IPV6_ADDR_SIZE; i += 2) {
-			RTE_LOG(INFO, LIBARP, "%02X%02X ", nd_key.ipv6[i],
-				nd_key.ipv6[i + 1]);
-		}
-	}
-	struct nd_timer_key callback_key;
-	callback_key.port_id = portid;
+        rte_timer_stop(ret_nd_data->timer);
+        rte_free(ret_nd_data->timer_key);
+        rte_free(ret_nd_data->buf_pkts);
+        ret_nd_data->buf_pkts = NULL;
 
-	for (i = 0; i < ND_IPV6_ADDR_SIZE; i++) {
-		callback_key.ipv6[i] = ipv6addr[i];
-
-	}
-	int ret = rte_hash_lookup_data(arp_hash_handle, &callback_key,
-							 (void **)&ret_nd_data);
-	if (ret < 0) {
-//              RTE_LOG(INFO, LIBARP,"arp-hash lookup failed ret %d, EINVAL %d, ENOENT %d\n", ret, EINVAL, ENOENT);
-	} else {
-		if (ret_nd_data->mode == DYNAMIC_ND) {
-			rte_timer_stop(ret_nd_data->timer);
-			rte_free(ret_nd_data->timer);
-		}
-	}
-	rte_hash_del_key(nd_hash_handle, &nd_key);
+        if (NDIPV6_DEBUG) {
+                RTE_LOG(INFO, LIBARP,
+                        "Deletes rte hash table nd entry for port %d ipv6=",
+                        timer_key->port_id);
+                for (i = 0; i < ND_IPV6_ADDR_SIZE; i += 2) {
+                        RTE_LOG(INFO, LIBARP, "%02X%02X ", timer_key->ipv6[i],
+                                timer_key->ipv6[i + 1]);
+                }
+        }
+        rte_hash_del_key(nd_hash_handle, timer_key);
 }
 
 int
 arp_queue_unresolved_packet(struct arp_entry_data *ret_arp_data, struct rte_mbuf *pkt)
 {
+	rte_rwlock_write_lock(&ret_arp_data->queue_lock);
 	if (ret_arp_data->num_pkts  == NUM_DESC) {
+		rte_rwlock_write_unlock(&ret_arp_data->queue_lock);
 		return 0;
 	}
+
 	ret_arp_data->buf_pkts[ret_arp_data->num_pkts++] = pkt;
+	rte_rwlock_write_unlock(&ret_arp_data->queue_lock);
 	return 0;
 }
 
@@ -1129,16 +1223,18 @@ arp_send_buffered_pkts(struct arp_entry_data *ret_arp_data,struct ether_addr *hw
 	uint8_t *eth_dest, *eth_src;
 	int i;
 
-	
+
 	if (!hw_addr || !ret_arp_data)
 		return;
 
+	rte_rwlock_write_lock(&ret_arp_data->queue_lock);
 	for (i=0;i<(int)ret_arp_data->num_pkts;i++) {
 		pkt = ret_arp_data->buf_pkts[i];
+
         	eth_dest = RTE_MBUF_METADATA_UINT8_PTR(pkt, MBUF_HDR_ROOM);
         	eth_src = RTE_MBUF_METADATA_UINT8_PTR(pkt, MBUF_HDR_ROOM + 6);
 
-		memcpy(eth_dest, &hw_addr, sizeof(struct ether_addr));
+		memcpy(eth_dest, hw_addr, sizeof(struct ether_addr));
 		memcpy(eth_src, get_link_hw_addr(port_id),
                                 sizeof(struct ether_addr));
 		port->transmit_single_pkt(port, pkt);
@@ -1146,8 +1242,49 @@ arp_send_buffered_pkts(struct arp_entry_data *ret_arp_data,struct ether_addr *hw
 		rte_pktmbuf_free(tmp);
 	}
 	ret_arp_data->num_pkts = 0;
-	ret_arp_data->buffered_pkt_list_head = NULL;
+	rte_rwlock_write_unlock(&ret_arp_data->queue_lock);
+}
 
+int
+nd_queue_unresolved_packet(struct nd_entry_data *ret_nd_data, struct rte_mbuf *pkt)
+{
+	rte_rwlock_write_lock(&ret_nd_data->queue_lock);
+	if (ret_nd_data->num_pkts  == get_nd_buf()) {
+		rte_rwlock_write_unlock(&ret_nd_data->queue_lock);
+		return 0;
+	}
+
+	ret_nd_data->buf_pkts[ret_nd_data->num_pkts++] = pkt;
+	rte_rwlock_write_unlock(&ret_nd_data->queue_lock);
+	return 0;
+}
+
+void
+nd_send_buffered_pkts(struct nd_entry_data *ret_nd_data,struct ether_addr *hw_addr, uint8_t port_id)
+{
+	l2_phy_interface_t *port = ifm_get_port(port_id);
+	struct rte_mbuf *pkt, *tmp;
+	uint8_t *eth_dest, *eth_src;
+	int i;
+
+	if (!hw_addr || !ret_nd_data)
+		return;
+
+	rte_rwlock_write_lock(&ret_nd_data->queue_lock);
+	for (i=0;i<(int)ret_nd_data->num_pkts;i++) {
+		pkt = ret_nd_data->buf_pkts[i];
+		eth_dest = RTE_MBUF_METADATA_UINT8_PTR(pkt, MBUF_HDR_ROOM);
+		eth_src = RTE_MBUF_METADATA_UINT8_PTR(pkt, MBUF_HDR_ROOM + 6);
+
+		memcpy(eth_dest, hw_addr, sizeof(struct ether_addr));
+		memcpy(eth_src, get_link_hw_addr(port_id),
+				sizeof(struct ether_addr));
+		port->transmit_single_pkt(port, pkt);
+		tmp = pkt;
+		rte_pktmbuf_free(tmp);
+	}
+	ret_nd_data->num_pkts = 0;
+	rte_rwlock_write_unlock(&ret_nd_data->queue_lock);
 }
 
 void
@@ -1196,6 +1333,7 @@ populate_arp_entry(const struct ether_addr *hw_addr, uint32_t ipaddr,
 					arp_key.port_id);
 			}
 			lib_arp_duplicate_found++;
+			rte_rwlock_write_lock(&new_arp_data->queue_lock);
 			new_arp_data->retry_count = 0;	// Reset
 			if (new_arp_data->status == STALE) {
 				new_arp_data->status = PROBE;
@@ -1211,7 +1349,7 @@ populate_arp_entry(const struct ether_addr *hw_addr, uint32_t ipaddr,
 						new_arp_data->port);
 				}
 			}
-			
+
 			if (rte_timer_reset(new_arp_data->timer,
 						(arp_timeout * rte_get_tsc_hz()),
 						SINGLE, timer_lcore,
@@ -1221,16 +1359,16 @@ populate_arp_entry(const struct ether_addr *hw_addr, uint32_t ipaddr,
 					RTE_LOG(INFO, LIBARP,
 						"Err : Timer already running\n");
 			}
+			rte_rwlock_write_unlock(&new_arp_data->queue_lock);
 			return;
 		} else {
+			rte_rwlock_write_lock(&new_arp_data->queue_lock);
 			ether_addr_copy(hw_addr, &new_arp_data->eth_addr);
 			if ((new_arp_data->status == INCOMPLETE) ||
 				(new_arp_data->status == PROBE)) {
 				new_arp_data->status = COMPLETE;
 				new_arp_data->mode = mode;
-				new_arp_data->n_confirmed = time(NULL);
-				//end_tsc[new_arp_data->port] = rte_rdtsc();
-				//printf("confirmed val is %x %dms\n",new_arp_data->ip, (end_tsc[new_arp_data->port] - start_tsc[new_arp_data->port] + ticks_per_ms/2)/ticks_per_ms);
+				new_arp_data->n_confirmed = rte_rdtsc();
 				new_arp_data->retry_count = 0;
 				if (rte_timer_reset(new_arp_data->timer,
 						(arp_timeout * rte_get_tsc_hz()),
@@ -1242,6 +1380,7 @@ populate_arp_entry(const struct ether_addr *hw_addr, uint32_t ipaddr,
 						"Err : Timer already running\n");
 				}
 			}
+			rte_rwlock_write_unlock(&new_arp_data->queue_lock);
 			return;
 		}
 	} else {
@@ -1269,12 +1408,16 @@ populate_arp_entry(const struct ether_addr *hw_addr, uint32_t ipaddr,
 			new_arp_data->port = portid;
 			new_arp_data->ip = ipaddr;
 			new_arp_data->mode = mode;
-			new_arp_data->buffered_pkt_list_head = NULL;
-			new_arp_data->buffered_pkt_list_tail = NULL;
 			new_arp_data->num_pkts = 0;
 			
-			rte_hash_add_key_data(arp_hash_handle, &arp_key,
-								new_arp_data);
+			/* attempt to add arp_entry to hash */
+			int ret;
+			ret = add_arp_data(&arp_key, new_arp_data);
+			if (ret) {
+				/* Some other thread created an entry for this ip */
+				rte_free(new_arp_data);
+			}
+
 			if (ARPICMP_DEBUG) {
 				RTE_LOG(INFO, LIBARP,
 					"arp_entry exists ip :%d.%d.%d.%d , port %d\n",
@@ -1314,21 +1457,24 @@ populate_arp_entry(const struct ether_addr *hw_addr, uint32_t ipaddr,
  * Install key - data pair in Hash table - From Pipeline Configuration
  *
  */
-
 void populate_nd_entry(const struct ether_addr *hw_addr, uint8_t ipv6[],
 					 uint8_t portid, uint8_t mode)
 {
 
 	/* need to lock here if multi-threaded */
 	/* rte_hash_add_key_data is not thread safe */
-	uint8_t i;
+	uint8_t i, val = 0;
 	struct nd_key_ipv6 nd_key;
 	nd_key.port_id = portid;
 
-	for (i = 0; i < ND_IPV6_ADDR_SIZE; i++)
+	for (i = 0; i < ND_IPV6_ADDR_SIZE; i++) {
 		nd_key.ipv6[i] = ipv6[i];
+		val |= ipv6[i];
+	}
 
-//      RTE_LOG(INFO, LIBARP,"\n");
+	if (!val)
+		return;
+
 	nd_key.filler1 = 0;
 	nd_key.filler2 = 0;
 	nd_key.filler3 = 0;
@@ -1336,11 +1482,18 @@ void populate_nd_entry(const struct ether_addr *hw_addr, uint8_t ipv6[],
 	lib_nd_populate_called++;
 
 	/* Validate if key-value pair already exists in the hash table for ND IPv6 */
-	struct nd_entry_data *new_nd_data = retrieve_nd_entry(nd_key);
+	struct nd_entry_data *new_nd_data = retrieve_nd_entry(nd_key, mode);
+	if (new_nd_data && ((new_nd_data->mode == STATIC_ND
+		&& mode == DYNAMIC_ND) || (new_nd_data->mode == DYNAMIC_ND
+		&& mode == STATIC_ND))) {
+		if (ARPICMP_DEBUG)
+		RTE_LOG(INFO, LIBARP, "populate_arp_entry: ND entry already exists(%d %d)\n",
+		new_nd_data->mode, mode);
+		return;
+	}
 
 	if (mode == DYNAMIC_ND) {
-		if (new_nd_data
-				&& is_same_ether_addr(&new_nd_data->eth_addr, hw_addr)) {
+		if (new_nd_data && is_same_ether_addr(&new_nd_data->eth_addr, hw_addr)) {
 
 			if (NDIPV6_DEBUG) {
 				RTE_LOG(INFO, LIBARP,
@@ -1355,61 +1508,47 @@ void populate_nd_entry(const struct ether_addr *hw_addr, uint8_t ipv6[],
 			}
 
 			lib_nd_duplicate_found++;
-			RTE_LOG(INFO, LIBARP, "nd_entry exists\n");
-			return;
-		}
-		uint32_t size =
-				RTE_CACHE_LINE_ROUNDUP(sizeof(struct nd_entry_data));
-		new_nd_data = rte_zmalloc(NULL, size, RTE_CACHE_LINE_SIZE);
+			rte_rwlock_write_lock(&new_nd_data->queue_lock);
+			if (new_nd_data->status == STALE) {
+				new_nd_data->retry_count = 0;	// Reset
+				new_nd_data->status = PROBE;
+				request_nd(new_nd_data->ipv6, ifm_get_port(new_nd_data->port));
 
-		//new_nd_data = (struct nd_entry_data *)rte_malloc(NULL, sizeof(struct nd_entry_data *),RTE_CACHE_LINE_SIZE);
-		new_nd_data->eth_addr = *hw_addr;
-		new_nd_data->status = COMPLETE;
-		new_nd_data->port = portid;
-		new_nd_data->mode = mode;
-		if (rte_mempool_get
-				(timer_mempool_arp, (void **)&(new_nd_data->timer)) < 0) {
-			RTE_LOG(INFO, LIBARP,
-				"TIMER - Error in getting timer alloc buffer\n");
-			return;
-		}
-
-		if (NDIPV6_DEBUG)
-			RTE_LOG(INFO, LIBARP, "populate_nd_entry ipv6=");
-
-		for (i = 0; i < ND_IPV6_ADDR_SIZE; i++) {
-			new_nd_data->ipv6[i] = ipv6[i];
-		}
-
-		if (NDIPV6_DEBUG) {
-			for (i = 0; i < ND_IPV6_ADDR_SIZE; i += 2) {
-
-				RTE_LOG(INFO, LIBARP, "%02X%02X ",
-					new_nd_data->ipv6[i],
-					new_nd_data->ipv6[i + 1]);
+				if (rte_timer_reset(new_nd_data->timer,
+						(arp_timeout * rte_get_tsc_hz()),
+						SINGLE, timer_lcore,
+						nd_timer_callback,
+						new_nd_data->timer_key) < 0) {
+					if (ARPICMP_DEBUG)
+						RTE_LOG(INFO, LIBARP,
+						"Err : Timer already running\n");
+				}
 			}
-		}
+			rte_rwlock_write_unlock(&new_nd_data->queue_lock);
+			return;
+		} else {
+			rte_rwlock_write_lock(&new_nd_data->queue_lock);
+			ether_addr_copy(hw_addr, &new_nd_data->eth_addr);
+			if ((new_nd_data->status == INCOMPLETE) ||
+				(new_nd_data->status == PROBE)) {
+				new_nd_data->status = COMPLETE;
+				new_nd_data->mode = mode;
+				new_nd_data->n_confirmed = rte_rdtsc();
+				new_nd_data->retry_count = 0;
+				if (rte_timer_reset(new_nd_data->timer,
+					(arp_timeout * rte_get_tsc_hz()),
+					SINGLE, timer_lcore,
+					nd_timer_callback,
+					new_nd_data->timer_key) < 0) {
+					if (ARPICMP_DEBUG)
+						RTE_LOG(INFO, LIBARP,
+						"Err : Timer already running\n");
+				}
+			}
+			rte_rwlock_write_unlock(&new_nd_data->queue_lock);
+                        return;
+                }
 
-		/*Add a key-data pair at hash table for ND IPv6 static routing */
-		rte_hash_add_key_data(nd_hash_handle, &nd_key, new_nd_data);
-		/* need to check the return value of the hash add */
-
-		/* after the hash is created then time is started */
-		rte_timer_init(new_nd_data->timer);
-		struct nd_timer_key *callback_key =
-				(struct nd_timer_key *)rte_malloc(NULL,
-									sizeof(struct nd_timer_key
-									 *),
-									RTE_CACHE_LINE_SIZE);
-		callback_key->port_id = portid;
-
-		for (i = 0; i < ND_IPV6_ADDR_SIZE; i++) {
-			callback_key->ipv6[i] = ipv6[i];
-		}
-		if (rte_timer_reset
-				(new_nd_data->timer, (arp_timeout * rte_get_tsc_hz()),
-				 SINGLE, timer_lcore, nd_timer_callback, callback_key) < 0)
-			RTE_LOG(INFO, LIBARP, "Err : Timer already running\n");
 	} else {
 		if (new_nd_data
 				&& is_same_ether_addr(&new_nd_data->eth_addr, hw_addr)) {
@@ -1433,7 +1572,6 @@ void populate_nd_entry(const struct ether_addr *hw_addr, uint8_t ipv6[],
 			new_nd_data =
 					rte_zmalloc(NULL, size, RTE_CACHE_LINE_SIZE);
 
-			//new_nd_data = (struct nd_entry_data *)rte_malloc(NULL, sizeof(struct nd_entry_data *),RTE_CACHE_LINE_SIZE);
 			new_nd_data->eth_addr = *hw_addr;
 			new_nd_data->status = COMPLETE;
 			new_nd_data->port = portid;
@@ -1441,13 +1579,25 @@ void populate_nd_entry(const struct ether_addr *hw_addr, uint8_t ipv6[],
 			for (i = 0; i < ND_IPV6_ADDR_SIZE; i++) {
 				new_nd_data->ipv6[i] = ipv6[i];
 			}
+			new_nd_data->mode = mode;
+			new_nd_data->num_pkts = 0;
 
 			/*Add a key-data pair at hash table for ND IPv6 static routing */
-			rte_hash_add_key_data(nd_hash_handle, &nd_key,
-								new_nd_data);
+			/* attempt to add arp_entry to hash */
+			int ret;
+			ret = add_nd_data(&nd_key, new_nd_data);
+			if (ret) {
+				rte_free(new_nd_data);
+			}
+
 			/* need to check the return value of the hash add */
+			#ifdef L3_STACK_SUPPORT
+			// Call l3fwd module for resolving 2_adj structure.
+			resolve_l2_adj(ipaddr, portid, hw_addr);
+			#endif
 		}
 	}
+
 	if (NDIPV6_DEBUG)
 		printf
 				("\n....Added a key-data pair at rte hash table for ND IPv6 static routing\n");
@@ -1743,7 +1893,6 @@ void process_arpicmp_pkt(struct rte_mbuf *pkt, l2_phy_interface_t *port)
 					print_mbuf("TX", port->pmdid, pkt,
 							 __LINE__);
 				printf("replying arp pkt done\n");
-				//rte_pktmbuf_free(pkt);
 				return;
 			} else if (arp_h->arp_op ==
 					 rte_cpu_to_be_16(ARP_OP_REPLY)) {
@@ -1759,7 +1908,6 @@ void process_arpicmp_pkt(struct rte_mbuf *pkt, l2_phy_interface_t *port)
 										 arp_data.arp_sip),
 							 in_port_id, DYNAMIC_ARP);
 
-				//rte_pktmbuf_free(pkt);
 				return;
 			} else {
 				if (ARPICMP_DEBUG)
@@ -1903,7 +2051,6 @@ void process_arpicmp_pkt(struct rte_mbuf *pkt, l2_phy_interface_t *port)
 
 		rte_pktmbuf_free(pkt);
 	}
-	printf("reached end of process_arpicmp\n");
 }
 
 /* int
@@ -2095,7 +2242,6 @@ static int arp_parse_args(struct pipeline_params *params)
 {
 	uint32_t arp_route_tbl_present = 0;
 	uint32_t nd_route_tbl_present = 0;
-	uint32_t ports_mac_list_present = 0;
 	uint32_t numArg;
 	uint32_t n_vnf_threads_present = 0;
 
@@ -2110,7 +2256,6 @@ static int arp_parse_args(struct pipeline_params *params)
 		pub_to_prv_map[i] = 0xff;
 	}
 
-	RTE_SET_USED(ports_mac_list_present);
 	RTE_SET_USED(nd_route_tbl_present);
 	RTE_SET_USED(arp_route_tbl_present);
 	for (numArg = 0; numArg < params->n_args; numArg++) {
@@ -2164,6 +2309,12 @@ static int arp_parse_args(struct pipeline_params *params)
 
 		if (strcmp(arg_name, "arp_buf") == 0) {
 			arp_buffer = atoi(arg_value);
+			continue;
+		}
+
+		if (strcmp(arg_name, "nd_buf") == 0) {
+			nd_buffer = atoi(arg_value);
+			continue;
 		}
 
 		/* prv_to_pub_map */
@@ -2243,50 +2394,6 @@ static int arp_parse_args(struct pipeline_params *params)
 		/* lib_arp_debug */
 		if (strcmp(arg_name, "lib_arp_debug") == 0) {
 			ARPICMP_DEBUG = atoi(arg_value);
-
-			continue;
-		}
-
-		/* ports_mac_list */
-		if (strcmp(arg_name, "ports_mac_list") == 0) {
-			ports_mac_list_present = 1;
-
-			uint32_t i = 0, j = 0, k = 0, MAC_NUM_BYTES = 6;
-
-			char byteStr[MAC_NUM_BYTES][3];
-			uint32_t byte[MAC_NUM_BYTES];
-
-			char *token = strtok(arg_value, " ");
-			while (token) {
-				k = 0;
-				for (i = 0; i < MAC_NUM_BYTES; i++) {
-					for (j = 0; j < 2; j++) {
-						byteStr[i][j] = token[k++];
-					}
-					byteStr[i][j] = '\0';
-					k++;
-				}
-
-				for (i = 0; i < MAC_NUM_BYTES; i++) {
-					byte[i] = strtoul(byteStr[i], NULL, 16);
-				}
-
-				if (ARPICMP_DEBUG) {
-					RTE_LOG(INFO, LIBARP, "token: %s",
-						token);
-					for (i = 0; i < MAC_NUM_BYTES; i++)
-						RTE_LOG(INFO, LIBARP,
-							", byte[%u] %u", i,
-							byte[i]);
-					RTE_LOG(INFO, LIBARP, "\n");
-				}
-				//Populate the static arp_route_table
-				for (i = 0; i < MAC_NUM_BYTES; i++)
-					p_arp_data->link_hw_addr[p_arp_data->link_hw_addr_array_idx].addr_bytes[i] = byte[i];
-
-				p_arp_data->link_hw_addr_array_idx++;
-				token = strtok(NULL, " ");
-			}
 
 			continue;
 		}
@@ -2483,6 +2590,27 @@ static void local_arp_cache_init(void)
         }
 }
 
+struct ether_addr *get_nd_local_link_hw_addr(uint8_t out_port, uint8_t nhip[])
+{
+        int i, j, limit;
+        struct ether_addr *x = NULL;
+        limit = p_arp_data->nd_local_cache[out_port].num_nhip;
+
+        for (i=0; i < limit; i++) {
+		for (j=0;j<16;j++) {
+			if (p_arp_data->nd_local_cache[out_port].nhip[i][j] != nhip[j])
+				continue;
+		}
+
+                x = &p_arp_data->nd_local_cache[out_port].link_hw_laddr[i];
+		//for (j=0;j<6;j++)
+		//	printf("%d  %d", x->addr_bytes[j], p_arp_data->nd_local_cache[out_port].link_hw_laddr[i].addr_bytes[j]);
+		return x;
+        }
+
+	return x;
+}
+
 struct ether_addr *get_local_link_hw_addr(uint8_t out_port, uint32_t nhip)
 {
         int i, limit;
@@ -2513,12 +2641,26 @@ void lib_arp_init(struct pipeline_params *params,
         size = RTE_CACHE_LINE_ROUNDUP(sizeof(struct arp_data));
         p = rte_zmalloc(NULL, size, RTE_CACHE_LINE_SIZE);
         p_arp_data = (struct arp_data *)p;
-	
+
 	/* Parse arguments */
 	if (arp_parse_args(params)) {
 		RTE_LOG(INFO, LIBARP, "arp_parse_args failed ...\n");
 		return;
 	}
+
+	/* acquire the mac addresses */
+	struct ether_addr hw_addr;
+	uint8_t nb_ports = rte_eth_dev_count();
+
+	for (i = 0; i < nb_ports; i++) {
+		rte_eth_macaddr_get(i, &hw_addr);
+		ether_addr_copy(&hw_addr, &p_arp_data->link_hw_addr[i]);
+		p_arp_data->link_hw_addr_array_idx++;
+	}
+
+	/* create a lock for arp/nd hash */
+	rte_rwlock_init(&arp_hash_handle_lock);
+	rte_rwlock_init(&nd_hash_handle_lock);
 
 	/* create the arp_icmp mbuf rx pool */
 	lib_arp_pktmbuf_tx_pool =
@@ -2538,9 +2680,29 @@ void lib_arp_init(struct pipeline_params *params,
 			return;
 		}
 	}
+
+	/* create the nd icmp mbuf rx pool */
+	lib_nd_pktmbuf_tx_pool =
+			rte_pktmbuf_pool_create("lib_nd_mbuf_tx_pool", NB_ARPICMP_MBUF, 32,
+						0, RTE_MBUF_DEFAULT_BUF_SIZE,
+						rte_socket_id());
+
+	if (lib_nd_pktmbuf_tx_pool == NULL) {
+		RTE_LOG(INFO, LIBARP, "ND mbuf pool create failed.\n");
+		return;
+	}
+
+	for (i=0; i<MAX_PORTS; i++) {
+		lib_nd_pkt[i] = rte_pktmbuf_alloc(lib_nd_pktmbuf_tx_pool);
+		if (lib_nd_pkt[i] == NULL) {
+			RTE_LOG(INFO, LIBARP, "ND lib_nd_pkt alloc failed.\n");
+			return;
+		}
+	}
+
 	/* create the arp_icmp mbuf rx pool */
-	arp_icmp_pktmbuf_tx_pool = rte_pktmbuf_pool_create("arp_icmp_mbuf_tx_pool", 
-					NB_ARPICMP_MBUF, 32, 0,
+	arp_icmp_pktmbuf_tx_pool = rte_pktmbuf_pool_create("arp_icmp_mbuf_tx_pool",
+					NB_ARPICMP_MBUF, MAX_POOL, 0,
 					RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
 
 	if (arp_icmp_pktmbuf_tx_pool == NULL) {
@@ -2607,7 +2769,7 @@ void arp_timer_callback(struct rte_timer *timer, void *arg)
         arp_key.filler3 = 0;
 
 	struct arp_entry_data *ret_arp_data = NULL;
-	time_t now;
+	uint64_t now;
 	if (ARPICMP_DEBUG) {
 		RTE_LOG(INFO, LIBARP, "arp_timer_callback ip %x, port %d\n",
 		arp_key.ip, arp_key.port_id);
@@ -2615,7 +2777,7 @@ void arp_timer_callback(struct rte_timer *timer, void *arg)
 
 	int ret = rte_hash_lookup_data(arp_hash_handle, &arp_key,
 					 (void **)&ret_arp_data);
-	now = time(NULL);
+	now = rte_rdtsc();
 
 	if (ARPICMP_DEBUG)
 		RTE_LOG(INFO, LIBARP, "ARP TIMER callback : expire :%d now:%ld\n",
@@ -2625,13 +2787,14 @@ void arp_timer_callback(struct rte_timer *timer, void *arg)
 		return;
 	} else {
 		if (ret_arp_data->mode == DYNAMIC_ARP) {
-			if (ret_arp_data->status == PROBE || 
+			rte_rwlock_write_lock(&ret_arp_data->queue_lock);
+			if (ret_arp_data->status == PROBE ||
 				ret_arp_data->status == INCOMPLETE) {
 				if (ret_arp_data->retry_count == 3) {
 					remove_arp_entry(ret_arp_data, arg);
 				} else {
 					ret_arp_data->retry_count++;
-					
+
 					if (ARPICMP_DEBUG) {
 						RTE_LOG(INFO, LIBARP,
 						"RETRY ARP..retry count : %u\n",
@@ -2644,7 +2807,6 @@ void arp_timer_callback(struct rte_timer *timer, void *arg)
 
 					if (ifm_chk_port_ipv4_enabled
 						(ret_arp_data->port)) {
-						//printf("inside arp timer callback numpkts:%d\n", ret_arp_data->num_pkts);
 						request_arp(ret_arp_data->port,
 								ret_arp_data->ip);
 					} else {
@@ -2654,7 +2816,7 @@ void arp_timer_callback(struct rte_timer *timer, void *arg)
 							__FUNCTION__,
 							ret_arp_data->port);
 					}
-					
+
 					if (rte_timer_reset(ret_arp_data->timer,
 								(PROBE_TIME *
 								 rte_get_tsc_hz()/ 1000),
@@ -2668,7 +2830,8 @@ void arp_timer_callback(struct rte_timer *timer, void *arg)
 
 				}
 			} else if (ret_arp_data->status == COMPLETE) {
-				if (now <= (ret_arp_data->n_confirmed + arp_timeout)) { 
+				if (now <= (ret_arp_data->n_confirmed +
+					 (arp_timeout * rte_get_tsc_hz()))) {
 					if (rte_timer_reset(ret_arp_data->timer,
 								(arp_timeout *
 								 rte_get_tsc_hz()), SINGLE,
@@ -2678,7 +2841,7 @@ void arp_timer_callback(struct rte_timer *timer, void *arg)
 					if (ARPICMP_DEBUG)
 						RTE_LOG(INFO, LIBARP,
 							"Err : Timer already running\n");
-				} else if (now <= (ret_arp_data->n_last_update + USED_TIME)) {
+				} else if (now <= (p_arp_data->update_tsc[ret_arp_data->port] + (USED_TIME * rte_get_tsc_hz()))) {
 					if (rte_timer_reset(ret_arp_data->timer,
 								(arp_timeout *
 								 rte_get_tsc_hz()), SINGLE,
@@ -2693,6 +2856,7 @@ void arp_timer_callback(struct rte_timer *timer, void *arg)
 					p_arp_data->arp_cache_hw_laddr_valid[ret_arp_data->port] = 0;
 				}
 			}
+			rte_rwlock_write_unlock(&ret_arp_data->queue_lock);
 		} else {
 			rte_hash_del_key(arp_hash_handle, &arp_key);
 		}
@@ -2702,11 +2866,104 @@ void arp_timer_callback(struct rte_timer *timer, void *arg)
 
 void nd_timer_callback(struct rte_timer *timer, void *arg)
 {
-	struct nd_timer_key *remove_key = (struct nd_timer_key *)arg;
+	struct nd_timer_key *timer_key = (struct nd_timer_key *)arg;
+        struct nd_key_ipv6 nd_key;
+	int j;
+	struct nd_entry_data *ret_nd_data = NULL;
+	uint64_t now;
+
+        nd_key.port_id = timer_key->port_id;
+        nd_key.filler1 = 0;
+        nd_key.filler2 = 0;
+        nd_key.filler3 = 0;
+
+	rte_mov16(&nd_key.ipv6[0], timer_key->ipv6);
+
+	if (ARPICMP_DEBUG) {
+		RTE_LOG(INFO, LIBARP, "nd_timer_callback port %d\n",
+		nd_key.port_id);
+	}
+
+	int ret = rte_hash_lookup_data(nd_hash_handle, &nd_key,
+					 (void **)&ret_nd_data);
+	now = rte_rdtsc();
+
 	if (ARPICMP_DEBUG)
-		RTE_LOG(INFO, LIBARP, "nd  time callback : expire :%d\n",
-			(int)timer->expire);
-	remove_nd_entry_ipv6(remove_key->ipv6, remove_key->port_id);
+		RTE_LOG(INFO, LIBARP, "ND TIMER callback : expire :%d now:%ld\n",
+			(int)timer->expire, now);
+	if (ret < 0) {
+		printf("Should not have come here \n");
+		for (j = 0; j < 16; j++)
+			printf("*%d ", nd_key.ipv6[j]);
+		printf("*%d ", nd_key.port_id);
+		return;
+	} else {
+		if (ret_nd_data->mode == DYNAMIC_ARP) {
+			rte_rwlock_write_lock(&ret_nd_data->queue_lock);
+			if (ret_nd_data->status == PROBE ||
+				ret_nd_data->status == INCOMPLETE) {
+				if (ret_nd_data->retry_count == 3) {
+					remove_nd_entry_ipv6(ret_nd_data, arg);
+				} else {
+					ret_nd_data->retry_count++;
+
+					if (ARPICMP_DEBUG) {
+						RTE_LOG(INFO, LIBARP,
+						"RETRY ND..retry count : %u\n",
+						ret_nd_data->retry_count);
+
+						RTE_LOG(INFO, LIBARP,
+						"TIMER STARTED FOR %u seconds\n",
+							ARP_TIMER_EXPIRY);
+					}
+
+					request_nd(ret_nd_data->ipv6,
+						 ifm_get_port(ret_nd_data->port));
+					if (rte_timer_reset(ret_nd_data->timer,
+								(PROBE_TIME *
+								 rte_get_tsc_hz()/ 1000),
+								SINGLE,
+								timer_lcore,
+								nd_timer_callback,
+								arg) < 0)
+					if (ARPICMP_DEBUG)
+						RTE_LOG(INFO, LIBARP,
+							"Err : Timer already running\n");
+
+				}
+			} else if (ret_nd_data->status == COMPLETE) {
+				if (now <= (ret_nd_data->n_confirmed +
+				 (arp_timeout * rte_get_tsc_hz()))) {
+					if (rte_timer_reset(ret_nd_data->timer,
+								(arp_timeout *
+								 rte_get_tsc_hz()), SINGLE,
+								timer_lcore,
+								nd_timer_callback,
+								arg) < 0)
+					if (ARPICMP_DEBUG)
+						RTE_LOG(INFO, LIBARP,
+							"Err : Timer already running\n");
+				} else if (now <= (p_arp_data->update_tsc[ret_nd_data->port] + (USED_TIME * rte_get_tsc_hz()))) {
+					if (rte_timer_reset(ret_nd_data->timer,
+								(arp_timeout *
+								 rte_get_tsc_hz()), SINGLE,
+								timer_lcore,
+								nd_timer_callback,
+								arg) < 0)
+					if (ARPICMP_DEBUG)
+						RTE_LOG(INFO, LIBARP,
+							"Err : Timer already running\n");
+				} else {
+					printf("making it stale\n");
+					ret_nd_data->status = STALE;
+					p_arp_data->nd_cache_hw_laddr_valid[ret_nd_data->port] = 0;
+				}
+			}
+			rte_rwlock_write_unlock(&ret_nd_data->queue_lock);
+		} else {
+			rte_hash_del_key(nd_hash_handle, &nd_key);
+		}
+	}
 	return;
 }
 
