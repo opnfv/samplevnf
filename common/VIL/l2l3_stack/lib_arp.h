@@ -54,6 +54,12 @@ struct arp_cache {
         uint32_t num_nhip;
 };
 
+struct nd_cache {
+        uint32_t nhip[MAX_LOCAL_MAC_ADDRESS][16];
+        struct ether_addr link_hw_laddr[MAX_LOCAL_MAC_ADDRESS];
+        uint32_t num_nhip;
+};
+
 /**
 * A structure for Route table entires of IPv6
 *
@@ -73,20 +79,25 @@ struct arp_data {
             lib_nd_route_table[MAX_ARP_RT_ENTRY];
 	uint8_t lib_nd_route_ent_cnt;
 	struct arp_cache arp_local_cache[MAX_PORTS];
+	struct nd_cache nd_local_cache[MAX_PORTS];
 	struct ether_addr link_hw_addr[MAX_LOCAL_MAC_ADDRESS];
 	uint32_t link_hw_addr_array_idx;
 	uint8_t arp_cache_hw_laddr_valid[MAX_LOCAL_MAC_ADDRESS];
+	uint8_t nd_cache_hw_laddr_valid[MAX_LOCAL_MAC_ADDRESS];
 } __rte_cache_aligned;
 
 uint8_t arp_cache_dest_mac_present(uint32_t out_port);
-
+uint8_t nd_cache_dest_mac_present(uint32_t out_port);
 extern struct lib_nd_route_table_entry lib_nd_route_table[MAX_ND_RT_ENTRY];
 extern struct lib_arp_route_table_entry lib_arp_route_table[MAX_ARP_RT_ENTRY];
 extern struct ether_addr *get_local_link_hw_addr(uint8_t out_port, uint32_t nhip);
+extern struct ether_addr *get_nd_local_link_hw_addr(uint8_t out_port, uint8_t nhip[]);
 extern struct arp_cache arp_local_cache[MAX_PORTS];
 extern void prefetch(void);
 extern struct arp_entry_data *arp_data_ptr[16];
+extern struct nd_entry_data *nd_data_ptr[16];
 uint32_t get_arp_buf(void);
+uint32_t get_nd_buf(void);
 
 enum {
 	ARP_FOUND,
@@ -215,7 +226,13 @@ struct nd_entry_data {
 	uint8_t status;				/**< statusof the entry */
 	uint8_t mode;				/**< Mode */
 	uint8_t ipv6[ND_IPV6_ADDR_SIZE];  /**< Ipv6 address */
+	uint8_t retry_count;			/**< retry count for ARP*/
 	struct rte_timer *timer;		/**< Timer */
+	struct nd_timer_key *timer_key;
+	struct rte_mbuf **buf_pkts;
+	uint32_t num_pkts;
+	uint32_t n_confirmed;
+	uint32_t n_last_update;
 } __attribute__ ((packed));
 
 /**
@@ -245,54 +262,10 @@ struct table_nd_entry_data {
 * @return
 * 0 if failure, and 1 if success
 */
-
-struct arp_entry_data *get_dest_mac_address(const uint32_t ipaddr, uint32_t *phy_port, struct ether_addr *hw_addr, uint32_t *nhip);
-/**
-* To get the destination MAC address andnext hop for the ip address  and outgoing port
-* @param1 ip addr
-* IP address for which MAC address is needed.
-* @param2 phy_port
-*  Physical Port
-* @param3 ether_addr
-* pointer to the ether_addr, This gets update with valid MAC addresss
-* @Param4 next nhip
-* Gets the next hop IP by Ip address and physical port
-* @return
-* 0 if failure, and 1 if success
-*/
 struct arp_entry_data *get_dest_mac_addr_port(const uint32_t ipaddr,
 				 uint32_t *phy_port, struct ether_addr *hw_addr);
 
 /**
-* To get the destination mac address for  IPv4  address
-* @param  Ipaddr
-* IP address which need the destination mac address
-* @param Phy_port
-* physical port
-* @param ether_addr
-* pointer to the ether_addr, This gets update with valid mac address
-* @return
-* 0 if failure, 1 if success
-*/
-int get_dest_mac_addr(const uint32_t ipaddr, uint32_t *phy_port,
-					struct ether_addr *hw_addr);
-
-/**
-* To get the destination mac address for IPV6 address
-* @param ipv6addr
-* IPv6 address which need the destination mac adress
-* @param Phy_Port
-* physical prt
-* @param ether_addr
-* pointer to the ether_address, This gets update with valid mac address
-* @param Nhipv6[]
-* Gets the next hop ipv6 address by ipv6 address and physical port
-* @return
-* 0 if failure, 1 ifsuccess
-*/
-int get_dest_mac_address_ipv6(uint8_t ipv6addr[], uint32_t *phy_port,
-						struct ether_addr *hw_addr, uint8_t nhipv6[]);
-/**
 * To get the destination mac address for IPV6 address
 * @param ipv6addr
 * IPv6 address which need the destination mac adress
@@ -306,12 +279,16 @@ int get_dest_mac_address_ipv6(uint8_t ipv6addr[], uint32_t *phy_port,
 * 0 if failure, 1 ifsuccess
 */
 
-int get_dest_mac_address_ipv6_port(uint8_t ipv6addr[], uint32_t *phy_port,
+struct nd_entry_data *get_dest_mac_address_ipv6_port(uint8_t ipv6addr[], uint32_t *phy_port,
 					 struct ether_addr *hw_addr,
 					 uint8_t nhipv6[]);
 int arp_queue_unresolved_packet(struct arp_entry_data * arp_data,
                         struct rte_mbuf * m);
 extern void arp_send_buffered_pkts(struct arp_entry_data *ret_arp_data,struct ether_addr *hw_addr, uint8_t port_id);
+
+int nd_queue_unresolved_packet(struct nd_entry_data *nd_data,
+                        struct rte_mbuf * m);
+extern void nd_send_buffered_pkts(struct nd_entry_data *ret_nd_data,struct ether_addr *hw_addr, uint8_t port_id);
 
 /**
 * To get hardware link address
@@ -352,7 +329,7 @@ void remove_arp_entry(struct arp_entry_data *ret_arp_data, void *arg);
 * Port id
 */
 
-void remove_nd_entry_ipv6(uint8_t ipv6addr[], uint8_t portid);
+void remove_nd_entry_ipv6(struct nd_entry_data *ret_nd_data, void *arg);
 
 /**
 * Populate arp entry in arp Table
@@ -446,7 +423,7 @@ struct arp_entry_data *retrieve_arp_entry(const struct arp_key_ipv4 arp_key, uin
 * Nd key to validate Nd entry
 */
 
-struct nd_entry_data *retrieve_nd_entry(struct nd_key_ipv6 nd_key);
+struct nd_entry_data *retrieve_nd_entry(struct nd_key_ipv6 nd_key, uint8_t mode);
 
 /**
 * Setsup Arp Initilization
@@ -552,5 +529,5 @@ uint32_t get_nh(uint32_t, uint32_t *, struct ether_addr *addr);
 * @Param nhipv6
 * next hop ipv6
 */
-void get_nh_ipv6(uint8_t ipv6[], uint32_t *port, uint8_t nhipv6[]);
+void get_nh_ipv6(uint8_t ipv6[], uint32_t *port, uint8_t nhipv6[], struct ether_addr *hw_addr);
 #endif

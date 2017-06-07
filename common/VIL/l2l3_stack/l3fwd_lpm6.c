@@ -705,7 +705,7 @@ int get_dest_mac_for_nexthop_ipv6(uint8_t nh_ipv6[RTE_LPM_IPV6_ADDR_SIZE],
 	}
 	tmp_nd_key.port_id = out_phy_port;
 
-	nd_data = retrieve_nd_entry(tmp_nd_key);
+	nd_data = retrieve_nd_entry(tmp_nd_key, DYNAMIC_ND);
 	if (nd_data == NULL) {
 		printf("ND entry is not found\n");
 		return 0;

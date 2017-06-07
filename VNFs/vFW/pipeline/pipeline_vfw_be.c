@@ -287,7 +287,7 @@ static void do_local_nh_ipv4_cache(uint32_t dest_if,
               }
        }
 }
-#endif
+
 static uint32_t local_get_nh_ipv6(
        uint8_t *ip,
        uint32_t *port,
@@ -367,6 +367,7 @@ static void do_local_nh_ipv6_cache(uint32_t dest_if,
                      } /* if */
               } /* for */
 }
+#endif
 /**
  * Print packet for debugging.
  *
@@ -1003,13 +1004,10 @@ pkt4_work_vfw_arp_ipv4_packets(struct rte_mbuf **pkts,
         meta_data_addr->output_port =  vfw_pipe->outport_id[dest_if];
 
         if (arp_cache_dest_mac_present(dest_if)) {
-
                 ether_addr_copy(get_link_hw_addr(dest_if), &ehdr->s_addr);
                 arp_data_ptr[dest_if]->n_last_update = time(NULL);
 
                 if (unlikely(ret_arp_data && ret_arp_data->num_pkts)) {
-
-                        printf("sending buffered packets\n");
                         arp_send_buffered_pkts(ret_arp_data,
                                  &ehdr->d_addr, vfw_pipe->outport_id[dest_if]);
 
@@ -1174,13 +1172,10 @@ pkt_work_vfw_arp_ipv4_packets(struct rte_mbuf *pkts,
                 arp_data_ptr[dest_if]->n_last_update = time(NULL);
 
                 if (unlikely(ret_arp_data && ret_arp_data->num_pkts)) {
-
-                        printf("sending buffered packets\n");
                         arp_send_buffered_pkts(ret_arp_data,
                                  &ehdr->d_addr, vfw_pipe->outport_id[dest_if]);
 
                             }
-
                      } else {
                 if (unlikely(ret_arp_data == NULL)) {
 
@@ -1239,12 +1234,10 @@ pkt4_work_vfw_arp_ipv6_packets(struct rte_mbuf **pkts,
               struct pipeline_vfw *vfw_pipe)
 {
        uint8_t nh_ipv6[IPV6_ADD_SIZE];
-       uint32_t ret;
        struct ether_addr hw_addr;
        struct mbuf_tcp_meta_data *meta_data_addr;
        struct ether_hdr *ehdr;
        struct rte_mbuf *pkt;
-       uint16_t phy_port;
        uint8_t i;
 
        for (i = 0; i < 4; i++) {
@@ -1258,7 +1251,6 @@ pkt4_work_vfw_arp_ipv6_packets(struct rte_mbuf **pkts,
                      continue;
               int must_reverse = ((synproxy_reply_mask & pkt_mask) != 0);
 
-              phy_port = pkt->port;
               meta_data_addr = (struct mbuf_tcp_meta_data *)
                      RTE_MBUF_METADATA_UINT32_PTR(pkt, META_DATA_OFFSET);
               ehdr = rte_vfw_get_ether_addr(pkt);
@@ -1270,8 +1262,11 @@ pkt4_work_vfw_arp_ipv6_packets(struct rte_mbuf **pkts,
               uint8_t dest_address[IPV6_ADD_SIZE];
 
               memset(nhip, 0, IPV6_ADD_SIZE);
+              if (must_reverse)
+                     rte_sp_exchange_mac_addresses(ehdr);
 
               rte_mov16(dest_address, ihdr->dst_addr);
+#if 0
               ret = local_get_nh_ipv6(&dest_address[0], &dest_if,
                             &nhip[0], vfw_pipe);
               if (must_reverse) {
@@ -1335,39 +1330,47 @@ pkt4_work_vfw_arp_ipv6_packets(struct rte_mbuf **pkts,
               }
 
               meta_data_addr->output_port = vfw_pipe->outport_id[dest_if];
-
+#endif
               memset(nh_ipv6, 0, IPV6_ADD_SIZE);
-              if (get_dest_mac_address_ipv6_port(
+              struct nd_entry_data *ret_nd_data = NULL;
+              ret_nd_data = get_dest_mac_address_ipv6_port(
                                    &dest_address[0],
                                    &dest_if,
                                    &hw_addr,
-                                   &nh_ipv6[0])) {
-                     ether_addr_copy(&hw_addr, &ehdr->d_addr);
-                     ether_addr_copy(get_link_hw_addr(dest_if),
+                                   &nh_ipv6[0]);
+
+	      meta_data_addr->output_port = vfw_pipe->
+                                    outport_id[dest_if];
+              if (nd_cache_dest_mac_present(dest_if)) {
+                    ether_addr_copy(get_link_hw_addr(dest_if),
                                    &ehdr->s_addr);
+                    nd_data_ptr[dest_if]->n_last_update = time(NULL);
 
-                     if (vfw_debug >= DEBUG_LEVEL_4) {
-                            char buf[HW_ADDR_SIZE];
-
-                            ether_format_addr(buf, sizeof(buf),
-                                          &hw_addr);
-                            printf("MAC found for  dest_if %d: %s, ",
-                                          dest_if, buf);
-                            ether_format_addr(buf, sizeof(buf),
-                                          &ehdr->s_addr);
-                            printf("new eth hdr src: %s, ", buf);
-                            ether_format_addr(buf, sizeof(buf),
-                                          &ehdr->d_addr);
-                            printf("new eth hdr dst: %s\n", buf);
-                     }
-
+                    if (unlikely(ret_nd_data && ret_nd_data->num_pkts)) {
+                        nd_send_buffered_pkts(ret_nd_data,
+				&ehdr->d_addr, meta_data_addr->output_port);
+                    }
               } else {
-                     printf("deleting ipv6\n");
-                     *pkts_mask &= ~pkt_mask;
-                     /*Next Neighbor is not yet implemented
-                      * for ipv6.*/
-                     vfw_pipe->counters->
-                            pkts_drop_without_arp_entry++;
+                    if (unlikely(ret_nd_data == NULL)) {
+                         *pkts_mask &= ~pkt_mask;
+			  vfw_pipe->counters->
+				pkts_drop_without_arp_entry++;
+                          continue;
+                    }
+		    if (ret_nd_data->status == INCOMPLETE ||
+	                  ret_nd_data->status == PROBE) {
+			  if (ret_nd_data->num_pkts >= NUM_DESC) {
+                                /* Drop the pkt */
+                                *pkts_mask &= ~pkt_mask;
+                                vfw_pipe->counters->
+                                pkts_drop_without_arp_entry++;
+				continue;
+                          } else {
+                                arp_pkts_mask |= pkt_mask;
+                                nd_queue_unresolved_packet(ret_nd_data, pkt);
+                                continue;
+                          }
+                    }
               }
 
        }
@@ -1401,12 +1404,10 @@ pkt_work_vfw_arp_ipv6_packets(struct rte_mbuf *pkts,
               struct pipeline_vfw *vfw_pipe)
 {
        uint8_t nh_ipv6[IPV6_ADD_SIZE];
-       uint32_t ret;
        struct ether_addr hw_addr;
        struct mbuf_tcp_meta_data *meta_data_addr;
        struct ether_hdr *ehdr;
        struct rte_mbuf *pkt;
-       uint16_t phy_port;
 
        uint32_t dest_if = INVALID_DESTIF;
        /* bitmask representing only this packet */
@@ -1418,7 +1419,6 @@ pkt_work_vfw_arp_ipv6_packets(struct rte_mbuf *pkts,
 
               int must_reverse = ((synproxy_reply_mask & pkt_mask) != 0);
 
-              phy_port = pkt->port;
               meta_data_addr = (struct mbuf_tcp_meta_data *)
                      RTE_MBUF_METADATA_UINT32_PTR(pkt, META_DATA_OFFSET);
               ehdr = rte_vfw_get_ether_addr(pkt);
@@ -1430,8 +1430,10 @@ pkt_work_vfw_arp_ipv6_packets(struct rte_mbuf *pkts,
               uint8_t dest_address[IPV6_ADD_SIZE];
 
               memset(nhip, 0, IPV6_ADD_SIZE);
-
+              if (must_reverse)
+                     rte_sp_exchange_mac_addresses(ehdr);
               rte_mov16(dest_address, ihdr->dst_addr);
+#if 0
               ret = local_get_nh_ipv6(&dest_address[0], &dest_if,
                             &nhip[0], vfw_pipe);
               if (must_reverse) {
@@ -1495,39 +1497,46 @@ pkt_work_vfw_arp_ipv6_packets(struct rte_mbuf *pkts,
               }
 
               meta_data_addr->output_port = vfw_pipe->outport_id[dest_if];
-
+#endif
               memset(nh_ipv6, 0, IPV6_ADD_SIZE);
-              if (get_dest_mac_address_ipv6_port(
+              struct nd_entry_data *ret_nd_data = NULL;
+              ret_nd_data = get_dest_mac_address_ipv6_port(
                                    &dest_address[0],
                                    &dest_if,
                                    &hw_addr,
-                                   &nh_ipv6[0])) {
-                     ether_addr_copy(&hw_addr, &ehdr->d_addr);
+                                   &nh_ipv6[0]);
+	      meta_data_addr->output_port = vfw_pipe->
+                                    outport_id[dest_if];
+              if (nd_cache_dest_mac_present(dest_if)) {
                      ether_addr_copy(get_link_hw_addr(dest_if),
                                    &ehdr->s_addr);
+                    nd_data_ptr[dest_if]->n_last_update = time(NULL);
 
-                     if (vfw_debug >= DEBUG_LEVEL_4) {
-                            char buf[HW_ADDR_SIZE];
-
-                            ether_format_addr(buf, sizeof(buf),
-                                          &hw_addr);
-                            printf("MAC found for  dest_if %d: %s, ",
-                                          dest_if, buf);
-                            ether_format_addr(buf, sizeof(buf),
-                                          &ehdr->s_addr);
-                            printf("new eth hdr src: %s, ", buf);
-                            ether_format_addr(buf, sizeof(buf),
-                                          &ehdr->d_addr);
-                            printf("new eth hdr dst: %s\n", buf);
+                    if (unlikely(ret_nd_data && ret_nd_data->num_pkts)) {
+                        nd_send_buffered_pkts(ret_nd_data,
+				&ehdr->d_addr, meta_data_addr->output_port);
                      }
-
               } else {
-                     printf("deleting ipv6\n");
-                     *pkts_mask &= ~pkt_mask;
-                     /*Next Neighbor is not yet implemented
-                      * for ipv6.*/
-                     vfw_pipe->counters->
-                            pkts_drop_without_arp_entry++;
+                    if (unlikely(ret_nd_data == NULL)) {
+                        *pkts_mask &= ~pkt_mask;
+			vfw_pipe->counters->
+				pkts_drop_without_arp_entry++;
+                        return;
+                    }
+		    if (ret_nd_data->status == INCOMPLETE ||
+                          ret_nd_data->status == PROBE) {
+                          if (ret_nd_data->num_pkts >= NUM_DESC) {
+                                /* Drop the pkt */
+                                *pkts_mask &= ~pkt_mask;
+                                vfw_pipe->counters->
+                                    pkts_drop_without_arp_entry++;
+                                return;
+                          } else {
+                                arp_pkts_mask |= pkt_mask;
+                                nd_queue_unresolved_packet(ret_nd_data, pkt);
+                                return;
+                          }
+                    }
               }
 
        }
@@ -1667,7 +1676,6 @@ rte_vfw_arp_ipv4_packets(struct rte_mbuf **pkts,
 
                 if (unlikely(ret_arp_data && ret_arp_data->num_pkts)) {
 
-                        printf("sending buffered packets\n");
                         p_nat->naptedPktCount += ret_arp_data->num_pkts;
                         arp_send_buffered_pkts(ret_arp_data,
                                  &ehdr->d_addr, vfw_pipe->outport_id[dest_if]);
@@ -1761,8 +1769,11 @@ rte_vfw_arp_ipv6_packets(struct rte_mbuf **pkts,
               uint8_t dest_address[IPV6_ADD_SIZE];
 
               memset(nhip, 0, IPV6_ADD_SIZE);
+              if (must_reverse)
+                     rte_sp_exchange_mac_addresses(ehdr);
 
               rte_mov16(dest_address, ihdr->dst_addr);
+#if 0
               ret = local_get_nh_ipv6(&dest_address[0], &dest_if,
                             &nhip[0], vfw_pipe);
               if (must_reverse) {
@@ -1826,41 +1837,49 @@ rte_vfw_arp_ipv6_packets(struct rte_mbuf **pkts,
               }
 
               meta_data_addr->output_port = vfw_pipe->outport_id[dest_if];
-
+#endif
               memset(nh_ipv6, 0, IPV6_ADD_SIZE);
-              if (get_dest_mac_address_ipv6_port(
+              struct nd_entry_data *ret_nd_data = NULL;
+              ret_nd_data = get_dest_mac_address_ipv6_port(
                                    &dest_address[0],
                                    &dest_if,
                                    &hw_addr,
-                                   &nh_ipv6[0])) {
-                     ether_addr_copy(&hw_addr, &ehdr->d_addr);
+                                   &nh_ipv6[0]);
+
+	      meta_data_addr->output_port = vfw_pipe->
+                                    outport_id[dest_if];
+              if (nd_cache_dest_mac_present(dest_if)) {
                      ether_addr_copy(get_link_hw_addr(dest_if),
                                    &ehdr->s_addr);
+                    nd_data_ptr[dest_if]->n_last_update = time(NULL);
 
-                     if (vfw_debug >= DEBUG_LEVEL_4) {
-                            char buf[HW_ADDR_SIZE];
-
-                            ether_format_addr(buf, sizeof(buf),
-                                          &hw_addr);
-                            printf("MAC found for  dest_if %d: %s, ",
-                                          dest_if, buf);
-                            ether_format_addr(buf, sizeof(buf),
-                                          &ehdr->s_addr);
-                            printf("new eth hdr src: %s, ", buf);
-                            ether_format_addr(buf, sizeof(buf),
-                                          &ehdr->d_addr);
-                            printf("new eth hdr dst: %s\n", buf);
+                    if (unlikely(ret_nd_data && ret_nd_data->num_pkts)) {
+                        nd_send_buffered_pkts(ret_nd_data,
+                               &ehdr->d_addr, meta_data_addr->output_port);
                      }
 
               } else {
-                     printf("deleting ipv6\n");
+                    if (unlikely(ret_nd_data == NULL)) {
                      pkts_mask &= ~pkt_mask;
-                     /*Next Neighbor is not yet implemented
-                      * for ipv6.*/
-                     vfw_pipe->counters->
-                            pkts_drop_without_arp_entry++;
-              }
-
+			  vfw_pipe->counters->
+				pkts_drop_without_arp_entry++;
+                          continue;
+                    }
+		    if (ret_nd_data->status == INCOMPLETE ||
+                          ret_nd_data->status == PROBE) {
+                          if (ret_nd_data->num_pkts >= NUM_DESC) {
+                                /* Drop the pkt */
+				pkts_mask &= ~pkt_mask;
+                                vfw_pipe->counters->
+                                    pkts_drop_without_arp_entry++;
+                                continue;
+                          } else {
+                                arp_pkts_mask |= pkt_mask;
+                                nd_queue_unresolved_packet(ret_nd_data, pkt);
+                                continue;
+                          }
+                    }
+	      }
 
        }
 

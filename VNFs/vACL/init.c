@@ -1292,11 +1292,13 @@ int app_init(struct app_params *app)
 	app_init_pipelines(app);
 	app_init_threads(app);
 
+	#ifdef L3_STACK_SUPPORT
         l3fwd_init();
         create_arp_table();
         create_nd_table();
         populate_lpm_routes();
         print_interface_details();
+	#endif
 
 	return 0;
 }
