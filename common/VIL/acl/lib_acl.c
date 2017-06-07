@@ -580,8 +580,13 @@ lib_acl_ipv4_pkt_work_key(struct lib_acl *plib_acl,
 			if (ACL_LIB_DEBUG)
 				printf("Action Accept\n");
 
-			if (action_array_active[action_id].action_bitmap
-					& lib_acl_action_conntrack) {
+			/* No conntrack for UDP */
+			struct ipv4_hdr *ihdr4 = (struct ipv4_hdr *)
+				RTE_MBUF_METADATA_UINT32_PTR(pkt, IP_START);
+
+			if ((action_array_active[action_id].action_bitmap
+					& lib_acl_action_conntrack) &&
+					(ihdr4->next_proto_id != IP_PROTOCOL_UDP)) {
 
 				/* Set conntrack bit for this pkt */
 				*conntrack_mask |= pkt_mask;
@@ -792,8 +797,13 @@ lib_acl_ipv6_pkt_work_key(struct lib_acl *plib_acl,
 			if (ACL_LIB_DEBUG)
 				printf("Action Accept\n");
 
-			if (action_array_active[action_id].action_bitmap
-					& lib_acl_action_conntrack) {
+			/* No conntrack for UDP */
+			struct ipv6_hdr *ihdr6 = (struct ipv6_hdr *)
+				RTE_MBUF_METADATA_UINT32_PTR(pkt, IP_START);
+
+			if ((action_array_active[action_id].action_bitmap
+					& lib_acl_action_conntrack) &&
+					(ihdr6->proto != IP_PROTOCOL_UDP)) {
 
 				/* Set conntrack bit for this pkt */
 				*conntrack_mask |= pkt_mask;
