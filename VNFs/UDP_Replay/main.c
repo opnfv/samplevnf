@@ -1591,20 +1591,37 @@ main_loop(__attribute__((unused)) void *dummy)
 				 */
 				int32_t n = RTE_ALIGN_FLOOR(nb_rx, 8);
 				for (j = 0; j < n; j += 8) {
-					uint32_t pkt_type =
-						pkts_burst[j]->packet_type &
-						pkts_burst[j+1]->packet_type &
-						pkts_burst[j+2]->packet_type &
-						pkts_burst[j+3]->packet_type &
-						pkts_burst[j+4]->packet_type &
-						pkts_burst[j+5]->packet_type &
-						pkts_burst[j+6]->packet_type &
-						pkts_burst[j+7]->packet_type;
-					if (pkt_type & RTE_PTYPE_L3_IPV4) {
+					struct ether_hdr *eth_h0 =
+					 rte_pktmbuf_mtod(pkts_burst[j], struct ether_hdr *);
+					struct ether_hdr *eth_h1 =
+					 rte_pktmbuf_mtod(pkts_burst[j+1], struct ether_hdr *);
+					struct ether_hdr *eth_h2 =
+					 rte_pktmbuf_mtod(pkts_burst[j+2], struct ether_hdr *);
+					struct ether_hdr *eth_h3 =
+					 rte_pktmbuf_mtod(pkts_burst[j+3], struct ether_hdr *);
+					struct ether_hdr *eth_h4 =
+					 rte_pktmbuf_mtod(pkts_burst[j+4], struct ether_hdr *);
+					struct ether_hdr *eth_h5 =
+					 rte_pktmbuf_mtod(pkts_burst[j+5], struct ether_hdr *);
+					struct ether_hdr *eth_h6 =
+					 rte_pktmbuf_mtod(pkts_burst[j+6], struct ether_hdr *);
+					struct ether_hdr *eth_h7 =
+					 rte_pktmbuf_mtod(pkts_burst[j+7], struct ether_hdr *);
+
+					uint16_t ether_type;
+					ether_type = 	(rte_cpu_to_be_16(eth_h0->ether_type) &
+							 rte_cpu_to_be_16(eth_h1->ether_type) &
+							 rte_cpu_to_be_16(eth_h2->ether_type) &
+							 rte_cpu_to_be_16(eth_h3->ether_type) &
+							 rte_cpu_to_be_16(eth_h4->ether_type) &
+							 rte_cpu_to_be_16(eth_h5->ether_type) &
+							 rte_cpu_to_be_16(eth_h6->ether_type) &
+							 rte_cpu_to_be_16(eth_h7->ether_type));
+
+					if (ether_type == ETHER_TYPE_IPv4) {
 						simple_ipv4_replay_8pkts(
 						&pkts_burst[j], portid, qconf);
-					} else if (pkt_type &
-						RTE_PTYPE_L3_IPV6) {
+					} else if (ether_type == ETHER_TYPE_IPv6) {
 						simple_ipv6_replay_8pkts(&pkts_burst[j],
 									portid, qconf);
 					} else {
@@ -1626,6 +1643,7 @@ main_loop(__attribute__((unused)) void *dummy)
 									portid, qconf);
 					}
 				}
+
 				for (; j < nb_rx ; j++) {
 					udp_replay_simple_replay(pkts_burst[j],
 								portid, qconf);
@@ -2646,7 +2664,7 @@ main(int argc, char **argv)
 		fflush(stdout);
 
 		nb_rx_queue = get_port_n_rx_queues(portid);
-                n_tx_queue = nb_rx_queue;
+		n_tx_queue = nb_rx_queue;
 		if (n_tx_queue > MAX_TX_QUEUE_PER_PORT)
 			n_tx_queue = MAX_TX_QUEUE_PER_PORT;
 		printf("Creating queues: nb_rxq=%d nb_txq=%u... ",
