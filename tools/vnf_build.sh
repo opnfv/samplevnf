@@ -24,8 +24,9 @@ echo "--------------------------------------------------------------------------
 HUGEPGSZ=`cat /proc/meminfo  | grep Hugepagesize | cut -d : -f 2 | tr -d ' '`
 MODPROBE="/sbin/modprobe"
 INSMOD="/sbin/insmod"
-DPDK_DOWNLOAD="http://dpdk.org/browse/dpdk/snapshot/dpdk-16.04.zip"
+DPDK_DOWNLOAD="Not initialized"
 DPDK_DIR=$VNF_CORE/dpdk
+DPDK_RTE_VER="Unknown"
 
 #
 # Sets QUIT variable so script will finish.
@@ -68,6 +69,8 @@ step_1()
         CONFIG_NUM=1
         TEXT[1]="Check OS and network connection"
         FUNC[1]="setup_env"
+        TEXT[2]="Select DPDK RTE version"
+        FUNC[2]="select_dpdk_rte_ver"
 }
 setup_env()
 {
@@ -94,6 +97,28 @@ setup_env()
 	fi
 	echo "Network connectivity successful."
 }
+select_dpdk_rte_ver()
+{
+
+	TITLE="Select the DPDK RTE version"
+	CONFIG_NUM=1
+	echo "[1] DPDK 16.04"
+	echo "[2] DPDK 16.11"
+	echo "[3] DPDK 17.02"
+	echo "[4] DPDK 17.05"
+	echo
+
+	while true; do
+		read -p "Select DPDK version to be used: " yn
+			case $yn in
+				[1]* ) DPDK_RTE_VER=16.04 ; return;;
+				[2]* ) DPDK_RTE_VER=16.11 ; return;;
+				[3]* ) DPDK_RTE_VER=17.02 ; return;;
+				[4]* ) DPDK_RTE_VER=17.05 ; return;;
+				* ) echo " Invalid selection...";;
+			esac
+	done
+}
 
 step_2()
 {
@@ -115,7 +140,7 @@ get_agreement_download()
 	echo
 	echo "List of packages needed for VNFs build and installation:"
 	echo "-------------------------------------------------------"
-	echo "1. DPDK version 16.04"
+	echo "1. DPDK version $DPDK_RTE_VER"
 	echo "2. build-essential"
 	echo "3. linux-headers-generic"
 	echo "4. git"
@@ -162,12 +187,13 @@ download_dpdk_zip()
 		echo "Please choose option '2.Agree to download' first"
 		return
 	fi
+	DPDK_DOWNLOAD="http://dpdk.org/browse/dpdk/snapshot/dpdk-$DPDK_RTE_VER.zip"
 	rm -rf $DPDK_DIR
 	if [ ! -e ${DPDK_DOWNLOAD##*/} ] ; then
 		wget ${DPDK_DOWNLOAD}
 	fi
 	unzip -o ${DPDK_DOWNLOAD##*/}
-	mv $VNF_CORE/dpdk-16.04 $VNF_CORE/dpdk
+	mv $VNF_CORE/dpdk-$DPDK_RTE_VER $VNF_CORE/dpdk
 }
 
 install_dpdk()
@@ -182,11 +208,14 @@ install_dpdk()
 	export RTE_TARGET=x86_64-native-linuxapp-gcc
 
 	pushd $DPDK_DIR
-	echo "Apply dpdk custom patches..."
-	patch -p1 < $VNF_CORE/patches/dpdk_custom_patch/i40e-fix-link-management.patch
-	patch -p1 < $VNF_CORE/patches/dpdk_custom_patch/i40e-fix-Rx-hang-when-disable-LLDP.patch
-	patch -p1 < $VNF_CORE/patches/dpdk_custom_patch/i40e-fix-link-status-change-interrupt.patch
-	patch -p1 < $VNF_CORE/patches/dpdk_custom_patch/i40e-fix-VF-bonded-device-link-down.patch
+
+	if [ $DPDK_RTE_VER == "16.04" ] ; then
+		echo "Apply dpdk custom patches..."
+			patch -p1 < $VNF_CORE/patches/dpdk_custom_patch/i40e-fix-link-management.patch
+			patch -p1 < $VNF_CORE/patches/dpdk_custom_patch/i40e-fix-Rx-hang-when-disable-LLDP.patch
+			patch -p1 < $VNF_CORE/patches/dpdk_custom_patch/i40e-fix-link-status-change-interrupt.patch
+			patch -p1 < $VNF_CORE/patches/dpdk_custom_patch/i40e-fix-VF-bonded-device-link-down.patch
+	fi
 
 	make -j install T=$RTE_TARGET
 	if [ $? -ne 0 ] ; then
