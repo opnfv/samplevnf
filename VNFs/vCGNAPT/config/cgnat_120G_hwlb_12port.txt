@@ -1,0 +1,57 @@
+
+p 1 arpadd 0 192.16.100.20 00:00:00:00:00:01
+p 1 arpadd 1 172.16.40.20  00:00:00:A1:3A:79
+p 1 arpadd 2 193.16.100.20 00:00:00:00:00:02
+p 1 arpadd 3 173.16.40.20  00:00:00:A1:3A:81
+p 1 arpadd 4 194.16.100.20 00:00:00:00:00:03
+p 1 arpadd 5 174.16.40.20  00:00:00:A1:3A:41
+p 1 arpadd 6 195.16.100.20 00:00:00:00:00:04
+p 1 arpadd 7 175.16.40.20  00:00:00:A1:3A:43
+p 1 arpadd 8 196.16.100.20 00:00:00:00:00:05
+p 1 arpadd 9 176.16.40.20  00:00:00:37:db:09
+p 1 arpadd 10 197.16.100.20 00:00:00:00:00:06
+p 1 arpadd 11 177.16.40.20  00:00:00:37:db:11
+
+set fwd rxonly
+set_sym_hash_ena_per_port 0 enable
+set_hash_global_config 0 simple_xor ipv4-udp enable
+set_sym_hash_ena_per_port 1 enable
+set_hash_global_config 1 simple_xor ipv4-udp enable
+set_hash_input_set 0 ipv4-udp src-ipv4 udp-src-port add
+set_hash_input_set 1 ipv4-udp dst-ipv4 udp-dst-port add
+set_sym_hash_ena_per_port 2 enable
+set_hash_global_config 2 simple_xor ipv4-udp enable
+set_sym_hash_ena_per_port 3 enable
+set_hash_global_config 3 simple_xor ipv4-udp enable
+set_hash_input_set 2 ipv4-udp src-ipv4 udp-src-port add
+set_hash_input_set 3 ipv4-udp dst-ipv4 udp-dst-port add
+
+set_sym_hash_ena_per_port 4 enable
+set_hash_global_config 4 simple_xor ipv4-udp enable
+set_sym_hash_ena_per_port 5 enable
+set_hash_global_config 5 simple_xor ipv4-udp enable
+set_hash_input_set 4 ipv4-udp src-ipv4 udp-src-port add
+set_hash_input_set 5 ipv4-udp dst-ipv4 udp-dst-port add
+
+set_sym_hash_ena_per_port 6 enable
+set_hash_global_config 6 simple_xor ipv4-udp enable
+set_sym_hash_ena_per_port 7 enable
+set_hash_global_config 7 simple_xor ipv4-udp enable
+set_hash_input_set 6 ipv4-udp src-ipv4 udp-src-port add
+set_hash_input_set 7 ipv4-udp dst-ipv4 udp-dst-port add
+
+set_sym_hash_ena_per_port 8 enable
+set_hash_global_config 8 simple_xor ipv4-udp enable
+set_sym_hash_ena_per_port 9 enable
+set_hash_global_config 9 simple_xor ipv4-udp enable
+set_hash_input_set 8 ipv4-udp src-ipv4 udp-src-port add
+set_hash_input_set 9 ipv4-udp dst-ipv4 udp-dst-port add
+
+set_sym_hash_ena_per_port 10 enable
+set_hash_global_config 10 simple_xor ipv4-udp enable
+set_sym_hash_ena_per_port 11 enable
+set_hash_global_config 11 simple_xor ipv4-udp enable
+set_hash_input_set 10 ipv4-udp src-ipv4 udp-src-port add
+set_hash_input_set 11 ipv4-udp dst-ipv4 udp-dst-port add
+
+p 1 arpls
