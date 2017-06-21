@@ -40,7 +40,7 @@ extern uint8_t firewall_flag;
 extern uint8_t cnxn_tracking_is_active;
 #define KEY_SIZE 10              /*IPV4 src_ip + dst_ip + src_port + dst_port */
 #define IP_32BIT_SIZE 4
-#define MAX_VFW_INSTANCES 12       /* max number fw threads, actual usually less */
+#define MAX_VFW_INSTANCES 24       /* max number fw threads, actual usually less */
 #define IPv4_HDR_VERSION 4
 #define IPv6_HDR_VERSION 6
 #define IP_VERSION_CHECK 4
