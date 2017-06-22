@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5aaae553_55dd736f",
+        "filename": "tools/vnf_build.sh",
+        "patchSetId": 1
+      },
+      "lineNbr": 27,
+      "author": {
+        "id": 6507
+      },
+      "writtenOn": "2017-06-22T01:27:57Z",
+      "side": 1,
+      "message": "set default version to 16.04. If no input os given we need to set it to 16.04",
+      "revId": "5461b17df297a259f12c1d5f53f2ae7a2238cd55",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
