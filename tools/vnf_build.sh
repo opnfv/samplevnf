@@ -183,7 +183,6 @@ install_dpdk()
 
 	pushd $DPDK_DIR
 	echo "Apply dpdk custom patches..."
-	patch -p0 < $VNF_CORE/patches/dpdk_custom_patch/rte_pipeline.patch
 	patch -p1 < $VNF_CORE/patches/dpdk_custom_patch/i40e-fix-link-management.patch
 	patch -p1 < $VNF_CORE/patches/dpdk_custom_patch/i40e-fix-Rx-hang-when-disable-LLDP.patch
 	patch -p1 < $VNF_CORE/patches/dpdk_custom_patch/i40e-fix-link-status-change-interrupt.patch
