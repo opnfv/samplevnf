@@ -43,7 +43,10 @@ enum rte_ct_packet_action rte_ct_udp_packet(struct rte_ct_cnxn_tracker *ct,
 		ustate = RTE_CT_UDP_REPLIED;
 		cd->connstatus = RTE_ASSURED_CONN;
 	}
-	rte_ct_set_cnxn_timer_for_udp(ct, cd, ustate);
+	/* Avoid timer resetting if connection is setup */
+	if(cd->connstatus != RTE_INIT_CONN)
+		cd->state_used_for_timer = ustate;
 
+	rte_ct_set_cnxn_timer_for_udp(ct, cd, ustate);
 	return RTE_CT_FORWARD_PACKET;
 }
