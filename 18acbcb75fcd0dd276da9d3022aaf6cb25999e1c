@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1aa4ed85_b7ee50b3",
+        "filename": "patches/dpdk_custom_patch/disable-acl-debug-logs.patch",
+        "patchSetId": 1
+      },
+      "lineNbr": 8,
+      "author": {
+        "id": 6507
+      },
+      "writtenOn": "2017-06-26T12:46:04Z",
+      "side": 1,
+      "message": "remove whitespaces",
+      "revId": "18acbcb75fcd0dd276da9d3022aaf6cb25999e1c",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
