@@ -1481,6 +1481,7 @@ rte_ct_cnxn_tracker_batch_lookup_basic_type(
 	struct rte_ct_cnxn_data *cnxn_data_entry[RTE_HASH_LOOKUP_BULK_MAX];
 
 	rte_prefetch0(ct->hash_table_entries);
+	rte_prefetch0(ct->rhash);
 
 	if (CNXN_TRX_DEBUG > 1) {
 		printf("Enter cnxn tracker %p", ct);
@@ -1647,18 +1648,6 @@ rte_ct_cnxn_tracker_batch_lookup_basic_type(
 			rte_prefetch0(entry);
 			rte_prefetch0(&entry->key_is_client_order);
 		}
-		else {
-			uint8_t pkt_index = compacting_map[i];
-			uint32_t *key = ct->hash_key_ptrs[pkt_index];
-			uint8_t protocol = *(key + 9);
-			if (protocol == UDP_PROTOCOL) {
-				/* Search in new connections only for UDP */
-				entry = rte_ct_search_new_connections(ct, key);
-				rte_prefetch0(&entry->counters.packets_forwarded);
-				rte_prefetch0(entry);
-				rte_prefetch0(&entry->key_is_client_order);
-			}
-		}
 		cnxn_data_entry[i] = entry;
 	}
 
@@ -1735,7 +1724,7 @@ rte_ct_cnxn_tracker_batch_lookup_basic_type(
 				 */
 
 				struct rte_ct_cnxn_data *recent_entry =
-					cnxn_data_entry[i];
+					rte_ct_search_new_connections(ct, key);
 
 				if (recent_entry != NULL) {
 					if (rte_ct_udp_packet(ct, recent_entry,
