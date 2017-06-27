@@ -187,6 +187,8 @@ install_dpdk()
 	patch -p1 < $VNF_CORE/patches/dpdk_custom_patch/i40e-fix-Rx-hang-when-disable-LLDP.patch
 	patch -p1 < $VNF_CORE/patches/dpdk_custom_patch/i40e-fix-link-status-change-interrupt.patch
 	patch -p1 < $VNF_CORE/patches/dpdk_custom_patch/i40e-fix-VF-bonded-device-link-down.patch
+	patch -p1 < $VNF_CORE/patches/dpdk_custom_patch/disable-acl-debug-logs.patch
+	patch -p1 < $VNF_CORE/patches/dpdk_custom_patch/set-log-level-to-info.patch
 
 	make -j install T=$RTE_TARGET
 	if [ $? -ne 0 ] ; then
