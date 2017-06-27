@@ -16,6 +16,24 @@
       "revId": "18acbcb75fcd0dd276da9d3022aaf6cb25999e1c",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1aa4ed85_12fe526c",
+        "filename": "patches/dpdk_custom_patch/disable-acl-debug-logs.patch",
+        "patchSetId": 1
+      },
+      "lineNbr": 8,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-06-27T04:42:19Z",
+      "side": 1,
+      "message": "Since it is a patch and created by tool, wouldn\u0027t like to edit this space(This space is created due to new line added). In the actual code after applying this patch will not have a space(it will have a empty line).",
+      "parentUuid": "1aa4ed85_b7ee50b3",
+      "revId": "18acbcb75fcd0dd276da9d3022aaf6cb25999e1c",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
     }
   ]
 }
