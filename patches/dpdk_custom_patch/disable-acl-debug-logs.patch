@@ -1,0 +1,14 @@
+diff --git a/lib/librte_table/rte_table_acl.c b/lib/librte_table/rte_table_acl.c
+index c1eb848..2db880c 100644
+--- a/lib/librte_table/rte_table_acl.c
++++ b/lib/librte_table/rte_table_acl.c
+@@ -236,7 +236,9 @@ rte_table_acl_build(struct rte_table_acl *acl, struct rte_acl_ctx **acl_ctx)
+ 		return -1;
+ 	}
+ 
++#if RTE_LOG_LEVEL > RTE_LOG_INFO
+ 	rte_acl_dump(ctx);
++#endif
+ 
+ 	*acl_ctx = ctx;
+ 	return 0;
