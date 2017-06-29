@@ -1,0 +1,122 @@
+extends layout
+
+//
+  Copyright (c) 2017 Kumar Rishabh and others.
+  All rights reserved. This program and the accompanying materials
+  are made available under the terms of the Apache License, Version 2.0
+  which accompanies this distribution, and is available at
+  http://www.apache.org/licenses/LICENSE-2.0
+block search
+  .container-dummy
+block add_project
+  .content-dummy
+      include edit_project
+block content
+  .content.container-grey
+    each key, index in json
+      #profile-page.container
+        .row
+          .box-container
+            .col.m12
+              .content-box
+                .col.s1
+                  img.img-size(src='/uploads/#{key.photo_url}')
+                .col.s11
+                  .user-content
+                    .content-title #{key.vnf_name}
+                    .rating-box
+                      input.rating(type='radio', name='example', value='1')
+                      input.rating(type='radio', name='example', value='2')
+                      input.rating(type='radio', name='example', value='3')
+                      input.rating(type='radio', name='example', value='4')
+                      input.rating(type='radio', name='example', value='5')
+                    p.description
+                      | Github_URL:
+                      //
+                        var repo_url =  #{key.repo_url} 
+                      a(href='#{key.repo_url}') 
+                        | #{key.repo_url} 
+                      //
+                        Pellentesque sit amet leo ut tortor ultrices commodo eu id ex. Pellentesque a odio sem. Curabitur placerat a risus sed blandit. Nulla non condimentum risus. Maecenas porta lacus nec tincidunt fringilla. Integer varius augue et sem scelerisque interdum quis mollis metus. Nunc porta dui nec felis egestas, ut posuere massa blandit. Vivamus non nisi vulputate diam pharetra molestie eu ac ex. Praesent sit amet felis lacinia, bibendum ipsum ac, cursus erat.
+                    .tags
+                      each tag, index in key.tags
+                        .chip #{tag.tag_name}
+                      //
+                        .chip Varius
+                        .chip Nullam
+                        .chip Curabitur
+                        .chip Maecena
+                        .chip Varius
+                        .chip Nullam
+                        .chip Curabitur
+                        .chip Maecena
+                        .chip Varius
+                        .chip Nullam
+                        .chip Curabitur
+                        .chip Maecena
+              .col.m6
+                .card.card-shadow-custom
+                  .row
+                    ul.card-highlights
+                      li.space-10
+                      li
+                        i.material-icons code
+                        span.dotted #{key.lines_of_code}
+                        |  Lines Of Code
+                        
+                      li
+                        i.material-icons person
+                        span.dotted #{key.no_of_developers}
+                        |  Number of Developers
+                      li
+                        i.material-icons star
+                        span.dotted #{key.no_of_stars}
+                        |  Number of Stars
+                      li
+                        i.material-icons description
+                        span.dotted #{key.versions}
+                        |  Number of Versions
+              .col.m6
+                .card.card-shadow-custom
+                  .row
+                    ul.card-highlights
+                      li.space-10
+                      li
+                        span.dotted #{key.license}
+                        |  License
+                      li
+                        span.dotted #{key.opnfv_indicator}
+                        |  OPNFV Indicator
+                      li
+                        span.dotted #{key.complexity}
+                        |  Complexity
+                      li
+                        span.dotted #{key.activity}
+                        |  Activity
+              .col.m12
+                .card.card-shadow-custom
+                  .row
+                    h4 Chart goes here
+  footer
+    | © 2017 XYZ Company
+  //
+    link(rel='stylesheet', href='/stylesheets/search_projects.css')
+  style(type='text/css').
+    /*    input[type="text"]:focus:not([readonly]) {
+    transition: all 0s !important;
+    border-radius: 5px;
+    border: 2px solid #333333;
+    box-shadow: 0 0 15px 1px rgba(0,0,0,0.50);
+    color: #333333;
+    }*/
+    .gray {
+      background: rgb(249,249,249);
+    }
+  link(rel='stylesheet', href='/3rd_party/rating/rating.css', type='text/css', media='screen', title='Rating CSS')  
+  script(type='text/javascript', src='/3rd_party/rating/rating.js')
+  link(rel='stylesheet', href='/stylesheets/style_project.css', type='text/css', media='screen', title='Rating CSS')  
+  
+  script(type='text/javascript').
+    $('.rating-box').rating(function(vote, event){
+    });
+

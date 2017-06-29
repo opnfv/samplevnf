@@ -1,0 +1,116 @@
+/*******************************************************************************
+ * Copyright (c) 2017 Kumar Rishabh and others.
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Apache License, Version 2.0
+ * which accompanies this distribution, and is available at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *******************************************************************************/
+
+.card-shadow-custom {
+  box-shadow: 0 2px 3px 0 rgba(0,0,0,0.50);
+  border-bottom: 2px solid #8B19A2;
+}
+.row-custom {
+  display: flex;
+  flex-flow: row wrap;
+  width: 100%;
+  margin: 1em 1em 1em 1em;
+  padding-right: 20px;
+}
+.card-title-div-custom {
+  margin: 0.5em 0 0.5em 0;
+  text-align: left;
+  display: inline-block;
+}
+.card-title-span-custom {
+  margin: 0 0 0 2em;
+  display: inline-block;
+}
+.card-title-div-custom-right {
+  margin: 0.5em 0em 0.5em 0;
+  text-align: right;
+  display: inline-block;
+}
+.card-image-picture-custom {
+  margin: auto;
+}
+.collection .collection-item.active {
+  background-color: rgb(255,245,114);
+  text-decoration: none;
+  transition: none;
+}
+.collection a.collection-item:not(.active):hover {
+  background-color: rgb(255,245,114);
+  text-decoration: none;
+  transition: none;
+}
+.collection .collection-item {
+  padding: 1px 25px;
+  border-bottom: 0px;
+  transition: none;
+}
+.chip > a {
+  display: block;
+  text-decoration: none;
+  text-align: center;
+  display:inline-block;
+    font-size:13px;
+    font-weight:500;
+    color:rgba(0, 0, 0, 0.6) !important;
+    margin-right: 15px !important;
+    margin-left: 15px !important;
+    text-transform: none !important;
+}
+.chip > a:hover {
+  background-color: transparent;
+  text-decoration: none;
+  transition: none;
+}
+a.a-custom-more {
+  display: block;
+  text-decoration: none;
+  text-align: center;
+  display:inline-block;
+    font-size: 20px;
+    font-weight:500;
+    color:rgba(0, 0, 0, 0.6) !important;
+    margin-right: 15px !important;
+    text-transform: none !important;
+}
+a.a-custom-more:hover {
+  background-color: transparent;
+}
+.collection-custom {
+  margin: 0em 0em 0em 1em;
+}
+.card .row .card-action-custom {
+  margin-left: 20px;
+}
+.rating {
+  color: rgb(253,225,109) !important;
+}
+.filled-stars .star i {
+  color: rgb(253,225,109) !important;
+}
+.glyphicon-star-empty {
+  color: rgb(221,221,221);
+}
+.star {
+}
+span.glyphicon.glyphicon-search.form-control-feedback,
+    div.form-group-custom i.material-icons {
+      top: 0.5em;
+      left: 16.0em;
+      cursor:pointer;
+      z-index: 30;
+      position: absolute;
+}
+.card-image-custom {
+  display: flex;
+  flex-flow: column wrap;
+}
+.img-size{
+  max-width:200px;
+  max-height:200px;
+}

@@ -1,0 +1,329 @@
+/*******************************************************************************
+ * Copyright (c) 2017 Kumar Rishabh and others.
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Apache License, Version 2.0
+ * which accompanies this distribution, and is available at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *******************************************************************************/
+
+@import url('https://fonts.googleapis.com/css?family=Muli:300,400,600,700,800');
+*
+{
+  color: #333333;
+  font-family: 'Muli', sans-serif;
+}
+*:focus
+{
+    outline: none;
+}
+html,
+body
+{
+  margin: 0;
+  padding: 0;
+  background: #ffffff;
+  font-family: 'Muli', sans-serif;
+}
+header
+{
+  padding: 10px 35px 0 0px;
+}
+header ul
+{
+  list-style: none;
+  display: inline-block;
+}
+header ul li
+{
+  display: inline-block;
+}
+header .logo
+{
+  background: url(../images/logo.png) no-repeat;
+  background-size: cover;
+
+}
+header .brand-logo-extends
+{
+  background: url(../images/logo.png) no-repeat;
+  background-size: cover;
+  width: 154px;
+  height: 34px;
+  margin-top: 11%;
+  margin-right: 0%;
+  padding: 0;
+  position: relative !important;
+  /*margin-right: 20px;
+  margin-left: 0;
+  float: left;*/
+  /*display: inline-block;
+  */
+}
+
+nav
+{
+  height: 10px;
+}
+
+header ul li.links
+{
+  margin: 7px 10px 0 0;
+}
+header ul li > a,
+.content ul.most-menu li.items a
+{
+  color: #333333;
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 0.6px;
+  font-family: 'Muli', sans-serif;
+}
+header ul.navigation-right
+{
+  float: right;
+  padding-top: 8px;
+}
+header li.signup > a
+{
+  border: 2px solid #333333;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weigt: 700;
+  padding: 2px 10px;
+}
+header li.signin > a
+{
+  border-bottom: 2px solid #333333;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 0px 2px;
+}
+header li.option
+{
+  font-weight: 800;
+  padding: 0 10px;
+}
+header ul li > a:hover,
+header li.signin > a:hover,
+header li.signup > a:hover,
+header ul li > a:focus,
+header li.signin > a:focus,
+header li.signup > a:focus,
+.content ul.most-menu li a:hover,
+.content ul.most-menu li a:focus
+{
+  text-decoration: none;
+  cursor: pointer;
+  color: #333333;
+}
+.content-title a {
+  color: #333333;
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 0.6px;
+  font-family: 'Muli', sans-serif;
+}
+.content-title a:hover,
+.content-title a:focus {
+  text-decoration: none;
+  cursor: pointer;
+  color: #333333;
+}
+header li.signup > a:hover
+{
+  background: #333333;
+  color: #ffffff;
+}
+.search-box
+{
+  text-align: center;
+  padding: 100px 0;
+}
+.search-box h1
+{
+  font-size: 30px;
+  letter-spacing: 2px;
+  color: #333333;
+  font-weight: 600;
+}
+form.search-form
+{
+  padding: 10px 20px;
+}
+form.search-form input.search-input
+{
+  font-weight: 400;
+  margin: 30px 0;
+  height: 80px;
+  padding: 10px 30px;
+  max-width: 800px;
+  width: 70%;
+  border-radius: 5px;
+  border: 2px solid #333333;
+  box-shadow: 0 0 15px 1px rgba(0,0,0,0.50);
+  color: #333333;
+  font-size: 22px;
+}
+
+form.search-form button.search-button
+{
+  padding: 18px 35px;
+  background: #FFF572;
+  border: 0;
+  box-shadow: 0 0 15px 1px #958F40;
+  border-radius: 1px;
+  font-size: 20px;
+  color: #393E41;
+  letter-spacing: 1px;
+  border-radius: 5px;
+  font-weight: 600;
+}
+form.search-form input:focus
+{
+  outline: none;
+}
+form.search-form input::-webkit-input-placeholder
+{
+  font-weight: 400;
+  letter-spacing: 1px;
+    color: #333333;
+}
+form.search-form input::-moz-placeholder
+{
+  font-weight: 400;
+  letter-spacing: 1px;
+    color: #333333;
+}
+form.search-form input:-moz-placeholder
+{
+  font-weight: 400;
+  letter-spacing: 5px;
+    color: #333333;
+}
+form.search-form input:-ms-input-placeholder
+{
+  font-weight: 400;
+  letter-spacing: 1px;
+    color: #333333;
+}
+.content
+{
+  height: 500px;
+  background: #f9f9f9;
+  padding: 10px 0;
+}
+.content ul.most-menu
+{
+  list-style: none;
+  text-align: center;
+  padding-bottom: 10px;
+}
+.content ul.most-menu li.items
+{
+  display: inline-block;
+  margin-right: 5px;
+  padding: 15px 25px;
+}
+.content ul.most-menu li.active
+{
+  /*background: #FFF572;*/
+}
+.content-box
+{
+  overflow: hidden;
+  padding: 20px 0 50px 0;
+  display: flex;
+  justify-content: center;
+  background: #FFFFFF;
+  box-shadow: 0 2px 3px 0 rgba(0,0,0,0.50);
+  border-bottom: 2px solid #8B19A2;
+  margin-bottom: 30px;
+}
+.content-data
+{
+  align-self: center;
+}
+.content-data h1.content-title
+{
+  font-size: 25px;
+  color: #000000;
+  letter-spacing: 1.2px;
+}
+.content-data .box
+{
+  padding: 6px 0;
+  height: 90px;
+  text-align: center;
+  border: 2px solid #4D4D4D;
+  border-radius: 2px;
+}
+.content-data .commit-icon
+{
+  width: 50px;
+  height: 50px;
+}
+.content-data .box h3.commits
+{
+  text-align: center;
+  font-size: 12px;
+  color: #333333;
+  letter-spacing: 0.03px;
+  margin-top: 1px !important;
+}
+.content-height-overwrite
+{
+  height: 110px;
+}
+.float-center-magic
+{
+  float: right;
+  position: relative;
+  left: -30%;
+}
+nav ul li:hover, nav ul li.active, nav ul li a.active, nav ul li a:hover {
+  background-color: rgb(255,245,114);
+}
+a:hover, a.active {
+  background-color: rgb(255,245,114);
+}
+footer
+{
+  font-size: 12px;
+  font-weight: 800;
+  color: #333333;
+  text-align: center;
+  padding: 20px;
+}
+.space-10
+{
+  height: 10px;
+}
+.space-30
+{
+  height: 100px;
+}
+input[type="search"]:focus:not([readonly]) {
+  transition: all 0s !important;
+  border-radius: 5px;
+  border: 2px solid #333333;
+  box-shadow: 0 0 15px 1px rgba(0,0,0,0.50);
+  color: #333333;
+}
+.gray {
+  background: rgb(249,249,249);
+}
+.custom-href
+{
+  color: #333333 !important;
+  font-family: 'Muli', sans-serif !important;
+}
+.card-title a:hover, a.active {
+  background: rgb(255,245,114);;
+}
+.dotted
+{
+  border-bottom: 1px dotted #8B19A2;
+  line-height: 250%;
+  color: #8B19A2;
+}
