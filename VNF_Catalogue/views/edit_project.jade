@@ -1,0 +1,159 @@
+
+.search-box-placeholder
+  script(src='/3rd_party/typeahead.js')
+  script(type='text/javascript', src='/javascripts/mode_edit_project.js')
+  .fixed-action-btn.fixed-action-btn_custom
+    a.btn-floating.btn-large.red
+      i.large.material-icons dashboard
+    ul
+      
+      li
+        a#modal_href.btn-floating.green.tooltipped(href='#modal1', data-position='left', data-delay='50', data-tooltip='Edit project details')
+          i.large.material-icons mode_edit
+  #modal1.modal
+    .modal-content
+      h4.center
+        i.material-icons library_add
+        |         Edit VNF_details
+      .row
+        form#add_project_form.col.s12(action='/add_project', enctype='multipart/form-data', method='post')
+          .row.modal-form-row
+            .input-field.col.s12
+              input#vnf_name.validate(type='text', name='vnf_name')
+              label.left-align(for='vnf_name') Name
+          .row
+            .input-field.col.s12
+              input#repo_url.validate(type='text', name='repo_url')
+              label.left-align(for='repo_url') Github URL
+          .row
+            .input-field.col.s12
+              select#license
+                option(value='', name='license', disabled='', selected='') Choose the License
+                option(value='MIT') MIT
+                option(value='GPL') GPL
+                option(value='GPL_V2') GPL_V2
+                option(value='BSD') BSD
+                option(value='APACHE') APACHE
+              label License
+          .row
+            .input-field.col.s12
+              select#opnfv_indicator
+                option(value='', name='opnfv_indicator', disabled='', selected='') Choose the OPNFV Indicator
+                option(value='silver') silver
+                option(value='gold') gold
+                option(value='platinum') platinum
+              label OPNFV Indicator
+
+          .row
+            .file-field.input-field
+              .btn
+                span Photo (Optional)
+                input#file_upload(type='file', name='file_upload')
+              .file-path-wrapper
+                input.file-path.validate(type='text', name='file_url')
+
+          .row
+            .input-field.col.s12
+              input#submitter_id.validate(type='hidden', name='submitter_id', value=1)
+
+          .row
+            button#add_project_button.modal-action.modal-close.waves-effect.waves-light.btn.right
+              | Submit VNF
+              i.material-icons.right send
+  #modal2.modal
+    .modal-content
+      h4.center
+        i.material-icons library_add
+        |         Add a TAG
+      .row
+        form#add_tag_form.col.s12(action='/add_tag', method='post')
+          .row.modal-form-row
+            .input-field.col.s12
+              input#tag_name.validate(type='text', name='tag_name')
+              label.left-align(for='tag_name') Name
+          button#add_tag_button.modal-action.modal-close.waves-effect.waves-light.btn.right
+            | Submit TAG
+            i.material-icons.right send
+  #modal3.modal
+      h4.center
+        i.material-icons library_add
+        |         Add a TAG to a VNF
+      .row
+        form#add_vnf_tag_association_form.col.s12(action='/vnf_tag_association', method='post')
+
+          .row.modal-form-row.modal-form-row-custom
+            .input-field.col.s2 VNF Name
+            #scrollable-dropdown-menu.input-field.col.s4
+              input#vnf_name.typeahead(type='text', name='vnf_name')
+              //
+                label.left-align(for='tag_name') VNF Name
+            .input-field.col.s2 TAG Name
+            #scrollable-dropdown-menu.input-field.col.s4
+              input#tag_name.validate.typeahead(type='text', name='tag_name')
+              //
+                label.left-align(for='tag_name') TAG Name
+
+          button#add_vnf_tag_association_button.modal-action.modal-close.waves-effect.waves-light.btn.right
+            | Submit
+            i.material-icons.right send
+  style.
+    .select-dropdown{
+        overflow-y: auto !important;
+    }
+    .dropdown-content {
+        max-height: 200px !important;
+    }
+    .backdrop{
+       background-color: rgb(253,225,109);
+    }
+    .bg {
+    }
+    .modal-form-row-custom {
+      min-height: 200px !important;
+    }
+    #scrollable-dropdown-menu .tt-menu {
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    .typeahead, .tt-query, .tt-hint {
+        border: 2px solid #CCCCCC;
+        border-radius: 8px 8px 8px 8px;
+        font-size: 24px;
+        height: 30px;
+        line-height: 30px;
+        outline: medium none;
+        padding: 8px 12px;
+        width: 396px;
+    }
+
+    .tt-query {
+        box-shadow: 0 1px 1px rgba(0, 0, 0, 0.075) inset;
+    }
+    .tt-hint {
+        color: #999999;
+    }
+    .tt-dropdown-menu {
+        background-color: #FFFFFF;
+        border: 1px solid rgba(0, 0, 0, 0.2);
+        border-radius: 8px 8px 8px 8px;
+        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+        margin-top: 12px;
+        padding: 8px 0;
+        width: 200px;
+    }
+    .tt-suggestion {
+        font-size: 18px;
+        line-height: 24px;
+        padding: 3px 20px;
+    }
+    .tt-suggestion.tt-cursor {
+        background-color: #0097CF;
+        color: #FFFFFF;
+    }
+    .tt-suggestion p {
+        margin: 0;
+    }
+    .tt-dropdown-menu, .gist {
+        text-align: left;
+    }

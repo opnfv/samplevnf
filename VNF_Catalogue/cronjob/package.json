@@ -1,0 +1,10 @@
+{
+    "name": "VNF_Catalogue_cron_jobs",
+    "version": "0.0.1",
+    "private": true,
+    "dependencies": {
+        "octonode": "*",
+        "async": "*",
+        "mysql": "*"
+    }
+}
