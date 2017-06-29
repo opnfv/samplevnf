@@ -1,0 +1,136 @@
+extends layout
+
+//
+  Copyright (c) 2017 Kumar Rishabh and others.
+  All rights reserved. This program and the accompanying materials
+  are made available under the terms of the Apache License, Version 2.0
+  which accompanies this distribution, and is available at
+  http://www.apache.org/licenses/LICENSE-2.0
+block content
+  link(rel='stylesheet', href='/stylesheets/3rd_party/bootstrap.css')
+  .search-box
+    h1 VNF Catalogue
+    form.search-form
+      input.search-input(type='search', placeholder='Search...', id='Tags')
+      .space-10
+      button.search-button(type='submit', value='Search', id='Search') Search
+  .content.content-height-overwrite
+    nav.z-depth-0.transparent
+      .nav-wrapper
+        ul#nav-mobile.float-center-magic.hide-on-med-and-down.most-menu
+          li.items
+            a(href='#') Most Lines of Code
+          li.items
+            a(href='#') Most Active
+          li.items
+            a(href='#') Most Active Contributions
+  .content
+    .container
+      .row
+        each key, index in json
+          .box-container
+            .col-md-3
+              .content-box
+                .content-data
+                  h1.content-title Beacon
+                  .box
+                    img.commit-icon(src='/images/3rd_party/commits.png')
+                    h3.commits
+                      | 4,845
+                      br
+                      | commits
+        //
+          .box-container
+            .col-md-3
+              .content-box
+                .content-data
+                  h1.content-title Beacon
+                  .box
+                    img.commit-icon(src='/images/3rd_party/commits.png')
+                    h3.commits
+                      | 4,845
+                      br
+                      | commits
+          .col-md-3
+            .content-box
+              .content-data
+                h1.content-title Beacon
+                .box
+                  img.commit-icon(src='/images/3rd_party/commits.png')
+                  h3.commits
+                    | 4,845
+                    br
+                    | commits
+          .col-md-3
+            .content-box
+              .content-data
+                h1.content-title Beacon
+                .box
+                  img.commit-icon(src='/images/3rd_party/commits.png')
+                  h3.commits
+                    | 4,845
+                    br
+                    | commits
+          .col-md-3
+            .content-box
+              .content-data
+                h1.content-title Beacon
+                .box
+                  img.commit-icon(src='/images/3rd_party/commits.png')
+                  h3.commits
+                    | 4,845
+                    br
+                    | commits
+          .col-md-3
+            .content-box
+              .content-data
+                h1.content-title Beacon
+                .box
+                  img.commit-icon(src='/images/3rd_party/commits.png')
+                  h3.commits
+                    | 4,845
+                    br
+                    | commits
+          .col-md-3
+            .content-box
+              .content-data
+                h1.content-title Beacon
+                .box
+                  img.commit-icon(src='/images/3rd_party/commits.png')
+                  h3.commits
+                    | 4,845
+                    br
+                    | commits
+          .col-md-3
+            .content-box
+              .content-data
+                h1.content-title Beacon
+                .box
+                  img.commit-icon(src='/images/3rd_party/commits.png')
+                  h3.commits
+                    | 4,845
+                    br
+                    | commits
+          .col-md-3
+            .content-box
+              .content-data
+                h1.content-title Beacon
+                .box
+                  img.commit-icon(src='/images/3rd_party/commits.png')
+                  h3.commits
+                    | 4,845
+                    br
+                    | commits
+    footer
+      | © 2017 XYZ Company
+  style(type='text/css').
+    input[type="text"]:focus:not([readonly]) {
+      transition: all 0s !important;
+      border-radius: 5px;
+      border: 2px solid #333333;
+      box-shadow: 0 0 15px 1px rgba(0,0,0,0.50);
+      color: #333333;
+    }
+    .gray {
+      background: rgb(249,249,249);
+    }

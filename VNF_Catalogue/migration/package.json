@@ -1,0 +1,16 @@
+{
+  "name": "VNF_Catalogue_migration",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "start": "node ./bin/www"
+  },
+  "dependencies": {
+    "bookshelf": "*",
+    "knex": "*",
+    "lodash": "*",
+    "mysql": "^2.13.0",
+    "when": "*",
+    "moment": "*"
+  }
+}

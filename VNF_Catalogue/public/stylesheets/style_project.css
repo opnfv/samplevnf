@@ -1,0 +1,238 @@
+.content
+{
+  background: #f9f9f9;
+  padding: 10px 0;
+}
+.content-dummy
+{
+  height: 65px;
+}
+.content ul.most-menu
+{
+  list-style: none;
+  text-align: center;
+  padding-bottom: 10px;
+}
+.content ul.most-menu li.items
+{
+  display: inline-block;
+  margin-right: 5px;
+  padding: 15px 25px;
+}
+.content ul.most-menu li.active
+{
+  /*background: #FFF572;*/
+}
+.content-box
+{
+    overflow: hidden;
+    padding: 20px 0 50px 0;
+    display: flex;
+    justify-content: center;
+    background: #FFFFFF;
+    box-shadow: 0 2px 3px 0 rgba(0,0,0,0.50);
+    border-bottom: 1px solid #8B19A2;
+    margin: 0 8px 50px 8px;
+}
+.content-data
+{
+  align-self: center;
+}
+.content-data h1.content-title
+{
+  font-size: 25px;
+  color: #000000;
+  letter-spacing: 1.2px;
+}
+.content-data .box
+{
+  padding: 10px 0;
+  height: 90px;
+  text-align: center;
+  border: 2px solid #4D4D4D;
+  border-radius: 2px;
+}
+.content-data .commit-icon
+{
+  width: 23px;
+  height: 16px;
+}
+.content-data .box h3.commits
+{
+  text-align: center;
+  font-size: 12px;
+  color: #333333;
+  letter-spacing: 0.03px;
+}
+.content-height-overwrite
+{
+  height: 110px;
+}
+.float-center-magic
+{
+  float: right;
+  position: relative;
+  left: -30%;
+}
+nav ul li:hover, nav ul li.active, nav ul li a.active, nav ul li a:hover {
+  background-color: rgb(255,245,114);
+}
+a:hover, a.active {
+  background-color: rgb(255,245,114); 
+}
+footer
+{
+  font-size: 12px;
+  font-weight: 800;
+  color: #333333;
+  text-align: center;
+  padding: 165px;
+}
+.container-grey
+{
+  background: #f9f9f9;
+}
+.container .row
+{
+  margin-left: 0;
+  margin-right: 0;
+}
+ul.card-highlights
+{
+  padding: 0;
+  margin: 0;
+  list-style: disc;
+}
+ul.card-highlights li
+{
+    padding: 0px 30px;
+    font-weight: 700;
+    font-size: 12px;
+}
+ul.card-highlights .dotted
+{
+  border-bottom: 1px dotted #8B19A2;
+  line-height: 250%;
+  color: #8B19A2;
+}
+.tags
+{
+    padding: 10px 12px;
+    letter-spacing: 0.8px;
+    font-weight: 700;
+    font-size: 12px;
+}
+.chip
+{
+    display: inline-block;
+    height: 32px;
+    letter-spacing: 1.2px;
+    font-size: 10px;
+    font-weight: 700;
+    color: rgba(0, 0, 0, 0.6);
+    line-height: 33px;
+    padding: 0px 12px;
+    border-radius: 5px;
+    background-color: #e4e4e4;
+    margin-bottom: 9px;
+    margin-right: 5px;
+}
+.meta-data
+{
+    padding: 10px 15px 0px 15px;
+    letter-spacing: 0.7px;
+    font-size: 12px;
+}
+.show-more
+{
+  text-align: center;
+}
+.show-more a
+{
+  padding: 12px 15px;
+    background: #FFF572;
+    color: #393E41;
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: 0.6px;
+}
+.show-more a:hover,
+.show-more a:focus
+{
+  cursor: pointer;
+  text-decoration: none;
+}
+.rating-box
+{
+  margin: 8px 0 0px 0;
+  padding-left: 12px;
+  display: inline-block;
+}
+.count
+{
+  display: inline-block;
+  font-weight: 800;
+  letter-spacing: 1px;
+  font-size: 10px;
+}
+.profile-picture img
+{
+  max-width: 400px;
+  width: 100%;
+  display: block;
+  margin: 0 auto;
+}
+#profile-page .content-title
+{
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: 0.8px;
+  display: inline;
+}
+#profile-page .user-content
+{
+  padding-left: 30px;
+  margin-top: -10px;
+}
+#profile-page .description
+{
+  letter-spacing: 0.6px;
+  line-height: 180%;
+  font-size: 14px;
+  padding: 10px 10px 0 0;
+}
+#profile-page .tags
+{
+  padding: 0;
+}
+.clearfix
+{
+  clear: both;
+}
+.space-10
+{
+  height: 10px;
+}
+.space-30
+{
+  height: 100px;
+}
+#profile-page .content-box
+{
+    display: block;
+    padding: 10px 0px;
+}
+#profile-page .content-box img 
+{
+    display: inline-block;
+}
+.img-size
+{
+  max-width:50px;
+  max-height:50px;
+}
+.custom-href
+{
+  color: #333333 !important;
+  font-family: 'Muli', sans-serif !important;
+}
