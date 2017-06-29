@@ -1,0 +1,54 @@
+doctype html
+//
+  Copyright (c) 2017 Kumar Rishabh and others.
+  All rights reserved. This program and the accompanying materials
+  are made available under the terms of the Apache License, Version 2.0
+  which accompanies this distribution, and is available at
+  http://www.apache.org/licenses/LICENSE-2.0
+html(lang='en')
+html
+    head
+        title= title
+        link(rel='stylesheet', href='/3rd_party/materialize/css/materialize.css')
+        script(type='text/javascript', src='https://code.jquery.com/jquery-3.1.1.min.js')
+        script(src='/javascripts/global.js')
+        script(src='/3rd_party/materialize/js/materialize.js')
+        link(href='https://fonts.googleapis.com/icon?family=Material+Icons', rel='stylesheet')
+        link(rel='stylesheet', href='/stylesheets/style.css')
+    body
+        header
+          nav.transparent.z-depth-0
+            .nav-wrapper
+              a.button-collapse(href='#', data-activates='mobile-demo')
+                i.material-icons menu
+              ul#nav-mobile.left.hide-on-med-and-down
+                li
+                  a(href='#')
+                    img.left.brand-logo.brand-logo-extends
+                li
+                  a(href='#') Projects
+                li
+                  a(href='#') People
+                li
+                  a(href='#') About
+              ul#nav-mobile.right.hide-on-med-and-down
+                li.signup
+                  a(href='#') Sign up
+                li.option or
+                li.signin
+                  a(href='#') Sign in
+              ul#mobile-demo.side-nav
+                li
+                  a(href='#') Projects
+                li
+                  a(href='#') People
+                li
+                  a(href='#') About
+                li.signup
+                  a(href='#') Sign up
+                li.signin
+                  a(href='#') Sign in
+        block search
+        block add_project
+        block content
+
