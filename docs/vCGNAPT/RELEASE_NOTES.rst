@@ -14,15 +14,15 @@ vCGNAPT application can be run independently (refer INSTALL.rst).
 
 2.	User Guide
 ===============
-Refer to README.rst for further details on vCGNAPT, HLD, features supported, test
-plan. For build configurations and execution requisites please refer to
+Refer to README.rst for further details on vCGNAPT, HLD, features supported,
+test plan. For build configurations and execution requisites please refer to
 INSTALL.rst.
 
 3. Feature for this release
 ===========================
 This release supports following features as part of vCGNAPT:
 -	vCGNAPT can run as a standalone application on bare-metal linux server or on a
-	virtual machine using SRIOV and OVS dpdk.
+        virtual machine using SRIOV and OVS dpdk.
 - Static NAT
 - Dynamic NAT
 - Static NAPT
@@ -43,26 +43,27 @@ This release supports following features as part of vCGNAPT:
 
 4. System requirements - OS and kernel version
 ==============================================
-This is supported on Ubuntu 14.04 and Ubuntu 16.04 and kernel version less than 4.5
+This is supported on Ubuntu 14.04 and 16.04 and kernel version less than 4.5
 
    VNFs on BareMetal support:
-		OS: Ubuntu 14.04 or 16.04 LTS
-		kernel: < 4.5
-		http://releases.ubuntu.com/16.04/
-		Download/Install the image: ubuntu-16.04.1-server-amd64.iso
+                OS: Ubuntu 14.04 or 16.04 LTS
+                kernel: < 4.5
+                http://releases.ubuntu.com/16.04/
+                Download/Install the image: ubuntu-16.04.1-server-amd64.iso
 
    VNFs on Standalone Hypervisor
-		HOST OS: Ubuntu 14.04 or 16.04 LTS
-		http://releases.ubuntu.com/16.04/
-		Download/Install the image: ubuntu-16.04.1-server-amd64.iso
-	     -   OVS (DPDK) - 2.5
-		   -   kernel: < 4.5
-	     -   Hypervisor - KVM
-	     -   VM OS - Ubuntu 16.04/Ubuntu 14.04
+                HOST OS: Ubuntu 14.04 or 16.04 LTS
+                http://releases.ubuntu.com/16.04/
+                Download/Install the image: ubuntu-16.04.1-server-amd64.iso
+             -   OVS (DPDK) - 2.5
+             -   kernel: < 4.5
+             -   Hypervisor - KVM
+             -   VM OS - Ubuntu 16.04/Ubuntu 14.04
 
 5. Known Bugs and limitations
 =============================
--	Hadware Loab Balancer feature is supported on fortville nic FW version 4.53 and below.
+-	Hadware Load Balancer feature is supported on fortville nic FW version 4.53
+  and below.
 - L4 UDP Replay is used to capture throughput for dynamic cgnapt
 - Hardware Checksum offload is not supported for IPv6 traffic.
 - CGNAPT on sriov is tested till 4 threads
@@ -75,6 +76,15 @@ This is supported on Ubuntu 14.04 and Ubuntu 16.04 and kernel version less than 
 
 7. References
 =============
-Following links provides additional information
-	.. _QUICKSTART: http://dpdk.org/doc/guides-16.04/linux_gsg/quick_start.html
-	.. _DPDKGUIDE: http://dpdk.org/doc/guides-16.04/prog_guide/index.html
+Following links provides additional information for differenet version of DPDKs
+        .. _QUICKSTART:
+                        http://dpdk.org/doc/guides-16.04/linux_gsg/quick_start.html
+                        http://dpdk.org/doc/guides-16.11/linux_gsg/quick_start.html
+                        http://dpdk.org/doc/guides-17.02/linux_gsg/quick_start.html
+                        http://dpdk.org/doc/guides-17.05/linux_gsg/quick_start.html
+
+        .. _DPDKGUIDE:
+                        http://dpdk.org/doc/guides-16.04/prog_guide/index.html
+                        http://dpdk.org/doc/guides-16.11/prog_guide/index.html
+                        http://dpdk.org/doc/guides-17.02/prog_guide/index.html
+                        http://dpdk.org/doc/guides-17.05/prog_guide/index.html

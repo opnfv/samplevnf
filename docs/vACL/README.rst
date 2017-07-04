@@ -9,9 +9,9 @@ Virtual ACL - vACL
 
 1. Introduction
 ==============
-This application implements Access Control List (ACL). ACL is typically 
+This application implements Access Control List (ACL). ACL is typically
 used for rule based policy enforcement. It restricts access to a destination
-IP address/port based on various header fields, such as source IP address/port, 
+IP address/port based on various header fields, such as source IP address/port,
 destination IP address/port and protocol. It is built on top of DPDK and
 uses the packet framework infrastructure.
 
@@ -43,7 +43,7 @@ The vACL VNF currently supports the following functionality:
   • ARP (request, response, gratuitous)
   • ICMP (terminal echo, echo response, passthrough)
   • ICMPv6 and ND (Neighbor Discovery)
- 
+
 4. High Level Design
 ====================
 The ACL Filter performs bulk filtering of incoming packets based on rules in current ruleset,
@@ -61,7 +61,7 @@ The DPDK ACL example: http://dpdk.org/doc/guides/sample_app_ug/l3_forward_access
 ===================
 5. Components of vACL
 ===================
-In vACL, each component is constructed using packet framework pipelines. 
+In vACL, each component is constructed using packet framework pipelines.
 It includes Rx and Tx Driver, Master pipeline, load balancer pipeline and
 vACL worker pipeline components. A Pipeline framework is a collection of input
 ports, table(s),output ports and actions (functions).
@@ -93,16 +93,16 @@ Loadbalancer is used.
 
 Load Balancer Pipeline
 ******************************
-The vACL support both hardware and software balancing for load blalcning of 
+The vACL support both hardware and software balancing for load blalcning of
 traffic across multiple VNF threads. The Hardware load balncing require support
 from hardware like Flow Director for steering of packets to application through
-hardware queues. 
+hardware queues.
 
 The Software Load balancer is also supported if hardware loadbalancing can't be
 used for any reason. The TXRX along with LOADB pipeline provides support for
 software load balancing by distributing the flows to Multiple vACL worker
 threads.
-Loadbalancer (HW or SW) distributes traffic based on the 5 tuple (src addr, src 
+Loadbalancer (HW or SW) distributes traffic based on the 5 tuple (src addr, src
 port, dest addr, dest port and protocol) applying an XOR logic distributing to
 active worker threads, thereby maintaining an affinity of flows to worker
 threads.
