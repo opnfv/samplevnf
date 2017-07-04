@@ -96,7 +96,7 @@ Manual Build:
    - export RTE_SDK=<samplevnf>/dpdk-16.04
    - export RTE_TARGET=x86_64-native-linuxapp-gcc
    - export VNF_CORE=<samplevnf>
-     or using ./toot/setenv.sh
+     or using ./tools/setenv.sh
 4. Build vFW VNFs
    - cd <samplevnf>/VNFs/vFW
    - make clean
