@@ -73,6 +73,15 @@ Following would be possible enhancement functionalities
 
 7. References
 =============
-Following links provides additional information
-	.. _QUICKSTART: http://dpdk.org/doc/guides-16.04/linux_gsg/quick_start.html
-	.. _DPDKGUIDE: http://dpdk.org/doc/guides-16.04/prog_guide/index.html
+Following links provides additional information for differenet version of DPDKs
+	.. _QUICKSTART:
+			http://dpdk.org/doc/guides-16.04/linux_gsg/quick_start.html
+			http://dpdk.org/doc/guides-16.11/linux_gsg/quick_start.html
+			http://dpdk.org/doc/guides-17.02/linux_gsg/quick_start.html
+			http://dpdk.org/doc/guides-17.05/linux_gsg/quick_start.html
+
+	.. _DPDKGUIDE:
+			http://dpdk.org/doc/guides-16.04/prog_guide/index.html
+			http://dpdk.org/doc/guides-16.11/prog_guide/index.html
+			http://dpdk.org/doc/guides-17.02/prog_guide/index.html
+			http://dpdk.org/doc/guides-17.05/prog_guide/index.html
