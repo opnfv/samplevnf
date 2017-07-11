@@ -637,14 +637,6 @@ rte_vfw_ipv4_packet_filter_and_process(struct rte_mbuf **pkts,
                      vfw_pipe->counters->pkts_drop_fragmented++;
               }
 
-              /*
-               * Behave like a router, and decrement the TTL of an
-               * IP packet. If this causes the TTL to become zero,
-               * the packet will be discarded. Unlike a router,
-               * no ICMP code 11 (Time * Exceeded) message will be
-               * sent back to the packet originator.
-               */
-
               if (unlikely(ttl <= 1)) {
                      /*
                       * about to decrement to zero (or is somehow
@@ -670,18 +662,6 @@ rte_vfw_ipv4_packet_filter_and_process(struct rte_mbuf **pkts,
 
               if (unlikely(discard)) {
                      valid_packets &= ~pkt_mask;
-              } else {
-                     ihdr4->time_to_live = ttl - 1;
-
-                     /* update header checksum, from rfc 1141 */
-                     uint32_t sum;
-                     uint16_t checksum = rte_bswap16(
-                                   ihdr4->hdr_checksum);
-                     /* increment checksum high byte */
-                     sum = checksum + 0x100;
-                     /* add carry */
-                     checksum = (sum + (sum >> BIT_CARRY));
-                     ihdr4->hdr_checksum = rte_bswap16(checksum);
               }
 
               /* make next packet data the current */
