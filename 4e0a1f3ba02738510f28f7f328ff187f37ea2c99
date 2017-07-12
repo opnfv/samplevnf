@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1aa4ed85_766d1a32",
+        "filename": "VNFs/vFW/pipeline/pipeline_vfw_be.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 770,
+      "author": {
+        "id": 6777
+      },
+      "writtenOn": "2017-07-12T09:06:31Z",
+      "side": 1,
+      "message": "You need to enclose the braces if (enable_hwlb) { ...\n}\nSame comment above",
+      "range": {
+        "startLine": 770,
+        "startChar": 7,
+        "endLine": 770,
+        "endChar": 8
+      },
+      "revId": "4e0a1f3ba02738510f28f7f328ff187f37ea2c99",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
