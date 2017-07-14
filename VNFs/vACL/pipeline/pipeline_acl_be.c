@@ -3177,7 +3177,7 @@ static void *pipeline_acl_init(struct pipeline_params *params,
 	 *  p_acl->links_map[0] = 0xff;
 	 *  p_acl->links_map[1] = 0xff;]
 	 */
-	p_acl->traffic_type = MIX;
+	p_acl->traffic_type = IPv4_HDR_VERSION;
 	for (i = 0; i < PIPELINE_MAX_PORT_IN; i++) {
 		p_acl->links_map[i] = 0xff;
 		p_acl->port_out_id[i] = 0xff;

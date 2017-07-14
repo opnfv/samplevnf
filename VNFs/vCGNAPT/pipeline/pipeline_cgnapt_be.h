@@ -325,7 +325,6 @@ f_ah(									\
 #define DST_ADR_OFST_IP4t6 (MBUF_HDR_ROOM + ETH_HDR_SIZE + \
 				IPV6_HDR_DST_ADR_OFST - 20)
 
-#define TRAFFIC_TYPE_MIX   0
 #define TRAFFIC_TYPE_IPV4  4
 #define TRAFFIC_TYPE_IPV6  6
 
