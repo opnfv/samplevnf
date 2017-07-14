@@ -290,19 +290,14 @@ build_vnfs()
 
 #--- Add non intractive option to build vnfs
 if [[ "$1" = "--silient" ]];then
+		DPDK_VER=("" "16.04" "16.11" "17.02" "17.05")
+		member="$2"
+		for item in "${DPDK_VER[@]}"; do
+			  if [[ "$member" == "$item" ]]; then
+		        DPDK_RTE_VER="$member"
+		    fi
+    done
     pushd $VNF_CORE
-
-    echo "Setup proxy if needed..."
-    http_proxy=$2
-    https_proxy=$3
-    if [[ "$http_proxy" != "" ]]; then
-         export http_proxy=$http_proxy
-         export https_proxy=$http_proxy
-    fi
-
-    if [[ "$https_proxy" != "" ]]; then
-         export https_proxy=$https_proxy
-    fi
 
     echo "Install required libraries..."
     touch .agree
