@@ -44,7 +44,6 @@ enum pipeline_acl_key_type {
 #define IP_HDR_DST_ADR_OFST 16
 #define IP_VERSION_4 4
 #define IP_VERSION_6 6
-#define MIX 10
 
 /* IPv6 */
 #define IP_HDR_SIZE_IPV6  40

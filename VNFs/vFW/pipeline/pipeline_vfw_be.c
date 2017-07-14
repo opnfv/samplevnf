@@ -142,7 +142,7 @@ struct mbuf_tcp_meta_data {
 
 #define IP_VERSION_4 4
 #define IP_VERSION_6 6
-#define MIX 10
+
 /* IPv6 */
 #define IP_HDR_SIZE_IPV6  40
 #define IP_HDR_DSCP_OFST_IPV6 0
@@ -2555,7 +2555,7 @@ static void
        strncpy(pipe->name, params->name, sizeof(pipe->name));
        pipe->log_level = params->log_level;
        pipe_vfw->n_flows = 4096;       /* small default value */
-       pipe_vfw->traffic_type = MIX;
+       pipe_vfw->traffic_type = IP_VERSION_4;
        pipe_vfw->pipeline_num = 0xff;
        for (i = 0; i < PIPELINE_MAX_PORT_IN; i++) {
               pipe_vfw->links_map[i] = 0xff;

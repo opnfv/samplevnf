@@ -8450,7 +8450,7 @@ static void *pipeline_cgnapt_init(struct pipeline_params *params, void *arg)
 	p_nat->hw_checksum_reqd = 0;
 	p_nat->pub_ip_port_set = NULL;
 	p_nat->pub_ip_count = 0;
-	p_nat->traffic_type = TRAFFIC_TYPE_MIX;
+	p_nat->traffic_type = TRAFFIC_TYPE_IPV4;
 	p_nat->vnf_set = 0xff;
 
 	/* For every init it should be reset */
