@@ -70,6 +70,7 @@ performance of the solution should be sufficient for testing the UDP NAT perform
 #include <rte_tcp.h>
 #include <rte_udp.h>
 #include <rte_string_fns.h>
+#include <rte_version.h>
 
 #include <cmdline_parse.h>
 #include <cmdline_parse_etheraddr.h>
@@ -1023,8 +1024,11 @@ simple_ipv6_replay_8pkts(struct rte_mbuf *m[8], uint8_t portid, struct lcore_con
         }
 	const void *key_array[8] = {&key[0], &key[1], &key[2], &key[3],
 				&key[4], &key[5], &key[6], &key[7]};
+#if RTE_VERSION < 0x100b0000
 	rte_hash_lookup_multi(qconf->ipv6_lookup_struct, &key_array[0], 8, ret);
-
+#else
+	rte_hash_lookup_bulk(qconf->ipv6_lookup_struct, &key_array[0], 8, ret);
+#endif
 	send_single_packet(m[0],portid);
 	send_single_packet(m[1],portid);
 	send_single_packet(m[2],portid);
