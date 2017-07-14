@@ -1,0 +1,57 @@
+##
+## Copyright (c) 2010-2017 Intel Corporation
+##
+## Licensed under the Apache License, Version 2.0 (the "License");
+## you may not use this file except in compliance with the License.
+## You may obtain a copy of the License at
+##
+##     http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+
+rapid (Rapid Automated Performance Indication for Dataplane)
+************************************************************
+
+rapid is a set of files offering an easy way to do a sanity check of the
+dataplane performance of an OpenStack environment.
+
+Copy the files in a directory on a machine that can run the OpenStack CLI
+commands and that can reach the OpenStack public network. Also create a qcow2
+image in the same directory with the following characteristics:
+* Name of the qcow2 file should be: rapidVM.qcow2
+  This default name can be changed on the rapid command line
+* Should have DPDK and PROX installed. PROX should be in /root/prox/ directory
+* Image should have cloud-init installed
+
+Source the openrc file of the OpenStack environment so that the OpenStack CLI
+commands can be run:
+  # source openrc
+Now you can run the rapid.py file. Use help for more info on the usage:
+  # ./rapid.py --help
+
+rapid will use the OpenStack CLI to create the flavor, key-pair, network, image,
+stack, ...
+Then it will connect to the 2 VMs that have been instantiated and it will launch
+PROX in both VMs.
+Once that is done it will connect to the PROX tcp socket and start sending
+commands to run the actual test.
+It will print test results on the screen while running.
+The PROX instance in the Generator VM will generate packets which will arrive in
+the PROX instance running on the SUT (System Under Test) VM. The SUT will then
+send the packets back to the generator by swapping source and destination.
+
+Notes about prox_gen_user_data.sh and prox_sut_user_data.sh scripts:
+- These scripts contain commands that will be executed using cloud-init at
+  startup of the VMs. They contain a hard-coded PCI address for the DPDK
+  interface that will be used by PROX. You might want to check that this is
+  actually the right PCI address.
+- These scripts also assume some specific DPDK directory and tools which might
+  change over different DPDK release. They have been tested with DPDK-17.02.
+- These scripts are also assuming that this interface is on the "dpdk-network"
+  network managed by OpenStack.
+

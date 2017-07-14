@@ -1,0 +1,117 @@
+##
+## Copyright (c) 2010-2017 Intel Corporation
+##
+## Licensed under the Apache License, Version 2.0 (the "License");
+## you may not use this file except in compliance with the License.
+## You may obtain a copy of the License at
+##
+##     http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+
+Description
+-----------
+This is PROX, the Packet pROcessing eXecution engine, part of Intel(R)
+Data Plane Performance Demonstrators, and formerly known as DPPD-BNG.
+PROX is a DPDK-based application implementing Telco use-cases such as
+a simplified BRAS/BNG, light-weight AFTR... It also allows configuring
+finer grained network functions like QoS, Routing, load-balancing...
+
+Compiling and running this application
+--------------------------------------
+This application supports DPDK 16.04, 16.11, 16.11.1, 17.02 and 17.05.
+The following commands assume that the following variables have been set:
+
+export RTE_SDK=/path/to/dpdk
+export RTE_TARGET=x86_64-native-linuxapp-gcc
+
+Example: DPDK 17.05 installation
+--------------------------------
+git clone http://dpdk.org/git/dpdk
+cd dpdk
+git checkout v17.05
+make install T=$RTE_TARGET
+
+PROX compilation
+----------------
+The Makefile with this application expects RTE_SDK to point to the
+root directory of DPDK (e.g. export RTE_SDK=/root/dpdk). If RTE_TARGET
+has not been set, x86_64-native-linuxapp-gcc will be assumed.
+
+Running PROX
+------------
+After DPDK has been set up, run make from the directory where you have
+extracted this application. A build directory will be created
+containing the PROX executable. The usage of the application is shown
+below. Note that this application assumes that all required ports have
+been bound to the DPDK provided igb_uio driver. Refer to the "Getting
+Started Guide - DPDK" document for more details.
+
+Usage: ./build/prox [-f CONFIG_FILE] [-l LOG_FILE] [-p] [-o DISPLAY] [-v] [-a|-e] \
+		[-m|-s|-i] [-n] [-w DEF] [-q] [-k] [-d] [-z] [-r VAL] [-u] [-t]
+        -f CONFIG_FILE : configuration file to load, ./prox.cfg by default
+        -l LOG_FILE : log file name, ./prox.log by default
+        -p : include PID in log file name if default log file is used
+        -o DISPLAY: Set display to use, can be 'curses' (default), 'cli' or 'none'
+        -v verbosity : initial logging verbosity
+        -a : autostart all cores (by default)
+        -e : don't autostart
+        -n : Create NULL devices instead of using PCI devices, useful together with -i
+        -m : list supported task modes and exit
+        -s : check configuration file syntax and exit
+        -i : check initialization sequence and exit
+        -u : Listen on UDS /tmp/prox.sock
+        -t : Listen on TCP port 8474
+        -q : Pass argument to Lua interpreter, useful to define variables
+        -w : define variable using syntax varname=value
+             takes precedence over variables defined in CONFIG_FILE
+        -k : Log statistics to file "stats_dump" in current directory
+        -d : Run as daemon, the parent process will block until PROX is not initialized
+        -z : Ignore CPU topology, implies -i
+        -r : Change initial screen refresh rate. If set to a lower than 0.001 seconds,
+                  screen refreshing will be disabled
+
+While applications using DPDK typically rely on the core mask and the
+number of channels to be specified on the command line, this
+application is configured using a .cfg file. The core mask and number
+of channels is derived from this config. For example, to run the
+application from the source directory execute:
+
+  user@target:~$ ./build/prox -f ./config/nop.cfg
+
+Provided example configurations
+-------------------------------
+PROX can be configured either as the SUT (System Under Test) or as the
+Traffic Generator. Some example configuration files are provided, both
+in the config directory to run PROX as a SUT, and in the gen directory
+to run it as a Traffic Generator.
+A quick description of these example configurations is provided below.
+Additional details are provided in the example configuration files.
+
+Basic configurations, mostly used as sanity check:
+- config/nop.cfg
+- config/nop-rings.cfg
+- gen/nop-gen.cfg
+
+Simplified BNG (Border Network Gateway) configurations, using different
+number of ports, with and without QoS, running on the host or in a VM:
+- config/bng-4ports.cfg
+- config/bng-8ports.cfg
+- config/bng-qos-4ports.cfg
+- config/bng-qos-8ports.cfg
+- config/bng-1q-4ports.cfg
+- config/bng-ovs-usv-4ports.cfg
+- config/bng-no-cpu-topology-4ports.cfg
+- gen/bng-4ports-gen.cfg
+- gen/bng-8ports-gen.cfg
+- gen/bng-ovs-usv-4ports-gen.cfg
+
+Light-weight AFTR configurations:
+- config/lw_aftr.cfg
+- gen/lw_aftr-gen.cfg
+

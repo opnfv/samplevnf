@@ -1,0 +1,41 @@
+##
+## Copyright (c) 2010-2017 Intel Corporation
+##
+## Licensed under the Apache License, Version 2.0 (the "License");
+## you may not use this file except in compliance with the License.
+## You may obtain a copy of the License at
+##
+##     http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+
+The scripts in this directory characterize flow a DPI-enabled VNF. The
+characeterization is split up into two steps. The first step (dpi1.py)
+searches for the traffic profile parameter boundaries. The second step
+(dpi2.py) takes as input the output of the first step and searches for
+the maximum sustainable throughput of a DPI-enabled VNF.
+
+To run the first script, use:
+
+   python2.7 ./dpi1.py -t TEST_SYSTEM_DESCRIPTIONS -o OUTPUT1
+
+TEST_SYSTEM_DESCRIPTIONS is a comma-separated list of systems where
+the syntax of defining each system is shown below:
+
+   user@ip:proxDir:cfgDir
+
+To run the second script, use:
+
+   python2.7 ./dpi2.py -t TEST_SYSTEM_DESCRIPTIONS \
+   	     -s SYSTEM_UNDER_TEST_DESCRIPTIONS \
+	     -o OUTPUT2 -d \
+	     -i OUTPUT1
+
+Finally, the results can be processed using the following command:
+
+   python2.7 ./maketable.py -i OUTPUT1 -j OUTPUT2 -o FINAL_TABLE

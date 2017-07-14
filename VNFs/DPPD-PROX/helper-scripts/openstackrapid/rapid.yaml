@@ -1,0 +1,105 @@
+##
+## Copyright (c) 2010-2017 Intel Corporation
+##
+## Licensed under the Apache License, Version 2.0 (the "License");
+## you may not use this file except in compliance with the License.
+## You may obtain a copy of the License at
+##
+##     http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+
+heat_template_version: 2016-04-08
+description: RAPID stack (Rapid Automated Performance Indication for Dataplane)
+parameters:
+  image:
+    type: string
+    label: Image name or ID
+    description: Image to be used for compute instance
+    default: RapidVM
+  flavor:
+    type: string
+    label: Flavor
+    description: Type of instance (flavor) to be used
+    default: prox_flavor
+  key:
+    type: string
+    label: Key name
+    description: Name of key-pair to be used for compute instance
+    default: prox
+  dpdk_network:
+    type: string
+    label: Private network name or ID
+    description: Network to attach instance to.
+    default: dpdk-network
+  private_network:
+    type: string
+    label: Private network name or ID
+    description: Network to attach instance to.
+    default: admin_internal_net
+  availability_zone:
+    type: string
+    description: The Availability Zone to launch the instance.
+    default: nova
+
+resources:
+  sut:
+    type: OS::Nova::Server
+    properties:
+      availability_zone: { get_param: availability_zone }
+      user_data:
+        get_file: prox_sut_user_data.sh
+      key_name: { get_param: key }
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      networks:
+        - network: { get_param: private_network }
+        - network: { get_param: dpdk_network }
+  gen:
+    type: OS::Nova::Server
+    properties:
+      availability_zone: { get_param: availability_zone }
+      user_data:
+        get_file: prox_gen_user_data.sh
+      key_name: { get_param: key }
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      networks:
+        - network: { get_param: private_network }
+        - network: { get_param: dpdk_network }
+
+  sut_floating_ip:
+    type: OS::Nova::FloatingIP
+    properties:
+      pool: admin_floating_net
+
+  gen_floating_ip:
+    type: OS::Nova::FloatingIP
+    properties:
+      pool: admin_floating_net
+
+  sut_association:
+    type: OS::Nova::FloatingIPAssociation
+    properties:
+      floating_ip: { get_resource: sut_floating_ip }
+      server_id: { get_resource: sut }
+
+  gen_association:
+    type: OS::Nova::FloatingIPAssociation
+    properties:
+      floating_ip: { get_resource: gen_floating_ip }
+      server_id: { get_resource: gen }
+
+outputs:
+  sut_ip:
+    description: IP address of the instance
+    value: { get_attr: [sut, first_address] }
+  gen_ip:
+    description: IP address of the instance
+    value: { get_attr: [gen, first_address] }
+

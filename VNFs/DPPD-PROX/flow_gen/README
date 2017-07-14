@@ -1,0 +1,47 @@
+##
+## Copyright (c) 2010-2017 Intel Corporation
+##
+## Licensed under the Apache License, Version 2.0 (the "License");
+## you may not use this file except in compliance with the License.
+## You may obtain a copy of the License at
+##
+##     http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+
+While it is possible to manually run stateful traffic generation as
+described below, it is recommended to use the provided dpi scripts
+available in the help-scripts directory..
+
+Before running flow based generation, a traffic profile needs to be
+extracted and copied into this directory. This is done by running the
+flow extract tool. An example of running the tool is shown below. For
+more details on the flow extract tool, please read the provided help
+by running the tool with the -h argument.
+
+./build/flowextract2 -s 500000 -i input.pcap -o output_directory
+
+After the output has been copied to this directory, the configuration
+can be launched as shown below:
+
+./build/prox -f flow_gen/flow_gen_4ports.cfg -e \
+	     -q max_setup_rate=2000 \
+	     -q connections=50000 \
+	     -q ss=19.46 \
+	     -q test_system_id=0
+
+The parameters provided through -q depend on the traffic profile. The
+following command can be used to find the maximum value of ss:
+
+./build/prox -f flow_gen/flow_gen_4ports.cfg -e \
+	     -q max_ss_and_quit=true \
+	     -q test_system_id=0
+
+This will cause prox to read the traffic profile, calculate the maximum
+value and quit immediately. No packets will be sent and the value for
+ss will be printed on stdout.

@@ -25,8 +25,9 @@ ACL          := $(VNF_DIR)/vACL
 FW           := $(VNF_DIR)/vFW
 CGNAPT       := $(VNF_DIR)/vCGNAPT
 UDP_Replay   := $(VNF_DIR)/UDP_Replay
+PROX         := $(VNF_DIR)/DPPD-PROX
 
-subdirs      := $(ACL) $(CGNAPT) $(FW) $(UDP_Replay)
+subdirs      := $(ACL) $(CGNAPT) $(FW) $(UDP_Replay) ${PROX}
 
 .PHONY: $(TARGETS) $(subdirs)
 
