@@ -2890,7 +2890,7 @@ main(int argc, char **argv)
 	int ret;
 	unsigned nb_ports;
 	unsigned lcore_id;
-	uint32_t n_tx_queue, nb_lcores;
+	uint32_t n_tx_queue;
 	uint8_t portid, nb_rx_queue;
         struct cmdline *cl;
 	uint32_t size;
@@ -2926,8 +2926,6 @@ main(int argc, char **argv)
 
 	if (check_port_config(nb_ports) < 0)
 		rte_exit(EXIT_FAILURE, "check_port_config failed\n");
-
-	nb_lcores = rte_lcore_count();
 
 	/*
 	 *Configuring port_config_t structure for interface manager initialization
