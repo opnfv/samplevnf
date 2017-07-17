@@ -1,0 +1,569 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1aa4ed85_22f992e9",
+        "filename": "VNFs/vCGNAPT/pipeline/pipeline_cgnapt_be.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 2404,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-17T09:27:04Z",
+      "side": 1,
+      "message": "more than 80 char/line",
+      "revId": "a2acb575c1ff6f3bc8e32afe84865cdc8953f633",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1aa4ed85_c2dd1e72",
+        "filename": "VNFs/vCGNAPT/pipeline/pipeline_cgnapt_be.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 4720,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-17T09:27:04Z",
+      "side": 1,
+      "message": "remove spaces..",
+      "revId": "a2acb575c1ff6f3bc8e32afe84865cdc8953f633",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1aa4ed85_82e72640",
+        "filename": "VNFs/vCGNAPT/pipeline/pipeline_cgnapt_be.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 5085,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-17T09:27:04Z",
+      "side": 1,
+      "message": "remove spaces..",
+      "revId": "a2acb575c1ff6f3bc8e32afe84865cdc8953f633",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1aa4ed85_a2e4a23b",
+        "filename": "VNFs/vCGNAPT/pipeline/pipeline_cgnapt_be.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 6251,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-17T09:27:04Z",
+      "side": 1,
+      "message": "crossed 80 char/line",
+      "revId": "a2acb575c1ff6f3bc8e32afe84865cdc8953f633",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1aa4ed85_42d12e56",
+        "filename": "VNFs/vCGNAPT/pipeline/pipeline_cgnapt_be.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 6425,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-17T09:27:04Z",
+      "side": 1,
+      "message": "Remove spaces",
+      "revId": "a2acb575c1ff6f3bc8e32afe84865cdc8953f633",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1aa4ed85_62d6aa51",
+        "filename": "VNFs/vCGNAPT/pipeline/pipeline_cgnapt_be.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 6731,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-17T09:27:04Z",
+      "side": 1,
+      "message": "crossing 80 char/line",
+      "revId": "a2acb575c1ff6f3bc8e32afe84865cdc8953f633",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1aa4ed85_22d0b24f",
+        "filename": "VNFs/vFW/pipeline/pipeline_vfw_be.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 179,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-17T09:27:04Z",
+      "side": 1,
+      "message": "remove this line..",
+      "range": {
+        "startLine": 179,
+        "startChar": 0,
+        "endLine": 179,
+        "endChar": 29
+      },
+      "revId": "a2acb575c1ff6f3bc8e32afe84865cdc8953f633",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1aa4ed85_e2c13a81",
+        "filename": "common/VIL/l2l3_stack/lib_arp.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 486,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-17T09:27:04Z",
+      "side": 1,
+      "message": "Crossing 80 char/line",
+      "revId": "a2acb575c1ff6f3bc8e32afe84865cdc8953f633",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1aa4ed85_82be46fe",
+        "filename": "common/VIL/l2l3_stack/lib_arp.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 546,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-17T09:27:04Z",
+      "side": 1,
+      "message": "remove commented code",
+      "range": {
+        "startLine": 545,
+        "startChar": 0,
+        "endLine": 546,
+        "endChar": 32
+      },
+      "revId": "a2acb575c1ff6f3bc8e32afe84865cdc8953f633",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1aa4ed85_a2bb420d",
+        "filename": "common/VIL/l2l3_stack/lib_arp.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 617,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-17T09:27:04Z",
+      "side": 1,
+      "message": "use rte_mov16() for better performance.",
+      "range": {
+        "startLine": 615,
+        "startChar": 0,
+        "endLine": 617,
+        "endChar": 3
+      },
+      "revId": "a2acb575c1ff6f3bc8e32afe84865cdc8953f633",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1aa4ed85_42384ea0",
+        "filename": "common/VIL/l2l3_stack/lib_arp.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1130,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-17T09:27:04Z",
+      "side": 1,
+      "message": "Remove unwanted code.. if not required in future.",
+      "range": {
+        "startLine": 1091,
+        "startChar": 0,
+        "endLine": 1130,
+        "endChar": 6
+      },
+      "revId": "a2acb575c1ff6f3bc8e32afe84865cdc8953f633",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1aa4ed85_623d4a8f",
+        "filename": "common/VIL/l2l3_stack/lib_arp.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1331,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-17T09:27:04Z",
+      "side": 1,
+      "message": "remove spaces",
+      "revId": "a2acb575c1ff6f3bc8e32afe84865cdc8953f633",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1aa4ed85_02425610",
+        "filename": "common/VIL/l2l3_stack/lib_arp.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1457,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-17T09:27:04Z",
+      "side": 1,
+      "message": "remove spaces",
+      "revId": "a2acb575c1ff6f3bc8e32afe84865cdc8953f633",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1aa4ed85_22475221",
+        "filename": "common/VIL/l2l3_stack/lib_arp.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1517,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-17T09:27:04Z",
+      "side": 1,
+      "message": "remove spaces",
+      "revId": "a2acb575c1ff6f3bc8e32afe84865cdc8953f633",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1aa4ed85_e2485a2f",
+        "filename": "common/VIL/l2l3_stack/lib_arp.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1602,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-17T09:27:04Z",
+      "side": 1,
+      "message": "make it neat alignments..",
+      "range": {
+        "startLine": 1601,
+        "startChar": 2,
+        "endLine": 1602,
+        "endChar": 61
+      },
+      "revId": "a2acb575c1ff6f3bc8e32afe84865cdc8953f633",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1aa4ed85_a25262db",
+        "filename": "common/VIL/l2l3_stack/lib_arp.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1894,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-17T09:27:04Z",
+      "side": 1,
+      "message": "Remove commented code, if not required in future.",
+      "range": {
+        "startLine": 1734,
+        "startChar": 1,
+        "endLine": 1894,
+        "endChar": 6
+      },
+      "revId": "a2acb575c1ff6f3bc8e32afe84865cdc8953f633",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1aa4ed85_425feee5",
+        "filename": "common/VIL/l2l3_stack/lib_arp.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 2914,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-17T09:27:04Z",
+      "side": 1,
+      "message": "Remove spaces..",
+      "revId": "a2acb575c1ff6f3bc8e32afe84865cdc8953f633",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1aa4ed85_62646ab9",
+        "filename": "common/VIL/l2l3_stack/lib_arp.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 2974,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-17T09:27:04Z",
+      "side": 1,
+      "message": "remove spaces..",
+      "revId": "a2acb575c1ff6f3bc8e32afe84865cdc8953f633",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1aa4ed85_0259f6fd",
+        "filename": "common/VIL/l2l3_stack/lib_arp.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 3061,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-17T09:27:04Z",
+      "side": 1,
+      "message": "remove spaces..",
+      "revId": "a2acb575c1ff6f3bc8e32afe84865cdc8953f633",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1aa4ed85_225e72e7",
+        "filename": "common/VIL/l2l3_stack/lib_arp.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 3068,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-17T09:27:04Z",
+      "side": 1,
+      "message": "remove spaces.",
+      "revId": "a2acb575c1ff6f3bc8e32afe84865cdc8953f633",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1aa4ed85_c272fe7b",
+        "filename": "common/VIL/l2l3_stack/lib_arp.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 3089,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-17T09:27:04Z",
+      "side": 1,
+      "message": "remove spaces",
+      "revId": "a2acb575c1ff6f3bc8e32afe84865cdc8953f633",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1aa4ed85_e26ffa90",
+        "filename": "common/VIL/l2l3_stack/lib_arp.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 3103,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-17T09:27:04Z",
+      "side": 1,
+      "message": "crossing 80 char/line",
+      "revId": "a2acb575c1ff6f3bc8e32afe84865cdc8953f633",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1aa4ed85_826c069e",
+        "filename": "common/VIL/l2l3_stack/lib_arp.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 3113,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-17T09:27:04Z",
+      "side": 1,
+      "message": "crossing 80 char/line",
+      "revId": "a2acb575c1ff6f3bc8e32afe84865cdc8953f633",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1aa4ed85_a269028d",
+        "filename": "common/VIL/l2l3_stack/lib_arp.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 3151,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-17T09:27:04Z",
+      "side": 1,
+      "message": "use rte_mov16() for better performance",
+      "range": {
+        "startLine": 3149,
+        "startChar": 0,
+        "endLine": 3151,
+        "endChar": 2
+      },
+      "revId": "a2acb575c1ff6f3bc8e32afe84865cdc8953f633",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1aa4ed85_42060ed0",
+        "filename": "common/VIL/l2l3_stack/lib_icmpv6.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 214,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-17T09:27:04Z",
+      "side": 1,
+      "message": "rte_mov16() can be used?",
+      "range": {
+        "startLine": 210,
+        "startChar": 0,
+        "endLine": 214,
+        "endChar": 37
+      },
+      "revId": "a2acb575c1ff6f3bc8e32afe84865cdc8953f633",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1aa4ed85_620b0ad7",
+        "filename": "common/VIL/l2l3_stack/lib_icmpv6.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 366,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-17T09:27:04Z",
+      "side": 1,
+      "message": "remove commented code",
+      "range": {
+        "startLine": 366,
+        "startChar": 1,
+        "endLine": 366,
+        "endChar": 48
+      },
+      "revId": "a2acb575c1ff6f3bc8e32afe84865cdc8953f633",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1aa4ed85_02101600",
+        "filename": "common/VIL/l2l3_stack/lib_icmpv6.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 389,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-17T09:27:04Z",
+      "side": 1,
+      "message": "remove commented code..",
+      "range": {
+        "startLine": 389,
+        "startChar": 2,
+        "endLine": 389,
+        "endChar": 36
+      },
+      "revId": "a2acb575c1ff6f3bc8e32afe84865cdc8953f633",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1aa4ed85_221512f1",
+        "filename": "common/VIL/l2l3_stack/lib_icmpv6.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 409,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-17T09:27:04Z",
+      "side": 1,
+      "message": "commented code can be removed?",
+      "range": {
+        "startLine": 407,
+        "startChar": 2,
+        "endLine": 409,
+        "endChar": 36
+      },
+      "revId": "a2acb575c1ff6f3bc8e32afe84865cdc8953f633",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1aa4ed85_8203a6b7",
+        "filename": "common/VIL/l2l3_stack/lib_icmpv6.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 411,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-17T09:27:04Z",
+      "side": 1,
+      "message": "rte_mov16() would be useful..",
+      "range": {
+        "startLine": 410,
+        "startChar": 0,
+        "endLine": 411,
+        "endChar": 34
+      },
+      "revId": "a2acb575c1ff6f3bc8e32afe84865cdc8953f633",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
