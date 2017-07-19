@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1aa4ed85_821de1bf",
+        "filename": "common/VIL/l2l3_stack/lib_arp.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 263,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-19T09:36:40Z",
+      "side": 1,
+      "message": "This table needs to be removed, this can be done as part of common code for gateway config.",
+      "range": {
+        "startLine": 263,
+        "startChar": 23,
+        "endLine": 263,
+        "endChar": 38
+      },
+      "revId": "5997f97a236457f2994820d39e3738dfd61076e4",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
