@@ -32,6 +32,7 @@
 
 #include "pipeline_common_fe.h"
 #include "interface.h"
+#include "lib_arp.h"
 
 int
 app_pipeline_ping(struct app_params *app,
@@ -534,6 +535,132 @@ app_link_down(struct app_params *app,
 
 	return 0;
 }
+
+/*
+ * Route add
+ */
+struct cmd_routeadd_config_result {
+        cmdline_fixed_string_t routeadd_string;
+        uint32_t port_id;
+        cmdline_ipaddr_t ip;
+        cmdline_fixed_string_t depth;
+};
+
+extern struct lib_nd_route_table_entry lib_nd_route_table[MAX_ND_RT_ENTRY];
+extern struct arp_data *p_arp_data;
+extern uint32_t nd_route_tbl_index;
+
+int app_routeadd_config_ipv4(struct app_params *app, uint32_t port_id,
+uint32_t ip, uint32_t mask)
+{
+	if (port_id > MAX_PORTS) {
+		printf("Max ports allowed is %d\n", MAX_PORTS);
+		return 1;
+	}
+
+	struct lib_arp_route_table_entry *lentry =
+		&p_arp_data->lib_arp_route_table
+		[port_id];
+		if (!lentry->ip)
+			p_arp_data->lib_arp_route_ent_cnt++;
+		lentry->ip = ip;
+		lentry->mask = mask;
+		lentry->port = port_id;
+		lentry->nh = ip;
+		lentry->nh_mask = ip & mask;
+
+	return 0;
+}
+
+int app_routeadd_config_ipv6(struct app_params *app, uint32_t port_id,
+uint8_t ipv6[], uint32_t depth)
+{
+	int i;
+
+	if (port_id > MAX_ND_RT_ENTRY) {
+		printf("Max ports allowed is %d\n", MAX_ND_RT_ENTRY);
+		return 1;
+	}
+
+	if (port_id >= nd_route_tbl_index)
+		nd_route_tbl_index++;
+
+	for (i = 0; i < 16; i++) {
+		lib_nd_route_table[port_id].ipv6[i] = ipv6[i];
+		lib_nd_route_table[port_id].nhipv6[i] = ipv6[i];
+	}
+
+	lib_nd_route_table[port_id].depth = depth;
+	lib_nd_route_table[port_id].port = port_id;
+
+	printf("num ports :%d\n", nd_route_tbl_index);
+
+	return 0;
+}
+
+static void
+cmd_routeadd_parsed(
+        void *parsed_result,
+        __attribute__((unused)) struct cmdline *cl,
+         void *data)
+{
+        struct cmd_routeadd_config_result *params = parsed_result;
+        struct app_params *app = data;
+        int status;
+
+        uint32_t port_id = params->port_id;
+        uint32_t i, ip, depth, mask;
+        uint8_t ipv6[16];
+        if (params->ip.family == AF_INET) {
+                ip = rte_bswap32((uint32_t) params->ip.addr.ipv4.s_addr);
+				mask = strtoul(params->depth, NULL, 16);
+		printf("ip:%x mask:%x port_id:%d\n", ip, mask, port_id);
+	}
+        else {
+                memcpy(ipv6, params->ip.addr.ipv6.s6_addr, 16);
+				depth = atoi(params->depth);
+		for (i=0;i<16;i++)
+			printf("%d ", ipv6[i]);
+		printf("\n port_id:%d depth:%d \n", port_id, depth);
+	}
+
+
+        if (params->ip.family == AF_INET)
+                status = app_routeadd_config_ipv4(app, port_id, ip, mask);
+        else
+                status = app_routeadd_config_ipv6(app, port_id, ipv6, depth);
+
+        if (status)
+                printf("Command failed\n");
+        else
+                printf("Command Success\n");
+}
+
+cmdline_parse_token_string_t cmd_routeadd_config_string =
+        TOKEN_STRING_INITIALIZER(struct cmd_routeadd_config_result, routeadd_string,
+                "routeadd");
+
+cmdline_parse_token_num_t cmd_routeadd_config_port_id =
+        TOKEN_NUM_INITIALIZER(struct cmd_routeadd_config_result, port_id, UINT32);
+
+cmdline_parse_token_ipaddr_t cmd_routeadd_config_ip =
+        TOKEN_IPADDR_INITIALIZER(struct cmd_routeadd_config_result, ip);
+
+cmdline_parse_token_string_t cmd_routeadd_config_depth_string =
+        TOKEN_STRING_INITIALIZER(struct cmd_routeadd_config_result, depth, NULL);
+
+cmdline_parse_inst_t cmd_routeadd = {
+        .f = cmd_routeadd_parsed,
+        .data = NULL,
+        .help_str = "Add Route entry",
+        .tokens = {
+                (void *) &cmd_routeadd_config_string,
+                (void *) &cmd_routeadd_config_port_id,
+				(void *) &cmd_routeadd_config_ip,
+				(void *) &cmd_routeadd_config_depth_string,
+                NULL,
+        },
+};
 
 /*
  * ping
@@ -1381,6 +1508,7 @@ cmdline_parse_inst_t cmd_run = {
 static cmdline_parse_ctx_t pipeline_common_cmds[] = {
 	(cmdline_parse_inst_t *) &cmd_quit,
 	(cmdline_parse_inst_t *) &cmd_run,
+	(cmdline_parse_inst_t *) &cmd_routeadd,
 
 	(cmdline_parse_inst_t *) &cmd_link_config,
 	(cmdline_parse_inst_t *) &cmd_link_up,
