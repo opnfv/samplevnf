@@ -730,10 +730,11 @@ app_init_link(struct app_params *app)
 			My_local_conf->rx_adv_conf.rss_conf.rss_key = NULL;
 			My_local_conf->rx_adv_conf.rss_conf.rss_hf = ETH_RSS_IP
 				| ETH_RSS_UDP | ETH_RSS_TCP;
-		} else {/* disable-rss */
-			My_local_conf->rx_adv_conf.rss_conf.rss_hf = 0;
 			/* pkt-filter-mode is perfect */
 			My_local_conf->fdir_conf.mode = RTE_FDIR_MODE_PERFECT;
+		} else {
+			/* disable-rss */
+			My_local_conf->rx_adv_conf.rss_conf.rss_hf = 0;
 		}
 
 		/* Set the hardware CRC stripping to avoid double stripping

@@ -993,16 +993,11 @@ app_init_link(struct app_params *app)
 			My_local_conf->rxmode.mq_mode = ETH_MQ_RX_RSS;
 			My_local_conf->rx_adv_conf.rss_conf.rss_key = NULL;
 			My_local_conf->rx_adv_conf.rss_conf.rss_hf = ETH_RSS_IP | ETH_RSS_UDP | ETH_RSS_TCP;
-			//My_local_conf->rx_adv_conf.rss_conf.rss_hf |= ETH_RSS_UDP;
-			//My_local_conf->rx_adv_conf.rss_conf.rss_hf |= ETH_RSS_IP;
-			// My_local_conf->rx_adv_conf.rss_conf.rss_hf = ETH_RSS_TCP;
-		}
-		//#else /*for FDIR Filter*/
-		else
-		{/* disable-rss */
-			My_local_conf->rx_adv_conf.rss_conf.rss_hf = 0;
 			/* pkt-filter-mode is perfect */
 			My_local_conf->fdir_conf.mode = RTE_FDIR_MODE_PERFECT;
+		} else {
+			/* disable-rss */
+			My_local_conf->rx_adv_conf.rss_conf.rss_hf = 0;
 		}
 
                 /* Set the hardware CRC stripping to avoid double stripping of FCS in VM */
