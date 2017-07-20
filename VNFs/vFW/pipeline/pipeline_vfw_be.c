@@ -68,7 +68,7 @@
 uint32_t timer_lcore;
 
 uint8_t firewall_flag = 1;
-uint8_t VFW_DEBUG;
+uint8_t VFW_DEBUG = 0;
 uint8_t cnxn_tracking_is_active = 1;
 /**
  * A structure defining the VFW pipeline input port per thread data.
@@ -176,32 +176,6 @@ __rte_cache_aligned;
   * TODO: look into "stub" table and see if that can be used
   * to avoid useless table lookup
   */
-/***** ARP local cache *****/
-#if 0
-uint8_t link_hw_laddr_valid[MAX_NUM_LOCAL_MAC_ADDRESS] = {
-       0, 0, 0, 0, 0, 0, 0, 0,
-       0, 0, 0, 0, 0, 0, 0, 0
-};
-
-static struct ether_addr link_hw_laddr[MAX_NUM_LOCAL_MAC_ADDRESS] = {
-       {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
-       {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
-       {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
-       {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
-       {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
-       {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
-       {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
-       {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
-       {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
-       {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
-       {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
-       {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
-       {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
-       {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
-       {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },
-       {.addr_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00} }
-};
-#endif
 uint64_t arp_pkts_mask;
 
 /* Start TSC measurement */
@@ -231,142 +205,6 @@ static inline void end_tsc_measure(
        }
 }
 
-//static struct ether_addr *get_local_link_hw_addr(uint8_t out_port)
-//{
-//       return &link_hw_laddr[out_port];
-//}
-#if 0
-static uint8_t local_dest_mac_present(uint8_t out_port)
-{
-       return link_hw_laddr_valid[out_port];
-}
-
-static uint32_t local_get_nh_ipv4(
-       uint32_t ip,
-       uint32_t *port,
-       uint32_t *nhip,
-       struct pipeline_vfw *vfw_pipe)
-{
-       int i;
-
-       for (i = 0; i < vfw_pipe->local_lib_arp_route_ent_cnt; i++) {
-              if (((vfw_pipe->local_lib_arp_route_table[i].ip &
-              vfw_pipe->local_lib_arp_route_table[i].mask) ==
-              (ip & vfw_pipe->local_lib_arp_route_table[i].mask))) {
-                     *port = vfw_pipe->local_lib_arp_route_table[i].port;
-
-                     *nhip = vfw_pipe->local_lib_arp_route_table[i].nh;
-                     return 1;
-              }
-       }
-       return 0;
-}
-
-static void do_local_nh_ipv4_cache(uint32_t dest_if,
-              struct pipeline_vfw *vfw_pipe)
-{
-
-       /* Search for the entry and do local copy */
-       int i;
-
-       for (i = 0; i < MAX_ARP_RT_ENTRY; i++) {
-              if (lib_arp_route_table[i].port == dest_if) {
-
-                     struct lib_arp_route_table_entry *lentry =
-                            &vfw_pipe->
-                            local_lib_arp_route_table[vfw_pipe->
-                            local_lib_arp_route_ent_cnt];
-
-                     lentry->ip   = lib_arp_route_table[i].ip;
-                     lentry->mask = lib_arp_route_table[i].mask;
-                     lentry->port = lib_arp_route_table[i].port;
-                     lentry->nh   = lib_arp_route_table[i].nh;
-
-                     vfw_pipe->local_lib_arp_route_ent_cnt++;
-                     break;
-              }
-       }
-}
-#endif
-static uint32_t local_get_nh_ipv6(
-       uint8_t *ip,
-       uint32_t *port,
-       uint8_t nhip[],
-        struct pipeline_vfw *vfw_pipe)
-{
-       uint8_t netmask_ipv6[IPV6_ADD_SIZE], netip_nd[IPV6_ADD_SIZE],
-              netip_in[IPV6_ADD_SIZE];
-       uint8_t i = 0, j = 0, k = 0, l = 0, depthflags = 0, depthflags1 = 0;
-       memset(netmask_ipv6, 0, sizeof(netmask_ipv6));
-       memset(netip_nd, 0, sizeof(netip_nd));
-       memset(netip_in, 0, sizeof(netip_in));
-
-       for (i = 0; i < vfw_pipe->local_lib_nd_route_ent_cnt; i++) {
-
-              convert_prefixlen_to_netmask_ipv6(
-                     vfw_pipe->local_lib_nd_route_table[i].depth,
-                     netmask_ipv6);
-
-              for (k = 0; k < IPV6_ADD_SIZE; k++)
-                     if (vfw_pipe->local_lib_nd_route_table[i].ipv6[k] &
-                                   netmask_ipv6[k]) {
-                            depthflags++;
-                            netip_nd[k] = vfw_pipe->
-                                   local_lib_nd_route_table[i].ipv6[k];
-                     }
-
-              for (l = 0; l < IPV6_ADD_SIZE; l++)
-                     if (ip[l] & netmask_ipv6[l]) {
-                            depthflags1++;
-                            netip_in[l] = ip[l];
-                     }
-
-
-              if ((depthflags == depthflags1) && (memcmp(netip_nd, netip_in,
-                                          sizeof(netip_nd)) == 0)) {
-
-                     *port = vfw_pipe->local_lib_nd_route_table[i].port;
-
-                     for (j = 0; j < IPV6_ADD_SIZE; j++)
-                            nhip[j] = vfw_pipe->
-                                   local_lib_nd_route_table[i].nhipv6[j];
-                     return 1;
-              }
-
-              depthflags = 0;
-              depthflags1 = 0;
-                     }
-                     return 0;
-}
-
-static void do_local_nh_ipv6_cache(uint32_t dest_if,
-              struct pipeline_vfw *vfw_pipe)
-{
-              /* Search for the entry and do local copy */
-       int i, l;
-
-       for (i = 0; i < MAX_ND_RT_ENTRY; i++) {
-
-              if (lib_nd_route_table[i].port == dest_if) {
-
-                     struct lib_nd_route_table_entry *lentry = &vfw_pipe->
-                            local_lib_nd_route_table[vfw_pipe->
-                            local_lib_nd_route_ent_cnt];
-
-                     for (l = 0; l < IPV6_ADD_SIZE; l++) {
-                            lentry->ipv6[l]   =
-                                   lib_nd_route_table[i].ipv6[l];
-                            lentry->nhipv6[l] =
-                                   lib_nd_route_table[i].nhipv6[l];
-                     }
-                     lentry->depth = lib_nd_route_table[i].depth;
-                     lentry->port  = lib_nd_route_table[i].port;
-
-                     vfw_pipe->local_lib_nd_route_ent_cnt++;
-                     break;
-                     } /* if */
-              } /* for */
-}
 /**
  * Print packet for debugging.
  *
@@ -929,85 +767,16 @@ pkt4_work_vfw_arp_ipv4_packets(struct rte_mbuf **pkts,
               uint32_t dest_address = rte_bswap32(ihdr->dst_addr);
               if (must_reverse)
                      rte_sp_exchange_mac_addresses(ehdr);
-#if 0
-              ret = local_get_nh_ipv4(dest_address, &dest_if,
-                            &nhip, vfw_pipe);
-              if (must_reverse) {
-                     rte_sp_exchange_mac_addresses(ehdr);
-                     if (is_phy_port_privte(phy_port)) {
-                            if (!ret) {
-                                   dest_if = get_pub_to_prv_port(
-                                                 &dest_address,
-                                                 IP_VERSION_4);
-                                   if (dest_if == INVALID_DESTIF) {
-                                          *pkts_mask &= ~pkt_mask;
-                                          vfw_pipe->counters->
-                                          pkts_drop_without_arp_entry++;
-                                   }
-                                   do_local_nh_ipv4_cache(
-                                                 dest_if, vfw_pipe);
-                            }
 
-                     } else {
-                            if (!ret) {
-                                   dest_if = get_prv_to_pub_port(
-                                                 &dest_address,
-                                                 IP_VERSION_4);
-                                   if (dest_if == INVALID_DESTIF) {
-                                          *pkts_mask &= ~pkt_mask;
-                                          vfw_pipe->counters->
-                                          pkts_drop_without_arp_entry++;
-                                   }
-                                   do_local_nh_ipv4_cache(dest_if,
-                                                 vfw_pipe);
-                            }
-                     }
-              } else if (is_phy_port_privte(phy_port)) {
-                     if (!ret) {
-                            dest_if = get_prv_to_pub_port(&dest_address,
-                                          IP_VERSION_4);
-                            if (dest_if == INVALID_DESTIF) {
-                                   *pkts_mask &= ~pkt_mask;
-                                   vfw_pipe->counters->
-                                          pkts_drop_without_arp_entry++;
-                            }
-                            do_local_nh_ipv4_cache(dest_if, vfw_pipe);
-                     }
-
-              } else {
-                     if (!ret) {
-                            dest_if = get_pub_to_prv_port(&dest_address,
-                                          IP_VERSION_4);
-                            if (dest_if == INVALID_DESTIF) {
-                                   *pkts_mask &= ~pkt_mask;
-                                   vfw_pipe->counters->
-                                          pkts_drop_without_arp_entry++;
-                            }
-                            do_local_nh_ipv4_cache(dest_if, vfw_pipe);
-                     }
-
-              }
-              meta_data_addr->output_port =  vfw_pipe->outport_id[dest_if];
-              if (local_dest_mac_present(dest_if)) {
-                     ether_addr_copy(get_local_link_hw_addr(dest_if),
-                                   &ehdr->d_addr);
-                     ether_addr_copy(get_link_hw_addr(dest_if),
-                                   &ehdr->s_addr);
-              } else {
-#endif
 	struct arp_entry_data *ret_arp_data = NULL;
         ret_arp_data = get_dest_mac_addr_port(dest_address,
                        &dest_if, &ehdr->d_addr);
         meta_data_addr->output_port =  vfw_pipe->outport_id[dest_if];
 
         if (arp_cache_dest_mac_present(dest_if)) {
-
                 ether_addr_copy(get_link_hw_addr(dest_if), &ehdr->s_addr);
-                arp_data_ptr[dest_if]->n_last_update = time(NULL);
-
+		update_nhip_access(dest_if);
                 if (unlikely(ret_arp_data && ret_arp_data->num_pkts)) {
-
-                        printf("sending buffered packets\n");
                         arp_send_buffered_pkts(ret_arp_data,
                                  &ehdr->d_addr, vfw_pipe->outport_id[dest_if]);
 
@@ -1015,7 +784,7 @@ pkt4_work_vfw_arp_ipv4_packets(struct rte_mbuf **pkts,
 
                      } else {
                 if (unlikely(ret_arp_data == NULL)) {
-
+			if (VFW_DEBUG)
                         printf("%s: NHIP Not Found, nhip:%x , "
                         "outport_id: %d\n", __func__, nhip,
                         vfw_pipe->outport_id[dest_if]);
@@ -1028,10 +797,9 @@ pkt4_work_vfw_arp_ipv4_packets(struct rte_mbuf **pkts,
 		if (ret_arp_data->status == INCOMPLETE ||
                            ret_arp_data->status == PROBE) {
                                 if (ret_arp_data->num_pkts >= NUM_DESC) {
-                            /* ICMP req sent, drop packet by
-                             * changing the mask */
-                        	vfw_pipe->counters->
-                                	 pkts_drop_without_arp_entry++;
+					/* ICMP req sent, drop packet by
+						* changing the mask */
+					vfw_pipe->counters->pkts_drop_without_arp_entry++;
                                         continue;
                                 } else {
                                         arp_pkts_mask |= pkt_mask;
@@ -1096,92 +864,24 @@ pkt_work_vfw_arp_ipv4_packets(struct rte_mbuf *pkts,
               if (must_reverse)
                      rte_sp_exchange_mac_addresses(ehdr);
 
-#if 0
-              ret = local_get_nh_ipv4(dest_address, &dest_if,
-                            &nhip, vfw_pipe);
-              if (must_reverse) {
-                     rte_sp_exchange_mac_addresses(ehdr);
-                     if (is_phy_port_privte(phy_port)) {
-                            if (!ret) {
-                                   dest_if = get_pub_to_prv_port(
-                                                 &dest_address,
-                                                 IP_VERSION_4);
-                                   if (dest_if == INVALID_DESTIF) {
-                                          *pkts_mask &= ~pkt_mask;
-                                          vfw_pipe->counters->
-                                          pkts_drop_without_arp_entry++;
-                                   }
-                                   do_local_nh_ipv4_cache(
-                                                 dest_if, vfw_pipe);
-                            }
-
-                     } else {
-                            if (!ret) {
-                                   dest_if = get_prv_to_pub_port(
-                                                 &dest_address,
-                                                 IP_VERSION_4);
-                                   if (dest_if == INVALID_DESTIF) {
-                                          *pkts_mask &= ~pkt_mask;
-                                          vfw_pipe->counters->
-                                          pkts_drop_without_arp_entry++;
-                                   }
-                                   do_local_nh_ipv4_cache(dest_if,
-                                                 vfw_pipe);
-                            }
-                     }
-              } else if (is_phy_port_privte(phy_port)) {
-                     if (!ret) {
-                            dest_if = get_prv_to_pub_port(&dest_address,
-                                          IP_VERSION_4);
-                            if (dest_if == INVALID_DESTIF) {
-                                   *pkts_mask &= ~pkt_mask;
-                                   vfw_pipe->counters->
-                                          pkts_drop_without_arp_entry++;
-                            }
-                            do_local_nh_ipv4_cache(dest_if, vfw_pipe);
-                     }
-
-              } else {
-                     if (!ret) {
-                            dest_if = get_pub_to_prv_port(&dest_address,
-                                          IP_VERSION_4);
-                            if (dest_if == INVALID_DESTIF) {
-                                   *pkts_mask &= ~pkt_mask;
-                                   vfw_pipe->counters->
-                                          pkts_drop_without_arp_entry++;
-                            }
-                            do_local_nh_ipv4_cache(dest_if, vfw_pipe);
-                     }
-
-              }
-              meta_data_addr->output_port =  vfw_pipe->outport_id[dest_if];
-              if (local_dest_mac_present(dest_if)) {
-                     ether_addr_copy(get_local_link_hw_addr(dest_if),
-                                   &ehdr->d_addr);
-                     ether_addr_copy(get_link_hw_addr(dest_if),
-                                   &ehdr->s_addr);
-              } else {
-#endif
 	struct arp_entry_data *ret_arp_data = NULL;
                      ret_arp_data = get_dest_mac_addr_port(dest_address,
                                    &dest_if, &ehdr->d_addr);
-              		meta_data_addr->output_port =  vfw_pipe->outport_id[dest_if];
+			meta_data_addr->output_port =  vfw_pipe->outport_id[dest_if];
+
         if (arp_cache_dest_mac_present(dest_if)) {
 
                 ether_addr_copy(get_link_hw_addr(dest_if), &ehdr->s_addr);
-                arp_data_ptr[dest_if]->n_last_update = time(NULL);
-
+		update_nhip_access(dest_if);
                 if (unlikely(ret_arp_data && ret_arp_data->num_pkts)) {
-
-                        printf("sending buffered packets\n");
                         arp_send_buffered_pkts(ret_arp_data,
                                  &ehdr->d_addr, vfw_pipe->outport_id[dest_if]);
 
                             }
-
                      } else {
                 if (unlikely(ret_arp_data == NULL)) {
 
+			if (VFW_DEBUG)
                         printf("%s: NHIP Not Found, nhip:%x , "
                         "outport_id: %d\n", __func__, nhip,
                         vfw_pipe->outport_id[dest_if]);
@@ -1193,10 +893,9 @@ pkt_work_vfw_arp_ipv4_packets(struct rte_mbuf *pkts,
 		if (ret_arp_data->status == INCOMPLETE ||
                            ret_arp_data->status == PROBE) {
                                 if (ret_arp_data->num_pkts >= NUM_DESC) {
-                            /* ICMP req sent, drop packet by
-                             * changing the mask */
-                        		vfw_pipe->counters->
-                                		pkts_drop_without_arp_entry++;
+					/* ICMP req sent, drop packet by
+						* changing the mask */
+					vfw_pipe->counters->pkts_drop_without_arp_entry++;
                                         return;
                                 } else {
                                         arp_pkts_mask |= pkt_mask;
@@ -1237,12 +936,10 @@ pkt4_work_vfw_arp_ipv6_packets(struct rte_mbuf **pkts,
               struct pipeline_vfw *vfw_pipe)
 {
        uint8_t nh_ipv6[IPV6_ADD_SIZE];
-       uint32_t ret;
        struct ether_addr hw_addr;
        struct mbuf_tcp_meta_data *meta_data_addr;
        struct ether_hdr *ehdr;
        struct rte_mbuf *pkt;
-       uint16_t phy_port;
        uint8_t i;
 
        for (i = 0; i < 4; i++) {
@@ -1256,7 +953,6 @@ pkt4_work_vfw_arp_ipv6_packets(struct rte_mbuf **pkts,
                      continue;
               int must_reverse = ((synproxy_reply_mask & pkt_mask) != 0);
 
-              phy_port = pkt->port;
               meta_data_addr = (struct mbuf_tcp_meta_data *)
                      RTE_MBUF_METADATA_UINT32_PTR(pkt, META_DATA_OFFSET);
               ehdr = rte_vfw_get_ether_addr(pkt);
@@ -1268,104 +964,49 @@ pkt4_work_vfw_arp_ipv6_packets(struct rte_mbuf **pkts,
               uint8_t dest_address[IPV6_ADD_SIZE];
 
               memset(nhip, 0, IPV6_ADD_SIZE);
+              if (must_reverse)
+                     rte_sp_exchange_mac_addresses(ehdr);
 
               rte_mov16(dest_address, ihdr->dst_addr);
-              ret = local_get_nh_ipv6(&dest_address[0], &dest_if,
-                            &nhip[0], vfw_pipe);
-              if (must_reverse) {
-                     rte_sp_exchange_mac_addresses(ehdr);
-                     if (is_phy_port_privte(phy_port)) {
-                            if (!ret) {
-                                   dest_if = get_pub_to_prv_port(
-                                                 (uint32_t *)
-                                                 &dest_address[0],
-                                                 IP_VERSION_6);
-                                   if (dest_if == INVALID_DESTIF) {
-                                          *pkts_mask &= ~pkt_mask;
-                                          vfw_pipe->counters->
-                                          pkts_drop_without_arp_entry++;
-                                   }
-                                   do_local_nh_ipv6_cache(dest_if,
-                                                 vfw_pipe);
-                            }
-
-                     } else {
-                            if (!ret) {
-                                   dest_if = get_prv_to_pub_port(
-                                                 (uint32_t *)
-                                                 &dest_address[0],
-                                                 IP_VERSION_6);
-                                   if (dest_if == INVALID_DESTIF) {
-                                          *pkts_mask &= ~pkt_mask;
-                                          vfw_pipe->counters->
-                                          pkts_drop_without_arp_entry++;
-                                   }
-                                   do_local_nh_ipv6_cache(dest_if,
-                                                 vfw_pipe);
-                            }
-                     }
-
-              } else if (is_phy_port_privte(phy_port)) {
-                     if (!ret) {
-                            dest_if = get_prv_to_pub_port((uint32_t *)
-                                          &dest_address[0], IP_VERSION_6);
-                            if (dest_if == INVALID_DESTIF) {
-                                   *pkts_mask &= ~pkt_mask;
-                                   vfw_pipe->counters->
-                                          pkts_drop_without_arp_entry++;
-                            }
-                            do_local_nh_ipv6_cache(dest_if, vfw_pipe);
-                     }
-
-              } else {
-                     if (!ret) {
-                            dest_if = get_pub_to_prv_port((uint32_t *)
-                                          &dest_address[0], IP_VERSION_6);
-                            if (dest_if == INVALID_DESTIF) {
-                                   *pkts_mask &= ~pkt_mask;
-                                   vfw_pipe->counters->
-                                          pkts_drop_without_arp_entry++;
-
-                            }
-                            do_local_nh_ipv6_cache(dest_if, vfw_pipe);
-                     }
-
-              }
-
-              meta_data_addr->output_port = vfw_pipe->outport_id[dest_if];
-
               memset(nh_ipv6, 0, IPV6_ADD_SIZE);
-              if (get_dest_mac_address_ipv6_port(
+              struct nd_entry_data *ret_nd_data = NULL;
+              ret_nd_data = get_dest_mac_address_ipv6_port(
                                    &dest_address[0],
                                    &dest_if,
                                    &hw_addr,
-                                   &nh_ipv6[0])) {
-                     ether_addr_copy(&hw_addr, &ehdr->d_addr);
-                     ether_addr_copy(get_link_hw_addr(dest_if),
+                                   &nh_ipv6[0]);
+
+		meta_data_addr->output_port = vfw_pipe->
+                                    outport_id[dest_if];
+              if (nd_cache_dest_mac_present(dest_if)) {
+                    ether_addr_copy(get_link_hw_addr(dest_if),
                                    &ehdr->s_addr);
+		    update_nhip_access(dest_if);
 
-                     if (vfw_debug >= DEBUG_LEVEL_4) {
-                            char buf[HW_ADDR_SIZE];
-
-                            ether_format_addr(buf, sizeof(buf),
-                                          &hw_addr);
-                            printf("MAC found for  dest_if %d: %s, ",
-                                          dest_if, buf);
-                            ether_format_addr(buf, sizeof(buf),
-                                          &ehdr->s_addr);
-                            printf("new eth hdr src: %s, ", buf);
-                            ether_format_addr(buf, sizeof(buf),
-                                          &ehdr->d_addr);
-                            printf("new eth hdr dst: %s\n", buf);
-                     }
-
+                    if (unlikely(ret_nd_data && ret_nd_data->num_pkts)) {
+                        nd_send_buffered_pkts(ret_nd_data,
+				&ehdr->d_addr, meta_data_addr->output_port);
+                    }
               } else {
-                     printf("deleting ipv6\n");
-                     *pkts_mask &= ~pkt_mask;
-                     /*Next Neighbor is not yet implemented
-                      * for ipv6.*/
-                     vfw_pipe->counters->
-                            pkts_drop_without_arp_entry++;
+                    if (unlikely(ret_nd_data == NULL)) {
+                         *pkts_mask &= ~pkt_mask;
+			  vfw_pipe->counters->
+				pkts_drop_without_arp_entry++;
+                          continue;
+                    }
+		    if (ret_nd_data->status == INCOMPLETE ||
+	                  ret_nd_data->status == PROBE) {
+			  if (ret_nd_data->num_pkts >= NUM_DESC) {
+                                /* Drop the pkt */
+                                *pkts_mask &= ~pkt_mask;
+				vfw_pipe->counters->pkts_drop_without_arp_entry++;
+				continue;
+                          } else {
+                                arp_pkts_mask |= pkt_mask;
+                                nd_queue_unresolved_packet(ret_nd_data, pkt);
+                                continue;
+                          }
+                    }
               }
 
        }
@@ -1399,12 +1040,10 @@ pkt_work_vfw_arp_ipv6_packets(struct rte_mbuf *pkts,
               struct pipeline_vfw *vfw_pipe)
 {
        uint8_t nh_ipv6[IPV6_ADD_SIZE];
-       uint32_t ret;
        struct ether_addr hw_addr;
        struct mbuf_tcp_meta_data *meta_data_addr;
        struct ether_hdr *ehdr;
        struct rte_mbuf *pkt;
-       uint16_t phy_port;
 
        uint32_t dest_if = INVALID_DESTIF;
        /* bitmask representing only this packet */
@@ -1416,7 +1055,6 @@ pkt_work_vfw_arp_ipv6_packets(struct rte_mbuf *pkts,
 
               int must_reverse = ((synproxy_reply_mask & pkt_mask) != 0);
 
-              phy_port = pkt->port;
               meta_data_addr = (struct mbuf_tcp_meta_data *)
                      RTE_MBUF_METADATA_UINT32_PTR(pkt, META_DATA_OFFSET);
               ehdr = rte_vfw_get_ether_addr(pkt);
@@ -1428,104 +1066,47 @@ pkt_work_vfw_arp_ipv6_packets(struct rte_mbuf *pkts,
               uint8_t dest_address[IPV6_ADD_SIZE];
 
               memset(nhip, 0, IPV6_ADD_SIZE);
-
-              rte_mov16(dest_address, ihdr->dst_addr);
-              ret = local_get_nh_ipv6(&dest_address[0], &dest_if,
-                            &nhip[0], vfw_pipe);
-              if (must_reverse) {
+              if (must_reverse)
                      rte_sp_exchange_mac_addresses(ehdr);
-                     if (is_phy_port_privte(phy_port)) {
-                            if (!ret) {
-                                   dest_if = get_pub_to_prv_port(
-                                                 (uint32_t *)
-                                                 &dest_address[0],
-                                                 IP_VERSION_6);
-                                   if (dest_if == INVALID_DESTIF) {
-                                          *pkts_mask &= ~pkt_mask;
-                                          vfw_pipe->counters->
-                                          pkts_drop_without_arp_entry++;
-                                   }
-                                   do_local_nh_ipv6_cache(dest_if,
-                                                 vfw_pipe);
-                            }
-
-                     } else {
-                            if (!ret) {
-                                   dest_if = get_prv_to_pub_port(
-                                                 (uint32_t *)
-                                                 &dest_address[0],
-                                                 IP_VERSION_6);
-                                   if (dest_if == INVALID_DESTIF) {
-                                          *pkts_mask &= ~pkt_mask;
-                                          vfw_pipe->counters->
-                                          pkts_drop_without_arp_entry++;
-                                   }
-                                   do_local_nh_ipv6_cache(dest_if,
-                                                 vfw_pipe);
-                            }
-                     }
-
-              } else if (is_phy_port_privte(phy_port)) {
-                     if (!ret) {
-                            dest_if = get_prv_to_pub_port((uint32_t *)
-                                          &dest_address[0], IP_VERSION_6);
-                            if (dest_if == INVALID_DESTIF) {
-                                   *pkts_mask &= ~pkt_mask;
-                                   vfw_pipe->counters->
-                                          pkts_drop_without_arp_entry++;
-                            }
-                            do_local_nh_ipv6_cache(dest_if, vfw_pipe);
-                     }
-
-              } else {
-                     if (!ret) {
-                            dest_if = get_pub_to_prv_port((uint32_t *)
-                                          &dest_address[0], IP_VERSION_6);
-                            if (dest_if == INVALID_DESTIF) {
-                                   *pkts_mask &= ~pkt_mask;
-                                   vfw_pipe->counters->
-                                          pkts_drop_without_arp_entry++;
-
-                            }
-                            do_local_nh_ipv6_cache(dest_if, vfw_pipe);
-                     }
-
-              }
-
-              meta_data_addr->output_port = vfw_pipe->outport_id[dest_if];
-
+              rte_mov16(dest_address, ihdr->dst_addr);
               memset(nh_ipv6, 0, IPV6_ADD_SIZE);
-              if (get_dest_mac_address_ipv6_port(
+              struct nd_entry_data *ret_nd_data = NULL;
+              ret_nd_data = get_dest_mac_address_ipv6_port(
                                    &dest_address[0],
                                    &dest_if,
                                    &hw_addr,
-                                   &nh_ipv6[0])) {
-                     ether_addr_copy(&hw_addr, &ehdr->d_addr);
+                                   &nh_ipv6[0]);
+	      meta_data_addr->output_port = vfw_pipe->
+                                    outport_id[dest_if];
+              if (nd_cache_dest_mac_present(dest_if)) {
                      ether_addr_copy(get_link_hw_addr(dest_if),
                                    &ehdr->s_addr);
+		    update_nhip_access(dest_if);
 
-                     if (vfw_debug >= DEBUG_LEVEL_4) {
-                            char buf[HW_ADDR_SIZE];
-
-                            ether_format_addr(buf, sizeof(buf),
-                                          &hw_addr);
-                            printf("MAC found for  dest_if %d: %s, ",
-                                          dest_if, buf);
-                            ether_format_addr(buf, sizeof(buf),
-                                          &ehdr->s_addr);
-                            printf("new eth hdr src: %s, ", buf);
-                            ether_format_addr(buf, sizeof(buf),
-                                          &ehdr->d_addr);
-                            printf("new eth hdr dst: %s\n", buf);
+                    if (unlikely(ret_nd_data && ret_nd_data->num_pkts)) {
+                        nd_send_buffered_pkts(ret_nd_data,
+				&ehdr->d_addr, meta_data_addr->output_port);
                      }
-
               } else {
-                     printf("deleting ipv6\n");
-                     *pkts_mask &= ~pkt_mask;
-                     /*Next Neighbor is not yet implemented
-                      * for ipv6.*/
-                     vfw_pipe->counters->
-                            pkts_drop_without_arp_entry++;
+                    if (unlikely(ret_nd_data == NULL)) {
+                        *pkts_mask &= ~pkt_mask;
+			vfw_pipe->counters->
+				pkts_drop_without_arp_entry++;
+                        return;
+                    }
+		    if (ret_nd_data->status == INCOMPLETE ||
+                          ret_nd_data->status == PROBE) {
+                          if (ret_nd_data->num_pkts >= NUM_DESC) {
+                                /* Drop the pkt */
+                                *pkts_mask &= ~pkt_mask;
+				vfw_pipe->counters->pkts_drop_without_arp_entry++;
+                                return;
+                          } else {
+                                arp_pkts_mask |= pkt_mask;
+                                nd_queue_unresolved_packet(ret_nd_data, pkt);
+                                return;
+                          }
+                    }
               }
 
        }
@@ -1588,85 +1169,16 @@ rte_vfw_arp_ipv4_packets(struct rte_mbuf **pkts,
               uint32_t dest_address = rte_bswap32(ihdr->dst_addr);
               if (must_reverse)
                      rte_sp_exchange_mac_addresses(ehdr);
-#if 0
-              ret = local_get_nh_ipv4(dest_address, &dest_if,
-                            &nhip, vfw_pipe);
-              if (must_reverse) {
-                     rte_sp_exchange_mac_addresses(ehdr);
-                     if (is_phy_port_privte(phy_port)) {
-                            if (!ret) {
-                                   dest_if = get_pub_to_prv_port(
-                                                 &dest_address,
-                                                 IP_VERSION_4);
-                                   if (dest_if == INVALID_DESTIF) {
-                                          pkts_mask &= ~pkt_mask;
-                                          vfw_pipe->counters->
-                                          pkts_drop_without_arp_entry++;
-                                   }
-                                   do_local_nh_ipv4_cache(
-                                                 dest_if, vfw_pipe);
-                            }
-
-                     } else {
-                            if (!ret) {
-                                   dest_if = get_prv_to_pub_port(
-                                                 &dest_address,
-                                                 IP_VERSION_4);
-                                   if (dest_if == INVALID_DESTIF) {
-                                          pkts_mask &= ~pkt_mask;
-                                          vfw_pipe->counters->
-                                          pkts_drop_without_arp_entry++;
-                                   }
-                                   do_local_nh_ipv4_cache(dest_if,
-                                                 vfw_pipe);
-                            }
-                     }
-              } else if (is_phy_port_privte(phy_port)) {
-                     if (!ret) {
-                            dest_if = get_prv_to_pub_port(&dest_address,
-                                          IP_VERSION_4);
-                            if (dest_if == INVALID_DESTIF) {
-                                   pkts_mask &= ~pkt_mask;
-                                   vfw_pipe->counters->
-                                          pkts_drop_without_arp_entry++;
-                            }
-                            do_local_nh_ipv4_cache(dest_if, vfw_pipe);
-                     }
-
-              } else {
-                     if (!ret) {
-                            dest_if = get_pub_to_prv_port(&dest_address,
-                                          IP_VERSION_4);
-                            if (dest_if == INVALID_DESTIF) {
-                                   pkts_mask &= ~pkt_mask;
-                                   vfw_pipe->counters->
-                                          pkts_drop_without_arp_entry++;
-                            }
-                            do_local_nh_ipv4_cache(dest_if, vfw_pipe);
-                     }
-
-              }
-              meta_data_addr->output_port =  vfw_pipe->outport_id[dest_if];
-              if (local_dest_mac_present(dest_if)) {
-                     ether_addr_copy(get_local_link_hw_addr(dest_if),
-                                   &ehdr->d_addr);
-                     ether_addr_copy(get_link_hw_addr(dest_if),
-                                   &ehdr->s_addr);
-              } else {
-#endif
 		struct arp_entry_data *ret_arp_data = NULL;
                      ret_arp_data = get_dest_mac_addr_port(dest_address,
                                    &dest_if, &ehdr->d_addr);
-              	meta_data_addr->output_port =  vfw_pipe->outport_id[dest_if];
+		meta_data_addr->output_port =  vfw_pipe->outport_id[dest_if];
         if (arp_cache_dest_mac_present(dest_if)) {
 
                 ether_addr_copy(get_link_hw_addr(dest_if), &ehdr->s_addr);
-                arp_data_ptr[dest_if]->n_last_update = time(NULL);
-
+		update_nhip_access(dest_if);
                 if (unlikely(ret_arp_data && ret_arp_data->num_pkts)) {
 
-                        printf("sending buffered packets\n");
-                        p_nat->naptedPktCount += ret_arp_data->num_pkts;
                         arp_send_buffered_pkts(ret_arp_data,
                                  &ehdr->d_addr, vfw_pipe->outport_id[dest_if]);
 
@@ -1675,6 +1187,7 @@ rte_vfw_arp_ipv4_packets(struct rte_mbuf **pkts,
                      } else {
                 if (unlikely(ret_arp_data == NULL)) {
 
+			if (VFW_DEBUG)
                         printf("%s: NHIP Not Found, nhip:%x , "
                         "outport_id: %d\n", __func__, nhip,
                         vfw_pipe->outport_id[dest_if]);
@@ -1687,10 +1200,9 @@ rte_vfw_arp_ipv4_packets(struct rte_mbuf **pkts,
 		if (ret_arp_data->status == INCOMPLETE ||
                            ret_arp_data->status == PROBE) {
                                 if (ret_arp_data->num_pkts >= NUM_DESC) {
-                     /* ICMP req sent, drop packet by
-                      * changing the mask */
-                                   	vfw_pipe->counters->
-                                          pkts_drop_without_arp_entry++;
+					/* ICMP req sent, drop packet by
+						* changing the mask */
+					vfw_pipe->counters->pkts_drop_without_arp_entry++;
                                         continue;
                                 } else {
                                         arp_pkts_mask |= pkt_mask;
@@ -1759,106 +1271,52 @@ rte_vfw_arp_ipv6_packets(struct rte_mbuf **pkts,
               uint8_t dest_address[IPV6_ADD_SIZE];
 
               memset(nhip, 0, IPV6_ADD_SIZE);
+              if (must_reverse)
+                     rte_sp_exchange_mac_addresses(ehdr);
 
               rte_mov16(dest_address, ihdr->dst_addr);
-              ret = local_get_nh_ipv6(&dest_address[0], &dest_if,
-                            &nhip[0], vfw_pipe);
-              if (must_reverse) {
-                     rte_sp_exchange_mac_addresses(ehdr);
-                     if (is_phy_port_privte(phy_port)) {
-                            if (!ret) {
-                                   dest_if = get_pub_to_prv_port(
-                                                 (uint32_t *)
-                                                 &dest_address[0],
-                                                 IP_VERSION_6);
-                                   if (dest_if == INVALID_DESTIF) {
-                                          pkts_mask &= ~pkt_mask;
-                                          vfw_pipe->counters->
-                                          pkts_drop_without_arp_entry++;
-                                   }
-                                   do_local_nh_ipv6_cache(dest_if,
-                                                 vfw_pipe);
-                            }
-
-                     } else {
-                            if (!ret) {
-                                   dest_if = get_prv_to_pub_port(
-                                                 (uint32_t *)
-                                                 &dest_address[0],
-                                                 IP_VERSION_6);
-                                   if (dest_if == INVALID_DESTIF) {
-                                          pkts_mask &= ~pkt_mask;
-                                          vfw_pipe->counters->
-                                          pkts_drop_without_arp_entry++;
-                                   }
-                                   do_local_nh_ipv6_cache(dest_if,
-                                                 vfw_pipe);
-                            }
-                     }
-
-              } else if (is_phy_port_privte(phy_port)) {
-                     if (!ret) {
-                            dest_if = get_prv_to_pub_port((uint32_t *)
-                                          &dest_address[0], IP_VERSION_6);
-                            if (dest_if == INVALID_DESTIF) {
-                                   pkts_mask &= ~pkt_mask;
-                                   vfw_pipe->counters->
-                                          pkts_drop_without_arp_entry++;
-                            }
-                            do_local_nh_ipv6_cache(dest_if, vfw_pipe);
-                     }
-
-              } else {
-                     if (!ret) {
-                            dest_if = get_pub_to_prv_port((uint32_t *)
-                                          &dest_address[0], IP_VERSION_6);
-                            if (dest_if == INVALID_DESTIF) {
-                                   pkts_mask &= ~pkt_mask;
-                                   vfw_pipe->counters->
-                                          pkts_drop_without_arp_entry++;
-
-                            }
-                            do_local_nh_ipv6_cache(dest_if, vfw_pipe);
-                     }
-
-              }
-
-              meta_data_addr->output_port = vfw_pipe->outport_id[dest_if];
-
               memset(nh_ipv6, 0, IPV6_ADD_SIZE);
-              if (get_dest_mac_address_ipv6_port(
+              struct nd_entry_data *ret_nd_data = NULL;
+              ret_nd_data = get_dest_mac_address_ipv6_port(
                                    &dest_address[0],
                                    &dest_if,
                                    &hw_addr,
-                                   &nh_ipv6[0])) {
-                     ether_addr_copy(&hw_addr, &ehdr->d_addr);
+                                   &nh_ipv6[0]);
+
+	      meta_data_addr->output_port = vfw_pipe->
+                                    outport_id[dest_if];
+              if (nd_cache_dest_mac_present(dest_if)) {
                      ether_addr_copy(get_link_hw_addr(dest_if),
                                    &ehdr->s_addr);
+		    update_nhip_access(dest_if);
 
-                     if (vfw_debug >= DEBUG_LEVEL_4) {
-                            char buf[HW_ADDR_SIZE];
-
-                            ether_format_addr(buf, sizeof(buf),
-                                          &hw_addr);
-                            printf("MAC found for  dest_if %d: %s, ",
-                                          dest_if, buf);
-                            ether_format_addr(buf, sizeof(buf),
-                                          &ehdr->s_addr);
-                            printf("new eth hdr src: %s, ", buf);
-                            ether_format_addr(buf, sizeof(buf),
-                                          &ehdr->d_addr);
-                            printf("new eth hdr dst: %s\n", buf);
+                    if (unlikely(ret_nd_data && ret_nd_data->num_pkts)) {
+                        nd_send_buffered_pkts(ret_nd_data,
+                               &ehdr->d_addr, meta_data_addr->output_port);
                      }
 
               } else {
-                     printf("deleting ipv6\n");
+                    if (unlikely(ret_nd_data == NULL)) {
                      pkts_mask &= ~pkt_mask;
-                     /*Next Neighbor is not yet implemented
-                      * for ipv6.*/
-                     vfw_pipe->counters->
-                            pkts_drop_without_arp_entry++;
-              }
-
+			  vfw_pipe->counters->
+				pkts_drop_without_arp_entry++;
+                          continue;
+                    }
+		    if (ret_nd_data->status == INCOMPLETE ||
+                          ret_nd_data->status == PROBE) {
+                          if (ret_nd_data->num_pkts >= NUM_DESC) {
+                                /* Drop the pkt */
+				pkts_mask &= ~pkt_mask;
+                                vfw_pipe->counters->
+                                    pkts_drop_without_arp_entry++;
+                                continue;
+                          } else {
+                                arp_pkts_mask |= pkt_mask;
+                                nd_queue_unresolved_packet(ret_nd_data, pkt);
+                                continue;
+                          }
+                    }
+	      }
 
        }
 

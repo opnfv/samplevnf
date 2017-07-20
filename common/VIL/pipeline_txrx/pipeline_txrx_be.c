@@ -30,9 +30,7 @@
 #include "pipeline_arpicmp_be.h"
 #include "vnf_common.h"
 #include "app.h"
-#ifndef VNF_ACL
 #include "lib_icmpv6.h"
-#endif
 
 uint8_t TXRX_DEBUG;
 int pkt_burst_cnt;
@@ -265,9 +263,8 @@ pkt_work_txrx(struct rte_mbuf *pkt, uint32_t pkt_num, void *arg)
 			|| !memcmp(ipv6_h->dst_addr, solicited_node_multicast_addr, 13)) {
 				rte_pipeline_port_out_packet_insert(p_txrx->p.p,
 					out_port, pkt);
-				rte_pipeline_ah_packet_drop(p_txrx->p.p, pkt_mask);
+				rte_pipeline_ah_packet_hijack(p_txrx->p.p, pkt_mask);
 			} else {
-				printf("Dropping the IPv6 pkt\n");
 				rte_pipeline_ah_packet_drop(p_txrx->p.p, pkt_mask);
 			}
 		}
@@ -414,7 +411,7 @@ pkt4_work_txrx(struct rte_mbuf **pkt, uint32_t pkt_num, void *arg)
 				|| !memcmp(ipv6_h0->dst_addr, solicited_node_multicast_addr, 13)) {
 				rte_pipeline_port_out_packet_insert(p_txrx->p.p,
 					out_port, pkt[0]);
-				rte_pipeline_ah_packet_drop(p_txrx->p.p, pkt_mask0);
+				rte_pipeline_ah_packet_hijack(p_txrx->p.p, pkt_mask0);
 
 			} else {
 				rte_pipeline_ah_packet_drop(p_txrx->p.p, pkt_mask0);
@@ -473,19 +470,14 @@ pkt4_work_txrx(struct rte_mbuf **pkt, uint32_t pkt_num, void *arg)
 	#ifdef IPV6
 	case ETH_TYPE_IPV6:
 		if (*protocol1 == ICMPV6_PROTOCOL_ID) {
-			#ifndef VNF_ACL
 			if (!memcmp(ipv6_h1->dst_addr, link->ipv6, 16)
 				|| !memcmp(ipv6_h1->dst_addr, solicited_node_multicast_addr, 13)) {
-			#endif
 				rte_pipeline_port_out_packet_insert(p_txrx->p.p,
 					out_port, pkt[1]);
-				rte_pipeline_ah_packet_drop(p_txrx->p.p, pkt_mask1);
-			#ifndef VNF_ACL
+				rte_pipeline_ah_packet_hijack(p_txrx->p.p, pkt_mask1);
 			} else {
-				printf("Dropping the IPv6 pkt\n");
 				rte_pipeline_ah_packet_drop(p_txrx->p.p, pkt_mask1);
 			}
-			#endif
 		}
 	break;
 	#endif
@@ -539,19 +531,14 @@ pkt4_work_txrx(struct rte_mbuf **pkt, uint32_t pkt_num, void *arg)
 	#ifdef IPV6
 	case ETH_TYPE_IPV6:
 		if (*protocol2 == ICMPV6_PROTOCOL_ID) {
-			#ifndef VNF_ACL
 			if (!memcmp(ipv6_h2->dst_addr, link->ipv6, 16)
 				|| !memcmp(ipv6_h2->dst_addr, solicited_node_multicast_addr, 13)) {
-			#endif
 				rte_pipeline_port_out_packet_insert(p_txrx->p.p,
 					out_port, pkt[2]);
-				rte_pipeline_ah_packet_drop(p_txrx->p.p, pkt_mask2);
-			#ifndef VNF_ACL
+				rte_pipeline_ah_packet_hijack(p_txrx->p.p, pkt_mask2);
 			} else {
-				printf("Dropping the IPv6 pkt\n");
 				rte_pipeline_ah_packet_drop(p_txrx->p.p, pkt_mask2);
 			}
-			#endif
 		}
 	break;
 	#endif
@@ -605,19 +592,14 @@ pkt4_work_txrx(struct rte_mbuf **pkt, uint32_t pkt_num, void *arg)
 	#ifdef IPV6
 	case ETH_TYPE_IPV6:
 		if (*protocol3 == ICMPV6_PROTOCOL_ID) {
-			#ifndef VNF_ACL
 			if (!memcmp(ipv6_h3->dst_addr, link->ipv6, 16)
 				|| !memcmp(ipv6_h3->dst_addr, solicited_node_multicast_addr, 13)) {
-			#endif
 				rte_pipeline_port_out_packet_insert(p_txrx->p.p,
 					out_port, pkt[3]);
-				rte_pipeline_ah_packet_drop(p_txrx->p.p, pkt_mask3);
-			#ifndef VNF_ACL
+				rte_pipeline_ah_packet_hijack(p_txrx->p.p, pkt_mask3);
 			} else {
-				printf("Dropping the IPv6 pkt\n");
 				rte_pipeline_ah_packet_drop(p_txrx->p.p, pkt_mask3);
 			}
-			#endif
 		}
 	break;
 	#endif
