@@ -779,7 +779,6 @@ void calculate_hw_checksum(
 	uint8_t protocol);
 
 uint64_t nextPowerOf2(uint64_t n);
-struct ether_addr *get_local_link_hw_addr(uint8_t out_port);
 uint8_t local_dest_mac_present(uint8_t out_port);
 
 enum PKT_TYPE {
