@@ -16,6 +16,24 @@
       "revId": "c1924ea6a3e2e38abfe6f9eaa55a153728422161",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1aa4ed85_d612b761",
+        "filename": "VNFs/vFW/init.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 734,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-07-21T05:54:52Z",
+      "side": 1,
+      "message": "Thanks for comments, resolved in next patch set and also verified.",
+      "parentUuid": "1aa4ed85_36c22bea",
+      "revId": "c1924ea6a3e2e38abfe6f9eaa55a153728422161",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
     }
   ]
 }
