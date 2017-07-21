@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1aa4ed85_36c22bea",
+        "filename": "VNFs/vFW/init.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 734,
+      "author": {
+        "id": 6625
+      },
+      "writtenOn": "2017-07-21T04:35:52Z",
+      "side": 1,
+      "message": "Add the else clause. Add fdir_conf.mode \u003d RTE_FDIR_MODE_PERFECT to the if clause",
+      "revId": "c1924ea6a3e2e38abfe6f9eaa55a153728422161",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
