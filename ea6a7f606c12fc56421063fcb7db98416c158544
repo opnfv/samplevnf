@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1aa4ed85_11ea990f",
+        "filename": "VNFs/vFW/init.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 738,
+      "author": {
+        "id": 6625
+      },
+      "writtenOn": "2017-07-21T06:29:29Z",
+      "side": 1,
+      "message": "correct",
+      "revId": "ea6a7f606c12fc56421063fcb7db98416c158544",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
