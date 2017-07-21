@@ -1,0 +1,167 @@
+doctype html
+//
+  Copyright (c) 2017 Kumar Rishabh and others.
+  All rights reserved. This program and the accompanying materials
+  are made available under the terms of the Apache License, Version 2.0
+  which accompanies this distribution, and is available at
+  http://www.apache.org/licenses/LICENSE-2.0
+html(lang='en')
+html
+  head
+    title= title
+    //
+      link(rel='stylesheet', href='/3rd_party/materialize/css/materialize.css')
+    script(type='text/javascript', src='https://code.jquery.com/jquery-3.1.1.min.js')
+    //
+      script(src='/javascripts/global.js')
+    //
+      script(src='/3rd_party/materialize/js/materialize.js')
+    link(href='https://fonts.googleapis.com/icon?family=Material+Icons', rel='stylesheet')
+    link(rel='stylesheet', href='/stylesheets/style.css')
+    script(src='/3rd_party/typeahead.js')
+    script(src='/javascripts/mode_edit.js')
+  body
+    h4.center
+    i.material-icons library_add
+    |         Add a TAG to a VNF
+    .row
+    form#add_tag_form.col.s12(action='/add_tag', method='post')
+      .row.modal-form-row
+          .input-field.col.s6 VNF Name
+          .input-field.col.s6 TAG Name
+      .row.modal-form-row
+        #scrollable-dropdown-menu.input-field.col.s6
+          input#tag_name.typeahead(type='text', name='tag_name')
+          //
+            label.left-align(for='tag_name') VNF Name
+
+        .input-field.col.s6
+          input#tag_name.validate(type='text', name='vnf_name')
+          //
+            label.left-align(for='tag_name') TAG Name
+      .row.modal-form-row
+          .input-field.col.s6
+          .input-field.col.s6
+      .row.modal-form-row
+      button#add_tag_button.modal-action.modal-close.waves-effect.waves-light.btn.right
+        | Submit
+        i.material-icons.right send
+style.
+  #scrollable-dropdown-menu .tt-menu {
+    max-height: 150px;
+    overflow-y: auto;
+  }
+
+  .typeahead, .tt-query, .tt-hint {
+      border: 2px solid #CCCCCC;
+      border-radius: 8px 8px 8px 8px;
+      font-size: 24px;
+      height: 30px;
+      line-height: 30px;
+      outline: medium none;
+      padding: 8px 12px;
+      width: 396px;
+  }
+  .typeahead {
+      background-color: #FFFFFF;
+  }
+  .typeahead:focus {
+      border: 2px solid #0097CF;
+  }
+  .tt-query {
+      box-shadow: 0 1px 1px rgba(0, 0, 0, 0.075) inset;
+  }
+  .tt-hint {
+      color: #999999;
+  }
+  .tt-dropdown-menu {
+      background-color: #FFFFFF;
+      border: 1px solid rgba(0, 0, 0, 0.2);
+      border-radius: 8px 8px 8px 8px;
+      box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+      margin-top: 12px;
+      padding: 8px 0;
+      width: 422px;
+  }
+  .tt-suggestion {
+      font-size: 18px;
+      line-height: 24px;
+      padding: 3px 20px;
+  }
+  .tt-suggestion.tt-cursor {
+      background-color: #0097CF;
+      color: #FFFFFF;
+  }
+  .tt-suggestion p {
+      margin: 0;
+  }
+  .tt-dropdown-menu, .gist {
+      text-align: left;
+  }
+  /*
+  html {
+      overflow-y: scroll;
+  }
+  .container {
+      margin: 0 auto;
+      max-width: 750px;
+      text-align: center;
+  }
+
+  html {
+      color: #333333;
+      font-family:"Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 18px;
+      line-height: 1.2;
+  }
+  .title, .example-name {
+      font-family: Prociono;
+  }
+  p {
+      margin: 0 0 10px;
+  }
+  .title {
+      font-size: 64px;
+      margin: 20px 0 0;
+  }
+  .example {
+      padding: 30px 0;
+  }
+  .example-name {
+      font-size: 32px;
+      margin: 20px 0;
+  }
+  .demo {
+      margin: 50px 0;
+      position: relative;
+  }
+  */
+  /*
+  .gist {
+      font-size: 14px;
+  }
+  .example-twitter-oss .tt-suggestion {
+      padding: 8px 20px;
+  }
+  .example-twitter-oss .tt-suggestion + .tt-suggestion {
+      border-top: 1px solid #CCCCCC;
+  }
+  .example-twitter-oss .repo-language {
+      float: right;
+      font-style: italic;
+  }
+  .example-twitter-oss .repo-name {
+      font-weight: bold;
+  }
+  .example-twitter-oss .repo-description {
+      font-size: 14px;
+  }
+  .example-sports .league-name {
+      border-bottom: 1px solid #CCCCCC;
+      margin: 0 20px 5px;
+      padding: 3px 0;
+  }
+  .example-arabic .tt-dropdown-menu {
+      text-align: right;
+  }
+  */

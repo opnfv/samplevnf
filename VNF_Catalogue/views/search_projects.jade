@@ -1,0 +1,96 @@
+extends layout
+
+//
+  Copyright (c) 2017 Kumar Rishabh and others.
+  All rights reserved. This program and the accompanying materials
+  are made available under the terms of the Apache License, Version 2.0
+  which accompanies this distribution, and is available at
+  http://www.apache.org/licenses/LICENSE-2.0
+block search
+  include search
+block add_project
+  include add_project
+block content
+  .col.s12.pagination
+    #pagination-long
+  .content#content
+    each key, index in json
+      .container.container-custom
+        .card.card-shadow-custom.horizontal
+          .row.row-custom
+            .col.s5.card-title-div-custom
+              span.card-title.card-title-span-custom 
+                a.custom-href(href='/project_profile?vnf_id=#{key.vnf_id}') 
+                  | #{key.vnf_name}
+            .col.s5.card-title-div-custom
+              i.material-icons grade
+              span.card-title PenguinScore: 42
+            .col.s2.card-title-div-custom-right
+              form(action='#')
+                input#search_result_1(type='checkbox', name='#{key.vnf_name}')
+                label(for='search_result_1') Compare
+            //
+              <div class="card-action">
+              <a href="#">This is a link</a>
+              </div>
+            .col.s4.card-image.card-image-custom
+              img.img-size.card-image-picture-custom(src='/uploads/#{key.photo_url}')
+            .col.s8.card-stacked
+              .card-content
+                p
+                  .collection.collection-custom
+                    a.collection-item(href='#!')
+                      span
+                        i.material-icons code
+                        |                             Lines Of Code: #{key.lines_of_code}
+                    a.collection-item(href='#!')
+                      span
+                        i.material-icons person
+                        |                             Number of Developers: #{key.no_of_developers}
+                    a.collection-item(href='#!')
+                      span
+                        i.material-icons star
+                        |                             Number of Stars: #{key.no_of_stars}
+                    a.collection-item(href='#!')
+                      span
+                        i.material-icons description
+                        |                             Number of Versions: #{key.versions}
+              .card-action
+                | Tags: 
+                each tag, index in key.tags
+                  .chip
+                    a.a-custom(href='/search_projects?tags=#{tag.tag_name}') #{tag.tag_name}
+                //
+                  .chip
+                    a.a-custom(href='#!') tag1
+                  .chip
+                    a.a-custom(href='#!') Tag2
+                  .chip
+                    a.a-custom(href='#!') Tag3
+                  .chip
+                    a.a-custom(href='#!') Tag4
+                  .chip
+                    a.a-custom(href='#!') Tag5
+                a.a-custom-more(href='/project_profile?vnf_id=#{key.vnf_id}') more
+            .divider
+            .card-action-custom.col.s12.card-action
+              | License: 
+              a(href='#') #{key.license}
+              | Complexity: 
+              a(href='#') Atomic
+              | Activity: 
+              a(href='#') Medium
+              | OPNFV Indicator: 
+              a(href='#') #{key.opnfv_indicator}
+  footer
+    | © 2017 XYZ Company
+    link(rel='stylesheet', href='/stylesheets/search_projects.css')
+    script(type='text/javascript', src='/3rd_party/materialize-pagination.js')
+    script(type='text/javascript', src='/javascripts/search_results.js')
+    style(type='text/css').
+      div.pagination{
+        margin-top: 1em;
+      }
+      div.pagination li {
+        width: 40px;
+      }

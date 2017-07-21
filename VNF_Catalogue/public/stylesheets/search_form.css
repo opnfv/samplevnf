@@ -1,0 +1,58 @@
+/*******************************************************************************
+ * Copyright (c) 2017 Kumar Rishabh and others.
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Apache License, Version 2.0
+ * which accompanies this distribution, and is available at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *******************************************************************************/
+
+input.search-input-rest
+{
+  font-weight: 400;
+  margin: 0px 0;
+  height: 30px;
+  padding: 10px 30px;
+    min-width: 90%;
+    max-width: 90%;
+  /*max-width: 500px;
+  */
+  border-radius: 5px;
+  border: 2px solid #333333;
+  box-shadow: 0 0 15px 1px rgba(0,0,0,0.50);
+  color: #333333;
+  font-size: 22px;
+}
+.material-search-custom {
+  left : -30px;
+
+  padding-left: 10px;
+}
+.form-group-custom {
+  width : 400px;
+  position: relative;
+  float: right;
+  left: -40%;
+}
+.form-control-custom {
+  padding-top: 10px;
+  padding-left: 50px;
+}
+input[type="search"]:focus:not([readonly]) {
+  transition: all 0s !important;
+  border-radius: 5px;
+  border: 2px solid #333333;
+  box-shadow: 0 0 15px 1px rgba(0,0,0,0.50);
+  color: #333333;
+}
+.gray {
+  background: rgb(249,249,249);
+}
+span.glyphicon.glyphicon-search.form-control-feedback,
+    div.form-group-custom i.material-icons {
+      top: 0.5em;
+      left: 16.0em;
+      cursor:pointer;
+      z-index: 30;
+      position: absolute;
+}
