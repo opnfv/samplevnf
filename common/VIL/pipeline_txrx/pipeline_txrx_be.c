@@ -32,7 +32,7 @@
 #include "app.h"
 #include "lib_icmpv6.h"
 
-uint8_t TXRX_DEBUG;
+uint8_t TXRX_DEBUG = 0;
 int pkt_burst_cnt;
 
 
