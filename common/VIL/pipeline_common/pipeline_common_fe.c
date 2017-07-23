@@ -553,8 +553,8 @@ extern uint32_t nd_route_tbl_index;
 /*
  * This implements route add entries for ipv4
  */
-int app_routeadd_config_ipv4(struct app_params *app, uint32_t port_id,
-uint32_t ip, uint32_t mask)
+int app_routeadd_config_ipv4(__attribute__((unused)) struct app_params *app,
+	uint32_t port_id, uint32_t ip, uint32_t mask)
 {
 	if (port_id > MAX_PORTS) {
 		printf("Max ports allowed is %d\n", MAX_PORTS);
@@ -580,8 +580,8 @@ uint32_t ip, uint32_t mask)
 /*
  * This implements route add entries for ipv6
  */
-int app_routeadd_config_ipv6(struct app_params *app, uint32_t port_id,
-uint8_t ipv6[], uint32_t depth)
+int app_routeadd_config_ipv6(__attribute__((unused)) struct app_params *app,
+	uint32_t port_id, uint8_t ipv6[], uint32_t depth)
 {
 	int i;
 
@@ -626,14 +626,14 @@ cmd_routeadd_parsed(
         int status;
 
         uint32_t port_id = params->port_id;
-        uint32_t i, ip, depth, mask;
+	uint32_t i, ip = 0, depth = 0, mask = 0;
         uint8_t ipv6[16];
+
         if (params->ip.family == AF_INET) {
                 ip = rte_bswap32((uint32_t) params->ip.addr.ipv4.s_addr);
 				mask = strtoul(params->depth, NULL, 16);
 		printf("ip:%x mask:%x port_id:%d\n", ip, mask, port_id);
-	}
-        else {
+	} else {
                 memcpy(ipv6, params->ip.addr.ipv6.s6_addr, 16);
 				depth = atoi(params->depth);
 		for (i=0;i<16;i++)

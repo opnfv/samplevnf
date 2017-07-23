@@ -228,4 +228,10 @@ int
 app_link_config_ipv6(struct app_params *app,
 				 uint32_t link_id, uint8_t ipv6[], uint32_t depth);
 
+int app_routeadd_config_ipv4( __attribute__((unused)) struct app_params *app,
+	uint32_t port_id, uint32_t ip, uint32_t mask);
+
+int app_routeadd_config_ipv6( __attribute__((unused)) struct app_params *app,
+	uint32_t port_id, uint8_t ipv6[], uint32_t depth);
+
 #endif
