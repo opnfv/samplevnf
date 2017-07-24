@@ -14,13 +14,29 @@
 
 link 0 down
 link 0 config 202.16.100.10 8
+; link 0 config fec0:0000:0000:0000:6a05:caff:fe30:21a0 64
 link 0 up
+
 link 1 down
 link 1 config 172.16.40.10 8
+;link 1 config 2012:0000:0000:0000:6a05:caff:fe30:2071 64
 link 1 up
 
+; routeadd <port #> <nhip address in decimal> <Mask>
+routeadd 0 202.16.100.20 0xff000000
+routeadd 1 172.16.40.20 0xff000000
+
+;routeadd <port #> <ipv6 address in hex> <Depth>
+;routeadd 0 fec0::6a05:caff:fe30:21b0  64
+;routeadd 1 2012::6a05:caff:fe30:2081 64
+
+; IPv4 static ARP
 ;p 1 arpadd 1 172.16.40.20 00:00:00:00:00:04
 ;p 1 arpadd 0 202.16.100.20 00:00:00:00:00:01
+
+; IPv6 static ARP
+;p 1 arpadd 0 fec0::6a05:caff:fe30:21b0 00:00:00:00:00:01
+;p 1 arpadd 1 2012::6a05:caff:fe30:2081 00:00:00:00:00:04
 
 p action add 0 accept
 p action add 0 fwd 0
@@ -37,13 +53,18 @@ p action add 0 conntrack
 p action add 1 conntrack
 p action add 2 conntrack
 p action add 3 conntrack
-p action add 4 conntrack
-p action add 5 conntrack
-p action add 6 conntrack
-p action add 7 conntrack
 
+; IPv4 rules
 p vfw add 1 202.16.100.20 8 172.16.40.20 8 0 65535 67 69 0 0 2
 p vfw add 2 202.16.100.20 8 172.16.40.20 8 0 65535 0 65535 0 0 1
 p vfw add 2 172.16.40.20 8 202.16.100.20 8 0 65535 0 65535 0 0 0
 
+; IPv6 rules
+;p vfw add 1 fec0::6a05:caff:fe30:21b0 64 2012::6a05:caff:fe30:2081 64 0 65535 67 69 0 0 2
+;p vfw add 2 fec0::6a05:caff:fe30:21b0 64 2012::6a05:caff:fe30:2081 64 0 65535 0 65535 0 0 1
+;p vfw add 2 2012::6a05:caff:fe30:2081 64 fec0::6a05:caff:fe30:21b0 64 0 65535 0 65535 0 0 0
+
 p vfw applyruleset
+
+p 1 arpls 0
+p 1 arpls 1
