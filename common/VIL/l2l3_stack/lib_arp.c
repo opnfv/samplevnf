@@ -40,6 +40,7 @@
 #include "lib_arp.h"
 #include "l3fwd_lpm4.h"
 #include "vnf_common.h"
+#include "gateway.h"
 
 #if (RTE_BYTE_ORDER == RTE_LITTLE_ENDIAN)
 #define CHECK_ENDIAN_16(x) rte_be_to_cpu_16(x)
@@ -140,15 +141,6 @@ void update_nhip_access(uint8_t dest_if)
 	p_arp_data->update_tsc[dest_if] = rte_rdtsc();
 }
 
-/**
- * A structure defining the mbuf meta data for VFW.
- */
-struct mbuf_arp_meta_data {
-/* output port stored for RTE_PIPELINE_ACTION_PORT_META */
-       uint32_t output_port;
-       struct rte_mbuf *next;       /* next pointer for chained buffers */
-} __rte_cache_aligned;
-
 static struct arp_entry_data arp_entry_data_default = {
 	.status = COMPLETE,
 	.num_pkts = 0,
@@ -224,11 +216,6 @@ int timer_objs_mempool_count = 70000;
 
 #define MAX_NUM_ARP_ENTRIES 64
 #define MAX_NUM_ND_ENTRIES 64
-
-inline uint32_t get_nh(uint32_t, uint32_t *, struct ether_addr *addr);
-void get_nh_ipv6(uint8_t ipv6[], uint32_t *port, uint8_t nhipv6[],
-	 struct ether_addr *hw_addr);
-
 #define MAX_ARP_DATA_ENTRY_TABLE 7
 
 struct table_arp_entry_data arp_entry_data_table[MAX_ARP_DATA_ENTRY_TABLE] = {
@@ -258,73 +245,6 @@ struct table_nd_entry_data nd_entry_data_table[MAX_ND_DATA_ENTRY_TABLE] = {
 	 {6, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1}, 0},
 	{{0, 0, 0, 0, 0, 14}, 6, INCOMPLETE,
 	 {7, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1}, 0},
-};
-
-struct lib_nd_route_table_entry lib_nd_route_table[MAX_ND_RT_ENTRY] = {
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} },
-	{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0,
-	 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} }
 };
 
 void print_trace(void);
@@ -368,132 +288,48 @@ void print_trace(void)
 	free(strings);
 }
 
-uint32_t get_nh(uint32_t ip, uint32_t *port, struct ether_addr *addr)
-{
-	int i = 0;
-	for (i = 0; i < p_arp_data->lib_arp_route_ent_cnt; i++) {
-		if ((p_arp_data->lib_arp_route_table[i].nh_mask) ==
-				 (ip & p_arp_data->lib_arp_route_table[i].mask)) {
-
-			*port = p_arp_data->lib_arp_route_table[i].port;
-			if (arp_cache_dest_mac_present(*port))
-				ether_addr_copy(
-				get_local_link_hw_addr(*port,
-				p_arp_data->lib_arp_route_table[i].nh), addr);
-			return p_arp_data->lib_arp_route_table[i].nh;
-		}
-	}
-	lib_arp_no_nh_found++;
-	return 0;
-}
-
-/*ND IPv6 */
-void get_nh_ipv6(uint8_t ipv6[], uint32_t *port, uint8_t nhipv6[],
-struct ether_addr *hw_addr)
-{
-	int i = 0;
-	uint8_t netmask_ipv6[16], netip_nd[16], netip_in[16];
-	uint8_t k = 0, l = 0, depthflags = 0, depthflags1 = 0;
-	memset(netmask_ipv6, 0, sizeof(netmask_ipv6));
-	memset(netip_nd, 0, sizeof(netip_nd));
-	memset(netip_in, 0, sizeof(netip_in));
-	if (!ipv6)
-		return;
-	for (i = 0; i < MAX_ARP_RT_ENTRY; i++) {
-
-		convert_prefixlen_to_netmask_ipv6(lib_nd_route_table[i].depth,
-							netmask_ipv6);
-
-		for (k = 0; k < 16; k++) {
-			if (lib_nd_route_table[i].ipv6[k] & netmask_ipv6[k]) {
-				depthflags++;
-				netip_nd[k] = lib_nd_route_table[i].ipv6[k];
-			}
-		}
-
-		for (l = 0; l < 16; l++) {
-			if (ipv6[l] & netmask_ipv6[l]) {
-				depthflags1++;
-				netip_in[l] = ipv6[l];
-			}
-		}
-		int j = 0;
-		if ((depthflags == depthflags1)
-				&& (memcmp(netip_nd, netip_in, sizeof(netip_nd)) == 0)) {
-			//&& (lib_nd_route_table[i].port == port))
-			*port = lib_nd_route_table[i].port;
-			lib_nd_nh_found++;
-
-			for (j = 0; j < 16; j++)
-				nhipv6[j] = lib_nd_route_table[i].nhipv6[j];
-
-			if (nd_cache_dest_mac_present(*port)) {
-				ether_addr_copy(
-				get_nd_local_link_hw_addr(*port, nhipv6),
-				(struct ether_addr *)hw_addr);
-			}
-			return;
-		}
-
-		if (NDIPV6_DEBUG)
-			printf("No nh match\n");
-		depthflags = 0;
-		depthflags1 = 0;
-	}
-	if (NDIPV6_DEBUG)
-		printf("No NH - ip 0x%x, \n", ipv6[0]);
-	lib_nd_no_nh_found++;
-}
 
 /* Added for Multiport changes*/
-struct arp_entry_data *get_dest_mac_addr_port(const uint32_t ipaddr,
-				 uint32_t *phy_port, struct ether_addr *hw_addr)
+struct arp_entry_data *get_dest_mac_addr_ipv4(const uint32_t nhip,
+				 uint32_t phy_port, struct ether_addr *hw_addr)
 {
 	struct arp_entry_data *ret_arp_data = NULL;
-	uint32_t nhip = 0;
 	uint8_t index;
-
-	nhip = get_nh(ipaddr, phy_port, hw_addr);
-	if (unlikely(nhip == 0)) {
-		if (ARPICMP_DEBUG)
-			printf("ARPICMP no nh found for ip %x, port %d\n",
-						 ipaddr, *phy_port);
-		return ret_arp_data;
-	}
 
 	/* as part of optimization we store mac address in cache
 	 * & thus can be sent without having to retrieve
 	 */
-	if (arp_cache_dest_mac_present(*phy_port)) {
+	if (arp_cache_dest_mac_present(phy_port)) {
+		ether_addr_copy(get_local_cache_hw_addr(phy_port, nhip), hw_addr);
 		return &arp_entry_data_default;
 	}
 
 	struct arp_key_ipv4 tmp_arp_key;
-	tmp_arp_key.port_id = *phy_port;	/* Changed for Multi Port */
+	tmp_arp_key.port_id = phy_port;	/* Changed for Multi Port */
 	tmp_arp_key.ip = nhip;
 
 	if (ARPICMP_DEBUG)
 		printf("%s: nhip: %x, phyport: %d\n", __FUNCTION__, nhip,
-					 *phy_port);
+					 phy_port);
 
 	ret_arp_data = retrieve_arp_entry(tmp_arp_key, DYNAMIC_ARP);
 	if (ret_arp_data == NULL) {
-	        if (ARPICMP_DEBUG && ipaddr)
+	        if (ARPICMP_DEBUG && nhip)
                 {
                        RTE_LOG(INFO, LIBARP,"ARPICMP no arp entry found for ip %x,"
-			" port %u\n", ipaddr, *phy_port);
+				       " port %u\n", nhip, phy_port);
                        print_arp_table();
                 }
 		lib_arp_no_arp_entry_found++;
 	} else if (ret_arp_data->status == COMPLETE) {
 		rte_rwlock_write_lock(&ret_arp_data->queue_lock);
                 ether_addr_copy(&ret_arp_data->eth_addr, hw_addr);
-		p_arp_data->arp_cache_hw_laddr_valid[*phy_port] = 1;
-		index = p_arp_data->arp_local_cache[*phy_port].num_nhip;
-		p_arp_data->arp_local_cache[*phy_port].nhip[index] = nhip;
+		p_arp_data->arp_cache_hw_laddr_valid[phy_port] = 1;
+		index = p_arp_data->arp_local_cache[phy_port].num_nhip;
+		p_arp_data->arp_local_cache[phy_port].nhip[index] = nhip;
 		ether_addr_copy(hw_addr,
-		 &p_arp_data->arp_local_cache[*phy_port].link_hw_laddr[index]);
-		p_arp_data->arp_local_cache[*phy_port].num_nhip++;
+                     &p_arp_data->arp_local_cache[phy_port].link_hw_laddr[index]);
+		p_arp_data->arp_local_cache[phy_port].num_nhip++;
 		rte_rwlock_write_unlock(&ret_arp_data->queue_lock);
 		lib_arp_arp_entry_found++;
 		if (ARPICMP_DEBUG)
@@ -501,43 +337,26 @@ struct arp_entry_data *get_dest_mac_addr_port(const uint32_t ipaddr,
         }
 
 	if (ret_arp_data)
-		p_arp_data->update_tsc[*phy_port] = rte_rdtsc();
+		p_arp_data->update_tsc[phy_port] = rte_rdtsc();
 
 	 return ret_arp_data;
 }
 
-struct nd_entry_data *get_dest_mac_address_ipv6_port(uint8_t ipv6addr[],
-			 uint32_t *phy_port, struct ether_addr *hw_addr, uint8_t nhipv6[])
+
+struct nd_entry_data *get_dest_mac_addr_ipv6(uint8_t nhipv6[],
+			 uint32_t phy_port, struct ether_addr *hw_addr)
 {
-	int i = 0, j = 0, flag = 0;
+	int i = 0;
 	uint8_t index;
 	lib_nd_get_mac_req++;
 
-	get_nh_ipv6(ipv6addr, phy_port, nhipv6, hw_addr);
-	for (j = 0; j < 16; j++) {
-		if (nhipv6[j])
-			flag++;
-	}
-
-	if (flag == 0) {
-		if (NDIPV6_DEBUG)
-			printf("NDIPV6 no nh found for ipv6 "
-						 "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
-						 "%02x%02x%02x%02x%02x%02x, port %d\n",
-						 ipv6addr[0], ipv6addr[1], ipv6addr[2],
-						 ipv6addr[3], ipv6addr[4], ipv6addr[5],
-						 ipv6addr[6], ipv6addr[7], ipv6addr[8],
-						 ipv6addr[9], ipv6addr[10], ipv6addr[11],
-						 ipv6addr[12], ipv6addr[13], ipv6addr[14],
-						 ipv6addr[15], *phy_port);
-		return 0;
-	}
-
 	struct nd_entry_data *ret_nd_data = NULL;
 	struct nd_key_ipv6 tmp_nd_key;
-	tmp_nd_key.port_id = *phy_port;
+	tmp_nd_key.port_id = phy_port;
 
-	if (nd_cache_dest_mac_present(*phy_port)) {
+	if (nd_cache_dest_mac_present(phy_port)) {
+		ether_addr_copy(get_nd_local_link_hw_addr(
+					(uint8_t)phy_port, nhipv6), hw_addr);
 		return &nd_entry_data_default;
 	}
 
@@ -548,28 +367,29 @@ struct nd_entry_data *get_dest_mac_address_ipv6_port(uint8_t ipv6addr[],
 	ret_nd_data = retrieve_nd_entry(tmp_nd_key, DYNAMIC_ND);
 	if (ret_nd_data == NULL) {
 		if (NDIPV6_DEBUG) {
-			printf("NDIPV6 no nd entry found for ip %x, port %d\n",
-						 ipv6addr[0], *phy_port);
+			printf("NDIPV6 no entry found for ip %x, port %d\n",
+						 nhipv6[0], phy_port);
 		}
 		lib_nd_no_arp_entry_found++;
 		return NULL;
 	} else if (ret_nd_data->status == COMPLETE) {
 		rte_rwlock_write_lock(&ret_nd_data->queue_lock);
 		ether_addr_copy(&ret_nd_data->eth_addr, hw_addr);
-		p_arp_data->nd_cache_hw_laddr_valid[*phy_port] = 1;
-		index = p_arp_data->nd_local_cache[*phy_port].num_nhip;
-		rte_mov16(&p_arp_data->nd_local_cache[*phy_port].nhip[index][0],
-				 &nhipv6[0]);
+		p_arp_data->nd_cache_hw_laddr_valid[phy_port] = 1;
+		index = p_arp_data->nd_local_cache[phy_port].num_nhip;
+		for (i=0; i<16; i++) {
+			p_arp_data->nd_local_cache[phy_port].nhip[index][i] = nhipv6[i];
+		}
 		ether_addr_copy(hw_addr,
-			&p_arp_data->nd_local_cache[*phy_port].link_hw_laddr[index]);
-		p_arp_data->nd_local_cache[*phy_port].num_nhip++;
+			&p_arp_data->nd_local_cache[phy_port].link_hw_laddr[index]);
+		p_arp_data->nd_local_cache[phy_port].num_nhip++;
 
 		lib_nd_nd_entry_found++;
 		rte_rwlock_write_unlock(&ret_nd_data->queue_lock);
 	}
 
 	if (ret_nd_data)
-		p_arp_data->update_tsc[*phy_port] = rte_rdtsc();
+		p_arp_data->update_tsc[phy_port] = rte_rdtsc();
 
 	return ret_nd_data;
 }
@@ -822,8 +642,7 @@ struct arp_entry_data *retrieve_arp_entry(struct arp_key_ipv4 arp_key, uint8_t m
 							 (void **)&ret_arp_data);
 	if (ret < 0 && (mode == DYNAMIC_ARP)) {
 	        if (ARPICMP_DEBUG)
-			RTE_LOG(INFO, LIBARP, "ARP entry not found for ip 0x%x\n",
-				arp_key.ip);
+			RTE_LOG(INFO, LIBARP, "ARP entry not found for ip 0x%x\n",arp_key.ip);
 
 		/* add INCOMPLETE arp entry */
 		ret_arp_data = rte_malloc_socket(NULL, sizeof(struct arp_entry_data),
@@ -1045,10 +864,10 @@ void print_arp_table(void)
 	void *next_data;
 	uint32_t iter = 0;
 
-	printf("------------------------ ARP CACHE ------------------------------------\n");
-	printf("-----------------------------------------------------------------------\n");
+	printf ("------------------------ ARP CACHE -----------------------------------------\n");
+	printf ("----------------------------------------------------------------------------\n");
 	printf("\tport  hw addr            status     ip addr\n");
-	printf("-----------------------------------------------------------------------\n");
+	printf ("----------------------------------------------------------------------------\n");
 
 	while (rte_hash_iterate(arp_hash_handle, &next_key, &next_data, &iter)
 				 >= 0) {
@@ -1057,9 +876,9 @@ void print_arp_table(void)
 				(struct arp_entry_data *)next_data;
 		struct arp_key_ipv4 tmp_arp_key;
 		memcpy(&tmp_arp_key, next_key, sizeof(struct arp_key_ipv4));
-		printf("\t%4d  %02X:%02X:%02X:%02X:%02X:%02X"
-			"  %10s %d.%d.%d.%d\n",
-				 tmp_arp_data->port, tmp_arp_data->eth_addr.addr_bytes[0],
+		printf("\t%4d  %02X:%02X:%02X:%02X:%02X:%02X  %10s      %d.%d.%d.%d\n",
+				 tmp_arp_data->port,
+				 tmp_arp_data->eth_addr.addr_bytes[0],
 				 tmp_arp_data->eth_addr.addr_bytes[1],
 				 tmp_arp_data->eth_addr.addr_bytes[2],
 				 tmp_arp_data->eth_addr.addr_bytes[3],
@@ -1073,22 +892,24 @@ void print_arp_table(void)
 	}
 
 	uint32_t i = 0;
-	printf("\nARP routing table has %d entries\n", p_arp_data->lib_arp_route_ent_cnt);
-	printf("\nIP_Address    Mask          Port    NH_IP_Address\n");
-	for (i = 0; i < p_arp_data->lib_arp_route_ent_cnt; i++) {
-		printf("0x%x    0x%x    %d       0x%x\n",
-					 p_arp_data->lib_arp_route_table[i].ip,
-					 p_arp_data->lib_arp_route_table[i].mask,
-					 p_arp_data->lib_arp_route_table[i].port,
-					 p_arp_data->lib_arp_route_table[i].nh);
-	}
+	uint32_t j = 0;
 
-	printf("\nARP Stats: Total Queries %u, ok_NH %u, no_NH %u, ok_Entry %u,"
-		" no_Entry %u, PopulateCall %u, Del %u, Dup %u\n",
-			 lib_arp_get_mac_req, lib_arp_nh_found, lib_arp_no_nh_found,
-			 lib_arp_arp_entry_found, lib_arp_no_arp_entry_found,
-			 lib_arp_populate_called, lib_arp_delete_called,
-			 lib_arp_duplicate_found);
+	printf("\nARP routing table...\n");
+	printf("\nIP_Address \t Mask \t\t Port\n");
+	for (j = 0; j < gw_get_num_ports(); j++) {
+		for (i = 0; i < p_route_data[j]->route_ent_cnt; i++) {
+			printf("0x%08x \t 0x%08x \t %d\n",
+					p_route_data[j]->route_table[i].nh,
+					p_route_data[j]->route_table[i].mask,
+					p_route_data[j]->route_table[i].port);
+		}
+	}
+	printf("\nARP Stats: Total Queries %u, ok_NH %u, no_NH %u, ok_Entry %u, "
+		 "no_Entry %u, PopulateCall %u, Del %u, Dup %u\n",
+		 lib_arp_get_mac_req, lib_arp_nh_found, lib_arp_no_nh_found,
+		 lib_arp_arp_entry_found, lib_arp_no_arp_entry_found,
+		 lib_arp_populate_called, lib_arp_delete_called,
+		 lib_arp_duplicate_found);
 
 	printf("ARP table key len is %lu\n", sizeof(struct arp_key_ipv4));
 }
@@ -1099,11 +920,13 @@ void print_nd_table(void)
 	const void *next_key;
 	void *next_data;
 	uint32_t iter = 0;
-	uint8_t ii = 0, j = 0, k = 0;
-	printf("-----------------------------------------------------------------------\n");
+	uint8_t ii = 0, k = 0;
+	printf
+			("------------------------------------------------------------------------------------------------------\n");
 	printf("\tport  hw addr            status         ip addr\n");
 
-	printf("-----------------------------------------------------------------------\n");
+	printf
+			("------------------------------------------------------------------------------------------------------\n");
 	while (rte_hash_iterate(nd_hash_handle, &next_key, &next_data, &iter) >=
 				 0) {
 
@@ -1111,7 +934,7 @@ void print_nd_table(void)
 				(struct nd_entry_data *)next_data;
 		struct nd_key_ipv6 tmp_nd_key;
 		memcpy(&tmp_nd_key, next_key, sizeof(struct nd_key_ipv6));
-		printf("\t%4d  %02X:%02X:%02X:%02X:%02X:%02X  %10s\n",
+		printf("\t%4d  %02X:%02X:%02X:%02X:%02X:%02X  %10s",
 					 tmp_nd_data->port,
 					 tmp_nd_data->eth_addr.addr_bytes[0],
 					 tmp_nd_data->eth_addr.addr_bytes[1],
@@ -1120,7 +943,7 @@ void print_nd_table(void)
 					 tmp_nd_data->eth_addr.addr_bytes[4],
 					 tmp_nd_data->eth_addr.addr_bytes[5],
 					 arp_status[tmp_nd_data->status]);
-		printf("\t\t\t\t\t\t");
+		printf("\t");
 		for (ii = 0; ii < ND_IPV6_ADDR_SIZE; ii += 2) {
 			printf("%02X%02X ", tmp_nd_data->ipv6[ii],
 						 tmp_nd_data->ipv6[ii + 1]);
@@ -1129,30 +952,24 @@ void print_nd_table(void)
 	}
 
 	uint32_t i = 0;
-	printf("\n\nND IPV6 routing table has %d entries\n",
-				 nd_route_tbl_index);
-	printf("\nIP_Address						Depth");
-	printf("          Port				NH_IP_Address\n");
-	for (i = 0; i < nd_route_tbl_index; i++) {
-		printf("\n");
+	printf("\n\nND IPV6 routing table ...\n");
+	printf ("\nNH_IP_Address					Depth          Port \n");
+	for(uint32_t p = 0; p < gw_get_num_ports(); p++ ) {
+		for (i = 0; i < p_nd_route_data[p]->nd_route_ent_cnt; i++) {
+			//		printf("\n");
 
-		for (j = 0; j < ND_IPV6_ADDR_SIZE; j += 2) {
-			RTE_LOG(INFO, LIBARP, "%02X%02X ",
-				lib_nd_route_table[i].ipv6[j],
-				lib_nd_route_table[i].ipv6[j + 1]);
-		}
+			for (k = 0; k < ND_IPV6_ADDR_SIZE; k += 2) {
+				printf("%02X%02X ", p_nd_route_data[p]->nd_route_table[i].nhipv6[k],
+						p_nd_route_data[p]->nd_route_table[i].nhipv6[k + 1]);
+			}
 
-		printf
-				("\n\t\t\t			%d					 %d					\n",
-				 lib_nd_route_table[i].depth, lib_nd_route_table[i].port);
-		printf("\t\t\t\t\t\t\t\t\t");
-		for (k = 0; k < ND_IPV6_ADDR_SIZE; k += 2) {
-			printf("%02X%02X ", lib_nd_route_table[i].nhipv6[k],
-						 lib_nd_route_table[i].ipv6[k + 1]);
+			printf("\t%d		%d					\n",
+					p_nd_route_data[p]->nd_route_table[i].depth,
+					p_nd_route_data[p]->nd_route_table[i].port);
 		}
 	}
-	printf("\nND IPV6 Stats: \nTotal Queries %u, ok_NH %u,"
-		" no_NH %u, ok_Entry %u, no_Entry %u, PopulateCall %u, Del %u, Dup %u\n",
+	printf ("\nND IPV6 Stats: \nTotal Queries %u, ok_NH %u, no_NH %u, ok_Entry %u, "
+			"no_Entry %u, PopulateCall %u, Del %u, Dup %u\n",
 			 lib_nd_get_mac_req, lib_nd_nh_found, lib_nd_no_nh_found,
 			 lib_nd_nd_entry_found, lib_nd_no_arp_entry_found,
 			 lib_nd_populate_called, lib_nd_delete_called,
@@ -1249,6 +1066,7 @@ arp_send_buffered_pkts(struct arp_entry_data *ret_arp_data,
 		tmp = pkt;
 		rte_pktmbuf_free(tmp);
 	}
+	printf("arp send buffered pkts = %d\n",ret_arp_data->num_pkts);
 	ret_arp_data->num_pkts = 0;
 	rte_rwlock_write_unlock(&ret_arp_data->queue_lock);
 }
@@ -1501,7 +1319,8 @@ void populate_nd_entry(const struct ether_addr *hw_addr, uint8_t ipv6[],
 	}
 
 	if (mode == DYNAMIC_ND) {
-		if (new_nd_data && is_same_ether_addr(&new_nd_data->eth_addr, hw_addr)) {
+		if (new_nd_data
+				&& is_same_ether_addr(&new_nd_data->eth_addr, hw_addr)) {
 
 			if (NDIPV6_DEBUG) {
 				RTE_LOG(INFO, LIBARP,
@@ -2410,11 +2229,10 @@ static int arp_parse_args(struct pipeline_params *params)
 		}
 
 		/* arp_route_tbl */
-		if (strcmp(arg_name, "arp_route_tbl") == 0) {
+		if (strcmp(arg_name, "route_default_gw_ipv4") == 0) {
 			arp_route_tbl_present = 1;
-
-			uint32_t dest_ip = 0, mask = 0, tx_port = 0, nh_ip =
-					0, i = 0, j = 0, k = 0, l = 0;
+			uint32_t dest_ip = 0, mask = 0, tx_port = 0, nh_ip = 0,
+				 i = 0, j = 0, k = 0;
 			uint32_t arp_route_tbl_str_max_len = 10;
 			char dest_ip_str[arp_route_tbl_str_max_len];
 			char mask_str[arp_route_tbl_str_max_len];
@@ -2425,11 +2243,11 @@ static int arp_parse_args(struct pipeline_params *params)
 				i = 0;
 				while ((i < (arp_route_tbl_str_max_len - 1))
 							 && (token[i] != ',')) {
-					dest_ip_str[i] = token[i];
+					nh_ip_str[i] = token[i];
 					i++;
 				}
-				dest_ip_str[i] = '\0';
-				dest_ip = strtoul(dest_ip_str, NULL, 16);
+				nh_ip_str[i] = '\0';
+				nh_ip = strtoul(nh_ip_str, NULL, 16);
 
 				i++;
 				j = 0;
@@ -2452,19 +2270,11 @@ static int arp_parse_args(struct pipeline_params *params)
 				tx_port = strtoul(tx_port_str, NULL, 16);	//atoi(tx_port_str);
 
 				k++;
-				l = 0;
-				while ((l < (arp_route_tbl_str_max_len - 1))
-							 && (token[i + j + k + l] != ')')) {
-					nh_ip_str[l] = token[i + j + k + l];
-					l++;
-				}
-				nh_ip_str[l] = '\0';
-				nh_ip = strtoul(nh_ip_str, NULL, 16);	//atoi(nh_ip_str);
 
 				if (1) {
 					RTE_LOG(INFO, LIBARP, "token: %s, "
 						"dest_ip_str: %s, dest_ip %u, "
-						"mask_str: %s, mask %u, "
+						"mask_str: %s, mask %x, "
 						"tx_port_str: %s, tx_port %u, "
 						"nh_ip_str: %s, nh_ip %u\n",
 						token, dest_ip_str, dest_ip,
@@ -2480,15 +2290,15 @@ static int arp_parse_args(struct pipeline_params *params)
 					 }
 				 */
 				//Populate the static arp_route_table
-			        struct lib_arp_route_table_entry *lentry =
-		                &p_arp_data->lib_arp_route_table
-				[p_arp_data->lib_arp_route_ent_cnt];
-				lentry->ip = dest_ip;
+
+			        struct route_table_entry *lentry =
+		                &p_route_data[tx_port]->route_table
+				[p_route_data[tx_port]->route_ent_cnt];
 				lentry->mask = mask;
 				lentry->port = tx_port;
 				lentry->nh = nh_ip;
 				lentry->nh_mask = nh_ip & mask;
-				p_arp_data->lib_arp_route_ent_cnt++;
+				p_route_data[tx_port]->route_ent_cnt++;
 				token = strtok(NULL, "(");
 			}
 
@@ -2496,13 +2306,13 @@ static int arp_parse_args(struct pipeline_params *params)
 		}
 		/*ND IPv6 */
 		/* nd_route_tbl */
-		if (strcmp(arg_name, "nd_route_tbl") == 0) {
+		if (strcmp(arg_name, "route_default_gw_ipv6") == 0) {
 			nd_route_tbl_present = 1;
 
-			uint8_t dest_ipv6[16], depth = 0, tx_port =
-					0, nh_ipv6[16], i = 0, j = 0, k = 0, l = 0;
+			uint8_t depth = 0, tx_port = 0, nh_ipv6[16];
+			uint8_t i = 0, j = 0, k = 0;
 			uint8_t nd_route_tbl_str_max_len = 128;	//64;
-			char dest_ipv6_str[nd_route_tbl_str_max_len];
+//			char dest_ipv6_str[nd_route_tbl_str_max_len];
 			char depth_str[nd_route_tbl_str_max_len];
 			char tx_port_str[nd_route_tbl_str_max_len];
 			char nh_ipv6_str[nd_route_tbl_str_max_len];
@@ -2511,13 +2321,12 @@ static int arp_parse_args(struct pipeline_params *params)
 				i = 0;
 				while ((i < (nd_route_tbl_str_max_len - 1))
 							 && (token[i] != ',')) {
-					dest_ipv6_str[i] = token[i];
+					nh_ipv6_str[i] = token[i];
 					i++;
 				}
-				dest_ipv6_str[i] = '\0';
-				my_inet_pton_ipv6(AF_INET6, dest_ipv6_str,
-							&dest_ipv6);
-
+				nh_ipv6_str[i] = '\0';
+				my_inet_pton_ipv6(AF_INET6, nh_ipv6_str,
+							&nh_ipv6);
 				i++;
 				j = 0;
 				while ((j < (nd_route_tbl_str_max_len - 1))
@@ -2542,31 +2351,19 @@ static int arp_parse_args(struct pipeline_params *params)
 				tx_port = strtoul(tx_port_str, NULL, 16);	//atoi(tx_port_str);
 
 				k++;
-				l = 0;
-				while ((l < (nd_route_tbl_str_max_len - 1))
-							 && (token[i + j + k + l] != ')')) {
-					nh_ipv6_str[l] = token[i + j + k + l];
-					l++;
-				}
-				nh_ipv6_str[l] = '\0';
-				my_inet_pton_ipv6(AF_INET6, nh_ipv6_str,
-							&nh_ipv6);
+				struct nd_route_table_entry *lentry =
+					&p_nd_route_data[tx_port]->nd_route_table
+				[p_nd_route_data[tx_port]->nd_route_ent_cnt];
 
 				//Populate the static arp_route_table
-				for (i = 0; i < 16; i++) {
-					lib_nd_route_table
-							[nd_route_tbl_index].ipv6[i] =
-							dest_ipv6[i];
-					lib_nd_route_table
-							[nd_route_tbl_index].nhipv6[i] =
-							nh_ipv6[i];
-				}
-				lib_nd_route_table[nd_route_tbl_index].depth =
-						depth;
-				lib_nd_route_table[nd_route_tbl_index].port =
-						tx_port;
+				for (i = 0; i < 16; i++)
+					lentry->nhipv6[i] = nh_ipv6[i];
 
-				nd_route_tbl_index++;
+				lentry->depth = depth;
+				lentry->port = tx_port;
+
+				p_nd_route_data[tx_port]->nd_route_ent_cnt++;
+
 				token = strtok(NULL, "(");
 			}
 
@@ -2614,13 +2411,19 @@ struct ether_addr *get_nd_local_link_hw_addr(uint8_t out_port, uint8_t nhip[])
 		}
 
                 x = &p_arp_data->nd_local_cache[out_port].link_hw_laddr[i];
+
+		if(ARPICMP_DEBUG) {
+			for (j = 0; j < 6; j++)
+			    printf("%d  %d", x->addr_bytes[j],
+				p_arp_data->nd_local_cache[out_port].link_hw_laddr[i].addr_bytes[j]);
+		}
 		return x;
         }
 
 	return x;
 }
 
-struct ether_addr *get_local_link_hw_addr(uint8_t out_port, uint32_t nhip)
+struct ether_addr *get_local_cache_hw_addr(uint8_t out_port, uint32_t nhip)
 {
         int i, limit;
 	uint32_t tmp;
@@ -2642,7 +2445,7 @@ void lib_arp_init(struct pipeline_params *params,
 
 	int i;
 	uint32_t size;
-	struct pipeline_cgnapt *p;
+	struct arp_data *p;
 
 	RTE_LOG(INFO, LIBARP, "ARP initialization ...\n");
 
@@ -2799,7 +2602,7 @@ void arp_timer_callback(struct rte_timer *timer, void *arg)
 			rte_rwlock_write_lock(&ret_arp_data->queue_lock);
 			if (ret_arp_data->status == PROBE ||
 				ret_arp_data->status == INCOMPLETE) {
-				if (ret_arp_data->retry_count == 3) {
+				if (ret_arp_data->retry_count == ARP_RETRY_COUNT) {
 					remove_arp_entry(ret_arp_data, arg);
 				} else {
 					ret_arp_data->retry_count++;
@@ -2912,7 +2715,7 @@ void nd_timer_callback(struct rte_timer *timer, void *arg)
 			rte_rwlock_write_lock(&ret_nd_data->queue_lock);
 			if (ret_nd_data->status == PROBE ||
 				ret_nd_data->status == INCOMPLETE) {
-				if (ret_nd_data->retry_count == 3) {
+				if (ret_nd_data->retry_count == ARP_RETRY_COUNT) {
 					remove_nd_entry_ipv6(ret_nd_data, arg);
 				} else {
 					ret_nd_data->retry_count++;
