@@ -33,6 +33,7 @@
 #include "pipeline_common_fe.h"
 #include "interface.h"
 #include "lib_arp.h"
+#include "gateway.h"
 
 int
 app_pipeline_ping(struct app_params *app,
@@ -546,7 +547,6 @@ struct cmd_routeadd_config_result {
         cmdline_fixed_string_t depth;
 };
 
-extern struct lib_nd_route_table_entry lib_nd_route_table[MAX_ND_RT_ENTRY];
 extern struct arp_data *p_arp_data;
 extern uint32_t nd_route_tbl_index;
 
@@ -563,12 +563,10 @@ int app_routeadd_config_ipv4(__attribute__((unused)) struct app_params *app,
 
 	printf("port id:%d ip: %x mask:%x", port_id, ip, mask);
 
-	struct lib_arp_route_table_entry *lentry =
-		&p_arp_data->lib_arp_route_table
-		[port_id];
-		if (!lentry->ip)
-			p_arp_data->lib_arp_route_ent_cnt++;
-		lentry->ip = ip;
+	struct route_table_entry *lentry =
+		&p_route_data->route_table[port_id];
+		if (!lentry->nh)
+			p_route_data->route_ent_cnt++;
 		lentry->mask = mask;
 		lentry->port = port_id;
 		lentry->nh = ip;
@@ -594,17 +592,15 @@ int app_routeadd_config_ipv6(__attribute__((unused)) struct app_params *app,
 		nd_route_tbl_index++;
 
 	printf("port id:%d depth:%d\n", port_id, depth);
-	printf("ipv6 address ");
-	for (i = 0; i < 16; i++) {
-		lib_nd_route_table[port_id].ipv6[i] = ipv6[i];
-		lib_nd_route_table[port_id].nhipv6[i] = ipv6[i];
-		printf("%x ", ipv6[i]);
-	}
+	printf("ipv6 address: ");
+	for(i = 0; i < IPV6_ADD_SIZE; i++)
+		printf("%02x ", ipv6[i]);
 	printf("\n");
 
+	rte_mov16(p_nd_route_data->nd_route_table[port_id].nhipv6, ipv6);
 
-	lib_nd_route_table[port_id].depth = depth;
-	lib_nd_route_table[port_id].port = port_id;
+	p_nd_route_data->nd_route_table[port_id].depth = depth;
+	p_nd_route_data->nd_route_table[port_id].port = port_id;
 
 	printf("num ports :%d\n", nd_route_tbl_index);
 
