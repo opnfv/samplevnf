@@ -33,6 +33,7 @@
 #include "pipeline_common_fe.h"
 #include "interface.h"
 #include "lib_arp.h"
+#include "gateway.h"
 
 int
 app_pipeline_ping(struct app_params *app,
@@ -541,12 +542,12 @@ app_link_down(struct app_params *app,
  */
 struct cmd_routeadd_config_result {
         cmdline_fixed_string_t routeadd_string;
+        cmdline_fixed_string_t type_string;
         uint32_t port_id;
         cmdline_ipaddr_t ip;
         cmdline_fixed_string_t depth;
 };
 
-extern struct lib_nd_route_table_entry lib_nd_route_table[MAX_ND_RT_ENTRY];
 extern struct arp_data *p_arp_data;
 extern uint32_t nd_route_tbl_index;
 
@@ -556,25 +557,46 @@ extern uint32_t nd_route_tbl_index;
 int app_routeadd_config_ipv4(__attribute__((unused)) struct app_params *app,
 	uint32_t port_id, uint32_t ip, uint32_t mask)
 {
-	if (port_id > MAX_PORTS) {
-		printf("Max ports allowed is %d\n", MAX_PORTS);
+	uint32_t i = 0;
+	if (port_id >= gw_get_num_ports()) {
+		printf("Max ports allowed is %d\n", gw_get_num_ports());
 		return 1;
 	}
 
-	printf("port id:%d ip: %x mask:%x", port_id, ip, mask);
+	printf("port id:%d ip: %x mask:%x\n", port_id, ip, mask);
 
-	struct lib_arp_route_table_entry *lentry =
-		&p_arp_data->lib_arp_route_table
-		[port_id];
-		if (!lentry->ip)
-			p_arp_data->lib_arp_route_ent_cnt++;
-		lentry->ip = ip;
+	struct route_table_entry *lentry = NULL;
+
+	/* Check for matching entry */
+	for(i = 0 ; i< p_route_data[port_id]->route_ent_cnt; i++) {
+
+		lentry = &p_route_data[port_id]->route_table[i];
+
+		/* Entry already exists? */
+		if(mask == 0) {
+			if(lentry->nh == ip)
+				return 1;
+		} else {
+			if( lentry->nh_mask == (ip & mask))
+				return 1;
+		}
+	}
+	if(i < MAX_ROUTE_ENTRY_SIZE) {
+
+		lentry = &p_route_data[port_id]->route_table[i];
+
+		p_route_data[port_id]->route_ent_cnt++;
 		lentry->mask = mask;
 		lentry->port = port_id;
 		lentry->nh = ip;
-		lentry->nh_mask = ip & mask;
+		lentry->nh_mask = (ip & mask);
+		return 0;
+	} else {
 
-	return 0;
+		printf("Error: Number of entries more than supported\n");
+		return 1;
+	}
+
 }
 
 /*
@@ -585,8 +607,8 @@ int app_routeadd_config_ipv6(__attribute__((unused)) struct app_params *app,
 {
 	int i;
 
-	if (port_id > MAX_ND_RT_ENTRY) {
-		printf("Max ports allowed is %d\n", MAX_ND_RT_ENTRY);
+	if (port_id >= gw_get_num_ports()) {
+		printf("Max ports allowed is %d\n", gw_get_num_ports());
 		return 1;
 	}
 
@@ -594,25 +616,70 @@ int app_routeadd_config_ipv6(__attribute__((unused)) struct app_params *app,
 		nd_route_tbl_index++;
 
 	printf("port id:%d depth:%d\n", port_id, depth);
-	printf("ipv6 address ");
-	for (i = 0; i < 16; i++) {
-		lib_nd_route_table[port_id].ipv6[i] = ipv6[i];
-		lib_nd_route_table[port_id].nhipv6[i] = ipv6[i];
-		printf("%x ", ipv6[i]);
-	}
+	printf("ipv6 address: ");
+	for(i = 0; i < IPV6_ADD_SIZE; i++)
+		printf("%02x ", ipv6[i]);
 	printf("\n");
 
+	struct nd_route_table_entry *lentry = NULL;
+	int k;
+	uint8_t netmask_ipv6[16], netip_nd[16], netip_in[16];
+	uint8_t depthflags = 0, depthflags1 = 0;
 
-	lib_nd_route_table[port_id].depth = depth;
-	lib_nd_route_table[port_id].port = port_id;
+	i = 0;
 
-	printf("num ports :%d\n", nd_route_tbl_index);
+	/* Check for matching entry */
+	for(i = 0 ; i< p_nd_route_data[port_id]->nd_route_ent_cnt; i++) {
 
-	return 0;
+		lentry = &p_nd_route_data[port_id]->nd_route_table[i];
+
+		memset(netmask_ipv6, 0, sizeof(netmask_ipv6));
+		memset(netip_nd, 0, sizeof(netip_nd));
+		memset(netip_in, 0, sizeof(netip_in));
+
+		/* Create netmask from depth */
+		convert_prefixlen_to_netmask_ipv6(lentry->depth, netmask_ipv6);
+
+		for (k = 0; k < 16; k++) {
+			if (lentry->nhipv6[k] & netmask_ipv6[k]) {
+				depthflags++;
+				netip_nd[k] = lentry->nhipv6[k];
+			}
+
+			if (ipv6[k] & netmask_ipv6[k]) {
+				depthflags1++;
+				netip_in[k] = ipv6[k];
+			}
+		}
+
+		if ((depthflags == depthflags1)
+				&& (memcmp(netip_nd, netip_in, sizeof(netip_nd)) == 0)) {
+				/* Route already exists */
+			printf("Route already exists \n");
+				return 1;
+		}
+	}
+
+	if(i < MAX_ND_ROUTE_ENTRY_SIZE) {
+
+		lentry = &p_nd_route_data[port_id]->nd_route_table[i];
+
+		rte_mov16(lentry->nhipv6, ipv6);
+
+		lentry->depth = depth;
+		lentry->port = port_id;
+		p_nd_route_data[port_id]->nd_route_ent_cnt++;
+
+		return 0;
+	} else {
+
+		printf("Error: Number of entries more than supported\n");
+		return 1;
+	}
 }
 
 /*
- * cmd handler for handling route add entry at runtime.
+ * cmd handler for handling route abj entry at runtime.
  * the same handle takes care of both ipv4 & ipv6
  */
 static void
@@ -629,15 +696,30 @@ cmd_routeadd_parsed(
 	uint32_t i, ip = 0, depth = 0, mask = 0;
         uint8_t ipv6[16];
 
+	printf("Adding route for %s \n", params->type_string);
+
         if (params->ip.family == AF_INET) {
                 ip = rte_bswap32((uint32_t) params->ip.addr.ipv4.s_addr);
-				mask = strtoul(params->depth, NULL, 16);
-		printf("ip:%x mask:%x port_id:%d\n", ip, mask, port_id);
+
+		if(strcmp(params->type_string, "net") == 0)
+		{
+			mask = strtoul(params->depth, NULL, 16);
+		} else {
+			mask = 0xffffffff;
+		}
+
+		printf("nhip:0x%08x mask:%x port_id:%d\n", ip, mask, port_id);
 	} else {
                 memcpy(ipv6, params->ip.addr.ipv6.s6_addr, 16);
-				depth = atoi(params->depth);
-		for (i=0;i<16;i++)
-			printf("%d ", ipv6[i]);
+		if(strcmp(params->type_string, "net") == 0)
+		{
+			depth = atoi(params->depth);
+		} else {
+			depth = 64;
+		}
+
+		for (i=0; i < 16; i++)
+			printf("%02x ", ipv6[i]);
 		printf("\n port_id:%d depth:%d \n", port_id, depth);
 	}
 
@@ -657,6 +739,14 @@ cmdline_parse_token_string_t cmd_routeadd_config_string =
         TOKEN_STRING_INITIALIZER(struct cmd_routeadd_config_result, routeadd_string,
                 "routeadd");
 
+cmdline_parse_token_string_t cmd_routeadd_net_string =
+        TOKEN_STRING_INITIALIZER(struct cmd_routeadd_config_result, type_string,
+                "net");
+
+cmdline_parse_token_string_t cmd_routeadd_host_string =
+        TOKEN_STRING_INITIALIZER(struct cmd_routeadd_config_result, type_string,
+                "host");
+
 cmdline_parse_token_num_t cmd_routeadd_config_port_id =
         TOKEN_NUM_INITIALIZER(struct cmd_routeadd_config_result, port_id, UINT32);
 
@@ -666,15 +756,29 @@ cmdline_parse_token_ipaddr_t cmd_routeadd_config_ip =
 cmdline_parse_token_string_t cmd_routeadd_config_depth_string =
         TOKEN_STRING_INITIALIZER(struct cmd_routeadd_config_result, depth, NULL);
 
-cmdline_parse_inst_t cmd_routeadd = {
+cmdline_parse_inst_t cmd_routeadd_net = {
         .f = cmd_routeadd_parsed,
         .data = NULL,
-        .help_str = "Add Route entry",
+        .help_str = "Add Route entry for gateway",
         .tokens = {
                 (void *) &cmd_routeadd_config_string,
+                (void *) &cmd_routeadd_net_string,
                 (void *) &cmd_routeadd_config_port_id,
-				(void *) &cmd_routeadd_config_ip,
-				(void *) &cmd_routeadd_config_depth_string,
+		(void *) &cmd_routeadd_config_ip,
+		(void *) &cmd_routeadd_config_depth_string,
+                NULL,
+        },
+};
+
+cmdline_parse_inst_t cmd_routeadd_host = {
+        .f = cmd_routeadd_parsed,
+        .data = NULL,
+        .help_str = "Add Route entry for host",
+        .tokens = {
+                (void *) &cmd_routeadd_config_string,
+                (void *) &cmd_routeadd_host_string,
+                (void *) &cmd_routeadd_config_port_id,
+		(void *) &cmd_routeadd_config_ip,
                 NULL,
         },
 };
@@ -1525,7 +1629,8 @@ cmdline_parse_inst_t cmd_run = {
 static cmdline_parse_ctx_t pipeline_common_cmds[] = {
 	(cmdline_parse_inst_t *) &cmd_quit,
 	(cmdline_parse_inst_t *) &cmd_run,
-	(cmdline_parse_inst_t *) &cmd_routeadd,
+	(cmdline_parse_inst_t *) &cmd_routeadd_net,
+	(cmdline_parse_inst_t *) &cmd_routeadd_host,
 
 	(cmdline_parse_inst_t *) &cmd_link_config,
 	(cmdline_parse_inst_t *) &cmd_link_up,
