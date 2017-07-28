@@ -50,6 +50,7 @@
 #include "lib_arp.h"
 #include "lib_icmpv6.h"
 #include "interface.h"
+#include "gateway.h"
 
 /* Shared among all VNFs including LB */
 struct app_params *myApp;
@@ -811,7 +812,7 @@ static void *pipeline_arpicmp_init(struct pipeline_params *params,
 
 	p_arp->receivedPktCount = 0;
 	p_arp->droppedPktCount = 0;
-
+	gw_init(params->n_ports_out);
 	lib_arp_init(params, app);
 
 	/* Pipeline */

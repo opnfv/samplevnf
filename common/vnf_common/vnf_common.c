@@ -17,6 +17,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "vnf_common.h"
+#include "gateway.h"
 #include "pipeline_arpicmp_be.h"
 #ifndef VNF_ACL
 #include "lib_arp.h"
@@ -47,13 +48,12 @@ uint8_t is_port_index_privte(uint16_t phy_port)
 uint32_t get_prv_to_pub_port(uint32_t *ip_addr, uint8_t type)
 {
 	uint32_t dest_if = 0xff;
-	struct ether_addr addr;
 
 	switch (type) {
 	case 4:
 	{
 		uint32_t nhip;
-		nhip = get_nh(ip_addr[0], &dest_if, &addr);
+		gw_get_nh_port_ipv4(*ip_addr, &dest_if, &nhip);
 
 		if (nhip)
 			return dest_if;
@@ -63,7 +63,8 @@ uint32_t get_prv_to_pub_port(uint32_t *ip_addr, uint8_t type)
 	case 6:
 	{
 		uint8_t nhipv6[16];
-		get_nh_ipv6((uint8_t *)ip_addr, &dest_if, &nhipv6[0], &addr);
+		gw_get_nh_port_ipv6((uint8_t *)ip_addr, &dest_if, nhipv6);
+
 		if (dest_if != 0xff)
 			return dest_if;
 		return 0xff;
@@ -76,13 +77,13 @@ uint32_t get_prv_to_pub_port(uint32_t *ip_addr, uint8_t type)
 uint32_t get_pub_to_prv_port(uint32_t *ip_addr, uint8_t type)
 {
 	uint32_t dest_if = 0xff;
-	struct ether_addr addr;
 
 	switch (type) {
 	case 4:
 	{
 		uint32_t nhip;
-		nhip = get_nh(ip_addr[0], &dest_if, &addr);
+
+		gw_get_nh_port_ipv4(*ip_addr, &dest_if, &nhip);
 
 		if (nhip)
 			return dest_if;
@@ -92,7 +93,8 @@ uint32_t get_pub_to_prv_port(uint32_t *ip_addr, uint8_t type)
 	case 6:
 	{
 		uint8_t nhipv6[16];
-		get_nh_ipv6((uint8_t *)ip_addr, &dest_if, &nhipv6[0], &addr);
+
+		gw_get_nh_port_ipv6((uint8_t *)ip_addr, &dest_if, nhipv6);
 		if (dest_if != 0xff)
 			return dest_if;
 		return 0xff;
