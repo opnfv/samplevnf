@@ -32,19 +32,8 @@
 #define NUM_DESC                (get_arp_buf())
 #define ARP_BUF_DEFAULT                30000
 #define PROBE_TIME             50
+#define ARP_RETRY_COUNT 100
 #undef L3_STACK_SUPPORT
-
-/**
-* A structure for Route table entries of IPv4
-*/
-
-struct lib_arp_route_table_entry {
-	uint32_t ip;	/**< Ipv4 address*/
-	uint32_t mask;	/**< mask */
-	uint32_t port;	/**< Physical port */
-	uint32_t nh;	/**< next hop */
-	uint32_t nh_mask;
-};
 
 #define MAX_LOCAL_MAC_ADDRESS	       32
 #define MAX_PORTS                      32
@@ -60,22 +49,9 @@ struct nd_cache {
         uint32_t num_nhip;
 };
 
-/**
-* A structure for Route table entires of IPv6
-*
-*/
-struct lib_nd_route_table_entry {
-	uint8_t ipv6[16];	/**< Ipv6 address */
-	uint8_t depth;		/**< Depth */
-	uint32_t port;		/**< Port */
-	uint8_t nhipv6[16];	/**< next hop Ipv6 */
-};
-
 uint8_t arp_cache_dest_mac_present(uint32_t out_port);
 uint8_t nd_cache_dest_mac_present(uint32_t out_port);
-extern struct lib_nd_route_table_entry lib_nd_route_table[MAX_ND_RT_ENTRY];
-extern struct lib_arp_route_table_entry lib_arp_route_table[MAX_ARP_RT_ENTRY];
-extern struct ether_addr *get_local_link_hw_addr(uint8_t out_port, uint32_t nhip);
+extern struct ether_addr *get_local_cache_hw_addr(uint8_t out_port, uint32_t nhip);
 extern struct ether_addr *get_nd_local_link_hw_addr(uint8_t out_port, uint8_t nhip[]);
 extern struct arp_cache arp_local_cache[MAX_PORTS];
 extern void prefetch(void);
@@ -228,12 +204,6 @@ struct table_nd_entry_data {
 } __attribute__ ((packed));
 
 struct arp_data {
-	struct lib_arp_route_table_entry
-            lib_arp_route_table[MAX_ARP_RT_ENTRY];
-	uint8_t lib_arp_route_ent_cnt;
-	struct lib_nd_route_table_entry
-            lib_nd_route_table[MAX_ARP_RT_ENTRY];
-	uint8_t lib_nd_route_ent_cnt;
 	struct arp_cache arp_local_cache[MAX_PORTS];
 	struct nd_cache nd_local_cache[MAX_PORTS];
 	struct ether_addr link_hw_addr[MAX_LOCAL_MAC_ADDRESS];
@@ -257,7 +227,7 @@ struct arp_data {
 * 0 if failure, and 1 if success
 */
 struct arp_entry_data *get_dest_mac_addr_port(const uint32_t ipaddr,
-				 uint32_t *phy_port, struct ether_addr *hw_addr);
+				 uint32_t phy_port, struct ether_addr *hw_addr);
 
 /**
 * To get the destination mac address for IPV6 address
@@ -524,4 +494,10 @@ uint32_t get_nh(uint32_t, uint32_t *, struct ether_addr *addr);
 * next hop ipv6
 */
 void get_nh_ipv6(uint8_t ipv6[], uint32_t *port, uint8_t nhipv6[], struct ether_addr *hw_addr);
+
+struct arp_entry_data *get_dest_mac_addr_ipv4(const uint32_t nhip,
+                   uint32_t phy_port, struct ether_addr *hw_addr);
+struct nd_entry_data *get_dest_mac_addr_ipv6(uint8_t nhipv6[],
+                   uint32_t phy_port, struct ether_addr *hw_addr);
+
 #endif
