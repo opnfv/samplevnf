@@ -32,17 +32,17 @@ link 3 config 172.16.40.10 8
 ;link 3 config 2016:0000:0000:0000:6a05:caff:fe30:2071 64
 link 3 up
 
-; routeadd <port #> <ipv4 nhip address in decimal> <Mask>
-routeadd 0 203.16.100.20 0xff000000
-routeadd 1 202.16.100.20 0xff000000
-routeadd 2 173.16.40.20  0xff000000
-routeadd 3 172.16.40.20  0xff000000
+; routeadd <net/host> <port #> <ipv4 nhip address in decimal> <Mask/NotApplicable>
+routeadd net 0 203.16.100.20 0xff000000
+routeadd net 1 202.16.100.20 0xff000000
+routeadd net 2 173.16.40.20  0xff000000
+routeadd net 3 172.16.40.20  0xff000000
 
-;routeadd <port #> <ipv6 nhip address in hex> <Depth>
-;routeadd 0 fec0:0000:0000:0000:6a05:caff:fe30:21a0 64
-;routeadd 1 fec1:0000:0000:0000:6a05:caff:fe30:21a0 64
-;routeadd 2 2012:0000:0000:0000:6a05:caff:fe30:2071 64
-;routeadd 3 2016:0000:0000:0000:6a05:caff:fe30:2071 64
+;routeadd <net/host> <port #> <ipv6 nhip address in hex> <Depth/NotApplicable>
+;routeadd net 0 fec0:0000:0000:0000:6a05:caff:fe30:21a0 64
+;routeadd net 1 fec1:0000:0000:0000:6a05:caff:fe30:21a0 64
+;routeadd net 2 2012:0000:0000:0000:6a05:caff:fe30:2071 64
+;routeadd net 3 2016:0000:0000:0000:6a05:caff:fe30:2071 64
 
 ; IPv4 Static ARP
 ;p 1 arpadd 0 203.16.100.20 00:00:00:00:00:01
