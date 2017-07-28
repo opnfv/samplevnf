@@ -41,6 +41,7 @@ VPATH += $(SRCDIR)/pipeline
 VPATH += $(VNF_CORE)/common/VIL/pipeline_txrx
 VPATH += $(VNF_CORE)/common/VIL/acl
 VPATH += $(VNF_CORE)/common/VIL/l2l3_stack
+VPATH += $(VNF_CORE)/common/VIL/gateway
 
 INC += $(wildcard *.h)
 INC += $(wildcard pipeline/*.h)
@@ -54,6 +55,7 @@ INC += $(wildcard $(VNF_CORE)/common/VIL/pipeline_master/*.h)
 INC += $(wildcard $(VNF_CORE)/common/VIL/pipeline_passthrough/*.h)
 INC += $(wildcard $(VNF_CORE)/common/VIL/pipeline_txrx/*.h)
 INC += $(wildcard $(VNF_CORE)/common/VIL/acl/*.h)
+INC += $(wildcard $(VNF_CORE)/common/VIL/gateway/*.h)
 
 CFLAGS += -I$(SRCDIR) -mrtm -mhle -I$(SRCDIR)/pipeline -I$(VNF_CORE)/common/vnf_common
 CFLAGS += -I$(VNF_CORE)/common/VIL/conntrack -I$(VNF_CORE)/common/VIL/l2l3_stack
@@ -62,6 +64,7 @@ CFLAGS += -I$(VNF_CORE)/common/VIL/pipeline_master -I$(VNF_CORE)/common/VIL/pipe
 CFLAGS += -I$(VNF_CORE)/common/VIL/pipeline_txrx
 CFLAGS += -I$(VNF_CORE)/common/VIL/acl
 CFLAGS += -I$(VNF_CORE)/common/VIL/pipeline_arpicmp
+CFLAGS += -I$(VNF_CORE)/common/VIL/gateway
 
 # all source are stored in SRCS-y
 SRCS-$(CONFIG_RTE_LIBRTE_PIPELINE) := main.c
@@ -104,6 +107,7 @@ SRCS-$(CONFIG_RTE_LIBRTE_PIPELINE) += pipeline_arpicmp_be.c
 SRCS-$(CONFIG_RTE_LIBRTE_PIPELINE) += pipeline_txrx.c
 SRCS-$(CONFIG_RTE_LIBRTE_PIPELINE) += pipeline_txrx_be.c
 SRCS-$(CONFIG_RTE_LIBRTE_PIPELINE) += lib_acl.c
+SRCS-$(CONFIG_RTE_LIBRTE_PIPELINE) += gateway.c
 
 
 CFLAGS += -O3
