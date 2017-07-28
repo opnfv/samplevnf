@@ -22,17 +22,21 @@ link 1 config 172.16.40.10 8
 ;link 1 config 2012:0000:0000:0000:6a05:caff:fe30:2071 64
 link 1 up
 
-; routeadd <port #> <ipv4 nhip address in decimal> <Mask>
-routeadd 0 202.16.100.20 0xff000000
-routeadd 1 172.16.40.20 0xff000000
+; routeadd <net/host> <port #> <ipv4 nhip address in decimal> <Mask/NotApplicable>
+;routeadd host 0 202.16.100.20
+;routeadd host 1 172.16.40.20
+routeadd net 0 202.16.100.20 0xff000000
+routeadd net 1 172.16.40.20 0xff000000
 
-;routeadd <port #> <ipv6 nhip address in hex> <Depth>
-;routeadd 0 fec0::6a05:caff:fe30:21b0 64
-;routeadd 1 2012::6a05:caff:fe30:2081 64
+;routeadd <net/host> <port #> <ipv6 nhip address in hex> <Depth/NotApplicable>
+;routeadd host 0 fec0::6a05:caff:fe30:21b0
+;routeadd host 1 2012::6a05:caff:fe30:2081
+routeadd net 0 fec0::6a05:caff:fe30:21b0 64
+routeadd net 1 2012::6a05:caff:fe30:2081 64
 
 ; IPv4 static ARP
-;p 1 arpadd 1 172.16.40.20 00:00:00:00:00:04
-;p 1 arpadd 0 202.16.100.20 00:00:00:00:00:01
+p 1 arpadd 1 172.16.40.20 00:00:00:00:00:02
+p 1 arpadd 0 202.16.100.20 00:00:00:00:00:01
 
 ; IPv6 static ARP
 ;p 1 arpadd 0 fec0::6a05:caff:fe30:21b0 00:00:00:00:00:01
