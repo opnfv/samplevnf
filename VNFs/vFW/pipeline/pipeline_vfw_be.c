@@ -24,7 +24,7 @@
  */
 
 #define EN_SWP_ACL 1
-#define EN_SWP_ARP 1
+//#define EN_SWP_ARP 1
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -64,6 +64,7 @@
 #include "lib_arp.h"
 #include "lib_icmpv6.h"
 #include "pipeline_common_fe.h"
+#include "gateway.h"
 
 uint32_t timer_lcore;
 
@@ -94,13 +95,6 @@ struct pipeline_vfw {
        uint8_t traffic_type;
        uint8_t links_map[PIPELINE_MAX_PORT_IN];
        uint8_t outport_id[PIPELINE_MAX_PORT_IN];
-       /* Local ARP & ND Tables */
-       struct lib_arp_route_table_entry
-              local_lib_arp_route_table[MAX_ARP_RT_ENTRY];
-       uint8_t local_lib_arp_route_ent_cnt;
-       struct lib_nd_route_table_entry
-              local_lib_nd_route_table[MAX_ND_RT_ENTRY];
-       uint8_t local_lib_nd_route_ent_cnt;
 
 } __rte_cache_aligned;
 /**
@@ -799,10 +793,12 @@ pkt4_work_vfw_arp_ipv4_packets(struct rte_mbuf **pkts,
                                 if (ret_arp_data->num_pkts >= NUM_DESC) {
 					/* ICMP req sent, drop packet by
 						* changing the mask */
-					vfw_pipe->counters->pkts_drop_without_arp_entry++;
+					vfw_pipe->counters->
+						pkts_drop_without_arp_entry++;
                                         continue;
                                 } else {
-                                        arp_pkts_mask |= pkt_mask;
+                                        //arp_pkts_mask |= pkt_mask;
+					*arp_hijack_mask |= pkt_mask;
                                         arp_queue_unresolved_packet(ret_arp_data, pkt);
                                         continue;
                      }
@@ -895,7 +891,8 @@ pkt_work_vfw_arp_ipv4_packets(struct rte_mbuf *pkts,
                                 if (ret_arp_data->num_pkts >= NUM_DESC) {
 					/* ICMP req sent, drop packet by
 						* changing the mask */
-					vfw_pipe->counters->pkts_drop_without_arp_entry++;
+					vfw_pipe->counters->
+						pkts_drop_without_arp_entry++;
                                         return;
                                 } else {
                                         arp_pkts_mask |= pkt_mask;
@@ -999,7 +996,8 @@ pkt4_work_vfw_arp_ipv6_packets(struct rte_mbuf **pkts,
 			  if (ret_nd_data->num_pkts >= NUM_DESC) {
                                 /* Drop the pkt */
                                 *pkts_mask &= ~pkt_mask;
-				vfw_pipe->counters->pkts_drop_without_arp_entry++;
+                                vfw_pipe->counters->
+					pkts_drop_without_arp_entry++;
 				continue;
                           } else {
                                 arp_pkts_mask |= pkt_mask;
@@ -1099,7 +1097,8 @@ pkt_work_vfw_arp_ipv6_packets(struct rte_mbuf *pkts,
                           if (ret_nd_data->num_pkts >= NUM_DESC) {
                                 /* Drop the pkt */
                                 *pkts_mask &= ~pkt_mask;
-				vfw_pipe->counters->pkts_drop_without_arp_entry++;
+                                vfw_pipe->counters->
+                                    pkts_drop_without_arp_entry++;
                                 return;
                           } else {
                                 arp_pkts_mask |= pkt_mask;
@@ -1116,211 +1115,257 @@ pkt_work_vfw_arp_ipv6_packets(struct rte_mbuf *pkts,
 #else
 
 /**
- * walk every valid mbuf (denoted by pkts_mask) and apply arp to the packet.
+ * walk every valid mbuf (denoted by pkts_mask) and forward the packet.
  * To support synproxy, some (altered) packets may need to be sent back where
  * they came from. The ip header has already been adjusted, but the ethernet
  * header has not, so this must be performed here.
- * Return an updated pkts_mask, since arp may drop some packets
+ * Return an updated pkts_mask and arp_hijack_mask since arp may drop some packets
  *
  * @param pkts
- *  A pointer to the packet.
+ *  A pointer to the packet array.
  * @param pkts_mask
- *  Packet mask
- * @param synproxy_reply_mask
- *  Reply Packet mask for Synproxy
+ *  Packets mask to be processed
+ * @param arp_hijack_mask
+ *  Packets to be hijacked for arp buffering
  * @param vfw_pipe
  *  A pointer to VFW pipeline.
  */
-static uint64_t
-rte_vfw_arp_ipv4_packets(struct rte_mbuf **pkts,
-              uint64_t pkts_mask,
-              uint64_t synproxy_reply_mask,
-              struct pipeline_vfw *vfw_pipe)
+static void vfw_fwd_pkts_ipv4(struct rte_mbuf **pkts, uint64_t *pkts_mask,
+		uint64_t *arp_hijack_mask, struct pipeline_vfw *vfw_pipe)
 {
-       uint64_t pkts_to_arp = pkts_mask;
+	uint64_t pkts_to_arp = *pkts_mask;
 
-       uint32_t ret;
-       uint32_t dest_if = INVALID_DESTIF;
-       for (; pkts_to_arp;) {
-              struct ether_addr hw_addr;
-              struct mbuf_tcp_meta_data *meta_data_addr;
-              struct ether_hdr *ehdr;
-              struct rte_mbuf *pkt;
-              uint16_t phy_port;
+	for (; pkts_to_arp;) {
 
-              uint8_t pos = (uint8_t) __builtin_ctzll(pkts_to_arp);
-              /* bitmask representing only this packet */
-              uint64_t pkt_mask = 1LLU << pos;
-              /* remove this packet from remaining list */
-              pkts_to_arp &= ~pkt_mask;
-              pkt = pkts[pos];
-              int must_reverse = ((synproxy_reply_mask & pkt_mask) != 0);
+		struct mbuf_tcp_meta_data *meta_data_addr;
+		struct ether_hdr *ehdr;
+		struct rte_mbuf *pkt;
+		uint32_t src_phy_port;
 
-              phy_port = pkt->port;
-              meta_data_addr = (struct mbuf_tcp_meta_data *)
-                     RTE_MBUF_METADATA_UINT32_PTR(pkt, META_DATA_OFFSET);
-              ehdr = rte_vfw_get_ether_addr(pkt);
+		uint8_t pos = (uint8_t) __builtin_ctzll(pkts_to_arp);
+		/* bitmask representing only this packet */
+		uint64_t pkt_mask = 1LLU << pos;
+		/* remove this packet from remaining list */
+		pkts_to_arp &= ~pkt_mask;
+		pkt = pkts[pos];
 
+		if(VFW_DEBUG) {
+			printf("----------------\n");
+			print_pkt(pkt);
+		}
 
-              struct ipv4_hdr *ihdr = (struct ipv4_hdr *)
-                     RTE_MBUF_METADATA_UINT32_PTR(pkt, IP_START);
-              uint32_t nhip = 0;
+		meta_data_addr = (struct mbuf_tcp_meta_data *)
+			RTE_MBUF_METADATA_UINT32_PTR(pkt, META_DATA_OFFSET);
 
-              uint32_t dest_address = rte_bswap32(ihdr->dst_addr);
-              if (must_reverse)
-                     rte_sp_exchange_mac_addresses(ehdr);
-		struct arp_entry_data *ret_arp_data = NULL;
-                     ret_arp_data = get_dest_mac_addr_port(dest_address,
-                                   &dest_if, &ehdr->d_addr);
-		meta_data_addr->output_port =  vfw_pipe->outport_id[dest_if];
-        if (arp_cache_dest_mac_present(dest_if)) {
+		ehdr = (struct ether_hdr *)
+			RTE_MBUF_METADATA_UINT32_PTR(pkt, ETHERNET_START);
 
-                ether_addr_copy(get_link_hw_addr(dest_if), &ehdr->s_addr);
-		update_nhip_access(dest_if);
-                if (unlikely(ret_arp_data && ret_arp_data->num_pkts)) {
+		src_phy_port = pkt->port;
+		uint32_t dst_phy_port = INVALID_DESTIF;
 
-                        arp_send_buffered_pkts(ret_arp_data,
-                                 &ehdr->d_addr, vfw_pipe->outport_id[dest_if]);
+		if(is_gateway()){
+			struct ipv4_hdr *ipv4hdr = (struct ipv4_hdr *)
+				RTE_MBUF_METADATA_UINT32_PTR(pkt, IP_START);
 
-                            }
+			/* Gateway Proc Starts */
 
-                     } else {
-                if (unlikely(ret_arp_data == NULL)) {
+			struct arp_entry_data *ret_arp_data = NULL;
+			struct ether_addr dst_mac;
+			uint32_t nhip = 0;
+			uint32_t dst_ip_addr = rte_bswap32(ipv4hdr->dst_addr);
 
-			if (VFW_DEBUG)
-                        printf("%s: NHIP Not Found, nhip:%x , "
-                        "outport_id: %d\n", __func__, nhip,
-                        vfw_pipe->outport_id[dest_if]);
+			gw_get_nh_port_ipv4(dst_ip_addr, src_phy_port, &dst_phy_port, &nhip);
 
-                        /* Drop the pkt */
-                                   vfw_pipe->counters->
-                                          pkts_drop_without_arp_entry++;
-                        continue;
-                     }
-		if (ret_arp_data->status == INCOMPLETE ||
-                           ret_arp_data->status == PROBE) {
-                                if (ret_arp_data->num_pkts >= NUM_DESC) {
-					/* ICMP req sent, drop packet by
-						* changing the mask */
-					vfw_pipe->counters->pkts_drop_without_arp_entry++;
-                                        continue;
-                                } else {
-                                        arp_pkts_mask |= pkt_mask;
-                                        arp_queue_unresolved_packet(ret_arp_data, pkt);
-                                        continue;
-              }
-}
+			ret_arp_data = get_dest_mac_addr_ipv4(nhip, dst_phy_port, &dst_mac);
+
+			/* Gateway Proc Ends */
+
+			if (arp_cache_dest_mac_present(dst_phy_port)) {
+
+				ether_addr_copy(&dst_mac, &ehdr->d_addr);
+				ether_addr_copy(get_link_hw_addr(dst_phy_port), &ehdr->s_addr);
+
+				meta_data_addr->output_port = vfw_pipe->outport_id[dst_phy_port];
+
+				update_nhip_access(dst_phy_port);
+
+				if (unlikely(ret_arp_data && ret_arp_data->num_pkts)) {
+
+					arp_send_buffered_pkts(ret_arp_data, &ehdr->d_addr,
+							vfw_pipe->outport_id[dst_phy_port]);
+				}
+
+			} else {
+				if (unlikely(ret_arp_data == NULL)) {
+
+					printf("NHIP Not Found\n");
+
+					/* Drop the pkt */
+					vfw_pipe->counters->
+						pkts_drop_without_arp_entry++;
+					continue;
+				}
+				if (ret_arp_data->status == INCOMPLETE ||
+						ret_arp_data->status == PROBE) {
+					if (ret_arp_data->num_pkts >= NUM_DESC) {
+						/* ICMP req sent, drop packet by
+						 * changing the mask */
+						vfw_pipe->counters->pkts_drop_without_arp_entry++;
+						continue;
+					} else {
+						*arp_hijack_mask |= pkt_mask;
+						arp_queue_unresolved_packet(ret_arp_data, pkt);
+						continue;
+					}
+				}
+			}
+		} else {
+			/* IP Pkt forwarding based on  pub/prv mapping */
+			if(is_phy_port_privte(src_phy_port))
+				dst_phy_port = prv_to_pub_map[src_phy_port];
+			else
+				dst_phy_port = pub_to_prv_map[src_phy_port];
+
+			meta_data_addr->output_port = vfw_pipe->outport_id[dst_phy_port];
+
+			if(VFW_DEBUG) {
+				printf("IP_PKT_FWD: src_phy_port=%d, dst_phy_port=%d\n",
+						src_phy_port, dst_phy_port);
+			}
+		}
+
+		if(VFW_DEBUG)
+			print_pkt(pkt);
 	}
 
-       }
-
-       return pkts_mask;
 }
+
 /**
- * walk every valid mbuf (denoted by pkts_mask) and apply arp to the packet.
+ * walk every valid mbuf (denoted by pkts_mask) and forward the packet.
  * To support synproxy, some (altered) packets may need to be sent back where
  * they came from. The ip header has already been adjusted, but the ethernet
  * header has not, so this must be performed here.
- * Return an updated pkts_mask, since arp may drop some packets
+ * Return an updated pkts_mask and arp_hijack_mask since arp may drop some packets
  *
  * @param pkts
- *  A pointer to the packet.
+ *  A pointer to the packet array.
  * @param pkts_mask
- *  Packet mask
- * @param synproxy_reply_mask
- *  Reply Packet mask for Synproxy
+ *  Packets mask to be processed
+ * @param arp_hijack_mask
+ *  Packets to be hijacked for arp buffering
  * @param vfw_pipe
  *  A pointer to VFW pipeline.
  */
-
-       static uint64_t
-rte_vfw_arp_ipv6_packets(struct rte_mbuf **pkts,
-              uint64_t pkts_mask,
-              uint64_t synproxy_reply_mask,
-              struct pipeline_vfw *vfw_pipe)
+static void vfw_fwd_pkts_ipv6(struct rte_mbuf **pkts, uint64_t *pkts_mask,
+			uint64_t *arp_hijack_mask, struct pipeline_vfw *vfw_pipe)
 {
-       uint64_t pkts_to_arp = pkts_mask;
-       uint8_t nh_ipv6[IPV6_ADD_SIZE];
-       uint32_t ret;
-       uint32_t dest_if = INVALID_DESTIF;
+	uint64_t pkts_to_arp = *pkts_mask;
 
-       for (; pkts_to_arp;) {
-              struct ether_addr hw_addr;
-              struct mbuf_tcp_meta_data *meta_data_addr;
-              struct ether_hdr *ehdr;
-              struct rte_mbuf *pkt;
-              uint16_t phy_port;
+	for (; pkts_to_arp;) {
 
-              uint8_t pos = (uint8_t) __builtin_ctzll(pkts_to_arp);
-              /* bitmask representing only this packet */
-              uint64_t pkt_mask = 1LLU << pos;
-              /* remove this packet from remaining list */
-              pkts_to_arp &= ~pkt_mask;
-              pkt = pkts[pos];
-              int must_reverse = ((synproxy_reply_mask & pkt_mask) != 0);
+		struct mbuf_tcp_meta_data *meta_data_addr;
+		struct ether_hdr *ehdr;
+		struct rte_mbuf *pkt;
+		uint32_t src_phy_port;
 
-              phy_port = pkt->port;
-              meta_data_addr = (struct mbuf_tcp_meta_data *)
-                     RTE_MBUF_METADATA_UINT32_PTR(pkt, META_DATA_OFFSET);
-              ehdr = rte_vfw_get_ether_addr(pkt);
+		struct nd_entry_data *ret_nd_data = NULL;
 
-              struct ipv6_hdr *ihdr = (struct ipv6_hdr *)
-                     RTE_MBUF_METADATA_UINT32_PTR(pkt, IP_START);
+		uint8_t pos = (uint8_t) __builtin_ctzll(pkts_to_arp);
+		/* bitmask representing only this packet */
+		uint64_t pkt_mask = 1LLU << pos;
+		/* remove this packet from remaining list */
+		pkts_to_arp &= ~pkt_mask;
+		pkt = pkts[pos];
 
-              uint8_t nhip[IPV6_ADD_SIZE];
-              uint8_t dest_address[IPV6_ADD_SIZE];
+		if(VFW_DEBUG) {
+			printf("----------------\n");
+			print_pkt(pkt);
+		}
 
-              memset(nhip, 0, IPV6_ADD_SIZE);
-              if (must_reverse)
-                     rte_sp_exchange_mac_addresses(ehdr);
+		meta_data_addr = (struct mbuf_tcp_meta_data *)
+			RTE_MBUF_METADATA_UINT32_PTR(pkt, META_DATA_OFFSET);
 
-              rte_mov16(dest_address, ihdr->dst_addr);
-              memset(nh_ipv6, 0, IPV6_ADD_SIZE);
-              struct nd_entry_data *ret_nd_data = NULL;
-              ret_nd_data = get_dest_mac_address_ipv6_port(
-                                   &dest_address[0],
-                                   &dest_if,
-                                   &hw_addr,
-                                   &nh_ipv6[0]);
+		ehdr = (struct ether_hdr *)
+			RTE_MBUF_METADATA_UINT32_PTR(pkt, ETHERNET_START);
 
-	      meta_data_addr->output_port = vfw_pipe->
-                                    outport_id[dest_if];
-              if (nd_cache_dest_mac_present(dest_if)) {
-                     ether_addr_copy(get_link_hw_addr(dest_if),
-                                   &ehdr->s_addr);
-		    update_nhip_access(dest_if);
+		src_phy_port = pkt->port;
+		uint32_t dst_phy_port = INVALID_DESTIF;
 
-                    if (unlikely(ret_nd_data && ret_nd_data->num_pkts)) {
-                        nd_send_buffered_pkts(ret_nd_data,
-                               &ehdr->d_addr, meta_data_addr->output_port);
-                     }
+		if(is_gateway()){
+			struct ipv6_hdr *ipv6hdr = (struct ipv6_hdr *)
+				RTE_MBUF_METADATA_UINT32_PTR(pkt, IP_START);
 
-              } else {
-                    if (unlikely(ret_nd_data == NULL)) {
-                     pkts_mask &= ~pkt_mask;
-			  vfw_pipe->counters->
-				pkts_drop_without_arp_entry++;
-                          continue;
-                    }
-		    if (ret_nd_data->status == INCOMPLETE ||
-                          ret_nd_data->status == PROBE) {
-                          if (ret_nd_data->num_pkts >= NUM_DESC) {
-                                /* Drop the pkt */
-				pkts_mask &= ~pkt_mask;
-                                vfw_pipe->counters->
-                                    pkts_drop_without_arp_entry++;
-                                continue;
-                          } else {
-                                arp_pkts_mask |= pkt_mask;
-                                nd_queue_unresolved_packet(ret_nd_data, pkt);
-                                continue;
-                          }
-                    }
-	      }
+			/* Gateway Proc Starts */
 
-       }
+			struct ether_addr dst_mac;
+			uint32_t dst_phy_port = INVALID_DESTIF;
+			uint8_t nhipv6[IPV6_ADD_SIZE];
+			uint8_t dest_ipv6_address[IPV6_ADD_SIZE];
+			memset(nhipv6, 0, IPV6_ADD_SIZE);
+			src_phy_port = pkt->port;
+			rte_mov16(dest_ipv6_address,  (uint8_t *)ipv6hdr);
 
-       return pkts_mask;
+			gw_get_nh_port_ipv6(dest_ipv6_address, src_phy_port, &dst_phy_port, nhipv6);
+
+			ret_nd_data = get_dest_mac_addr_ipv6(nhipv6, dst_phy_port, &dst_mac);
+
+			/* Gateway Proc Ends */
+
+			if (nd_cache_dest_mac_present(dst_phy_port)) {
+
+				ether_addr_copy(&dst_mac, &ehdr->d_addr);
+				ether_addr_copy(get_link_hw_addr(dst_phy_port), &ehdr->s_addr);
+
+				meta_data_addr->output_port = vfw_pipe->outport_id[dst_phy_port];
+
+				update_nhip_access(dst_phy_port);
+
+				if (unlikely(ret_nd_data && ret_nd_data->num_pkts)) {
+					nd_send_buffered_pkts(ret_nd_data, &ehdr->d_addr,
+							vfw_pipe->outport_id[dst_phy_port]);
+				}
+
+			} else {
+				if (unlikely(ret_nd_data == NULL)) {
+
+					printf("NHIP Not Found\n");
+
+					/* Drop the pkt */
+					vfw_pipe->counters->pkts_drop_without_arp_entry++;
+					continue;
+				}
+				if (ret_nd_data->status == INCOMPLETE ||
+						ret_nd_data->status == PROBE) {
+					if (ret_nd_data->num_pkts >= NUM_DESC) {
+						/* ICMP req sent, drop packet by
+						 * changing the mask */
+						vfw_pipe->counters->pkts_drop_without_arp_entry++;
+						continue;
+					} else {
+						*arp_hijack_mask |= pkt_mask;
+						nd_queue_unresolved_packet(ret_nd_data, pkt);
+						continue;
+					}
+				}
+			}
+
+		} else {
+			/* IP Pkt forwarding based on  pub/prv mapping */
+			if(is_phy_port_privte(src_phy_port))
+				dst_phy_port = prv_to_pub_map[src_phy_port];
+			else
+				dst_phy_port = pub_to_prv_map[src_phy_port];
+
+			meta_data_addr->output_port = vfw_pipe->outport_id[dst_phy_port];
+
+			if(VFW_DEBUG) {
+				printf("IP_PKT_FWD: src_phy_port=%d, dst_phy_port=%d\n",
+						src_phy_port, dst_phy_port);
+			}
+		}
+		if(VFW_DEBUG)
+			print_pkt(pkt);
+	}
 }
 
 #endif
@@ -1516,9 +1561,9 @@ vfw_port_in_action_ipv4(struct rte_pipeline *p,
 
        uint64_t packet_mask_in = RTE_LEN2MASK(n_pkts, uint64_t);
        uint64_t pkts_drop_mask;
-       uint64_t hijack_mask = 0;
-       arp_pkts_mask = 0;
-       uint64_t synproxy_reply_mask = 0;       /* for synproxy */
+       uint64_t synp_hijack_mask = 0;
+       uint64_t arp_hijack_mask = 0;
+//       uint64_t synproxy_reply_mask;       /* for synproxy */
        uint64_t keep_mask = packet_mask_in;
 
        uint64_t conntrack_mask = 0, connexist_mask = 0;
@@ -1598,8 +1643,8 @@ vfw_port_in_action_ipv4(struct rte_pipeline *p,
        if (likely(cnxn_tracking_is_active)) {
               rte_ct_cnxn_tracker_batch_lookup_type(ct, pkts,
                             &keep_mask, &ct_helper, IPv4_HEADER_SIZE);
-              synproxy_reply_mask = ct_helper.reply_pkt_mask;
-              hijack_mask = ct_helper.hijack_mask;
+//              synproxy_reply_mask = ct_helper.reply_pkt_mask;
+              synp_hijack_mask = ct_helper.hijack_mask;
 
        }
 
@@ -1637,9 +1682,9 @@ vfw_port_in_action_ipv4(struct rte_pipeline *p,
 #else
        rte_prefetch0((void*)in_port_dir_a);
        rte_prefetch0((void*)prv_to_pub_map);
-       rte_prefetch0((void*) & vfw_pipe->local_lib_arp_route_table);
-       keep_mask = rte_vfw_arp_ipv4_packets(pkts, keep_mask,
-                     synproxy_reply_mask, vfw_pipe);
+
+	vfw_fwd_pkts_ipv4(pkts, &keep_mask, &arp_hijack_mask, vfw_pipe);
+
 #endif
 
        if (vfw_debug > 1) {
@@ -1651,9 +1696,14 @@ vfw_port_in_action_ipv4(struct rte_pipeline *p,
                                    (void *)keep_mask);
        }
 
-       /* Update mask before returning, so that bad packets are dropped */
-        if (arp_pkts_mask) {
-                rte_pipeline_ah_packet_hijack(p, arp_pkts_mask);
+	   /* Hijack the Synproxy and ARP buffered packets */
+
+       if (unlikely(arp_hijack_mask || synp_hijack_mask)) {
+
+//                printf("Pkts hijacked arp = %lX, synp = %lX\n",
+//			              arp_hijack_mask, synp_hijack_mask);
+
+                rte_pipeline_ah_packet_hijack(p,(arp_hijack_mask | synp_hijack_mask));
         }
 
        pkts_drop_mask = packet_mask_in & ~keep_mask;
@@ -1662,9 +1712,6 @@ vfw_port_in_action_ipv4(struct rte_pipeline *p,
               /* printf("drop %p\n", (void *) pkts_drop_mask); */
               rte_pipeline_ah_packet_drop(p, pkts_drop_mask);
        }
-
-       if (unlikely(hijack_mask != 0))
-              rte_pipeline_ah_packet_hijack(p, hijack_mask);
 
        vfw_pipe->counters->num_batch_pkts_sum += n_pkts;
        vfw_pipe->counters->num_pkts_measurements++;
@@ -1705,8 +1752,10 @@ vfw_port_in_action_ipv6(struct rte_pipeline *p,
 
        uint64_t packet_mask_in = RTE_LEN2MASK(n_pkts, uint64_t);
        uint64_t pkts_drop_mask;
-       uint64_t hijack_mask = 0;
-       uint64_t synproxy_reply_mask = 0;       /* for synproxy */
+       uint64_t synp_hijack_mask = 0;
+       uint64_t arp_hijack_mask = 0;
+//       uint64_t hijack_mask = 0;
+//       uint64_t synproxy_reply_mask = 0;       /* for synproxy */
        uint64_t keep_mask = packet_mask_in;
 
        uint64_t conntrack_mask = 0, connexist_mask = 0;
@@ -1782,8 +1831,8 @@ vfw_port_in_action_ipv6(struct rte_pipeline *p,
        if (likely(cnxn_tracking_is_active)) {
               rte_ct_cnxn_tracker_batch_lookup_type(ct, pkts,
                             &keep_mask, &ct_helper, IPv6_HEADER_SIZE);
-              synproxy_reply_mask = ct_helper.reply_pkt_mask;
-              hijack_mask = ct_helper.hijack_mask;
+//              synproxy_reply_mask = ct_helper.reply_pkt_mask;
+              synp_hijack_mask = ct_helper.hijack_mask;
 
        }
 
@@ -1795,7 +1844,7 @@ vfw_port_in_action_ipv6(struct rte_pipeline *p,
                                    ETHERNET_START));
        }
        rte_prefetch0((void*)in_port_dir_a);
-       rte_prefetch0(vfw_pipe->local_lib_nd_route_table);
+ //      rte_prefetch0(vfw_pipe->local_lib_nd_route_table);
        uint32_t i;
 
        for (i = 0; i < (n_pkts & (~0x3LLU)); i += 4) {
@@ -1820,9 +1869,9 @@ vfw_port_in_action_ipv6(struct rte_pipeline *p,
        }
 #else
        rte_prefetch0((void*)in_port_dir_a);
-       rte_prefetch0((void*) & vfw_pipe->local_lib_arp_route_table);
-       keep_mask = rte_vfw_arp_ipv6_packets(pkts, keep_mask,
-                     synproxy_reply_mask, vfw_pipe);
+
+	vfw_fwd_pkts_ipv6(pkts, &keep_mask, &arp_hijack_mask, vfw_pipe);
+
 #endif
 
        if (vfw_debug > 1) {
@@ -1834,6 +1883,16 @@ vfw_port_in_action_ipv6(struct rte_pipeline *p,
                                    (void *)keep_mask);
        }
 
+	/* Hijack the Synproxy and ARP buffered packets */
+
+        if (unlikely(arp_hijack_mask || synp_hijack_mask)) {
+
+//                printf("Pkts hijacked arp = %lX, synp = %lX\n",
+//			              arp_hijack_mask, synp_hijack_mask);
+
+                rte_pipeline_ah_packet_hijack(p,(arp_hijack_mask | synp_hijack_mask));
+        }
+
        /* Update mask before returning, so that bad packets are dropped */
 
        pkts_drop_mask = packet_mask_in & ~keep_mask;
@@ -1842,9 +1901,6 @@ vfw_port_in_action_ipv6(struct rte_pipeline *p,
               /* printf("drop %p\n", (void *) pkts_drop_mask); */
               rte_pipeline_ah_packet_drop(p, pkts_drop_mask);
        }
-
-       if (unlikely(hijack_mask != 0))
-              rte_pipeline_ah_packet_hijack(p, hijack_mask);
 
        vfw_pipe->counters->num_batch_pkts_sum += n_pkts;
        vfw_pipe->counters->num_pkts_measurements++;
