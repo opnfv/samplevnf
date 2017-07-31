@@ -26,7 +26,7 @@ MODPROBE="/sbin/modprobe"
 INSMOD="/sbin/insmod"
 DPDK_DOWNLOAD="Not initialized"
 DPDK_DIR=$VNF_CORE/dpdk
-DPDK_RTE_VER="16.04"
+DPDK_RTE_VER="17.02"
 
 #
 # Sets QUIT variable so script will finish.
@@ -289,13 +289,15 @@ build_vnfs()
 	popd
 }
 
-#--- Add non intractive option to build vnfs
-if [[ "$1" = "--silient" ]];then
-		DPDK_VER=("" "16.04" "16.11" "17.02" "17.05")
-		member="$2"
-		for item in "${DPDK_VER[@]}"; do
-			  if [[ "$member" == "$item" ]]; then
-		        DPDK_RTE_VER="$member"
+non_interactive()
+{
+  #--- Add non intractive option to build vnfs
+  if [[ "$1" = "true" ]];then
+		  DPDK_VER=("" "16.04" "16.11" "17.02" "17.05")
+		  member="$2"
+		  for item in "${DPDK_VER[@]}"; do
+			   if [[ "$member" == "$item" ]]; then
+		      DPDK_RTE_VER="$member"
 		    fi
     done
     pushd $VNF_CORE
@@ -318,62 +320,117 @@ if [[ "$1" = "--silient" ]];then
 
     popd
     exit
-fi
+  fi
+}
 
-SETUP_PROXY="setup_http_proxy"
-STEPS[1]="step_1"
-STEPS[2]="step_2"
-STEPS[3]="step_3"
+interactive()
+{
+  SETUP_PROXY="setup_http_proxy"
+  STEPS[1]="step_1"
+  STEPS[2]="step_2"
+  STEPS[3]="step_3"
 
-QUIT=0
+  QUIT=0
 
+  while [ "$QUIT" == "0" ]; do
+    OPTION_NUM=1
+    for s in $(seq ${#STEPS[@]}) ; do
+      ${STEPS[s]}
+
+      echo "----------------------------------------------------------"
+      echo " Step $s: ${TITLE}"
+      echo "----------------------------------------------------------"
+
+      for i in $(seq ${#TEXT[@]}) ; do
+              echo "[$OPTION_NUM] ${TEXT[i]}"
+              OPTIONS[$OPTION_NUM]=${FUNC[i]}
+              let "OPTION_NUM+=1"
+      done
+
+      # Clear TEXT and FUNC arrays before next step
+      unset TEXT
+      unset FUNC
+
+      echo ""
+    done
+
+    echo "[$OPTION_NUM] Exit Script"
+    OPTIONS[$OPTION_NUM]="quit"
+    echo ""
+    echo -n "Option: "
+    read our_entry
+    echo ""
+    ${OPTIONS[our_entry]} ${our_entry}
+
+    if [ "$QUIT" == "0" ] ; then
+      echo
+      echo -n "Press enter to continue ..."; read
+      clear
+      continue
+      exit
+    fi
+    echo "Installation successfully complete."
+  done
+}
+
+# -- main script
 clear
-
-echo -n "Checking for user permission.. "
 sudo -n true
 if [ $? -ne 0 ]; then
-   echo "Password-less sudo user must run this script" 1>&2
-   exit 1
+  echo -n "Checking for user permission.. "
+  echo "Password-less sudo user must run this script" 1>&2
+  exit 1
 fi
-echo "Done"
-clear
 
-while [ "$QUIT" == "0" ]; do
-        OPTION_NUM=1
-        for s in $(seq ${#STEPS[@]}) ; do
-                ${STEPS[s]}
+NON_INTERACTIVE=false
+INTERACTIVE=true
+DPDK_VERSION=$DPDK_RTE_VER
 
-                echo "----------------------------------------------------------"
-                echo " Step $s: ${TITLE}"
-                echo "----------------------------------------------------------"
-
-                for i in $(seq ${#TEXT[@]}) ; do
-                        echo "[$OPTION_NUM] ${TEXT[i]}"
-                        OPTIONS[$OPTION_NUM]=${FUNC[i]}
-                        let "OPTION_NUM+=1"
-                done
-
-                # Clear TEXT and FUNC arrays before next step
-                unset TEXT
-                unset FUNC
-
-                echo ""
-        done
-
-        echo "[$OPTION_NUM] Exit Script"
-        OPTIONS[$OPTION_NUM]="quit"
-        echo ""
-        echo -n "Option: "
-        read our_entry
-        echo ""
-        ${OPTIONS[our_entry]} ${our_entry}
-
-        if [ "$QUIT" == "0" ] ; then
-                echo
-                echo -n "Press enter to continue ..."; read
-                clear
-                continue
-                exit
-        fi
-        echo "Installation successfully complete."
+for i in "$@"
+do
+case $i in
+		-s|--silient)
+		NON_INTERACTIVE=true
+  INTERACTIVE=false
+		;;
+		-i|--interactive)
+		INTERACTIVE=true
+		;;
+		-p=*|--proxy=*)
+		export http_proxy="${i#*=}"
+		export https_proxy="${i#*=}"
+		;;
+		-d=*|--dpdk=*)
+		DPDK_VERSION="${i#*=}"
+		;;
+		-h|--help)
+		echo "CommandLine options:"
+		echo "===================="
+		echo "1. Intractive mode:"
+		echo "./tools/vnf_build.sh or ./tools/vnf_build.sh -i"
+		echo
+		echo "1. Non-Intractive mode:"
+		echo "./tools/vnf_build.sh -s [Default dpdk 17.02]"
+		echo "If system is behind proxy use -p=<proxy> and to use different dpdk version use -d=<dpdk>"
+		echo "eg: ./tools/vnf_build.sh -s -p=http://proxy.com -d=17.05"
+		echo 'Note:- supported dpdk version ("16.04" "16.11" "17.02" "17.05")'
+		echo
+		exit
+		;;
+		--default)
+		INTERACTIVE=true
+		;;
+		*)
+  ;;
+esac
 done
+
+if [[ "$INTERACTIVE" == "true" ]]; then
+			interactive
+			exit
+fi
+
+if [[ "$NON_INTERACTIVE" == "true" ]]; then
+			non_interactive $NON_INTERACTIVE $DPDK_VERSION
+			exit
+fi
