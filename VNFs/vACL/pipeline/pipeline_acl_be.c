@@ -47,6 +47,8 @@
 #include "pipeline_actions_common.h"
 #include "lib_arp.h"
 #include "lib_icmpv6.h"
+#include "gateway.h"
+
 static uint8_t acl_prv_que_port_index[PIPELINE_MAX_PORT_IN];
 extern void convert_prefixlen_to_netmask_ipv6(uint32_t depth,
                                               uint8_t netmask_ipv6[]);
@@ -82,14 +84,6 @@ struct pipeline_acl {
 	uint64_t arpPktCount;
 	struct acl_table_entry *acl_entries_ipv4[RTE_PORT_IN_BURST_SIZE_MAX];
 	struct acl_table_entry *acl_entries_ipv6[RTE_PORT_IN_BURST_SIZE_MAX];
-
-	/* Local ARP & ND Tables */
-	struct lib_arp_route_table_entry
-	 local_lib_arp_route_table[MAX_ARP_RT_ENTRY];
-	uint8_t local_lib_arp_route_ent_cnt;
-	struct lib_nd_route_table_entry
-	 local_lib_nd_route_table[MAX_ND_RT_ENTRY];
-	uint8_t local_lib_nd_route_ent_cnt;
 
 } __rte_cache_aligned;
 
@@ -147,74 +141,6 @@ static pipeline_msg_req_handler custom_handlers[] = {
 uint64_t arp_pkts_mask;
 
 uint8_t ACL_DEBUG;
-uint32_t local_get_nh_ipv4(uint32_t ip,
-			   uint32_t *port,
-			   uint32_t *nhip, struct pipeline_acl *p_acl)
-{
-	int i;
-
-	for (i = 0; i < p_acl->local_lib_arp_route_ent_cnt; i++) {
-		if (((p_acl->local_lib_arp_route_table[i].ip &
-			p_acl->local_lib_arp_route_table[i].mask) ==
-			(ip & p_acl->local_lib_arp_route_table[i].mask))) {
-			*port = p_acl->local_lib_arp_route_table[i].port;
-
-			*nhip = p_acl->local_lib_arp_route_table[i].nh;
-			return 1;
-		}
-	}
-	return 0;
-}
-
-static uint32_t local_get_nh_ipv6(uint8_t *ip,
-				  uint32_t *port,
-				  uint8_t nhip[], struct pipeline_acl *p_acl)
-{
-	int i = 0;
-        uint8_t netmask_ipv6[16],netip_nd[16],netip_in[16];
-        uint8_t k = 0, l = 0, depthflags = 0, depthflags1 = 0;
-        memset (netmask_ipv6, 0, sizeof(netmask_ipv6));
-        memset (netip_nd, 0, sizeof(netip_nd));
-        memset (netip_in, 0, sizeof(netip_in));
-
-        for (i = 0; i < p_acl->local_lib_nd_route_ent_cnt; i++) {
-
-                convert_prefixlen_to_netmask_ipv6
-                    (p_acl->local_lib_nd_route_table[i].depth, netmask_ipv6);
-
-                for (k = 0; k < 16; k++)
-                        if (p_acl->local_lib_nd_route_table[i].ipv6[k] &
-                            netmask_ipv6[k]) {
-                                depthflags++;
-                                netip_nd[k] = p_acl->
-                                local_lib_nd_route_table[i].ipv6[k];
-                        }
-
-
-                for (l = 0; l < 16; l++)
-                        if (ip[l] & netmask_ipv6[l]) {
-                                depthflags1++;
-                                netip_in[l] = ip[l];
-                        }
-
-                int j = 0;
-
-                if ((depthflags == depthflags1) && (memcmp(netip_nd, netip_in,
-                                                        sizeof(netip_nd)) == 0)){
-                        *port = p_acl->local_lib_nd_route_table[i].port;
-
-                        for (j = 0; j < 16; j++)
-                                nhip[j] =
-                                    p_acl->local_lib_nd_route_table[i].
-                                    nhipv6[j];
-                        return 1;
-                }
-
-                depthflags = 0;
-                depthflags1 = 0;
-        }
-        return 0;
-}
 
 static uint8_t check_arp_icmp(struct rte_mbuf *pkt,
 			      uint64_t pkt_mask, struct pipeline_acl *p_acl)
@@ -396,675 +322,689 @@ void print_pkt_acl(struct rte_mbuf *pkt)
  */
 static int
 pkt_work_acl_key(struct rte_pipeline *p,
-		 struct rte_mbuf **pkts, uint32_t n_pkts, void *arg)
+        struct rte_mbuf **pkts, uint32_t n_pkts, void *arg)
 {
 
-	struct pipeline_acl *p_acl = arg;
-
-	p_acl->counters->pkts_received =
-	    p_acl->counters->pkts_received + n_pkts;
-	if (ACL_DEBUG)
-		printf("pkt_work_acl_key pkts_received: %" PRIu64
-		       " n_pkts: %u\n", p_acl->counters->pkts_received, n_pkts);
-
-	uint64_t lookup_hit_mask = 0;
-	uint64_t lookup_hit_mask_ipv4 = 0;
-	uint64_t lookup_hit_mask_ipv6 = 0;
-	uint64_t lookup_miss_mask = 0;
-	uint64_t conntrack_mask = 0;
-	uint64_t connexist_mask = 0;
-	uint32_t dest_address = 0;
-	arp_pkts_mask = 0;
-	int dest_if = 0;
-	int status;
-	uint64_t pkts_drop_mask, pkts_mask = RTE_LEN2MASK(n_pkts, uint64_t);
-	uint64_t keep_mask = pkts_mask;
-	uint16_t port;
-	uint32_t ret;
-
-	p_acl->in_port_time_stamp = rte_get_tsc_cycles();
-
-	if (acl_ipv4_enabled) {
-		if (ACL_DEBUG)
-			printf("ACL IPV4 Lookup Mask Before = %p\n",
-			       (void *)pkts_mask);
-		status =
-		    rte_table_acl_ops.f_lookup(acl_rule_table_ipv4_active, pkts,
-					       pkts_mask, &lookup_hit_mask_ipv4,
-					       (void **)
-					       p_acl->acl_entries_ipv4);
-		if (ACL_DEBUG)
-			printf("ACL IPV4 Lookup Mask After = %p\n",
-			       (void *)lookup_hit_mask_ipv4);
-	}
-
-	if (acl_ipv6_enabled) {
-		if (ACL_DEBUG)
-			printf("ACL IPV6 Lookup Mask Before = %p\n",
-			       (void *)pkts_mask);
-		status =
-		    rte_table_acl_ops.f_lookup(acl_rule_table_ipv6_active, pkts,
-					       pkts_mask, &lookup_hit_mask_ipv6,
-					       (void **)
-					       p_acl->acl_entries_ipv6);
-		if (ACL_DEBUG)
-			printf("ACL IPV6 Lookup Mask After = %p\n",
-			       (void *)lookup_hit_mask_ipv6);
-	}
-
-	/* Merge lookup results since we process both IPv4 and IPv6 below */
-	lookup_hit_mask = lookup_hit_mask_ipv4 | lookup_hit_mask_ipv6;
-	if (ACL_DEBUG)
-		printf("ACL Lookup Mask After = %p\n", (void *)lookup_hit_mask);
-
-	lookup_miss_mask = pkts_mask & (~lookup_hit_mask);
-	pkts_mask = lookup_hit_mask;
-	p_acl->counters->pkts_drop += __builtin_popcountll(lookup_miss_mask);
-	if (ACL_DEBUG)
-		printf("pkt_work_acl_key pkts_drop: %" PRIu64 " n_pkts: %u\n",
-		       p_acl->counters->pkts_drop,
-		       __builtin_popcountll(lookup_miss_mask));
-
-	uint64_t pkts_to_process = lookup_hit_mask;
-		/* bitmap of packets left to process for ARP */
-
-	for (; pkts_to_process;) {
-		uint8_t pos = (uint8_t) __builtin_ctzll(pkts_to_process);
-		uint64_t pkt_mask = 1LLU << pos;
-		/* bitmask representing only this packet */
-
-		pkts_to_process &= ~pkt_mask;
-		/* remove this packet from remaining list */
-		struct rte_mbuf *pkt = pkts[pos];
-
-		if (enable_hwlb)
-			if (!check_arp_icmp(pkt, pkt_mask, p_acl)) {
-				pkts_mask &= ~(1LLU << pos);
-				continue;
-			}
-
-		uint8_t hdr_chk =
-		    RTE_MBUF_METADATA_UINT8(pkt, MBUF_HDR_ROOM + ETH_HDR_SIZE);
-		hdr_chk = hdr_chk >> IP_VERSION_CHECK;
-
-		if (hdr_chk == IPv4_HDR_VERSION) {
-
-			struct acl_table_entry *entry =
-			    (struct acl_table_entry *)
-			    p_acl->acl_entries_ipv4[pos];
-			uint16_t phy_port = entry->head.port_id;
-			uint32_t action_id = entry->action_id;
-
-			if (ACL_DEBUG)
-				printf("action_id = %u\n", action_id);
-
-			uint32_t dscp_offset =
-			    MBUF_HDR_ROOM + ETH_HDR_SIZE + IP_HDR_DSCP_OFST;
-
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_count) {
-				action_counter_table
-				    [p_acl->action_counter_index]
-				    [action_id].packetCount++;
-				action_counter_table
-				    [p_acl->action_counter_index]
-				    [action_id].byteCount +=
-				    rte_pktmbuf_pkt_len(pkt);
-				if (ACL_DEBUG)
-					printf("Action Count   Packet Count: %"
-					       PRIu64 "  Byte Count: %" PRIu64
-					       "\n",
-					       action_counter_table
-					       [p_acl->action_counter_index]
-					       [action_id].packetCount,
-					       action_counter_table
-					       [p_acl->action_counter_index]
-					       [action_id].byteCount);
-			}
-
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_packet_drop) {
-
-				/* Drop packet by changing the mask */
-				if (ACL_DEBUG)
-					printf("ACL before drop pkt_mask "
-							" %lu, pkt_num %d\n",
-					     pkts_mask, pos);
-				pkts_mask &= ~(1LLU << pos);
-				if (ACL_DEBUG)
-					printf("ACL after drop pkt_mask  "
-							"%lu, pkt_num %d\n",
-					     pkts_mask, pos);
-				p_acl->counters->pkts_drop++;
-			}
-
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_fwd) {
-				phy_port =
-				    action_array_active[action_id].fwd_port;
-				entry->head.port_id = phy_port;
-				if (ACL_DEBUG)
-					printf("Action FWD  Port ID: %u\n",
-					       phy_port);
-			}
-
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_nat) {
-				phy_port =
-				    action_array_active[action_id].nat_port;
-				entry->head.port_id = phy_port;
-				if (ACL_DEBUG)
-					printf("Action NAT  Port ID: %u\n",
-					       phy_port);
-			}
-
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_dscp) {
-
-				/* Set DSCP priority */
-				uint8_t *dscp = RTE_MBUF_METADATA_UINT8_PTR(pkt,
-							    dscp_offset);
-				*dscp =
-				    action_array_active[action_id].dscp_priority
-				    << 2;
-				if (ACL_DEBUG)
-					printf
-					    ("Action DSCP  DSCP Priority: %u\n",
-					     *dscp);
-			}
-
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_packet_accept) {
-				if (ACL_DEBUG)
-					printf("Action Accept\n");
-
-				if (action_array_active[action_id].action_bitmap
-				    & acl_action_conntrack) {
-
-					/* Set conntrack bit for this pkt */
-					conntrack_mask |= pkt_mask;
-					if (ACL_DEBUG)
-						printf("ACL Conntrack enabled: "
-							"%p  pkt_mask: %p\n",
-						     (void *)conntrack_mask,
-						     (void *)pkt_mask);
-				}
-
-				if (action_array_active[action_id].action_bitmap
-				    & acl_action_connexist) {
-
-					/* Set conntrack bit for this pkt */
-					conntrack_mask |= pkt_mask;
-
-		/* Set connexist bit for this pkt for public -> private */
-		/* Private -> public packet will open the connection */
-					if (action_array_active
-					    [action_id].private_public ==
-					    acl_public_private)
-						connexist_mask |= pkt_mask;
-
-					if (ACL_DEBUG)
-						printf("ACL Connexist enabled  "
-				"conntrack: %p  connexist: %p  pkt_mask: %p\n",
-						     (void *)conntrack_mask,
-						     (void *)connexist_mask,
-						     (void *)pkt_mask);
-				}
-			}
-		}
-
-		if (hdr_chk == IPv6_HDR_VERSION) {
-
-			struct acl_table_entry *entry =
-			    (struct acl_table_entry *)
-			    p_acl->acl_entries_ipv6[pos];
-			uint16_t phy_port = entry->head.port_id;
-			uint32_t action_id = entry->action_id;
-
-			if (ACL_DEBUG)
-				printf("action_id = %u\n", action_id);
-
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_count) {
-				action_counter_table
-				    [p_acl->action_counter_index]
-				    [action_id].packetCount++;
-				action_counter_table
-				    [p_acl->action_counter_index]
-				    [action_id].byteCount +=
-				    rte_pktmbuf_pkt_len(pkt);
-				if (ACL_DEBUG)
-					printf("Action Count   Packet Count: %"
-					       PRIu64 "  Byte Count: %" PRIu64
-					       "\n",
-					       action_counter_table
-					       [p_acl->action_counter_index]
-					       [action_id].packetCount,
-					       action_counter_table
-					       [p_acl->action_counter_index]
-					       [action_id].byteCount);
-			}
-
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_packet_drop) {
-				/* Drop packet by changing the mask */
-				if (ACL_DEBUG)
-					printf("ACL before drop pkt_mask  "
-							"%lu, pkt_num %d\n",
-					     pkts_mask, pos);
-				pkts_mask &= ~(1LLU << pos);
-				if (ACL_DEBUG)
-					printf("ACL after drop pkt_mask  "
-							"%lu, pkt_num %d\n",
-					     pkts_mask, pos);
-				p_acl->counters->pkts_drop++;
-
-			}
-
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_fwd) {
-				phy_port =
-				    action_array_active[action_id].fwd_port;
-				entry->head.port_id = phy_port;
-				if (ACL_DEBUG)
-					printf("Action FWD  Port ID: %u\n",
-					       phy_port);
-			}
-
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_nat) {
-				phy_port =
-				    action_array_active[action_id].nat_port;
-				entry->head.port_id = phy_port;
-				if (ACL_DEBUG)
-					printf("Action NAT  Port ID: %u\n",
-					       phy_port);
-			}
-
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_dscp) {
-
-				/* Set DSCP priority */
-				uint32_t dscp_offset =
-				    MBUF_HDR_ROOM + ETH_HDR_SIZE +
-				    IP_HDR_DSCP_OFST_IPV6;
-				uint16_t *dscp =
-				    RTE_MBUF_METADATA_UINT16_PTR(pkt,
-								 dscp_offset);
-				uint16_t dscp_value =
-				    (rte_bswap16
-				     (RTE_MBUF_METADATA_UINT16
-				      (pkt, dscp_offset)) & 0XF00F);
-				uint8_t dscp_store =
-				    action_array_active[action_id].dscp_priority
-				    << 2;
-				uint16_t dscp_temp = dscp_store;
-
-				dscp_temp = dscp_temp << 4;
-				*dscp = rte_bswap16(dscp_temp | dscp_value);
-				if (ACL_DEBUG)
-					printf
-					    ("Action DSCP  DSCP Priority: %u\n",
-					     *dscp);
-			}
-
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_packet_accept) {
-				if (ACL_DEBUG)
-					printf("Action Accept\n");
-
-				if (action_array_active[action_id].action_bitmap
-				    & acl_action_conntrack) {
-
-					/* Set conntrack bit for this pkt */
-					conntrack_mask |= pkt_mask;
-					if (ACL_DEBUG)
-						printf("ACL Conntrack enabled: "
-							" %p  pkt_mask: %p\n",
-						     (void *)conntrack_mask,
-						     (void *)pkt_mask);
-				}
-
-				if (action_array_active[action_id].action_bitmap
-				    & acl_action_connexist) {
-
-					/* Set conntrack bit for this pkt */
-					conntrack_mask |= pkt_mask;
-
-		/* Set connexist bit for this pkt for public -> private */
-		/* Private -> public packet will open the connection */
-					if (action_array_active
-					    [action_id].private_public ==
-					    acl_public_private)
-						connexist_mask |= pkt_mask;
-
-					if (ACL_DEBUG)
-						printf("ACL Connexist enabled  "
-				"conntrack: %p  connexist: %p  pkt_mask: %p\n",
-						     (void *)conntrack_mask,
-						     (void *)connexist_mask,
-						     (void *)pkt_mask);
-				}
-			}
-		}
-	}
-
-	/* Only call connection tracker if required */
-	if (conntrack_mask > 0) {
-		if (ACL_DEBUG)
-			printf
-			    ("ACL Call Conntrack Before = %p  Connexist = %p\n",
-			     (void *)conntrack_mask, (void *)connexist_mask);
-		conntrack_mask =
-		    rte_ct_cnxn_tracker_batch_lookup_with_new_cnxn_control
-		    (p_acl->cnxn_tracker, pkts, conntrack_mask, connexist_mask);
-		if (ACL_DEBUG)
-			printf("ACL Call Conntrack After = %p\n",
-			       (void *)conntrack_mask);
-
-		/* Only change pkt mask for pkts that have conntrack enabled */
-		/* Need to loop through packets to check if conntrack enabled */
-		pkts_to_process = pkts_mask;
-		for (; pkts_to_process;) {
-			uint32_t action_id = 0;
-			uint8_t pos =
-			    (uint8_t) __builtin_ctzll(pkts_to_process);
-			uint64_t pkt_mask = 1LLU << pos;
-		/* bitmask representing only this packet */
-
-			pkts_to_process &= ~pkt_mask;
-		/* remove this packet from remaining list */
-			struct rte_mbuf *pkt = pkts[pos];
-
-			uint8_t hdr_chk = RTE_MBUF_METADATA_UINT8(pkt,
-								  MBUF_HDR_ROOM
-								  +
-								  ETH_HDR_SIZE);
-
-			hdr_chk = hdr_chk >> IP_VERSION_CHECK;
-			if (hdr_chk == IPv4_HDR_VERSION) {
-				struct acl_table_entry *entry =
-				    (struct acl_table_entry *)
-				    p_acl->acl_entries_ipv4[pos];
-				action_id = entry->action_id;
-			} else {
-				struct acl_table_entry *entry =
-				    (struct acl_table_entry *)
-				    p_acl->acl_entries_ipv6[pos];
-				action_id = entry->action_id;
-			}
-
-			if ((action_array_active[action_id].action_bitmap &
-			     acl_action_conntrack)
-			    || (action_array_active[action_id].action_bitmap &
-				acl_action_connexist)) {
-
-				if (conntrack_mask & pkt_mask) {
-					if (ACL_DEBUG)
-						printf("ACL Conntrack Accept  "
-								"packet = %p\n",
-						     (void *)pkt_mask);
-				} else {
-					/* Drop packet by changing the mask */
-					if (ACL_DEBUG)
-						printf("ACL Conntrack Drop  "
-								"packet = %p\n",
-						     (void *)pkt_mask);
-					pkts_mask &= ~pkt_mask;
-					p_acl->counters->pkts_drop++;
-				}
-			}
-		}
-	}
-
-	pkts_to_process = pkts_mask;
-		/* bitmap of packets left to process for ARP */
-
-	for (; pkts_to_process;) {
-		uint8_t pos = (uint8_t) __builtin_ctzll(pkts_to_process);
-		uint64_t pkt_mask = 1LLU << pos;
-		/* bitmask representing only this packet */
-
-		pkts_to_process &= ~pkt_mask;
-		/* remove this packet from remaining list */
-		struct rte_mbuf *pkt = pkts[pos];
-
-		uint8_t hdr_chk =
-		    RTE_MBUF_METADATA_UINT8(pkt, MBUF_HDR_ROOM + ETH_HDR_SIZE);
-		hdr_chk = hdr_chk >> IP_VERSION_CHECK;
-
-		if (hdr_chk == IPv4_HDR_VERSION) {
-
-			struct acl_table_entry *entry =
-			    (struct acl_table_entry *)
-			    p_acl->acl_entries_ipv4[pos];
-			uint16_t phy_port = pkt->port;
-			uint32_t *port_out_id =
-			    RTE_MBUF_METADATA_UINT32_PTR(pkt,
-							 META_DATA_OFFSET +
-							 offsetof(struct
-							  mbuf_acl_meta_data,
-								  output_port));
-			if (ACL_DEBUG)
-				printf
-				   ("phy_port = %i, links_map[phy_port] = %i\n",
-				     phy_port, p_acl->links_map[phy_port]);
-
-		/* header room + eth hdr size + dst_adr offset in ip header */
-			uint32_t dst_addr_offset =
-			    MBUF_HDR_ROOM + ETH_HDR_SIZE + IP_HDR_DST_ADR_OFST;
-			uint32_t *dst_addr =
-			    RTE_MBUF_METADATA_UINT32_PTR(pkt, dst_addr_offset);
-			uint8_t *eth_dest =
-			    RTE_MBUF_METADATA_UINT8_PTR(pkt, MBUF_HDR_ROOM);
-			uint8_t *eth_src =
-			    RTE_MBUF_METADATA_UINT8_PTR(pkt, MBUF_HDR_ROOM + 6);
-			struct ether_addr hw_addr;
-			uint32_t dest_address = rte_bswap32(*dst_addr);
-			uint32_t *nhip = RTE_MBUF_METADATA_UINT32_PTR(pkt,
-							      META_DATA_OFFSET
-								      +
-								      offsetof
-								      (struct
-						       mbuf_acl_meta_data,
-								       nhip));
-			uint32_t packet_length = rte_pktmbuf_pkt_len(pkt);
-			*nhip = 0;
-			struct arp_entry_data *ret_arp_data = NULL;
-			ret_arp_data = get_dest_mac_addr_port
-			    (dest_address, &dest_if, (struct ether_addr *) eth_dest);
-			*port_out_id = p_acl->port_out_id[dest_if];
-			if (arp_cache_dest_mac_present(dest_if)) {
-				ether_addr_copy(get_link_hw_addr(dest_if),
-					 (struct ether_addr *)eth_src);
-				update_nhip_access(dest_if);
-				if (unlikely(ret_arp_data && ret_arp_data->num_pkts)) {
-					printf("sending buffered packets\n");
-					arp_send_buffered_pkts(ret_arp_data,
-					(struct ether_addr *)eth_dest, *port_out_id);
-
-				}
-				p_acl->counters->tpkts_processed++;
-				p_acl->counters->bytes_processed +=
-				    packet_length;
-			} else {
-				if (unlikely(ret_arp_data == NULL)) {
-					if (ACL_DEBUG)
-					printf("%s: NHIP Not Found, "
-					"outport_id: %d\n", __func__,
-					*port_out_id);
-
-					/* Drop the pkt */
-					pkts_mask &= ~(1LLU << pos);
-					if (ACL_DEBUG)
-						printf("ACL after drop pkt_mask  "
-						"%lu, pkt_num %d\n",
-						pkts_mask, pos);
-						p_acl->counters->pkts_drop++;
-						continue;
-				}
-
-				if (ret_arp_data->status == INCOMPLETE ||
-					ret_arp_data->status == PROBE) {
-					if (ret_arp_data->num_pkts >= NUM_DESC) {
-						/* Drop the pkt */
-						pkts_mask &= ~(1LLU << pos);
-						if (ACL_DEBUG)
-							printf("ACL after drop pkt_mask  "
-							"%lu, pkt_num %d\n",
-							pkts_mask, pos);
-						p_acl->counters->pkts_drop++;
-						continue;
-					} else {
-						arp_pkts_mask |= pkt_mask;
-						arp_queue_unresolved_packet(ret_arp_data,
-									 pkt);
-						continue;
-					}
-				}
-			}
-
-		} /* end of if (hdr_chk == IPv4_HDR_VERSION) */
-
-		if (hdr_chk == IPv6_HDR_VERSION) {
-
-			struct acl_table_entry *entry =
-			    (struct acl_table_entry *)
-			    p_acl->acl_entries_ipv6[pos];
-			//uint16_t phy_port = entry->head.port_id;
-			uint16_t phy_port = pkt->port;
-			uint32_t *port_out_id =
-			    RTE_MBUF_METADATA_UINT32_PTR(pkt,
-							 META_DATA_OFFSET +
-							 offsetof(struct
-							  mbuf_acl_meta_data,
-								  output_port));
-			/*if (is_phy_port_privte(phy_port))
-				*port_out_id = ACL_PUB_PORT_ID;
-			else
-				*port_out_id = ACL_PRV_PORT_ID;*/
-
-			/*      *port_out_id = p_acl->links_map[phy_port]; */
-			if (ACL_DEBUG)
-				printf("phy_port = %i,  "
-					"links_map[phy_port] = %i\n",
-				     phy_port, p_acl->links_map[phy_port]);
-
-		/* header room + eth hdr size + dst_adr offset in ip header */
-			uint32_t dst_addr_offset =
-			    MBUF_HDR_ROOM + ETH_HDR_SIZE +
-			    IP_HDR_DST_ADR_OFST_IPV6;
-			uint8_t *eth_dest =
-			    RTE_MBUF_METADATA_UINT8_PTR(pkt, MBUF_HDR_ROOM);
-			uint8_t *eth_src =
-			    RTE_MBUF_METADATA_UINT8_PTR(pkt, MBUF_HDR_ROOM + 6);
-			struct ether_addr hw_addr;
-			uint8_t dest_address[16];
-			uint8_t nhip[16];
-
-			nhip[0] =
-			RTE_MBUF_METADATA_UINT8(pkt,
-						    META_DATA_OFFSET +
-						    offsetof(struct
-							     mbuf_acl_meta_data,
-							     nhip));
-			uint8_t *dst_addr[16];
-			uint32_t packet_length = rte_pktmbuf_pkt_len(pkt);
-			int i = 0;
-
-			for (i = 0; i < 16; i++) {
-				dst_addr[i] =
-				    RTE_MBUF_METADATA_UINT8_PTR(pkt,
-								dst_addr_offset
-								+ i);
-			}
-			memcpy(dest_address, *dst_addr, sizeof(dest_address));
-			memset(nhip, 0, sizeof(nhip));
-
-			struct nd_entry_data *ret_nd_data = NULL;
-			ret_nd_data = get_dest_mac_address_ipv6_port
-			    (dest_address, &dest_if, &hw_addr, &nhip[0]);
-			*port_out_id = p_acl->port_out_id[dest_if];
-			if (nd_cache_dest_mac_present(dest_if)) {
-				ether_addr_copy(get_link_hw_addr(dest_if),
-					(struct ether_addr *)eth_src);
-				update_nhip_access(dest_if);
-
-				if (unlikely(ret_nd_data && ret_nd_data->num_pkts)) {
-					printf("sending buffered packets\n");
-					p_acl->counters->tpkts_processed +=
-						 ret_nd_data->num_pkts;
-					nd_send_buffered_pkts(ret_nd_data,
-					(struct ether_addr *)eth_dest, *port_out_id);
-				}
-				p_acl->counters->tpkts_processed++;
-				p_acl->counters->bytes_processed +=
-				    packet_length;
-			} else {
-				if (unlikely(ret_nd_data == NULL)) {
-					if (ACL_DEBUG)
-						printf("ACL before drop pkt_mask  "
-						"%lu, pkt_num %d\n", pkts_mask, pos);
-					pkts_mask &= ~(1LLU << pos);
-					if (ACL_DEBUG)
-						printf("ACL after drop pkt_mask  "
-						"%lu, pkt_num %d\n", pkts_mask, pos);
-					p_acl->counters->pkts_drop++;
-					continue;
-				}
-
-				if (ret_nd_data->status == INCOMPLETE ||
-					ret_nd_data->status == PROBE) {
-					if (ret_nd_data->num_pkts >= NUM_DESC) {
-						/* Drop the pkt */
-						if (ACL_DEBUG)
-							printf("ACL before drop pkt_mask  "
-							"%lu, pkt_num %d\n", pkts_mask, pos);
-						pkts_mask &= ~(1LLU << pos);
-						if (ACL_DEBUG)
-							printf("ACL after drop pkt_mask  "
-							"%lu, pkt_num %d\n", pkts_mask, pos);
-						p_acl->counters->pkts_drop++;
-						continue;
-					} else {
-						arp_pkts_mask |= pkt_mask;
-						nd_queue_unresolved_packet(ret_nd_data,
-										 pkt);
-						continue;
-					}
-				}
-
-			}
-
-		} /* if (hdr_chk == IPv6_HDR_VERSION) */
-
-	}
-
-	pkts_drop_mask = keep_mask & ~pkts_mask;
-	rte_pipeline_ah_packet_drop(p, pkts_drop_mask);
-	keep_mask = pkts_mask;
-
-	if (arp_pkts_mask) {
-		keep_mask &= ~(arp_pkts_mask);
-		rte_pipeline_ah_packet_hijack(p, arp_pkts_mask);
-	}
-
-	/* don't bother measuring if traffic very low, might skew stats */
-	uint32_t packets_this_iteration = __builtin_popcountll(pkts_mask);
-
-	if (packets_this_iteration > 1) {
-		uint64_t latency_this_iteration =
-		    rte_get_tsc_cycles() - p_acl->in_port_time_stamp;
-
-		p_acl->counters->sum_latencies += latency_this_iteration;
-		p_acl->counters->count_latencies++;
-	}
-
-	if (ACL_DEBUG)
-		printf("Leaving pkt_work_acl_key pkts_mask = %p\n",
-		       (void *)pkts_mask);
-
-	return 0;
+    struct pipeline_acl *p_acl = arg;
+
+    p_acl->counters->pkts_received =
+        p_acl->counters->pkts_received + n_pkts;
+    if (ACL_DEBUG)
+        printf("pkt_work_acl_key pkts_received: %" PRIu64
+                " n_pkts: %u\n", p_acl->counters->pkts_received, n_pkts);
+
+    uint64_t lookup_hit_mask = 0;
+    uint64_t lookup_hit_mask_ipv4 = 0;
+    uint64_t lookup_hit_mask_ipv6 = 0;
+    uint64_t lookup_miss_mask = 0;
+    uint64_t conntrack_mask = 0;
+    uint64_t connexist_mask = 0;
+    uint32_t dest_address = 0;
+    arp_pkts_mask = 0;
+    int status;
+    uint64_t pkts_drop_mask, pkts_mask = RTE_LEN2MASK(n_pkts, uint64_t);
+    uint64_t keep_mask = pkts_mask;
+    uint16_t port;
+    uint32_t ret;
+
+    p_acl->in_port_time_stamp = rte_get_tsc_cycles();
+
+    if (acl_ipv4_enabled) {
+        if (ACL_DEBUG)
+            printf("ACL IPV4 Lookup Mask Before = %p\n",
+                    (void *)pkts_mask);
+        status =
+            rte_table_acl_ops.f_lookup(acl_rule_table_ipv4_active, pkts,
+                    pkts_mask, &lookup_hit_mask_ipv4,
+                    (void **)
+                    p_acl->acl_entries_ipv4);
+        if (ACL_DEBUG)
+            printf("ACL IPV4 Lookup Mask After = %p\n",
+                    (void *)lookup_hit_mask_ipv4);
+    }
+
+    if (acl_ipv6_enabled) {
+        if (ACL_DEBUG)
+            printf("ACL IPV6 Lookup Mask Before = %p\n",
+                    (void *)pkts_mask);
+        status =
+            rte_table_acl_ops.f_lookup(acl_rule_table_ipv6_active, pkts,
+                    pkts_mask, &lookup_hit_mask_ipv6,
+                    (void **)
+                    p_acl->acl_entries_ipv6);
+        if (ACL_DEBUG)
+            printf("ACL IPV6 Lookup Mask After = %p\n",
+                    (void *)lookup_hit_mask_ipv6);
+    }
+
+    /* Merge lookup results since we process both IPv4 and IPv6 below */
+    lookup_hit_mask = lookup_hit_mask_ipv4 | lookup_hit_mask_ipv6;
+    if (ACL_DEBUG)
+        printf("ACL Lookup Mask After = %p\n", (void *)lookup_hit_mask);
+
+    lookup_miss_mask = pkts_mask & (~lookup_hit_mask);
+    pkts_mask = lookup_hit_mask;
+    p_acl->counters->pkts_drop += __builtin_popcountll(lookup_miss_mask);
+    if (ACL_DEBUG)
+        printf("pkt_work_acl_key pkts_drop: %" PRIu64 " n_pkts: %u\n",
+                p_acl->counters->pkts_drop,
+                __builtin_popcountll(lookup_miss_mask));
+
+    uint64_t pkts_to_process = lookup_hit_mask;
+    /* bitmap of packets left to process for ARP */
+
+    for (; pkts_to_process;) {
+        uint8_t pos = (uint8_t) __builtin_ctzll(pkts_to_process);
+        uint64_t pkt_mask = 1LLU << pos;
+        /* bitmask representing only this packet */
+
+        pkts_to_process &= ~pkt_mask;
+        /* remove this packet from remaining list */
+        struct rte_mbuf *pkt = pkts[pos];
+
+        if (enable_hwlb)
+            if (!check_arp_icmp(pkt, pkt_mask, p_acl)) {
+                pkts_mask &= ~(1LLU << pos);
+                continue;
+            }
+
+        uint8_t hdr_chk =
+            RTE_MBUF_METADATA_UINT8(pkt, MBUF_HDR_ROOM + ETH_HDR_SIZE);
+        hdr_chk = hdr_chk >> IP_VERSION_CHECK;
+
+        if (hdr_chk == IPv4_HDR_VERSION) {
+
+            struct acl_table_entry *entry =
+                (struct acl_table_entry *)
+                p_acl->acl_entries_ipv4[pos];
+            uint16_t phy_port = entry->head.port_id;
+            uint32_t action_id = entry->action_id;
+
+            if (ACL_DEBUG)
+                printf("action_id = %u\n", action_id);
+
+            uint32_t dscp_offset =
+                MBUF_HDR_ROOM + ETH_HDR_SIZE + IP_HDR_DSCP_OFST;
+
+            if (action_array_active[action_id].action_bitmap &
+                    acl_action_count) {
+                action_counter_table
+                    [p_acl->action_counter_index]
+                    [action_id].packetCount++;
+                action_counter_table
+                    [p_acl->action_counter_index]
+                    [action_id].byteCount +=
+                        rte_pktmbuf_pkt_len(pkt);
+                if (ACL_DEBUG)
+                    printf("Action Count   Packet Count: %"
+                            PRIu64 "  Byte Count: %" PRIu64
+                            "\n",
+                            action_counter_table
+                            [p_acl->action_counter_index]
+                            [action_id].packetCount,
+                            action_counter_table
+                            [p_acl->action_counter_index]
+                            [action_id].byteCount);
+            }
+
+            if (action_array_active[action_id].action_bitmap &
+                    acl_action_packet_drop) {
+
+                /* Drop packet by changing the mask */
+                if (ACL_DEBUG)
+                    printf("ACL before drop pkt_mask "
+                            " %lu, pkt_num %d\n",
+                            pkts_mask, pos);
+                pkts_mask &= ~(1LLU << pos);
+                if (ACL_DEBUG)
+                    printf("ACL after drop pkt_mask  "
+                            "%lu, pkt_num %d\n",
+                            pkts_mask, pos);
+                p_acl->counters->pkts_drop++;
+            }
+
+            if (action_array_active[action_id].action_bitmap &
+                    acl_action_fwd) {
+                phy_port =
+                    action_array_active[action_id].fwd_port;
+                entry->head.port_id = phy_port;
+                if (ACL_DEBUG)
+                    printf("Action FWD  Port ID: %u\n",
+                            phy_port);
+            }
+
+            if (action_array_active[action_id].action_bitmap &
+                    acl_action_nat) {
+                phy_port =
+                    action_array_active[action_id].nat_port;
+                entry->head.port_id = phy_port;
+                if (ACL_DEBUG)
+                    printf("Action NAT  Port ID: %u\n",
+                            phy_port);
+            }
+
+            if (action_array_active[action_id].action_bitmap &
+                    acl_action_dscp) {
+
+                /* Set DSCP priority */
+                uint8_t *dscp = RTE_MBUF_METADATA_UINT8_PTR(pkt,
+                        dscp_offset);
+                *dscp =
+                    action_array_active[action_id].dscp_priority
+                    << 2;
+                if (ACL_DEBUG)
+                    printf
+                        ("Action DSCP  DSCP Priority: %u\n",
+                         *dscp);
+            }
+
+            if (action_array_active[action_id].action_bitmap &
+                    acl_action_packet_accept) {
+                if (ACL_DEBUG)
+                    printf("Action Accept\n");
+
+                if (action_array_active[action_id].action_bitmap
+                        & acl_action_conntrack) {
+
+                    /* Set conntrack bit for this pkt */
+                    conntrack_mask |= pkt_mask;
+                    if (ACL_DEBUG)
+                        printf("ACL Conntrack enabled: "
+                                "%p  pkt_mask: %p\n",
+                                (void *)conntrack_mask,
+                                (void *)pkt_mask);
+                }
+
+                if (action_array_active[action_id].action_bitmap
+                        & acl_action_connexist) {
+
+                    /* Set conntrack bit for this pkt */
+                    conntrack_mask |= pkt_mask;
+
+                    /* Set connexist bit for this pkt for public -> private */
+                    /* Private -> public packet will open the connection */
+                    if (action_array_active
+                            [action_id].private_public ==
+                            acl_public_private)
+                        connexist_mask |= pkt_mask;
+
+                    if (ACL_DEBUG)
+                        printf("ACL Connexist enabled  "
+                                "conntrack: %p  connexist: %p  pkt_mask: %p\n",
+                                (void *)conntrack_mask,
+                                (void *)connexist_mask,
+                                (void *)pkt_mask);
+                }
+            }
+        }
+
+        if (hdr_chk == IPv6_HDR_VERSION) {
+
+            struct acl_table_entry *entry =
+                (struct acl_table_entry *)
+                p_acl->acl_entries_ipv6[pos];
+            uint16_t phy_port = entry->head.port_id;
+            uint32_t action_id = entry->action_id;
+
+            if (ACL_DEBUG)
+                printf("action_id = %u\n", action_id);
+
+            if (action_array_active[action_id].action_bitmap &
+                    acl_action_count) {
+                action_counter_table
+                    [p_acl->action_counter_index]
+                    [action_id].packetCount++;
+                action_counter_table
+                    [p_acl->action_counter_index]
+                    [action_id].byteCount +=
+                        rte_pktmbuf_pkt_len(pkt);
+                if (ACL_DEBUG)
+                    printf("Action Count   Packet Count: %"
+                            PRIu64 "  Byte Count: %" PRIu64
+                            "\n",
+                            action_counter_table
+                            [p_acl->action_counter_index]
+                            [action_id].packetCount,
+                            action_counter_table
+                            [p_acl->action_counter_index]
+                            [action_id].byteCount);
+            }
+
+            if (action_array_active[action_id].action_bitmap &
+                    acl_action_packet_drop) {
+                /* Drop packet by changing the mask */
+                if (ACL_DEBUG)
+                    printf("ACL before drop pkt_mask  "
+                            "%lu, pkt_num %d\n",
+                            pkts_mask, pos);
+                pkts_mask &= ~(1LLU << pos);
+                if (ACL_DEBUG)
+                    printf("ACL after drop pkt_mask  "
+                            "%lu, pkt_num %d\n",
+                            pkts_mask, pos);
+                p_acl->counters->pkts_drop++;
+
+            }
+
+            if (action_array_active[action_id].action_bitmap &
+                    acl_action_fwd) {
+                phy_port =
+                    action_array_active[action_id].fwd_port;
+                entry->head.port_id = phy_port;
+                if (ACL_DEBUG)
+                    printf("Action FWD  Port ID: %u\n",
+                            phy_port);
+            }
+
+            if (action_array_active[action_id].action_bitmap &
+                    acl_action_nat) {
+                phy_port =
+                    action_array_active[action_id].nat_port;
+                entry->head.port_id = phy_port;
+                if (ACL_DEBUG)
+                    printf("Action NAT  Port ID: %u\n",
+                            phy_port);
+            }
+
+            if (action_array_active[action_id].action_bitmap &
+                    acl_action_dscp) {
+
+                /* Set DSCP priority */
+                uint32_t dscp_offset =
+                    MBUF_HDR_ROOM + ETH_HDR_SIZE +
+                    IP_HDR_DSCP_OFST_IPV6;
+                uint16_t *dscp =
+                    RTE_MBUF_METADATA_UINT16_PTR(pkt,
+                            dscp_offset);
+                uint16_t dscp_value =
+                    (rte_bswap16
+                     (RTE_MBUF_METADATA_UINT16
+                      (pkt, dscp_offset)) & 0XF00F);
+                uint8_t dscp_store =
+                    action_array_active[action_id].dscp_priority
+                    << 2;
+                uint16_t dscp_temp = dscp_store;
+
+                dscp_temp = dscp_temp << 4;
+                *dscp = rte_bswap16(dscp_temp | dscp_value);
+                if (ACL_DEBUG)
+                    printf
+                        ("Action DSCP  DSCP Priority: %u\n",
+                         *dscp);
+            }
+
+            if (action_array_active[action_id].action_bitmap &
+                    acl_action_packet_accept) {
+                if (ACL_DEBUG)
+                    printf("Action Accept\n");
+
+                if (action_array_active[action_id].action_bitmap
+                    & acl_action_conntrack) {
+
+                    /* Set conntrack bit for this pkt */
+                    conntrack_mask |= pkt_mask;
+                    if (ACL_DEBUG)
+                        printf("ACL Conntrack enabled: "
+                                " %p  pkt_mask: %p\n",
+                                (void *)conntrack_mask,
+                                (void *)pkt_mask);
+                }
+
+                if (action_array_active[action_id].action_bitmap
+                        & acl_action_connexist) {
+
+                    /* Set conntrack bit for this pkt */
+                    conntrack_mask |= pkt_mask;
+
+                    /* Set connexist bit for this pkt for public -> private */
+                    /* Private -> public packet will open the connection */
+                    if (action_array_active
+                            [action_id].private_public ==
+                            acl_public_private)
+                        connexist_mask |= pkt_mask;
+
+                    if (ACL_DEBUG)
+                        printf("ACL Connexist enabled  "
+                                "conntrack: %p  connexist: %p  pkt_mask: %p\n",
+                                (void *)conntrack_mask,
+                                (void *)connexist_mask,
+                                (void *)pkt_mask);
+                }
+            }
+        }
+    }
+
+    /* Only call connection tracker if required */
+    if (conntrack_mask > 0) {
+        if (ACL_DEBUG)
+            printf
+                ("ACL Call Conntrack Before = %p  Connexist = %p\n",
+                 (void *)conntrack_mask, (void *)connexist_mask);
+        conntrack_mask =
+            rte_ct_cnxn_tracker_batch_lookup_with_new_cnxn_control
+            (p_acl->cnxn_tracker, pkts, conntrack_mask, connexist_mask);
+        if (ACL_DEBUG)
+            printf("ACL Call Conntrack After = %p\n",
+                    (void *)conntrack_mask);
+
+        /* Only change pkt mask for pkts that have conntrack enabled */
+        /* Need to loop through packets to check if conntrack enabled */
+        pkts_to_process = pkts_mask;
+        for (; pkts_to_process;) {
+            uint32_t action_id = 0;
+            uint8_t pos =
+                (uint8_t) __builtin_ctzll(pkts_to_process);
+            uint64_t pkt_mask = 1LLU << pos;
+            /* bitmask representing only this packet */
+
+            pkts_to_process &= ~pkt_mask;
+            /* remove this packet from remaining list */
+            struct rte_mbuf *pkt = pkts[pos];
+
+            uint8_t hdr_chk = RTE_MBUF_METADATA_UINT8(pkt,
+                    MBUF_HDR_ROOM
+                    +
+                    ETH_HDR_SIZE);
+
+            hdr_chk = hdr_chk >> IP_VERSION_CHECK;
+            if (hdr_chk == IPv4_HDR_VERSION) {
+                struct acl_table_entry *entry =
+                    (struct acl_table_entry *)
+                    p_acl->acl_entries_ipv4[pos];
+                action_id = entry->action_id;
+            } else {
+                struct acl_table_entry *entry =
+                    (struct acl_table_entry *)
+                    p_acl->acl_entries_ipv6[pos];
+                action_id = entry->action_id;
+            }
+
+            if ((action_array_active[action_id].action_bitmap &
+                        acl_action_conntrack)
+                || (action_array_active[action_id].action_bitmap &
+                acl_action_connexist)) {
+
+                if (conntrack_mask & pkt_mask) {
+                    if (ACL_DEBUG)
+                        printf("ACL Conntrack Accept  "
+                                "packet = %p\n",
+                             (void *)pkt_mask);
+                } else {
+                    /* Drop packet by changing the mask */
+                    if (ACL_DEBUG)
+                        printf("ACL Conntrack Drop  "
+                                "packet = %p\n",
+                             (void *)pkt_mask);
+                    pkts_mask &= ~pkt_mask;
+                    p_acl->counters->pkts_drop++;
+                }
+            }
+        }
+    }
+
+    pkts_to_process = pkts_mask;
+    /* bitmap of packets left to process for ARP */
+
+    for (; pkts_to_process;) {
+        uint8_t pos = (uint8_t) __builtin_ctzll(pkts_to_process);
+        uint64_t pkt_mask = 1LLU << pos;
+        /* bitmask representing only this packet */
+
+        pkts_to_process &= ~pkt_mask;
+        /* remove this packet from remaining list */
+        struct rte_mbuf *pkt = pkts[pos];
+
+        uint8_t hdr_chk =
+            RTE_MBUF_METADATA_UINT8(pkt, MBUF_HDR_ROOM + ETH_HDR_SIZE);
+        hdr_chk = hdr_chk >> IP_VERSION_CHECK;
+
+        if (hdr_chk == IPv4_HDR_VERSION) {
+
+            struct acl_table_entry *entry =
+                (struct acl_table_entry *)
+                p_acl->acl_entries_ipv4[pos];
+            uint16_t phy_port = pkt->port;
+            uint32_t *port_out_id =
+                RTE_MBUF_METADATA_UINT32_PTR(pkt,
+                             META_DATA_OFFSET +
+                             offsetof(struct
+                              mbuf_acl_meta_data,
+                                  output_port));
+            if (ACL_DEBUG)
+                printf
+                   ("phy_port = %i, links_map[phy_port] = %i\n",
+                     phy_port, p_acl->links_map[phy_port]);
+            uint32_t packet_length = rte_pktmbuf_pkt_len(pkt);
+
+            uint32_t dest_if = INVALID_DESTIF;
+            uint32_t src_phy_port = pkt->port;
+
+            if(is_gateway()){
+
+                /* Gateway Proc Starts */
+                struct ether_hdr *ehdr = (struct ether_hdr *)
+                    RTE_MBUF_METADATA_UINT32_PTR(pkt,
+                            META_DATA_OFFSET + MBUF_HDR_ROOM);
+
+                struct ipv4_hdr *ipv4hdr = (struct ipv4_hdr *)
+                    RTE_MBUF_METADATA_UINT32_PTR(pkt, IP_START);
+
+                struct arp_entry_data *ret_arp_data = NULL;
+                struct ether_addr dst_mac;
+                uint32_t nhip = 0;
+                uint32_t dst_ip_addr = rte_bswap32(ipv4hdr->dst_addr);
+
+                gw_get_nh_port_ipv4(dst_ip_addr, &dest_if, &nhip);
+
+                ret_arp_data = get_dest_mac_addr_ipv4(nhip, dest_if, &dst_mac);
+
+                /* Gateway Proc Ends */
+                if (arp_cache_dest_mac_present(dest_if)) {
+
+                    ether_addr_copy(&dst_mac, &ehdr->d_addr);
+                    ether_addr_copy(get_link_hw_addr(dest_if), &ehdr->s_addr);
+
+                    *port_out_id = p_acl->port_out_id[dest_if];
+
+                    update_nhip_access(dest_if);
+                    if (unlikely(ret_arp_data && ret_arp_data->num_pkts)) {
+                        printf("sending buffered packets\n");
+                        arp_send_buffered_pkts(ret_arp_data, &ehdr->d_addr,
+                                p_acl->port_out_id[dest_if]);
+
+                    }
+                    p_acl->counters->tpkts_processed++;
+                    p_acl->counters->bytes_processed +=
+                        packet_length;
+                } else {
+                    if (unlikely(ret_arp_data == NULL)) {
+                        if (ACL_DEBUG)
+                            printf("%s: NHIP Not Found, "
+                                    "outport_id: %d\n", __func__,
+                                    p_acl->port_out_id[dest_if]);
+
+                        /* Drop the pkt */
+                        pkts_mask &= ~(1LLU << pos);
+                        if (ACL_DEBUG)
+                            printf("ACL after drop pkt_mask  "
+                                    "%lu, pkt_num %d\n",
+                                    pkts_mask, pos);
+                        p_acl->counters->pkts_drop++;
+                        continue;
+                    }
+
+                    if (ret_arp_data->status == INCOMPLETE ||
+                            ret_arp_data->status == PROBE) {
+                        if (ret_arp_data->num_pkts >= NUM_DESC) {
+                            /* Drop the pkt */
+                            pkts_mask &= ~(1LLU << pos);
+                            if (ACL_DEBUG)
+                                printf("ACL after drop pkt_mask  "
+                                        "%lu, pkt_num %d\n",
+                                        pkts_mask, pos);
+                            p_acl->counters->pkts_drop++;
+                            continue;
+                        } else {
+                            arp_pkts_mask |= pkt_mask;
+                            arp_queue_unresolved_packet(ret_arp_data,
+                                    pkt);
+                            continue;
+                        }
+                    }
+                 }
+
+              } else {
+                    /* IP Pkt forwarding based on pub/prv mapping */
+                    if(is_phy_port_privte(src_phy_port))
+                        dest_if = prv_to_pub_map[src_phy_port];
+                    else
+                        dest_if = pub_to_prv_map[src_phy_port];
+
+                    *port_out_id = p_acl->port_out_id[dest_if];
+             }
+
+        } /* end of if (hdr_chk == IPv4_HDR_VERSION) */
+
+        if (hdr_chk == IPv6_HDR_VERSION) {
+
+            struct acl_table_entry *entry =
+                (struct acl_table_entry *)
+                p_acl->acl_entries_ipv6[pos];
+            //uint16_t phy_port = entry->head.port_id;
+            uint16_t phy_port = pkt->port;
+            uint32_t *port_out_id =
+                RTE_MBUF_METADATA_UINT32_PTR(pkt,
+                        META_DATA_OFFSET +
+                        offsetof(struct
+                            mbuf_acl_meta_data,
+                            output_port));
+            if (ACL_DEBUG)
+                printf("phy_port = %i,  "
+                        "links_map[phy_port] = %i\n",
+                        phy_port, p_acl->links_map[phy_port]);
+
+            uint32_t packet_length = rte_pktmbuf_pkt_len(pkt);
+
+            uint32_t dest_if = INVALID_DESTIF;
+            uint32_t src_phy_port = pkt->port;
+
+            if(is_gateway()){
+
+                /* Gateway Proc Starts */
+                struct ipv6_hdr *ipv6hdr = (struct ipv6_hdr *)
+                    RTE_MBUF_METADATA_UINT32_PTR(pkt, IP_START);
+
+                struct ether_hdr *ehdr = (struct ether_hdr *)
+                    RTE_MBUF_METADATA_UINT32_PTR(pkt,
+                            META_DATA_OFFSET + MBUF_HDR_ROOM);
+
+                struct ether_addr dst_mac;
+                uint8_t nhipv6[IPV6_ADD_SIZE];
+                uint8_t dest_ipv6_address[IPV6_ADD_SIZE];
+                struct nd_entry_data *ret_nd_data = NULL;
+
+                memset(nhipv6, 0, IPV6_ADD_SIZE);
+                rte_mov16(dest_ipv6_address,  (uint8_t *)ipv6hdr);
+
+                gw_get_nh_port_ipv6(dest_ipv6_address,
+                        &dest_if, nhipv6);
+
+                ret_nd_data = get_dest_mac_addr_ipv6(nhipv6, dest_if, &dst_mac);
+
+                /* Gateway Proc Ends */
+
+                if (nd_cache_dest_mac_present(dest_if)) {
+
+                    ether_addr_copy(&dst_mac, &ehdr->d_addr);
+                    ether_addr_copy(get_link_hw_addr(dest_if), &ehdr->s_addr);
+
+                    *port_out_id = p_acl->port_out_id[dest_if];
+
+                    update_nhip_access(dest_if);
+
+                    if (unlikely(ret_nd_data && ret_nd_data->num_pkts)) {
+                        printf("sending buffered packets\n");
+                        p_acl->counters->tpkts_processed +=
+                            ret_nd_data->num_pkts;
+                        nd_send_buffered_pkts(ret_nd_data, &ehdr->d_addr,
+                                p_acl->port_out_id[dest_if]);
+                    }
+                    p_acl->counters->tpkts_processed++;
+                    p_acl->counters->bytes_processed +=
+                        packet_length;
+                } else {
+                    if (unlikely(ret_nd_data == NULL)) {
+                        if (ACL_DEBUG)
+                            printf("ACL before drop pkt_mask  "
+                                    "%lu, pkt_num %d\n", pkts_mask, pos);
+                        pkts_mask &= ~(1LLU << pos);
+                        if (ACL_DEBUG)
+                            printf("ACL after drop pkt_mask  "
+                                    "%lu, pkt_num %d\n", pkts_mask, pos);
+                        p_acl->counters->pkts_drop++;
+                        continue;
+                    }
+
+                    if (ret_nd_data->status == INCOMPLETE ||
+                            ret_nd_data->status == PROBE) {
+                        if (ret_nd_data->num_pkts >= NUM_DESC) {
+                            /* Drop the pkt */
+                            if (ACL_DEBUG)
+                                printf("ACL before drop pkt_mask  "
+                                        "%lu, pkt_num %d\n", pkts_mask, pos);
+                            pkts_mask &= ~(1LLU << pos);
+                            if (ACL_DEBUG)
+                                printf("ACL after drop pkt_mask  "
+                                        "%lu, pkt_num %d\n", pkts_mask, pos);
+                            p_acl->counters->pkts_drop++;
+                            continue;
+                        } else {
+                            arp_pkts_mask |= pkt_mask;
+                            nd_queue_unresolved_packet(ret_nd_data,
+                                    pkt);
+                            continue;
+                        }
+                    }
+                }
+
+            } else {
+                /* IP Pkt forwarding based on  pub/prv mapping */
+                if(is_phy_port_privte(src_phy_port))
+                    dest_if = prv_to_pub_map[src_phy_port];
+                else
+                    dest_if = pub_to_prv_map[src_phy_port];
+
+                *port_out_id = p_acl->port_out_id[dest_if];
+            }
+        }
+
+    } /* if (hdr_chk == IPv6_HDR_VERSION) */
+
+    pkts_drop_mask = keep_mask & ~pkts_mask;
+    rte_pipeline_ah_packet_drop(p, pkts_drop_mask);
+    keep_mask = pkts_mask;
+
+    if (arp_pkts_mask) {
+        keep_mask &= ~(arp_pkts_mask);
+        rte_pipeline_ah_packet_hijack(p, arp_pkts_mask);
+    }
+
+    /* don't bother measuring if traffic very low, might skew stats */
+    uint32_t packets_this_iteration = __builtin_popcountll(pkts_mask);
+
+    if (packets_this_iteration > 1) {
+        uint64_t latency_this_iteration =
+            rte_get_tsc_cycles() - p_acl->in_port_time_stamp;
+
+        p_acl->counters->sum_latencies += latency_this_iteration;
+        p_acl->counters->count_latencies++;
+    }
+
+    if (ACL_DEBUG)
+        printf("Leaving pkt_work_acl_key pkts_mask = %p\n",
+               (void *)pkts_mask);
+
+    return 0;
 }
 
 /**
@@ -1093,674 +1033,559 @@ pkt_work_acl_key(struct rte_pipeline *p,
  */
 static int
 pkt_work_acl_ipv4_key(struct rte_pipeline *p,
-		      struct rte_mbuf **pkts, uint32_t n_pkts, void *arg)
+              struct rte_mbuf **pkts, uint32_t n_pkts, void *arg)
 {
 
-	struct pipeline_acl *p_acl = arg;
+    struct pipeline_acl *p_acl = arg;
 
-	p_acl->counters->pkts_received =
-	    p_acl->counters->pkts_received + n_pkts;
-	if (ACL_DEBUG)
-		printf("pkt_work_acl_key pkts_received: %" PRIu64
-		       " n_pkts: %u\n", p_acl->counters->pkts_received, n_pkts);
+    p_acl->counters->pkts_received =
+        p_acl->counters->pkts_received + n_pkts;
+    if (ACL_DEBUG)
+        printf("pkt_work_acl_key pkts_received: %" PRIu64
+               " n_pkts: %u\n", p_acl->counters->pkts_received, n_pkts);
 
-	uint64_t lookup_hit_mask = 0;
-	uint64_t lookup_hit_mask_ipv4 = 0;
-	uint64_t lookup_hit_mask_ipv6 = 0;
-	uint64_t lookup_miss_mask = 0;
-	uint64_t conntrack_mask = 0;
-	uint64_t connexist_mask = 0;
-	uint32_t dest_address = 0;
-	arp_pkts_mask = 0;
-	int dest_if = 0;
-	int status;
-	uint64_t pkts_drop_mask, pkts_mask = RTE_LEN2MASK(n_pkts, uint64_t);
-	uint64_t keep_mask = pkts_mask;
-	uint16_t port;
-	uint32_t ret;
+    uint64_t lookup_hit_mask = 0;
+    uint64_t lookup_hit_mask_ipv4 = 0;
+    uint64_t lookup_hit_mask_ipv6 = 0;
+    uint64_t lookup_miss_mask = 0;
+    uint64_t conntrack_mask = 0;
+    uint64_t connexist_mask = 0;
+    uint32_t dest_address = 0;
+    arp_pkts_mask = 0;
+    int status;
+    uint64_t pkts_drop_mask, pkts_mask = RTE_LEN2MASK(n_pkts, uint64_t);
+    uint64_t keep_mask = pkts_mask;
+    uint16_t port;
+    uint32_t ret;
 
-	p_acl->in_port_time_stamp = rte_get_tsc_cycles();
+    p_acl->in_port_time_stamp = rte_get_tsc_cycles();
 
-	if (acl_ipv4_enabled) {
-		if (ACL_DEBUG)
-			printf("ACL IPV4 Lookup Mask Before = %p\n",
-			       (void *)pkts_mask);
-		status =
-		    rte_table_acl_ops.f_lookup(acl_rule_table_ipv4_active, pkts,
-					       pkts_mask, &lookup_hit_mask_ipv4,
-					       (void **)
-					       p_acl->acl_entries_ipv4);
-		if (ACL_DEBUG)
-			printf("ACL IPV4 Lookup Mask After = %p\n",
-			       (void *)lookup_hit_mask_ipv4);
-	}
+    if (acl_ipv4_enabled) {
+        if (ACL_DEBUG)
+            printf("ACL IPV4 Lookup Mask Before = %p\n",
+                   (void *)pkts_mask);
+        status =
+            rte_table_acl_ops.f_lookup(acl_rule_table_ipv4_active, pkts,
+                           pkts_mask, &lookup_hit_mask_ipv4,
+                           (void **)
+                           p_acl->acl_entries_ipv4);
+        if (ACL_DEBUG)
+            printf("ACL IPV4 Lookup Mask After = %p\n",
+                   (void *)lookup_hit_mask_ipv4);
+    }
 
-	/* Merge lookup results since we process both IPv4 and IPv6 below */
-	lookup_hit_mask = lookup_hit_mask_ipv4 | lookup_hit_mask_ipv6;
-	if (ACL_DEBUG)
-		printf("ACL Lookup Mask After = %p\n", (void *)lookup_hit_mask);
+    /* Merge lookup results since we process both IPv4 and IPv6 below */
+    lookup_hit_mask = lookup_hit_mask_ipv4 | lookup_hit_mask_ipv6;
+    if (ACL_DEBUG)
+        printf("ACL Lookup Mask After = %p\n", (void *)lookup_hit_mask);
 
-	lookup_miss_mask = pkts_mask & (~lookup_hit_mask);
-	pkts_mask = lookup_hit_mask;
-	p_acl->counters->pkts_drop += __builtin_popcountll(lookup_miss_mask);
-	if (ACL_DEBUG)
-		printf("pkt_work_acl_key pkts_drop: %" PRIu64 " n_pkts: %u\n",
-		       p_acl->counters->pkts_drop,
-		       __builtin_popcountll(lookup_miss_mask));
+    lookup_miss_mask = pkts_mask & (~lookup_hit_mask);
+    pkts_mask = lookup_hit_mask;
+    p_acl->counters->pkts_drop += __builtin_popcountll(lookup_miss_mask);
+    if (ACL_DEBUG)
+        printf("pkt_work_acl_key pkts_drop: %" PRIu64 " n_pkts: %u\n",
+               p_acl->counters->pkts_drop,
+               __builtin_popcountll(lookup_miss_mask));
 
-	uint64_t pkts_to_process = lookup_hit_mask;
-		/* bitmap of packets left to process for ARP */
+    uint64_t pkts_to_process = lookup_hit_mask;
+        /* bitmap of packets left to process for ARP */
 
-	for (; pkts_to_process;) {
-		uint8_t pos = (uint8_t) __builtin_ctzll(pkts_to_process);
-		uint64_t pkt_mask = 1LLU << pos;
-		/* bitmask representing only this packet */
+    for (; pkts_to_process;) {
+        uint8_t pos = (uint8_t) __builtin_ctzll(pkts_to_process);
+        uint64_t pkt_mask = 1LLU << pos;
+        /* bitmask representing only this packet */
 
-		pkts_to_process &= ~pkt_mask;
-		/* remove this packet from remaining list */
-		struct rte_mbuf *pkt = pkts[pos];
+        pkts_to_process &= ~pkt_mask;
+        /* remove this packet from remaining list */
+        struct rte_mbuf *pkt = pkts[pos];
 
-		if (enable_hwlb)
-			if (!check_arp_icmp(pkt, pkt_mask, p_acl)) {
-				pkts_mask &= ~(1LLU << pos);
-				continue;
-			}
+        if (enable_hwlb)
+            if (!check_arp_icmp(pkt, pkt_mask, p_acl)) {
+                pkts_mask &= ~(1LLU << pos);
+                continue;
+            }
 
-		uint8_t hdr_chk =
-		    RTE_MBUF_METADATA_UINT8(pkt, MBUF_HDR_ROOM + ETH_HDR_SIZE);
-		hdr_chk = hdr_chk >> IP_VERSION_CHECK;
+        uint8_t hdr_chk =
+            RTE_MBUF_METADATA_UINT8(pkt, MBUF_HDR_ROOM + ETH_HDR_SIZE);
+        hdr_chk = hdr_chk >> IP_VERSION_CHECK;
 
-		if (hdr_chk == IPv4_HDR_VERSION) {
-			struct acl_table_entry *entry =
-			    (struct acl_table_entry *)
-			    p_acl->acl_entries_ipv4[pos];
-			uint16_t phy_port = entry->head.port_id;
-			uint32_t action_id = entry->action_id;
+        if (hdr_chk == IPv4_HDR_VERSION) {
+            struct acl_table_entry *entry =
+                (struct acl_table_entry *)
+                p_acl->acl_entries_ipv4[pos];
+            uint16_t phy_port = entry->head.port_id;
+            uint32_t action_id = entry->action_id;
 
-			if (ACL_DEBUG)
-				printf("action_id = %u\n", action_id);
+            if (ACL_DEBUG)
+                printf("action_id = %u\n", action_id);
 
-			uint32_t dscp_offset =
-			    MBUF_HDR_ROOM + ETH_HDR_SIZE + IP_HDR_DSCP_OFST;
+            uint32_t dscp_offset =
+                MBUF_HDR_ROOM + ETH_HDR_SIZE + IP_HDR_DSCP_OFST;
 
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_count) {
-				action_counter_table
-				    [p_acl->action_counter_index]
-				    [action_id].packetCount++;
-				action_counter_table
-				    [p_acl->action_counter_index]
-				    [action_id].byteCount +=
-				    rte_pktmbuf_pkt_len(pkt);
-				if (ACL_DEBUG)
-					printf("Action Count   Packet Count: %"
-					       PRIu64 "  Byte Count: %" PRIu64
-					       "\n",
-					       action_counter_table
-					       [p_acl->action_counter_index]
-					       [action_id].packetCount,
-					       action_counter_table
-					       [p_acl->action_counter_index]
-					       [action_id].byteCount);
-			}
+            if (action_array_active[action_id].action_bitmap &
+                acl_action_count) {
+                action_counter_table
+                    [p_acl->action_counter_index]
+                    [action_id].packetCount++;
+                action_counter_table
+                    [p_acl->action_counter_index]
+                    [action_id].byteCount +=
+                    rte_pktmbuf_pkt_len(pkt);
+                if (ACL_DEBUG)
+                    printf("Action Count   Packet Count: %"
+                           PRIu64 "  Byte Count: %" PRIu64
+                           "\n",
+                           action_counter_table
+                           [p_acl->action_counter_index]
+                           [action_id].packetCount,
+                           action_counter_table
+                           [p_acl->action_counter_index]
+                           [action_id].byteCount);
+            }
 
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_packet_drop) {
+            if (action_array_active[action_id].action_bitmap &
+                acl_action_packet_drop) {
 
-				/* Drop packet by changing the mask */
-				if (ACL_DEBUG)
-					printf("ACL before drop pkt_mask  "
-							"%lu, pkt_num %d\n",
-					     pkts_mask, pos);
-				pkts_mask &= ~(1LLU << pos);
-				if (ACL_DEBUG)
-					printf("ACL after drop pkt_mask "
-							" %lu, pkt_num %d\n",
-					     pkts_mask, pos);
-				p_acl->counters->pkts_drop++;
-			}
+                /* Drop packet by changing the mask */
+                if (ACL_DEBUG)
+                    printf("ACL before drop pkt_mask  "
+                            "%lu, pkt_num %d\n",
+                         pkts_mask, pos);
+                pkts_mask &= ~(1LLU << pos);
+                if (ACL_DEBUG)
+                    printf("ACL after drop pkt_mask "
+                            " %lu, pkt_num %d\n",
+                         pkts_mask, pos);
+                p_acl->counters->pkts_drop++;
+            }
 
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_fwd) {
-				phy_port =
-				    action_array_active[action_id].fwd_port;
-				entry->head.port_id = phy_port;
-				if (ACL_DEBUG)
-					printf("Action FWD  Port ID: %u\n",
-					       phy_port);
-			}
+            if (action_array_active[action_id].action_bitmap &
+                acl_action_fwd) {
+                phy_port =
+                    action_array_active[action_id].fwd_port;
+                entry->head.port_id = phy_port;
+                if (ACL_DEBUG)
+                    printf("Action FWD  Port ID: %u\n",
+                           phy_port);
+            }
 
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_nat) {
-				phy_port =
-				    action_array_active[action_id].nat_port;
-				entry->head.port_id = phy_port;
-				if (ACL_DEBUG)
-					printf("Action NAT  Port ID: %u\n",
-					       phy_port);
-			}
+            if (action_array_active[action_id].action_bitmap &
+                acl_action_nat) {
+                phy_port =
+                    action_array_active[action_id].nat_port;
+                entry->head.port_id = phy_port;
+                if (ACL_DEBUG)
+                    printf("Action NAT  Port ID: %u\n",
+                           phy_port);
+            }
 
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_dscp) {
+            if (action_array_active[action_id].action_bitmap &
+                acl_action_dscp) {
 
-				/* Set DSCP priority */
-				uint8_t *dscp = RTE_MBUF_METADATA_UINT8_PTR(pkt,
-							    dscp_offset);
-				*dscp =
-				    action_array_active[action_id].dscp_priority
-				    << 2;
-				if (ACL_DEBUG)
-					printf
-					    ("Action DSCP  DSCP Priority: %u\n",
-					     *dscp);
-			}
+                /* Set DSCP priority */
+                uint8_t *dscp = RTE_MBUF_METADATA_UINT8_PTR(pkt,
+                                dscp_offset);
+                *dscp =
+                    action_array_active[action_id].dscp_priority
+                    << 2;
+                if (ACL_DEBUG)
+                    printf
+                        ("Action DSCP  DSCP Priority: %u\n",
+                         *dscp);
+            }
 
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_packet_accept) {
-				if (ACL_DEBUG)
-					printf("Action Accept\n");
+            if (action_array_active[action_id].action_bitmap &
+                acl_action_packet_accept) {
+                if (ACL_DEBUG)
+                    printf("Action Accept\n");
 
-				if (action_array_active[action_id].action_bitmap
-				    & acl_action_conntrack) {
+                if (action_array_active[action_id].action_bitmap
+                    & acl_action_conntrack) {
 
-					/* Set conntrack bit for this pkt */
-					conntrack_mask |= pkt_mask;
-					if (ACL_DEBUG)
-						printf("ACL Conntrack  "
-						"enabled: %p  pkt_mask: %p\n",
-						     (void *)conntrack_mask,
-						     (void *)pkt_mask);
-				}
+                    /* Set conntrack bit for this pkt */
+                    conntrack_mask |= pkt_mask;
+                    if (ACL_DEBUG)
+                        printf("ACL Conntrack  "
+                        "enabled: %p  pkt_mask: %p\n",
+                             (void *)conntrack_mask,
+                             (void *)pkt_mask);
+                }
 
-				if (action_array_active[action_id].action_bitmap
-				    & acl_action_connexist) {
+                if (action_array_active[action_id].action_bitmap
+                    & acl_action_connexist) {
 
-					/* Set conntrack bit for this pkt */
-					conntrack_mask |= pkt_mask;
+                    /* Set conntrack bit for this pkt */
+                    conntrack_mask |= pkt_mask;
 
-		/* Set connexist bit for this pkt for public -> private */
-		/* Private -> public packet will open the connection */
-					if (action_array_active
-					    [action_id].private_public ==
-					    acl_public_private)
-						connexist_mask |= pkt_mask;
+        /* Set connexist bit for this pkt for public -> private */
+        /* Private -> public packet will open the connection */
+                    if (action_array_active
+                        [action_id].private_public ==
+                        acl_public_private)
+                        connexist_mask |= pkt_mask;
 
-					if (ACL_DEBUG)
-						printf("ACL Connexist  "
-			"enabled conntrack: %p  connexist: %p  pkt_mask: %p\n",
-						     (void *)conntrack_mask,
-						     (void *)connexist_mask,
-						     (void *)pkt_mask);
-				}
-			}
-		}
+                    if (ACL_DEBUG)
+                        printf("ACL Connexist  "
+            "enabled conntrack: %p  connexist: %p  pkt_mask: %p\n",
+                             (void *)conntrack_mask,
+                             (void *)connexist_mask,
+                             (void *)pkt_mask);
+                }
+            }
+        }
 #if 0
-		if (hdr_chk == IPv6_HDR_VERSION) {
+        if (hdr_chk == IPv6_HDR_VERSION) {
 
-			struct acl_table_entry *entry =
-			    (struct acl_table_entry *)
-			    p_acl->acl_entries_ipv6[pos];
-			uint16_t phy_port = entry->head.port_id;
-			uint32_t action_id = entry->action_id;
+            struct acl_table_entry *entry =
+                (struct acl_table_entry *)
+                p_acl->acl_entries_ipv6[pos];
+            uint16_t phy_port = entry->head.port_id;
+            uint32_t action_id = entry->action_id;
 
-			if (ACL_DEBUG)
-				printf("action_id = %u\n", action_id);
+            if (ACL_DEBUG)
+                printf("action_id = %u\n", action_id);
 
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_count) {
-				action_counter_table
-				    [p_acl->action_counter_index]
-				    [action_id].packetCount++;
-				action_counter_table
-				    [p_acl->action_counter_index]
-				    [action_id].byteCount +=
-				    rte_pktmbuf_pkt_len(pkt);
-				if (ACL_DEBUG)
-					printf("Action Count   Packet Count: %"
-					       PRIu64 "  Byte Count: %" PRIu64
-					       "\n",
-					       action_counter_table
-					       [p_acl->action_counter_index]
-					       [action_id].packetCount,
-					       action_counter_table
-					       [p_acl->action_counter_index]
-					       [action_id].byteCount);
-			}
+            if (action_array_active[action_id].action_bitmap &
+                acl_action_count) {
+                action_counter_table
+                    [p_acl->action_counter_index]
+                    [action_id].packetCount++;
+                action_counter_table
+                    [p_acl->action_counter_index]
+                    [action_id].byteCount +=
+                    rte_pktmbuf_pkt_len(pkt);
+                if (ACL_DEBUG)
+                    printf("Action Count   Packet Count: %"
+                           PRIu64 "  Byte Count: %" PRIu64
+                           "\n",
+                           action_counter_table
+                           [p_acl->action_counter_index]
+                           [action_id].packetCount,
+                           action_counter_table
+                           [p_acl->action_counter_index]
+                           [action_id].byteCount);
+            }
 
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_packet_drop) {
-				/* Drop packet by changing the mask */
-				if (ACL_DEBUG)
-					printf
-			    ("ACL before drop pkt_mask %lu, pkt_num %d\n",
-					     pkts_mask, pos);
-				pkts_mask &= ~(1LLU << pos);
-				if (ACL_DEBUG)
-					printf
-			 ("ACL after drop pkt_mask %lu, pkt_num %d\n",
-					     pkts_mask, pos);
-				p_acl->counters->pkts_drop++;
+            if (action_array_active[action_id].action_bitmap &
+                acl_action_packet_drop) {
+                /* Drop packet by changing the mask */
+                if (ACL_DEBUG)
+                    printf
+                ("ACL before drop pkt_mask %lu, pkt_num %d\n",
+                         pkts_mask, pos);
+                pkts_mask &= ~(1LLU << pos);
+                if (ACL_DEBUG)
+                    printf
+             ("ACL after drop pkt_mask %lu, pkt_num %d\n",
+                         pkts_mask, pos);
+                p_acl->counters->pkts_drop++;
 
-			}
+            }
 
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_fwd) {
-				phy_port =
-				    action_array_active[action_id].fwd_port;
-				entry->head.port_id = phy_port;
-				if (ACL_DEBUG)
-					printf("Action FWD  Port ID: %u\n",
-					       phy_port);
-			}
+            if (action_array_active[action_id].action_bitmap &
+                acl_action_fwd) {
+                phy_port =
+                    action_array_active[action_id].fwd_port;
+                entry->head.port_id = phy_port;
+                if (ACL_DEBUG)
+                    printf("Action FWD  Port ID: %u\n",
+                           phy_port);
+            }
 
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_nat) {
-				phy_port =
-				    action_array_active[action_id].nat_port;
-				entry->head.port_id = phy_port;
-				if (ACL_DEBUG)
-					printf("Action NAT  Port ID: %u\n",
-					       phy_port);
-			}
+            if (action_array_active[action_id].action_bitmap &
+                acl_action_nat) {
+                phy_port =
+                    action_array_active[action_id].nat_port;
+                entry->head.port_id = phy_port;
+                if (ACL_DEBUG)
+                    printf("Action NAT  Port ID: %u\n",
+                           phy_port);
+            }
 
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_dscp) {
+            if (action_array_active[action_id].action_bitmap &
+                acl_action_dscp) {
 
-				/* Set DSCP priority */
-				uint32_t dscp_offset =
-				    MBUF_HDR_ROOM + ETH_HDR_SIZE +
-				    IP_HDR_DSCP_OFST_IPV6;
-				uint16_t *dscp =
-				    RTE_MBUF_METADATA_UINT16_PTR(pkt,
-								 dscp_offset);
-				uint16_t dscp_value =
-				    (rte_bswap16
-				     (RTE_MBUF_METADATA_UINT16
-				      (pkt, dscp_offset)) & 0XF00F);
-				uint8_t dscp_store =
-				    action_array_active[action_id].dscp_priority
-				    << 2;
-				uint16_t dscp_temp = dscp_store;
+                /* Set DSCP priority */
+                uint32_t dscp_offset =
+                    MBUF_HDR_ROOM + ETH_HDR_SIZE +
+                    IP_HDR_DSCP_OFST_IPV6;
+                uint16_t *dscp =
+                    RTE_MBUF_METADATA_UINT16_PTR(pkt,
+                                 dscp_offset);
+                uint16_t dscp_value =
+                    (rte_bswap16
+                     (RTE_MBUF_METADATA_UINT16
+                      (pkt, dscp_offset)) & 0XF00F);
+                uint8_t dscp_store =
+                    action_array_active[action_id].dscp_priority
+                    << 2;
+                uint16_t dscp_temp = dscp_store;
 
-				dscp_temp = dscp_temp << 4;
-				*dscp = rte_bswap16(dscp_temp | dscp_value);
-				if (ACL_DEBUG)
-					printf
-				    ("Action DSCP   DSCP Priority: %u\n",
-					     *dscp);
-			}
+                dscp_temp = dscp_temp << 4;
+                *dscp = rte_bswap16(dscp_temp | dscp_value);
+                if (ACL_DEBUG)
+                    printf
+                    ("Action DSCP   DSCP Priority: %u\n",
+                         *dscp);
+            }
 
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_packet_accept) {
-				if (ACL_DEBUG)
-					printf("Action Accept\n");
+            if (action_array_active[action_id].action_bitmap &
+                acl_action_packet_accept) {
+                if (ACL_DEBUG)
+                    printf("Action Accept\n");
 
-				if (action_array_active[action_id].action_bitmap
-				    & acl_action_conntrack) {
+                if (action_array_active[action_id].action_bitmap
+                    & acl_action_conntrack) {
 
-					/* Set conntrack bit for this pkt */
-					conntrack_mask |= pkt_mask;
-					if (ACL_DEBUG)
-						printf("ACL Conntrack  "
-						"enabled: %p  pkt_mask: %p\n",
-						     (void *)conntrack_mask,
-						     (void *)pkt_mask);
-				}
+                    /* Set conntrack bit for this pkt */
+                    conntrack_mask |= pkt_mask;
+                    if (ACL_DEBUG)
+                        printf("ACL Conntrack  "
+                        "enabled: %p  pkt_mask: %p\n",
+                             (void *)conntrack_mask,
+                             (void *)pkt_mask);
+                }
 
-				if (action_array_active[action_id].action_bitmap
-				    & acl_action_connexist) {
+                if (action_array_active[action_id].action_bitmap
+                    & acl_action_connexist) {
 
-					/* Set conntrack bit for this pkt */
-					conntrack_mask |= pkt_mask;
+                    /* Set conntrack bit for this pkt */
+                    conntrack_mask |= pkt_mask;
 
-		/* Set connexist bit for this pkt for public -> private */
-		/* Private -> public packet will open the connection */
-					if (action_array_active
-					    [action_id].private_public ==
-					    acl_public_private)
-						connexist_mask |= pkt_mask;
+        /* Set connexist bit for this pkt for public -> private */
+        /* Private -> public packet will open the connection */
+                    if (action_array_active
+                        [action_id].private_public ==
+                        acl_public_private)
+                        connexist_mask |= pkt_mask;
 
-					if (ACL_DEBUG)
-						printf("ACL Connexist enabled  "
-				"conntrack: %p  connexist: %p  pkt_mask: %p\n",
-						     (void *)conntrack_mask,
-						     (void *)connexist_mask,
-						     (void *)pkt_mask);
-				}
-			}
-		}
+                    if (ACL_DEBUG)
+                        printf("ACL Connexist enabled  "
+                "conntrack: %p  connexist: %p  pkt_mask: %p\n",
+                             (void *)conntrack_mask,
+                             (void *)connexist_mask,
+                             (void *)pkt_mask);
+                }
+            }
+        }
 #endif
-	}
-	/* Only call connection tracker if required */
-	if (conntrack_mask > 0) {
-		if (ACL_DEBUG)
-			printf
-			    ("ACL Call Conntrack Before = %p  Connexist = %p\n",
-			     (void *)conntrack_mask, (void *)connexist_mask);
-		conntrack_mask =
-		    rte_ct_cnxn_tracker_batch_lookup_with_new_cnxn_control
-		    (p_acl->cnxn_tracker, pkts, conntrack_mask, connexist_mask);
-		if (ACL_DEBUG)
-			printf("ACL Call Conntrack After = %p\n",
-			       (void *)conntrack_mask);
+    }
+    /* Only call connection tracker if required */
+    if (conntrack_mask > 0) {
+        if (ACL_DEBUG)
+            printf
+                ("ACL Call Conntrack Before = %p  Connexist = %p\n",
+                 (void *)conntrack_mask, (void *)connexist_mask);
+        conntrack_mask =
+            rte_ct_cnxn_tracker_batch_lookup_with_new_cnxn_control
+            (p_acl->cnxn_tracker, pkts, conntrack_mask, connexist_mask);
+        if (ACL_DEBUG)
+            printf("ACL Call Conntrack After = %p\n",
+                   (void *)conntrack_mask);
 
-		/* Only change pkt mask for pkts that have conntrack enabled */
-		/* Need to loop through packets to check if conntrack enabled */
-		pkts_to_process = pkts_mask;
-		for (; pkts_to_process;) {
-			uint32_t action_id = 0;
-			uint8_t pos =
-			    (uint8_t) __builtin_ctzll(pkts_to_process);
-			uint64_t pkt_mask = 1LLU << pos;
-		/* bitmask representing only this packet */
+        /* Only change pkt mask for pkts that have conntrack enabled */
+        /* Need to loop through packets to check if conntrack enabled */
+        pkts_to_process = pkts_mask;
+        for (; pkts_to_process;) {
+            uint32_t action_id = 0;
+            uint8_t pos =
+                (uint8_t) __builtin_ctzll(pkts_to_process);
+            uint64_t pkt_mask = 1LLU << pos;
+        /* bitmask representing only this packet */
 
-			pkts_to_process &= ~pkt_mask;
-		/* remove this packet from remaining list */
-			struct rte_mbuf *pkt = pkts[pos];
+            pkts_to_process &= ~pkt_mask;
+        /* remove this packet from remaining list */
+            struct rte_mbuf *pkt = pkts[pos];
 
-			uint8_t hdr_chk = RTE_MBUF_METADATA_UINT8(pkt,
-								  MBUF_HDR_ROOM
-								  +
-								  ETH_HDR_SIZE);
-			hdr_chk = hdr_chk >> IP_VERSION_CHECK;
-			if (hdr_chk == IPv4_HDR_VERSION) {
-				struct acl_table_entry *entry =
-				    (struct acl_table_entry *)
-				    p_acl->acl_entries_ipv4[pos];
-				action_id = entry->action_id;
-			} else {
-				struct acl_table_entry *entry =
-				    (struct acl_table_entry *)
-				    p_acl->acl_entries_ipv6[pos];
-				action_id = entry->action_id;
-			}
+            uint8_t hdr_chk = RTE_MBUF_METADATA_UINT8(pkt,
+                                  MBUF_HDR_ROOM
+                                  +
+                                  ETH_HDR_SIZE);
+            hdr_chk = hdr_chk >> IP_VERSION_CHECK;
+            if (hdr_chk == IPv4_HDR_VERSION) {
+                struct acl_table_entry *entry =
+                    (struct acl_table_entry *)
+                    p_acl->acl_entries_ipv4[pos];
+                action_id = entry->action_id;
+            } else {
+                struct acl_table_entry *entry =
+                    (struct acl_table_entry *)
+                    p_acl->acl_entries_ipv6[pos];
+                action_id = entry->action_id;
+            }
 
-			if ((action_array_active[action_id].action_bitmap &
-			     acl_action_conntrack)
-			    || (action_array_active[action_id].action_bitmap &
-				acl_action_connexist)) {
+            if ((action_array_active[action_id].action_bitmap &
+                 acl_action_conntrack)
+                || (action_array_active[action_id].action_bitmap &
+                acl_action_connexist)) {
 
-				if (conntrack_mask & pkt_mask) {
-					if (ACL_DEBUG)
-						printf("ACL Conntrack Accept  "
-								"packet = %p\n",
-						     (void *)pkt_mask);
-				} else {
+                if (conntrack_mask & pkt_mask) {
+                    if (ACL_DEBUG)
+                        printf("ACL Conntrack Accept  "
+                                "packet = %p\n",
+                             (void *)pkt_mask);
+                } else {
 /* Drop packet by changing the mask */
-					if (ACL_DEBUG)
-						printf("ACL Conntrack Drop  "
-								"packet = %p\n",
-						     (void *)pkt_mask);
-					pkts_mask &= ~pkt_mask;
-					p_acl->counters->pkts_drop++;
-				}
-			}
-		}
-	}
+                    if (ACL_DEBUG)
+                        printf("ACL Conntrack Drop  "
+                                "packet = %p\n",
+                             (void *)pkt_mask);
+                    pkts_mask &= ~pkt_mask;
+                    p_acl->counters->pkts_drop++;
+                }
+            }
+        }
+    }
 
-	pkts_to_process = pkts_mask;
-	/* bitmap of packets left to process for ARP */
+    pkts_to_process = pkts_mask;
+    /* bitmap of packets left to process for ARP */
 
-	for (; pkts_to_process;) {
-		uint8_t pos = (uint8_t) __builtin_ctzll(pkts_to_process);
-		uint64_t pkt_mask = 1LLU << pos;
-	/* bitmask representing only this packet */
+    for (; pkts_to_process;) {
+        uint8_t pos = (uint8_t) __builtin_ctzll(pkts_to_process);
+        uint64_t pkt_mask = 1LLU << pos;
+    /* bitmask representing only this packet */
 
-		pkts_to_process &= ~pkt_mask;
-	/* remove this packet from remaining list */
-		struct rte_mbuf *pkt = pkts[pos];
+        pkts_to_process &= ~pkt_mask;
+    /* remove this packet from remaining list */
+        struct rte_mbuf *pkt = pkts[pos];
 
-		uint8_t hdr_chk =
-		    RTE_MBUF_METADATA_UINT8(pkt, MBUF_HDR_ROOM + ETH_HDR_SIZE);
-		hdr_chk = hdr_chk >> IP_VERSION_CHECK;
+        uint8_t hdr_chk =
+            RTE_MBUF_METADATA_UINT8(pkt, MBUF_HDR_ROOM + ETH_HDR_SIZE);
+        hdr_chk = hdr_chk >> IP_VERSION_CHECK;
 
-		if (hdr_chk == IPv4_HDR_VERSION) {
+        if (hdr_chk == IPv4_HDR_VERSION) {
 
-			struct acl_table_entry *entry =
-			    (struct acl_table_entry *)
-			    p_acl->acl_entries_ipv4[pos];
-			//uint16_t phy_port = entry->head.port_id;
-			uint16_t phy_port = pkt->port;
-			uint32_t *port_out_id =
-			    RTE_MBUF_METADATA_UINT32_PTR(pkt,
-							 META_DATA_OFFSET +
-							 offsetof(struct
-							  mbuf_acl_meta_data,
-								  output_port));
-			/*  *port_out_id = p_acl->links_map[phy_port]; */
-/*			if (is_phy_port_privte(phy_port))
-				*port_out_id = ACL_PUB_PORT_ID;
-			else
-				*port_out_id = ACL_PRV_PORT_ID;*/
-			if (ACL_DEBUG)
-				printf
-				   ("phy_port = %i, links_map[phy_port] = %i\n",
-				     phy_port, p_acl->links_map[phy_port]);
+            struct acl_table_entry *entry =
+                (struct acl_table_entry *)
+                p_acl->acl_entries_ipv4[pos];
+            //uint16_t phy_port = entry->head.port_id;
+            uint16_t phy_port = pkt->port;
+            uint32_t *port_out_id =
+                RTE_MBUF_METADATA_UINT32_PTR(pkt,
+                             META_DATA_OFFSET +
+                             offsetof(struct
+                              mbuf_acl_meta_data,
+                                  output_port));
+            if (ACL_DEBUG)
+                printf
+                   ("phy_port = %i, links_map[phy_port] = %i\n",
+                     phy_port, p_acl->links_map[phy_port]);
 
-	/* header room + eth hdr size + dst_adr offset in ip header */
-			uint32_t dst_addr_offset =
-			    MBUF_HDR_ROOM + ETH_HDR_SIZE + IP_HDR_DST_ADR_OFST;
-			uint32_t *dst_addr =
-			    RTE_MBUF_METADATA_UINT32_PTR(pkt, dst_addr_offset);
-			uint8_t *eth_dest =
-			    RTE_MBUF_METADATA_UINT8_PTR(pkt, MBUF_HDR_ROOM);
-			uint8_t *eth_src =
-			    RTE_MBUF_METADATA_UINT8_PTR(pkt, MBUF_HDR_ROOM + 6);
-			struct ether_addr hw_addr;
-			uint32_t dest_address = rte_bswap32(*dst_addr);
-			uint32_t *nhip = RTE_MBUF_METADATA_UINT32_PTR(pkt,
-							      META_DATA_OFFSET
-								      +
-								      offsetof
-								      (struct
-						       mbuf_acl_meta_data,
-								       nhip));
-			uint32_t packet_length = rte_pktmbuf_pkt_len(pkt);
-			*nhip = 0;
-			dest_address = rte_bswap32(*dst_addr);
-			struct arp_entry_data *ret_arp_data = NULL;
-			ret_arp_data = get_dest_mac_addr_port
-			    (dest_address, &dest_if, (struct ether_addr *)eth_dest);
-			*port_out_id = p_acl->port_out_id[dest_if];
+            uint32_t packet_length = rte_pktmbuf_pkt_len(pkt);
 
-			if (arp_cache_dest_mac_present(dest_if)) {
-				ether_addr_copy(get_link_hw_addr(dest_if),
-					 (struct ether_addr *)eth_src);
-				update_nhip_access(dest_if);
-				if (unlikely(ret_arp_data && ret_arp_data->num_pkts)) {
-					printf("sending buffered packets\n");
-					arp_send_buffered_pkts(ret_arp_data,
-					(struct ether_addr *)eth_dest, *port_out_id);
+            uint32_t dest_if = INVALID_DESTIF;
+            uint32_t src_phy_port = pkt->port;
 
-				}
-				p_acl->counters->tpkts_processed++;
-				p_acl->counters->bytes_processed +=
-				    packet_length;
-			} else {
-				if (unlikely(ret_arp_data == NULL)) {
+            if(is_gateway()){
 
-					if (ACL_DEBUG)
-					printf("%s: NHIP Not Found, "
-					"outport_id: %d\n", __func__,
-					*port_out_id);
+                /* Gateway Proc Starts */
+                struct ether_hdr *ehdr = (struct ether_hdr *)
+                    RTE_MBUF_METADATA_UINT32_PTR(pkt,
+                            META_DATA_OFFSET + MBUF_HDR_ROOM);
 
-					/* Drop the pkt */
-					pkts_mask &= ~(1LLU << pos);
-					if (ACL_DEBUG)
-						printf("ACL after drop pkt_mask  "
-						"%lu, pkt_num %d\n",
-						pkts_mask, pos);
-						p_acl->counters->pkts_drop++;
-					continue;
-				}
+                struct ipv4_hdr *ipv4hdr = (struct ipv4_hdr *)
+                    RTE_MBUF_METADATA_UINT32_PTR(pkt, IP_START);
 
-				if (ret_arp_data->status == INCOMPLETE ||
-				ret_arp_data->status == PROBE) {
-					if (ret_arp_data->num_pkts >= NUM_DESC) {
-						/* Drop the pkt */
-						pkts_mask &= ~(1LLU << pos);
-						if (ACL_DEBUG)
-							printf("ACL after drop pkt_mask  "
-							"%lu, pkt_num %d\n",
-							pkts_mask, pos);
-						p_acl->counters->pkts_drop++;
-						continue;
-					} else {
-					arp_pkts_mask |= pkt_mask;
-					arp_queue_unresolved_packet(ret_arp_data, pkt);
-					continue;
-					}
-				}
-			}
-		}
-#if 0
-		if (hdr_chk == IPv6_HDR_VERSION) {
+                struct arp_entry_data *ret_arp_data = NULL;
+                struct ether_addr dst_mac;
+                uint32_t dest_if = INVALID_DESTIF;
+                uint32_t nhip = 0;
+                uint32_t src_phy_port = pkt->port;
+                uint32_t dst_ip_addr = rte_bswap32(ipv4hdr->dst_addr);
 
-			struct acl_table_entry *entry =
-			    (struct acl_table_entry *)
-			    p_acl->acl_entries_ipv6[pos];
-			uint16_t phy_port = entry->head.port_id;
-			uint32_t *port_out_id =
-			    RTE_MBUF_METADATA_UINT32_PTR(pkt,
-							 META_DATA_OFFSET +
-							 offsetof(struct
-							  mbuf_acl_meta_data,
-								  output_port));
-			if (is_phy_port_privte(phy_port))
-				*port_out_id = ACL_PUB_PORT_ID;
-			else
-				*port_out_id = ACL_PRV_PORT_ID;
+                gw_get_nh_port_ipv4(dst_ip_addr, &dest_if, &nhip);
 
-			/*  *port_out_id = p_acl->links_map[phy_port]; */
-			if (ACL_DEBUG)
-				printf
-			    ("phy_port = %i, links_map[phy_port] = %i\n",
-				     phy_port, p_acl->links_map[phy_port]);
+                ret_arp_data = get_dest_mac_addr_ipv4(nhip, dest_if, &dst_mac);
 
-	/* header room + eth hdr size + dst_adr offset in ip header */
-			uint32_t dst_addr_offset =
-			    MBUF_HDR_ROOM + ETH_HDR_SIZE +
-			    IP_HDR_DST_ADR_OFST_IPV6;
-			uint8_t *eth_dest =
-			    RTE_MBUF_METADATA_UINT8_PTR(pkt, MBUF_HDR_ROOM);
-			uint8_t *eth_src =
-			    RTE_MBUF_METADATA_UINT8_PTR(pkt, MBUF_HDR_ROOM + 6);
-			struct ether_addr hw_addr;
-			uint8_t dest_address[16];
-			uint8_t nhip[16];
+                /* Gateway Proc Ends */
+                if (arp_cache_dest_mac_present(dest_if)) {
 
-			nhip[0] =
-			    RTE_MBUF_METADATA_UINT8(pkt,
-						    META_DATA_OFFSET +
-						    offsetof(struct
-							     mbuf_acl_meta_data,
-							     nhip));
-			uint8_t *dst_addr[16];
-			uint32_t packet_length = rte_pktmbuf_pkt_len(pkt);
-			int i = 0;
+                    ether_addr_copy(&dst_mac, &ehdr->d_addr);
+                    ether_addr_copy(get_link_hw_addr(dest_if), &ehdr->s_addr);
 
-			for (i = 0; i < 16; i++) {
-				dst_addr[i] =
-				    RTE_MBUF_METADATA_UINT8_PTR(pkt,
-								dst_addr_offset
-								+ i);
-			}
-			memcpy(dest_address, *dst_addr, sizeof(dest_address));
-			memset(nhip, 0, sizeof(nhip));
-			if (is_phy_port_privte(phy_port))
-				port = ACL_PUB_PORT_ID;
-			else
-				port = ACL_PRV_PORT_ID;
+                    *port_out_id = p_acl->port_out_id[dest_if];
 
-			if (get_dest_mac_address_ipv6_port
-			    (dest_address, port, &hw_addr, &nhip[0])) {
-				if (ACL_DEBUG) {
+                    update_nhip_access(dest_if);
+                    if (unlikely(ret_arp_data && ret_arp_data->num_pkts)) {
+                        printf("sending buffered packets\n");
+                        arp_send_buffered_pkts(ret_arp_data, &ehdr->d_addr,
+                                p_acl->port_out_id[dest_if]);
+                    }
+                    p_acl->counters->tpkts_processed++;
+                    p_acl->counters->bytes_processed += packet_length;
+                } else {
+                    if (unlikely(ret_arp_data == NULL)) {
 
-					printf
-	    ("MAC found for  port %d - %02x:%02x:%02x:%02x:%02x:%02x\n",
-					     phy_port, hw_addr.addr_bytes[0],
-					     hw_addr.addr_bytes[1],
-					     hw_addr.addr_bytes[2],
-					     hw_addr.addr_bytes[3],
-					     hw_addr.addr_bytes[4],
-					     hw_addr.addr_bytes[5]);
-					printf
-		    ("Dest MAC before - %02x:%02x:%02x:%02x:%02x:%02x\n",
-					     eth_dest[0], eth_dest[1],
-					     eth_dest[2], eth_dest[3],
-					     eth_dest[4], eth_dest[5]);
-				}
-				memcpy(eth_dest, &hw_addr,
-				       sizeof(struct ether_addr));
-				if (ACL_DEBUG) {
-					printf("PktP %p, dest_macP %p\n", pkt,
-					       eth_dest);
-					printf
-			    ("Dest MAC after - %02x:%02x:%02x:%02x:%02x:%02x\n",
-					     eth_dest[0], eth_dest[1],
-					     eth_dest[2], eth_dest[3],
-					     eth_dest[4], eth_dest[5]);
-				}
-				if (is_phy_port_privte(phy_port))
-					memcpy(eth_src,
-					       get_link_hw_addr(dest_if),
-					       sizeof(struct ether_addr));
-				else
-					memcpy(eth_src,
-					       get_link_hw_addr(dest_if),
-					       sizeof(struct ether_addr));
+                        if (ACL_DEBUG)
+                            printf("%s: NHIP Not Found, "
+                                    "outport_id: %d\n", __func__,
+                                    p_acl->port_out_id[dest_if]);
 
-		/*
-		 * memcpy(eth_src, get_link_hw_addr(p_acl->links_map[phy_port]),
-		 * sizeof(struct ether_addr));
-		 */
-				p_acl->counters->tpkts_processed++;
-				p_acl->counters->bytes_processed +=
-				    packet_length;
-			}
+                        /* Drop the pkt */
+                        pkts_mask &= ~(1LLU << pos);
+                        if (ACL_DEBUG)
+                            printf("ACL after drop pkt_mask  "
+                                    "%lu, pkt_num %d\n",
+                                    pkts_mask, pos);
+                        p_acl->counters->pkts_drop++;
+                        continue;
+                    }
 
-			else {
+                    if (ret_arp_data->status == INCOMPLETE ||
+                            ret_arp_data->status == PROBE) {
+                        if (ret_arp_data->num_pkts >= NUM_DESC) {
+                            /* Drop the pkt */
+                            pkts_mask &= ~(1LLU << pos);
+                            if (ACL_DEBUG)
+                                printf("ACL after drop pkt_mask  "
+                                        "%lu, pkt_num %d\n",
+                                        pkts_mask, pos);
+                            p_acl->counters->pkts_drop++;
+                            continue;
+                        } else {
+                            arp_pkts_mask |= pkt_mask;
+                            arp_queue_unresolved_packet(ret_arp_data, pkt);
+                            continue;
+                        }
+                    }
+                }
 
-				/* Drop packet by changing the mask */
-				if (ACL_DEBUG)
-					printf("ACL before drop pkt_mask "
-							" %lu, pkt_num %d\n",
-					     pkts_mask, pos);
-				pkts_mask &= ~(1LLU << pos);
-				if (ACL_DEBUG)
-					printf("ACL after drop pkt_mask  "
-							"%lu, pkt_num %d\n",
-					     pkts_mask, pos);
-				p_acl->counters->pkts_drop++;
-			}
-		}
-#endif
+            } else {
+                /* IP Pkt forwarding based on  pub/prv mapping */
+                if(is_phy_port_privte(src_phy_port))
+                    dest_if = prv_to_pub_map[src_phy_port];
+                else
+                    dest_if = pub_to_prv_map[src_phy_port];
 
-	}
+                *port_out_id = p_acl->port_out_id[dest_if];
+            }
 
-	pkts_drop_mask = keep_mask & ~pkts_mask;
-	rte_pipeline_ah_packet_drop(p, pkts_drop_mask);
-	keep_mask = pkts_mask;
+        }
 
-	if (arp_pkts_mask) {
-		keep_mask &= ~(arp_pkts_mask);
-		rte_pipeline_ah_packet_hijack(p, arp_pkts_mask);
-	}
+    }
+    pkts_drop_mask = keep_mask & ~pkts_mask;
+    rte_pipeline_ah_packet_drop(p, pkts_drop_mask);
+    keep_mask = pkts_mask;
 
-	/* don't bother measuring if traffic very low, might skew stats */
-	uint32_t packets_this_iteration = __builtin_popcountll(pkts_mask);
+    if (arp_pkts_mask) {
+        keep_mask &= ~(arp_pkts_mask);
+        rte_pipeline_ah_packet_hijack(p, arp_pkts_mask);
+    }
 
-	if (packets_this_iteration > 1) {
-		uint64_t latency_this_iteration =
-		    rte_get_tsc_cycles() - p_acl->in_port_time_stamp;
-		p_acl->counters->sum_latencies += latency_this_iteration;
-		p_acl->counters->count_latencies++;
-	}
-	if (ACL_DEBUG)
-		printf("Leaving pkt_work_acl_key pkts_mask = %p\n",
-			(void *)pkts_mask);
+    /* don't bother measuring if traffic very low, might skew stats */
+    uint32_t packets_this_iteration = __builtin_popcountll(pkts_mask);
 
-	return 0;
+    if (packets_this_iteration > 1) {
+        uint64_t latency_this_iteration =
+            rte_get_tsc_cycles() - p_acl->in_port_time_stamp;
+        p_acl->counters->sum_latencies += latency_this_iteration;
+        p_acl->counters->count_latencies++;
+    }
+    if (ACL_DEBUG)
+        printf("Leaving pkt_work_acl_key pkts_mask = %p\n",
+            (void *)pkts_mask);
+
+    return 0;
 }
 
 /**
@@ -1789,563 +1614,567 @@ pkt_work_acl_ipv4_key(struct rte_pipeline *p,
  */
 static int
 pkt_work_acl_ipv6_key(struct rte_pipeline *p,
-		      struct rte_mbuf **pkts, uint32_t n_pkts, void *arg)
+              struct rte_mbuf **pkts, uint32_t n_pkts, void *arg)
 {
 
-	struct pipeline_acl *p_acl = arg;
+    struct pipeline_acl *p_acl = arg;
 
-	p_acl->counters->pkts_received =
-	    p_acl->counters->pkts_received + n_pkts;
-	if (ACL_DEBUG)
-		printf("pkt_work_acl_key pkts_received: %" PRIu64
-		       " n_pkts: %u\n", p_acl->counters->pkts_received, n_pkts);
+    p_acl->counters->pkts_received =
+        p_acl->counters->pkts_received + n_pkts;
+    if (ACL_DEBUG)
+        printf("pkt_work_acl_key pkts_received: %" PRIu64
+               " n_pkts: %u\n", p_acl->counters->pkts_received, n_pkts);
 
-	uint64_t lookup_hit_mask = 0;
-	uint64_t lookup_hit_mask_ipv4 = 0;
-	uint64_t lookup_hit_mask_ipv6 = 0;
-	uint64_t lookup_miss_mask = 0;
-	uint64_t conntrack_mask = 0;
-	uint64_t connexist_mask = 0;
-	uint32_t dest_address = 0;
-	arp_pkts_mask = 0;
-	int dest_if = 0;
-	int status;
-	uint64_t pkts_drop_mask, pkts_mask = RTE_LEN2MASK(n_pkts, uint64_t);
-	uint64_t keep_mask = pkts_mask;
-	uint16_t port;
-	uint32_t ret;
+    uint64_t lookup_hit_mask = 0;
+    uint64_t lookup_hit_mask_ipv4 = 0;
+    uint64_t lookup_hit_mask_ipv6 = 0;
+    uint64_t lookup_miss_mask = 0;
+    uint64_t conntrack_mask = 0;
+    uint64_t connexist_mask = 0;
+    uint32_t dest_address = 0;
+    arp_pkts_mask = 0;
+    int status;
+    uint64_t pkts_drop_mask, pkts_mask = RTE_LEN2MASK(n_pkts, uint64_t);
+    uint64_t keep_mask = pkts_mask;
+    uint16_t port;
+    uint32_t ret;
 
-	p_acl->in_port_time_stamp = rte_get_tsc_cycles();
+    p_acl->in_port_time_stamp = rte_get_tsc_cycles();
 
-	if (acl_ipv6_enabled) {
-		if (ACL_DEBUG)
-			printf("ACL IPV6 Lookup Mask Before = %p\n",
-			       (void *)pkts_mask);
-		status =
-		    rte_table_acl_ops.f_lookup(acl_rule_table_ipv6_active, pkts,
-					       pkts_mask, &lookup_hit_mask_ipv6,
-					       (void **)
-					       p_acl->acl_entries_ipv6);
-		if (ACL_DEBUG)
-			printf("ACL IPV6 Lookup Mask After = %p\n",
-			       (void *)lookup_hit_mask_ipv6);
-	}
+    if (acl_ipv6_enabled) {
+        if (ACL_DEBUG)
+            printf("ACL IPV6 Lookup Mask Before = %p\n",
+                   (void *)pkts_mask);
+        status =
+            rte_table_acl_ops.f_lookup(acl_rule_table_ipv6_active, pkts,
+                           pkts_mask, &lookup_hit_mask_ipv6,
+                           (void **)
+                           p_acl->acl_entries_ipv6);
+        if (ACL_DEBUG)
+            printf("ACL IPV6 Lookup Mask After = %p\n",
+                   (void *)lookup_hit_mask_ipv6);
+    }
 
-	/* Merge lookup results since we process both IPv4 and IPv6 below */
-	lookup_hit_mask = lookup_hit_mask_ipv4 | lookup_hit_mask_ipv6;
-	if (ACL_DEBUG)
-		printf("ACL Lookup Mask After = %p\n", (void *)lookup_hit_mask);
+    /* Merge lookup results since we process both IPv4 and IPv6 below */
+    lookup_hit_mask = lookup_hit_mask_ipv4 | lookup_hit_mask_ipv6;
+    if (ACL_DEBUG)
+        printf("ACL Lookup Mask After = %p\n", (void *)lookup_hit_mask);
 
-	lookup_miss_mask = pkts_mask & (~lookup_hit_mask);
-	pkts_mask = lookup_hit_mask;
-	p_acl->counters->pkts_drop += __builtin_popcountll(lookup_miss_mask);
-	if (ACL_DEBUG)
-		printf("pkt_work_acl_key pkts_drop: %" PRIu64 " n_pkts: %u\n",
-		       p_acl->counters->pkts_drop,
-		       __builtin_popcountll(lookup_miss_mask));
+    lookup_miss_mask = pkts_mask & (~lookup_hit_mask);
+    pkts_mask = lookup_hit_mask;
+    p_acl->counters->pkts_drop += __builtin_popcountll(lookup_miss_mask);
+    if (ACL_DEBUG)
+        printf("pkt_work_acl_key pkts_drop: %" PRIu64 " n_pkts: %u\n",
+               p_acl->counters->pkts_drop,
+               __builtin_popcountll(lookup_miss_mask));
 
-	uint64_t pkts_to_process = lookup_hit_mask;
-		/* bitmap of packets left to process for ARP */
+    uint64_t pkts_to_process = lookup_hit_mask;
+        /* bitmap of packets left to process for ARP */
 
-	for (; pkts_to_process;) {
-		uint8_t pos = (uint8_t) __builtin_ctzll(pkts_to_process);
-		uint64_t pkt_mask = 1LLU << pos;
-		/* bitmask representing only this packet */
+    for (; pkts_to_process;) {
+        uint8_t pos = (uint8_t) __builtin_ctzll(pkts_to_process);
+        uint64_t pkt_mask = 1LLU << pos;
+        /* bitmask representing only this packet */
 
-		pkts_to_process &= ~pkt_mask;
-		/* remove this packet from remaining list */
-		struct rte_mbuf *pkt = pkts[pos];
+        pkts_to_process &= ~pkt_mask;
+        /* remove this packet from remaining list */
+        struct rte_mbuf *pkt = pkts[pos];
 
-		if (enable_hwlb)
-			if (!check_arp_icmp(pkt, pkt_mask, p_acl)) {
-				pkts_mask &= ~(1LLU << pos);
-				continue;
-			}
-		uint8_t hdr_chk =
-		    RTE_MBUF_METADATA_UINT8(pkt, MBUF_HDR_ROOM + ETH_HDR_SIZE);
-		hdr_chk = hdr_chk >> IP_VERSION_CHECK;
+        if (enable_hwlb)
+            if (!check_arp_icmp(pkt, pkt_mask, p_acl)) {
+                pkts_mask &= ~(1LLU << pos);
+                continue;
+            }
+        uint8_t hdr_chk =
+            RTE_MBUF_METADATA_UINT8(pkt, MBUF_HDR_ROOM + ETH_HDR_SIZE);
+        hdr_chk = hdr_chk >> IP_VERSION_CHECK;
 #if 0
-		if (hdr_chk == IPv4_HDR_VERSION) {
-			struct acl_table_entry *entry =
-			    (struct acl_table_entry *)
-			    p_acl->acl_entries_ipv4[pos];
-			uint16_t phy_port = entry->head.port_id;
-			uint32_t action_id = entry->action_id;
+        if (hdr_chk == IPv4_HDR_VERSION) {
+            struct acl_table_entry *entry =
+                (struct acl_table_entry *)
+                p_acl->acl_entries_ipv4[pos];
+            uint16_t phy_port = entry->head.port_id;
+            uint32_t action_id = entry->action_id;
 
-			if (ACL_DEBUG)
-				printf("action_id = %u\n", action_id);
+            if (ACL_DEBUG)
+                printf("action_id = %u\n", action_id);
 
-			uint32_t dscp_offset =
-			    MBUF_HDR_ROOM + ETH_HDR_SIZE + IP_HDR_DSCP_OFST;
+            uint32_t dscp_offset =
+                MBUF_HDR_ROOM + ETH_HDR_SIZE + IP_HDR_DSCP_OFST;
 
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_count) {
-				action_counter_table
-				    [p_acl->action_counter_index]
-				    [action_id].packetCount++;
-				action_counter_table
-				    [p_acl->action_counter_index]
-				    [action_id].byteCount +=
-				    rte_pktmbuf_pkt_len(pkt);
-				if (ACL_DEBUG)
-					printf("Action Count   Packet Count: %"
-					       PRIu64 "  Byte Count: %" PRIu64
-					       "\n",
-					       action_counter_table
-					       [p_acl->action_counter_index]
-					       [action_id].packetCount,
-					       action_counter_table
-					       [p_acl->action_counter_index]
-					       [action_id].byteCount);
-			}
+            if (action_array_active[action_id].action_bitmap &
+                acl_action_count) {
+                action_counter_table
+                    [p_acl->action_counter_index]
+                    [action_id].packetCount++;
+                action_counter_table
+                    [p_acl->action_counter_index]
+                    [action_id].byteCount +=
+                    rte_pktmbuf_pkt_len(pkt);
+                if (ACL_DEBUG)
+                    printf("Action Count   Packet Count: %"
+                           PRIu64 "  Byte Count: %" PRIu64
+                           "\n",
+                           action_counter_table
+                           [p_acl->action_counter_index]
+                           [action_id].packetCount,
+                           action_counter_table
+                           [p_acl->action_counter_index]
+                           [action_id].byteCount);
+            }
 
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_packet_drop) {
+            if (action_array_active[action_id].action_bitmap &
+                acl_action_packet_drop) {
 
-				/* Drop packet by changing the mask */
-				if (ACL_DEBUG)
-					printf
-			    ("ACL before drop pkt_mask %lu, pkt_num %d\n",
-					     pkts_mask, pos);
-				pkts_mask &= ~(1LLU << pos);
-				if (ACL_DEBUG)
-					printf
-			  ("ACL after drop pkt_mask %lu, pkt_num %d\n",
-					     pkts_mask, pos);
-				p_acl->counters->pkts_drop++;
-			}
+                /* Drop packet by changing the mask */
+                if (ACL_DEBUG)
+                    printf
+                ("ACL before drop pkt_mask %lu, pkt_num %d\n",
+                         pkts_mask, pos);
+                pkts_mask &= ~(1LLU << pos);
+                if (ACL_DEBUG)
+                    printf
+              ("ACL after drop pkt_mask %lu, pkt_num %d\n",
+                         pkts_mask, pos);
+                p_acl->counters->pkts_drop++;
+            }
 
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_fwd) {
-				phy_port =
-				    action_array_active[action_id].fwd_port;
-				entry->head.port_id = phy_port;
-				if (ACL_DEBUG)
-					printf("Action FWD  Port ID: %u\n",
-					       phy_port);
-			}
+            if (action_array_active[action_id].action_bitmap &
+                acl_action_fwd) {
+                phy_port =
+                    action_array_active[action_id].fwd_port;
+                entry->head.port_id = phy_port;
+                if (ACL_DEBUG)
+                    printf("Action FWD  Port ID: %u\n",
+                           phy_port);
+            }
 
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_nat) {
-				phy_port =
-				    action_array_active[action_id].nat_port;
-				entry->head.port_id = phy_port;
-				if (ACL_DEBUG)
-					printf("Action NAT  Port ID: %u\n",
-					       phy_port);
-			}
+            if (action_array_active[action_id].action_bitmap &
+                acl_action_nat) {
+                phy_port =
+                    action_array_active[action_id].nat_port;
+                entry->head.port_id = phy_port;
+                if (ACL_DEBUG)
+                    printf("Action NAT  Port ID: %u\n",
+                           phy_port);
+            }
 
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_dscp) {
+            if (action_array_active[action_id].action_bitmap &
+                acl_action_dscp) {
 
-				/* Set DSCP priority */
-				uint8_t *dscp = RTE_MBUF_METADATA_UINT8_PTR(pkt,
-							    dscp_offset);
-				*dscp =
-				    action_array_active[action_id].dscp_priority
-				    << 2;
-				if (ACL_DEBUG)
-					printf
-					    ("Action DSCP  DSCP Priority: %u\n",
-					     *dscp);
-			}
+                /* Set DSCP priority */
+                uint8_t *dscp = RTE_MBUF_METADATA_UINT8_PTR(pkt,
+                                dscp_offset);
+                *dscp =
+                    action_array_active[action_id].dscp_priority
+                    << 2;
+                if (ACL_DEBUG)
+                    printf
+                        ("Action DSCP  DSCP Priority: %u\n",
+                         *dscp);
+            }
 
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_packet_accept) {
-				if (ACL_DEBUG)
-					printf("Action Accept\n");
+            if (action_array_active[action_id].action_bitmap &
+                acl_action_packet_accept) {
+                if (ACL_DEBUG)
+                    printf("Action Accept\n");
 
-				if (action_array_active[action_id].action_bitmap
-				    & acl_action_conntrack) {
+                if (action_array_active[action_id].action_bitmap
+                    & acl_action_conntrack) {
 
-					/* Set conntrack bit for this pkt */
-					conntrack_mask |= pkt_mask;
-					if (ACL_DEBUG)
-						printf("ACL Conntrack enabled: "
-							" %p  pkt_mask: %p\n",
-						     (void *)conntrack_mask,
-						     (void *)pkt_mask);
-				}
+                    /* Set conntrack bit for this pkt */
+                    conntrack_mask |= pkt_mask;
+                    if (ACL_DEBUG)
+                        printf("ACL Conntrack enabled: "
+                            " %p  pkt_mask: %p\n",
+                             (void *)conntrack_mask,
+                             (void *)pkt_mask);
+                }
 
-				if (action_array_active[action_id].action_bitmap
-				    & acl_action_connexist) {
+                if (action_array_active[action_id].action_bitmap
+                    & acl_action_connexist) {
 
-					/* Set conntrack bit for this pkt */
-					conntrack_mask |= pkt_mask;
+                    /* Set conntrack bit for this pkt */
+                    conntrack_mask |= pkt_mask;
 
-		/* Set connexist bit for this pkt for public -> private */
-			/* Private -> public packet will open the connection */
-					if (action_array_active
-					    [action_id].private_public ==
-					    acl_public_private)
-						connexist_mask |= pkt_mask;
+        /* Set connexist bit for this pkt for public -> private */
+            /* Private -> public packet will open the connection */
+                    if (action_array_active
+                        [action_id].private_public ==
+                        acl_public_private)
+                        connexist_mask |= pkt_mask;
 
-					if (ACL_DEBUG)
-						printf("ACL Connexist enabled  "
-				"conntrack: %p  connexist: %p  pkt_mask: %p\n",
-						     (void *)conntrack_mask,
-						     (void *)connexist_mask,
-						     (void *)pkt_mask);
-				}
-			}
-		}
+                    if (ACL_DEBUG)
+                        printf("ACL Connexist enabled  "
+                "conntrack: %p  connexist: %p  pkt_mask: %p\n",
+                             (void *)conntrack_mask,
+                             (void *)connexist_mask,
+                             (void *)pkt_mask);
+                }
+            }
+        }
 #endif
 
-		if (hdr_chk == IPv6_HDR_VERSION) {
+        if (hdr_chk == IPv6_HDR_VERSION) {
 
-			struct acl_table_entry *entry =
-			    (struct acl_table_entry *)
-			    p_acl->acl_entries_ipv6[pos];
-			uint16_t phy_port = entry->head.port_id;
-			uint32_t action_id = entry->action_id;
+            struct acl_table_entry *entry =
+                (struct acl_table_entry *)
+                p_acl->acl_entries_ipv6[pos];
+            uint16_t phy_port = entry->head.port_id;
+            uint32_t action_id = entry->action_id;
 
-			if (ACL_DEBUG)
-				printf("action_id = %u\n", action_id);
+            if (ACL_DEBUG)
+                printf("action_id = %u\n", action_id);
 
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_count) {
-				action_counter_table
-				    [p_acl->action_counter_index]
-				    [action_id].packetCount++;
-				action_counter_table
-				    [p_acl->action_counter_index]
-				    [action_id].byteCount +=
-				    rte_pktmbuf_pkt_len(pkt);
-				if (ACL_DEBUG)
-					printf("Action Count   Packet Count: %"
-					       PRIu64 "  Byte Count: %" PRIu64
-					       "\n",
-					       action_counter_table
-					       [p_acl->action_counter_index]
-					       [action_id].packetCount,
-					       action_counter_table
-					       [p_acl->action_counter_index]
-					       [action_id].byteCount);
-			}
+            if (action_array_active[action_id].action_bitmap &
+                acl_action_count) {
+                action_counter_table
+                    [p_acl->action_counter_index]
+                    [action_id].packetCount++;
+                action_counter_table
+                    [p_acl->action_counter_index]
+                    [action_id].byteCount +=
+                    rte_pktmbuf_pkt_len(pkt);
+                if (ACL_DEBUG)
+                    printf("Action Count   Packet Count: %"
+                           PRIu64 "  Byte Count: %" PRIu64
+                           "\n",
+                           action_counter_table
+                           [p_acl->action_counter_index]
+                           [action_id].packetCount,
+                           action_counter_table
+                           [p_acl->action_counter_index]
+                           [action_id].byteCount);
+            }
 
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_packet_drop) {
-				/* Drop packet by changing the mask */
-				if (ACL_DEBUG)
-					printf("ACL before drop pkt_mask  "
-							"%lu, pkt_num %d\n",
-					     pkts_mask, pos);
-				pkts_mask &= ~(1LLU << pos);
-				if (ACL_DEBUG)
-					printf("ACL after drop pkt_mask  "
-							"%lu, pkt_num %d\n",
-					     pkts_mask, pos);
-				p_acl->counters->pkts_drop++;
+            if (action_array_active[action_id].action_bitmap &
+                acl_action_packet_drop) {
+                /* Drop packet by changing the mask */
+                if (ACL_DEBUG)
+                    printf("ACL before drop pkt_mask  "
+                            "%lu, pkt_num %d\n",
+                         pkts_mask, pos);
+                pkts_mask &= ~(1LLU << pos);
+                if (ACL_DEBUG)
+                    printf("ACL after drop pkt_mask  "
+                            "%lu, pkt_num %d\n",
+                         pkts_mask, pos);
+                p_acl->counters->pkts_drop++;
 
-			}
+            }
 
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_fwd) {
-				phy_port =
-				    action_array_active[action_id].fwd_port;
-				entry->head.port_id = phy_port;
-				if (ACL_DEBUG)
-					printf("Action FWD  Port ID: %u\n",
-					       phy_port);
-			}
+            if (action_array_active[action_id].action_bitmap &
+                acl_action_fwd) {
+                phy_port =
+                    action_array_active[action_id].fwd_port;
+                entry->head.port_id = phy_port;
+                if (ACL_DEBUG)
+                    printf("Action FWD  Port ID: %u\n",
+                           phy_port);
+            }
 
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_nat) {
-				phy_port =
-				    action_array_active[action_id].nat_port;
-				entry->head.port_id = phy_port;
-				if (ACL_DEBUG)
-					printf("Action NAT  Port ID: %u\n",
-					       phy_port);
-			}
+            if (action_array_active[action_id].action_bitmap &
+                acl_action_nat) {
+                phy_port =
+                    action_array_active[action_id].nat_port;
+                entry->head.port_id = phy_port;
+                if (ACL_DEBUG)
+                    printf("Action NAT  Port ID: %u\n",
+                           phy_port);
+            }
 
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_dscp) {
+            if (action_array_active[action_id].action_bitmap &
+                acl_action_dscp) {
 
-				/* Set DSCP priority */
-				uint32_t dscp_offset =
-				    MBUF_HDR_ROOM + ETH_HDR_SIZE +
-				    IP_HDR_DSCP_OFST_IPV6;
-				uint16_t *dscp =
-				    RTE_MBUF_METADATA_UINT16_PTR(pkt,
-								 dscp_offset);
-				uint16_t dscp_value =
-				    (rte_bswap16
-				     (RTE_MBUF_METADATA_UINT16
-				      (pkt, dscp_offset)) & 0XF00F);
-				uint8_t dscp_store =
-				    action_array_active[action_id].dscp_priority
-				    << 2;
-				uint16_t dscp_temp = dscp_store;
+                /* Set DSCP priority */
+                uint32_t dscp_offset =
+                    MBUF_HDR_ROOM + ETH_HDR_SIZE +
+                    IP_HDR_DSCP_OFST_IPV6;
+                uint16_t *dscp =
+                    RTE_MBUF_METADATA_UINT16_PTR(pkt,
+                                 dscp_offset);
+                uint16_t dscp_value =
+                    (rte_bswap16
+                     (RTE_MBUF_METADATA_UINT16
+                      (pkt, dscp_offset)) & 0XF00F);
+                uint8_t dscp_store =
+                    action_array_active[action_id].dscp_priority
+                    << 2;
+                uint16_t dscp_temp = dscp_store;
 
-				dscp_temp = dscp_temp << 4;
-				*dscp = rte_bswap16(dscp_temp | dscp_value);
-				if (ACL_DEBUG)
-					printf
-					    ("Action DSCP  DSCP Priority: %u\n",
-					     *dscp);
-			}
+                dscp_temp = dscp_temp << 4;
+                *dscp = rte_bswap16(dscp_temp | dscp_value);
+                if (ACL_DEBUG)
+                    printf
+                        ("Action DSCP  DSCP Priority: %u\n",
+                         *dscp);
+            }
 
-			if (action_array_active[action_id].action_bitmap &
-			    acl_action_packet_accept) {
-				if (ACL_DEBUG)
-					printf("Action Accept\n");
+            if (action_array_active[action_id].action_bitmap &
+                acl_action_packet_accept) {
+                if (ACL_DEBUG)
+                    printf("Action Accept\n");
 
-				if (action_array_active[action_id].action_bitmap
-				    & acl_action_conntrack) {
+                if (action_array_active[action_id].action_bitmap
+                    & acl_action_conntrack) {
 
-					/* Set conntrack bit for this pkt */
-					conntrack_mask |= pkt_mask;
-					if (ACL_DEBUG)
-						printf("ACL Conntrack enabled: "
-							" %p  pkt_mask: %p\n",
-						     (void *)conntrack_mask,
-						     (void *)pkt_mask);
-				}
+                    /* Set conntrack bit for this pkt */
+                    conntrack_mask |= pkt_mask;
+                    if (ACL_DEBUG)
+                        printf("ACL Conntrack enabled: "
+                            " %p  pkt_mask: %p\n",
+                             (void *)conntrack_mask,
+                             (void *)pkt_mask);
+                }
 
-				if (action_array_active[action_id].action_bitmap
-				    & acl_action_connexist) {
+                if (action_array_active[action_id].action_bitmap
+                    & acl_action_connexist) {
 
-					/* Set conntrack bit for this pkt */
-					conntrack_mask |= pkt_mask;
+                    /* Set conntrack bit for this pkt */
+                    conntrack_mask |= pkt_mask;
 
-		/* Set connexist bit for this pkt for public -> private */
-			/* Private -> public packet will open the connection */
-					if (action_array_active
-					    [action_id].private_public ==
-					    acl_public_private)
-						connexist_mask |= pkt_mask;
+        /* Set connexist bit for this pkt for public -> private */
+            /* Private -> public packet will open the connection */
+                    if (action_array_active
+                        [action_id].private_public ==
+                        acl_public_private)
+                        connexist_mask |= pkt_mask;
 
-					if (ACL_DEBUG)
-						printf("ACL Connexist enabled "
-				"conntrack: %p  connexist: %p  pkt_mask: %p\n",
-						     (void *)conntrack_mask,
-						     (void *)connexist_mask,
-						     (void *)pkt_mask);
-				}
-			}
-		}
-	}
-	/* Only call connection tracker if required */
-	if (conntrack_mask > 0) {
-		if (ACL_DEBUG)
-			printf
-			    ("ACL Call Conntrack Before = %p  Connexist = %p\n",
-			     (void *)conntrack_mask, (void *)connexist_mask);
-		conntrack_mask =
-		    rte_ct_cnxn_tracker_batch_lookup_with_new_cnxn_control
-		    (p_acl->cnxn_tracker, pkts, conntrack_mask, connexist_mask);
-		if (ACL_DEBUG)
-			printf("ACL Call Conntrack After = %p\n",
-			       (void *)conntrack_mask);
+                    if (ACL_DEBUG)
+                        printf("ACL Connexist enabled "
+                "conntrack: %p  connexist: %p  pkt_mask: %p\n",
+                             (void *)conntrack_mask,
+                             (void *)connexist_mask,
+                             (void *)pkt_mask);
+                }
+            }
+        }
+    }
+    /* Only call connection tracker if required */
+    if (conntrack_mask > 0) {
+        if (ACL_DEBUG)
+            printf
+                ("ACL Call Conntrack Before = %p  Connexist = %p\n",
+                 (void *)conntrack_mask, (void *)connexist_mask);
+        conntrack_mask =
+            rte_ct_cnxn_tracker_batch_lookup_with_new_cnxn_control
+            (p_acl->cnxn_tracker, pkts, conntrack_mask, connexist_mask);
+        if (ACL_DEBUG)
+            printf("ACL Call Conntrack After = %p\n",
+                   (void *)conntrack_mask);
 
-		/* Only change pkt mask for pkts that have conntrack enabled */
-		/* Need to loop through packets to check if conntrack enabled */
-		pkts_to_process = pkts_mask;
-		for (; pkts_to_process;) {
-			uint32_t action_id = 0;
-			uint8_t pos =
-			    (uint8_t) __builtin_ctzll(pkts_to_process);
-			uint64_t pkt_mask = 1LLU << pos;
-		/* bitmask representing only this packet */
+        /* Only change pkt mask for pkts that have conntrack enabled */
+        /* Need to loop through packets to check if conntrack enabled */
+        pkts_to_process = pkts_mask;
+        for (; pkts_to_process;) {
+            uint32_t action_id = 0;
+            uint8_t pos =
+                (uint8_t) __builtin_ctzll(pkts_to_process);
+            uint64_t pkt_mask = 1LLU << pos;
+        /* bitmask representing only this packet */
 
-			pkts_to_process &= ~pkt_mask;
-		/* remove this packet from remaining list */
-			struct rte_mbuf *pkt = pkts[pos];
+            pkts_to_process &= ~pkt_mask;
+        /* remove this packet from remaining list */
+            struct rte_mbuf *pkt = pkts[pos];
 
-			uint8_t hdr_chk = RTE_MBUF_METADATA_UINT8(pkt,
-								  MBUF_HDR_ROOM
-								  +
-								  ETH_HDR_SIZE);
-			hdr_chk = hdr_chk >> IP_VERSION_CHECK;
-			if (hdr_chk == IPv4_HDR_VERSION) {
-				struct acl_table_entry *entry =
-				    (struct acl_table_entry *)
-				    p_acl->acl_entries_ipv4[pos];
-				action_id = entry->action_id;
-			} else {
-				struct acl_table_entry *entry =
-				    (struct acl_table_entry *)
-				    p_acl->acl_entries_ipv6[pos];
-				action_id = entry->action_id;
-			}
+            uint8_t hdr_chk = RTE_MBUF_METADATA_UINT8(pkt,
+                                  MBUF_HDR_ROOM
+                                  +
+                                  ETH_HDR_SIZE);
+            hdr_chk = hdr_chk >> IP_VERSION_CHECK;
+            if (hdr_chk == IPv4_HDR_VERSION) {
+                struct acl_table_entry *entry =
+                    (struct acl_table_entry *)
+                    p_acl->acl_entries_ipv4[pos];
+                action_id = entry->action_id;
+            } else {
+                struct acl_table_entry *entry =
+                    (struct acl_table_entry *)
+                    p_acl->acl_entries_ipv6[pos];
+                action_id = entry->action_id;
+            }
 
-			if ((action_array_active[action_id].action_bitmap &
-			     acl_action_conntrack)
-			    || (action_array_active[action_id].action_bitmap &
-				acl_action_connexist)) {
+            if ((action_array_active[action_id].action_bitmap &
+                 acl_action_conntrack)
+                || (action_array_active[action_id].action_bitmap &
+                acl_action_connexist)) {
 
-				if (conntrack_mask & pkt_mask) {
-					if (ACL_DEBUG)
-						printf("ACL Conntrack Accept  "
-							"packet = %p\n",
-						     (void *)pkt_mask);
-				} else {
+                if (conntrack_mask & pkt_mask) {
+                    if (ACL_DEBUG)
+                        printf("ACL Conntrack Accept  "
+                            "packet = %p\n",
+                             (void *)pkt_mask);
+                } else {
 /* Drop packet by changing the mask */
-					if (ACL_DEBUG)
-						printf
-					    ("ACL Conntrack Drop packet = %p\n",
-						     (void *)pkt_mask);
-					pkts_mask &= ~pkt_mask;
-					p_acl->counters->pkts_drop++;
-				}
-			}
-		}
-	}
+                    if (ACL_DEBUG)
+                        printf
+                        ("ACL Conntrack Drop packet = %p\n",
+                             (void *)pkt_mask);
+                    pkts_mask &= ~pkt_mask;
+                    p_acl->counters->pkts_drop++;
+                }
+            }
+        }
+    }
 
-	pkts_to_process = pkts_mask;
-	/* bitmap of packets left to process for ARP */
+    pkts_to_process = pkts_mask;
+    /* bitmap of packets left to process for ARP */
 
-	for (; pkts_to_process;) {
-		uint8_t pos = (uint8_t) __builtin_ctzll(pkts_to_process);
-		uint64_t pkt_mask = 1LLU << pos;
-	/* bitmask representing only this packet */
+    for (; pkts_to_process;) {
+        uint8_t pos = (uint8_t) __builtin_ctzll(pkts_to_process);
+        uint64_t pkt_mask = 1LLU << pos;
+    /* bitmask representing only this packet */
 
-		pkts_to_process &= ~pkt_mask;
-	/* remove this packet from remaining list */
-		struct rte_mbuf *pkt = pkts[pos];
+        pkts_to_process &= ~pkt_mask;
+    /* remove this packet from remaining list */
+        struct rte_mbuf *pkt = pkts[pos];
 
-		uint8_t hdr_chk =
-		    RTE_MBUF_METADATA_UINT8(pkt, MBUF_HDR_ROOM + ETH_HDR_SIZE);
-		hdr_chk = hdr_chk >> IP_VERSION_CHECK;
+        uint8_t hdr_chk =
+            RTE_MBUF_METADATA_UINT8(pkt, MBUF_HDR_ROOM + ETH_HDR_SIZE);
+        hdr_chk = hdr_chk >> IP_VERSION_CHECK;
 
-		if (hdr_chk == IPv6_HDR_VERSION) {
+        if (hdr_chk == IPv6_HDR_VERSION) {
 
-			struct acl_table_entry *entry =
-			    (struct acl_table_entry *)
-			    p_acl->acl_entries_ipv6[pos];
-			//uint16_t phy_port = entry->head.port_id;
-			uint16_t phy_port = pkt->port;
-			uint32_t *port_out_id =
-			    RTE_MBUF_METADATA_UINT32_PTR(pkt,
-							 META_DATA_OFFSET +
-							 offsetof(struct
-							  mbuf_acl_meta_data,
-								  output_port));
-		/*	if (is_phy_port_privte(phy_port))
-				*port_out_id = ACL_PUB_PORT_ID;
-			else
-				*port_out_id = ACL_PRV_PORT_ID;*/
+            struct acl_table_entry *entry =
+                (struct acl_table_entry *)
+                p_acl->acl_entries_ipv6[pos];
+            //uint16_t phy_port = entry->head.port_id;
+            uint16_t phy_port = pkt->port;
+            uint32_t *port_out_id =
+                RTE_MBUF_METADATA_UINT32_PTR(pkt,
+                             META_DATA_OFFSET +
+                             offsetof(struct
+                              mbuf_acl_meta_data,
+                                  output_port));
 
-			/*  *port_out_id = p_acl->links_map[phy_port]; */
-			if (ACL_DEBUG)
-				printf
-				    ("phy_port = %i,links_map[phy_port] = %i\n",
-				     phy_port, p_acl->links_map[phy_port]);
+            if (ACL_DEBUG)
+                printf
+                    ("phy_port = %i,links_map[phy_port] = %i\n",
+                     phy_port, p_acl->links_map[phy_port]);
 
-	/* header room + eth hdr size + dst_adr offset in ip header */
-			uint32_t dst_addr_offset =
-			    MBUF_HDR_ROOM + ETH_HDR_SIZE +
-			    IP_HDR_DST_ADR_OFST_IPV6;
-			uint8_t *eth_dest =
-			    RTE_MBUF_METADATA_UINT8_PTR(pkt, MBUF_HDR_ROOM);
-			uint8_t *eth_src =
-			    RTE_MBUF_METADATA_UINT8_PTR(pkt, MBUF_HDR_ROOM + 6);
-			struct ether_addr hw_addr;
-			uint8_t dest_address[16];
-			uint8_t nhip[16];
+            uint32_t packet_length = rte_pktmbuf_pkt_len(pkt);
 
-			nhip[0] =
-			    RTE_MBUF_METADATA_UINT8(pkt,
-						    META_DATA_OFFSET +
-						    offsetof(struct
-							     mbuf_acl_meta_data,
-							     nhip));
-			uint8_t *dst_addr[16];
-			uint32_t packet_length = rte_pktmbuf_pkt_len(pkt);
-			int i = 0;
+            uint32_t dest_if = INVALID_DESTIF;
+            uint32_t src_phy_port = pkt->port;
 
-			for (i = 0; i < 16; i++) {
-				dst_addr[i] =
-				    RTE_MBUF_METADATA_UINT8_PTR(pkt,
-								dst_addr_offset
-								+ i);
-			}
-			memcpy(dest_address, *dst_addr, sizeof(dest_address));
-			memset(nhip, 0, sizeof(nhip));
-			struct nd_entry_data *ret_nd_data = NULL;
-			ret_nd_data = get_dest_mac_address_ipv6_port
-			    (dest_address, &dest_if, &hw_addr, &nhip[0]);
-			*port_out_id = p_acl->port_out_id[dest_if];
+            if(is_gateway()){
 
-			if (nd_cache_dest_mac_present(dest_if)) {
-				ether_addr_copy(get_link_hw_addr(dest_if),
-					(struct ether_addr *)eth_src);
-				update_nhip_access(dest_if);
+                /* Gateway Proc Starts */
+                struct ipv6_hdr *ipv6hdr = (struct ipv6_hdr *)
+                    RTE_MBUF_METADATA_UINT32_PTR(pkt, IP_START);
 
-				if (unlikely(ret_nd_data && ret_nd_data->num_pkts)) {
-					printf("sending buffered packets\n");
-					p_acl->counters->tpkts_processed +=
-						 ret_nd_data->num_pkts;
-					nd_send_buffered_pkts(ret_nd_data,
-					(struct ether_addr *)eth_dest, *port_out_id);
-				}
-				p_acl->counters->tpkts_processed++;
-				p_acl->counters->bytes_processed +=
-				    packet_length;
-			} else {
-				if (unlikely(ret_nd_data == NULL)) {
-					if (ACL_DEBUG)
-						printf("ACL before drop pkt_mask  "
-						"%lu, pkt_num %d\n", pkts_mask, pos);
-					pkts_mask &= ~(1LLU << pos);
-					if (ACL_DEBUG)
-						printf("ACL after drop pkt_mask  "
-						"%lu, pkt_num %d\n", pkts_mask, pos);
-					p_acl->counters->pkts_drop++;
-					continue;
-				}
+                struct ether_hdr *ehdr = (struct ether_hdr *)
+                    RTE_MBUF_METADATA_UINT32_PTR(pkt,
+                            META_DATA_OFFSET + MBUF_HDR_ROOM);
 
-				if (ret_nd_data->status == INCOMPLETE ||
-					ret_nd_data->status == PROBE) {
-					if (ret_nd_data->num_pkts >= NUM_DESC) {
-						/* Drop the pkt */
-						if (ACL_DEBUG)
-							printf("ACL before drop pkt_mask  "
-							"%lu, pkt_num %d\n", pkts_mask, pos);
-						pkts_mask &= ~(1LLU << pos);
-						if (ACL_DEBUG)
-							printf("ACL after drop pkt_mask  "
-							"%lu, pkt_num %d\n", pkts_mask, pos);
-						p_acl->counters->pkts_drop++;
-						continue;
-					} else {
-						arp_pkts_mask |= pkt_mask;
-						nd_queue_unresolved_packet(ret_nd_data,
-										 pkt);
-						continue;
-					}
-				}
+                struct ether_addr dst_mac;
+                uint32_t dest_if = INVALID_DESTIF;
+                uint8_t nhipv6[IPV6_ADD_SIZE];
+                uint8_t dest_ipv6_address[IPV6_ADD_SIZE];
+                uint32_t src_phy_port;
+                struct nd_entry_data *ret_nd_data = NULL;
 
-			}
+                memset(nhipv6, 0, IPV6_ADD_SIZE);
+                src_phy_port = pkt->port;
+                rte_mov16(dest_ipv6_address,  (uint8_t *)ipv6hdr);
 
-		}
+                gw_get_nh_port_ipv6(dest_ipv6_address,
+                        &dest_if, nhipv6);
 
-	} /* end of for loop */
+                ret_nd_data = get_dest_mac_addr_ipv6(nhipv6, dest_if, &dst_mac);
 
-	pkts_drop_mask = keep_mask & ~pkts_mask;
-	rte_pipeline_ah_packet_drop(p, pkts_drop_mask);
-	keep_mask = pkts_mask;
+                /* Gateway Proc Ends */
 
-	if (arp_pkts_mask) {
-		keep_mask &= ~(arp_pkts_mask);
-		rte_pipeline_ah_packet_hijack(p, arp_pkts_mask);
-	}
+                if (nd_cache_dest_mac_present(dest_if)) {
 
-	/* don't bother measuring if traffic very low, might skew stats */
-	uint32_t packets_this_iteration = __builtin_popcountll(pkts_mask);
+                    ether_addr_copy(&dst_mac, &ehdr->d_addr);
+                    ether_addr_copy(get_link_hw_addr(dest_if), &ehdr->s_addr);
 
-	if (packets_this_iteration > 1) {
-		uint64_t latency_this_iteration =
-		    rte_get_tsc_cycles() - p_acl->in_port_time_stamp;
-		p_acl->counters->sum_latencies += latency_this_iteration;
-		p_acl->counters->count_latencies++;
-	}
-	if (ACL_DEBUG)
-		printf("Leaving pkt_work_acl_key pkts_mask = %p\n",
-		       (void *)pkts_mask);
+                    *port_out_id = p_acl->port_out_id[dest_if];
 
-	return 0;
+                    update_nhip_access(dest_if);
+
+                    if (unlikely(ret_nd_data && ret_nd_data->num_pkts)) {
+                        printf("sending buffered packets\n");
+                        p_acl->counters->tpkts_processed +=
+                            ret_nd_data->num_pkts;
+                        nd_send_buffered_pkts(ret_nd_data, &ehdr->d_addr,
+                                p_acl->port_out_id[dest_if]);
+                    }
+                    p_acl->counters->tpkts_processed++;
+                    p_acl->counters->bytes_processed += packet_length;
+                } else {
+                    if (unlikely(ret_nd_data == NULL)) {
+                        if (ACL_DEBUG)
+                            printf("ACL before drop pkt_mask  "
+                                    "%lu, pkt_num %d\n", pkts_mask, pos);
+                        pkts_mask &= ~(1LLU << pos);
+                        if (ACL_DEBUG)
+                            printf("ACL after drop pkt_mask  "
+                                    "%lu, pkt_num %d\n", pkts_mask, pos);
+                        p_acl->counters->pkts_drop++;
+                        continue;
+                    }
+
+                    if (ret_nd_data->status == INCOMPLETE ||
+                            ret_nd_data->status == PROBE) {
+                        if (ret_nd_data->num_pkts >= NUM_DESC) {
+                            /* Drop the pkt */
+                            if (ACL_DEBUG)
+                                printf("ACL before drop pkt_mask  "
+                                        "%lu, pkt_num %d\n", pkts_mask, pos);
+                            pkts_mask &= ~(1LLU << pos);
+                            if (ACL_DEBUG)
+                                printf("ACL after drop pkt_mask  "
+                                        "%lu, pkt_num %d\n", pkts_mask, pos);
+                            p_acl->counters->pkts_drop++;
+                            continue;
+                        } else {
+                            arp_pkts_mask |= pkt_mask;
+                            nd_queue_unresolved_packet(ret_nd_data,
+                                    pkt);
+                            continue;
+                        }
+                    }
+                }
+
+            } else {
+                /* IP Pkt forwarding based on  pub/prv mapping */
+                if(is_phy_port_privte(src_phy_port))
+                    dest_if = prv_to_pub_map[src_phy_port];
+                else
+                    dest_if = pub_to_prv_map[src_phy_port];
+
+                *port_out_id = p_acl->port_out_id[dest_if];
+
+            }
+        }
+
+    } /* end of for loop */
+
+    pkts_drop_mask = keep_mask & ~pkts_mask;
+    rte_pipeline_ah_packet_drop(p, pkts_drop_mask);
+    keep_mask = pkts_mask;
+
+    if (arp_pkts_mask) {
+        keep_mask &= ~(arp_pkts_mask);
+        rte_pipeline_ah_packet_hijack(p, arp_pkts_mask);
+    }
+
+    /* don't bother measuring if traffic very low, might skew stats */
+    uint32_t packets_this_iteration = __builtin_popcountll(pkts_mask);
+
+    if (packets_this_iteration > 1) {
+        uint64_t latency_this_iteration =
+            rte_get_tsc_cycles() - p_acl->in_port_time_stamp;
+        p_acl->counters->sum_latencies += latency_this_iteration;
+        p_acl->counters->count_latencies++;
+    }
+    if (ACL_DEBUG)
+        printf("Leaving pkt_work_acl_key pkts_mask = %p\n",
+               (void *)pkts_mask);
+
+    return 0;
 }
 
 static struct rte_acl_field_def field_format_ipv4[] = {
