@@ -20,9 +20,9 @@ link 1 down
 link 1 config 2012:0000:0000:0000:6a05:caff:fe30:2071 64
 link 1 up
 
-;routeadd <port #> <ipv6 nhip address in hex> <Depth>
-routeadd 0 fec0::6a05:caff:fe30:21b0  64
-routeadd 1 2012::6a05:caff:fe30:2081 64
+;routeadd <net/host> <port #> <ipv6 nhip address in hex> <Depth/NotApplicable>
+routeadd net 0 fec0::6a05:caff:fe30:21b0 64
+routeadd net 1 2012::6a05:caff:fe30:2081 64
 
 ; IPv6 static ARP
 ;p 1 arpadd 0 fec0::6a05:caff:fe30:21b0 00:00:00:00:00:01
