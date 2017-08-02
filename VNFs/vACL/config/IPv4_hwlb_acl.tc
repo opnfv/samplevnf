@@ -20,9 +20,9 @@ link 1 down
 link 1 config 172.16.40.10 8
 link 1 up
 
-; routeadd <port #> <ipv4 nhip address in decimal> <Mask>
-routeadd 0 202.16.100.20 0xff000000
-routeadd 1 172.16.40.20  0xff000000
+;routeadd <net/host> <port #> <ipv4 nhip address in decimal> <Mask/NotApplicable>
+routeadd net 0 202.16.100.20 0xff000000
+routeadd net 1 172.16.40.20  0xff000000
 
 ; IPv4 static ARP
 ;p 1 arpadd 1 172.16.40.20 00:00:00:00:00:04
