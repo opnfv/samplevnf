@@ -418,14 +418,6 @@ struct pipeline_cgnapt {
 
 	uint8_t vnf_set;	/* to identify as separate LB-CGNAPT set */
 
-	/* Local ARP & ND Tables */
-	struct lib_arp_route_table_entry
-		local_lib_arp_route_table[MAX_ARP_RT_ENTRY];
-	uint8_t local_lib_arp_route_ent_cnt;
-	struct lib_nd_route_table_entry
-		local_lib_nd_route_table[MAX_ND_RT_ENTRY];
-	uint8_t local_lib_nd_route_ent_cnt;
-
 	/* For internal debugging purpose */
 #ifdef CGNAPT_TIMING_INST
 	uint64_t in_port_exit_timestamp;
