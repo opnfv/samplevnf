@@ -64,6 +64,7 @@
 #include "vnf_common.h"
 #include "lib_sip_alg.h"
 #include "lib_icmpv6.h"
+#include "gateway.h"
 
 #include "pipeline_common_fe.h"
 #ifdef CT_CGNAT
@@ -177,21 +178,6 @@ uint8_t well_known_prefix[16] = {
 	0x00, 0x00, 0x00, 0x00
 };
 
-static uint32_t local_get_nh_ipv4(
-	uint32_t ip,
-	uint32_t *port,
-	uint32_t *nhip,
-	struct pipeline_cgnapt *p_nat);
-static void do_local_nh_ipv4_cache(
-	uint32_t dest_if,
-	struct pipeline_cgnapt *p_nat);
-
-static uint32_t local_get_nh_ipv6(
-	uint8_t *ip,
-	uint32_t *port,
-	uint8_t nhip[],
-	struct pipeline_cgnapt *p_nat);
-
 static uint8_t check_arp_icmp(
 	struct rte_mbuf *pkt,
 	uint64_t pkt_mask,
@@ -218,123 +204,6 @@ uint64_t nextPowerOf2(uint64_t n)
 	n++;
 	return n;
 }
-
-void remove_local_cache(uint8_t port)
-{
-	link_hw_laddr_valid[port] = 0;
-}
-
-/**
- * Function to get IPv4-IP NH from thread local array
- *
- * @params ip
- *  IPv4 - IP
- * @params port
- *  NH port number
- * @params nhip
- *  NHIP of IPv4 type
- * @params p_nat
- *  CGNAPT pipeline ptr
- *
- * @return
- *  1 on success, 0 for failure
- */
-
-static uint32_t local_get_nh_ipv4(
-	uint32_t ip,
-	uint32_t *port,
-	uint32_t *nhip,
-	struct pipeline_cgnapt *p_nat)
-{
-	int i;
-	for (i = 0; i < p_nat->local_lib_arp_route_ent_cnt; i++) {
-		if (((p_nat->local_lib_arp_route_table[i].ip &
-			p_nat->local_lib_arp_route_table[i].mask) ==
-			(ip & p_nat->local_lib_arp_route_table[i].mask))) {
-			*port = p_nat->local_lib_arp_route_table[i].port;
-
-			*nhip = p_nat->local_lib_arp_route_table[i].nh;
-			return 1;
-		}
-	}
-	return 0;
-}
-
-/**
- * Function to make local copy for NH of type IPv4
- *
- * @params dest_if
- *  Physical port number
- * @params p_nat
- *  CGNAPT pipeline ptr
- *
- */
-
-static void do_local_nh_ipv4_cache(
-	uint32_t dest_if,
-	struct pipeline_cgnapt *p_nat)
-{
-	return;
-}
-
-
-/**
- * Function to get IPv6-IP NH from thread local array
- *
- * @params ip
- *  Pointer to starting addr of IPv6
- * @params port
- *  NH port number
- * @params nhip
- *  NHIP of IPv6 type
- * @params p_nat
- *  CGNAPT pipeline ptr
- *
- * @return
- *  1 on success, 0 for failure
- */
-
-static uint32_t local_get_nh_ipv6(
-	uint8_t *ip,
-	uint32_t *port,
-	uint8_t nhip[],
-	struct pipeline_cgnapt *p_nat)
-{
-	int i = 0;
-	uint8_t netmask_ipv6[16];
-	uint8_t k = 0, l = 0, depthflags = 0, depthflags1 = 0;
-
-	for (i = 0; i < p_nat->local_lib_nd_route_ent_cnt; i++) {
-
-		convert_prefixlen_to_netmask_ipv6(
-			p_nat->local_lib_nd_route_table[i].depth,
-			netmask_ipv6);
-
-		for (k = 0; k < 16; k++)
-			if (p_nat->local_lib_nd_route_table[i].ipv6[k] &
-					netmask_ipv6[k])
-				depthflags++;
-
-		for (l = 0; l < 16; l++)
-			if (ip[l] & netmask_ipv6[l])
-				depthflags1++;
-
-		int j = 0;
-		if (depthflags == depthflags1) {
-			*port = p_nat->local_lib_nd_route_table[i].port;
-
-			for (j = 0; j < 16; j++)
-				nhip[j] = p_nat->local_lib_nd_route_table[i].
-						nhipv6[j];
-			return 1;
-		}
-
-		depthflags = 0;
-		depthflags1 = 0;
-			}
-			return 0;
-}
-
 
 #ifdef SIP_ALG
 /* Commented code may be required for future usage, Please keep it*/
@@ -2073,7 +1942,7 @@ static int cgnapt_in_port_ah_mix(struct rte_pipeline *rte_p,
 		uint8_t nh_ipv6[16];
 		uint32_t nhip = 0;
 
-		uint32_t dest_if = 0xff;
+		uint32_t dest_if = INVALID_DESTIF;
 		uint32_t ret;
 
 		uint16_t *outport_id =
@@ -2086,51 +1955,53 @@ static int cgnapt_in_port_ah_mix(struct rte_pipeline *rte_p,
 			&& rte_be_to_cpu_16(*dst_port) == 53) {
 			p_nat->invalid_packets |= 1LLU << pkt_index;
 			p_nat->naptDroppedPktCount++;
-			#ifdef CGNAPT_DEBUGGING
+#ifdef CGNAPT_DEBUGGING
 			p_nat->naptDroppedPktCount6++;
-			#endif
+#endif
 			continue;
 			}
 
 			dest_address = rte_bswap32(*dst_addr);
-			ret = local_get_nh_ipv4(dest_address, &dest_if,
-					&nhip, p_nat);
-			if (!ret) {
-				dest_if = get_prv_to_pub_port(&dest_address,
-						IP_VERSION_4);
-				if (dest_if == INVALID_DESTIF) {
-					p_nat->invalid_packets |=
-						1LLU << pkt_index;
-					p_nat->naptDroppedPktCount++;
-					#ifdef CGNAPT_DEBUGGING
-					p_nat->naptDroppedPktCount6++;
-					#endif
-					continue;
-				}
-				do_local_nh_ipv4_cache(dest_if, p_nat);
-			}
+			/* Gateway Proc Starts */
 
-			*outport_id = p_nat->outport_id[dest_if];
-			struct arp_entry_data *ret_arp_data;
-			ret_arp_data = get_dest_mac_addr_port(dest_address,
-				&dest_if, (struct ether_addr *)eth_dest);
+			struct arp_entry_data *ret_arp_data = NULL;
+			uint32_t src_phy_port = *src_port;
 
-			if (unlikely(ret_arp_data == NULL)) {
+			gw_get_nh_port_ipv4(dest_address, src_phy_port,
+					&dest_if, &nhip);
 
-				#ifdef CGNAPT_DEBUGGING
-				printf("%s: NHIP Not Found, nhip: %x, "
-				"outport_id: %d\n", __func__, nhip,
-				*outport_id);
-				#endif
-				/* Drop the pkt */
-				p_nat->invalid_packets |= pkt_mask;
+			if (dest_if == INVALID_DESTIF) {
+				p_nat->invalid_packets |=
+					1LLU << pkt_index;
 				p_nat->naptDroppedPktCount++;
-
-				#ifdef CGNAPT_DEBUGGING
-				p_nat->naptDroppedPktCount4++;
-				#endif
+#ifdef CGNAPT_DEBUGGING
+				p_nat->naptDroppedPktCount6++;
+#endif
 				continue;
 			}
+
+		*outport_id = p_nat->outport_id[dest_if];
+
+		ret_arp_data = get_dest_mac_addr_ipv4(nhip, dest_if, &hw_addr);
+
+		if (unlikely(ret_arp_data == NULL)) {
+
+			#ifdef CGNAPT_DEBUGGING
+			printf("%s: NHIP Not Found, nhip: %x, "
+			"outport_id: %d\n", __func__, nhip,
+			*outport_id);
+			#endif
+			/* Drop the pkt */
+			p_nat->invalid_packets |= pkt_mask;
+			p_nat->naptDroppedPktCount++;
+
+			#ifdef CGNAPT_DEBUGGING
+			p_nat->naptDroppedPktCount4++;
+			#endif
+			continue;
+		}
+
+		/* Gateway Proc Ends */
 
 			if (ret_arp_data->status == COMPLETE) {
 
@@ -2262,21 +2133,28 @@ static int cgnapt_in_port_ah_mix(struct rte_pipeline *rte_p,
 					 &entry->data.u.prv_ipv6[0], 16);
 			memset(nh_ipv6, 0, 16);
 			struct nd_entry_data *ret_nd_data = NULL;
-			ret_nd_data = get_dest_mac_address_ipv6_port((uint8_t *)
-                                &dst_addr[0], &dest_if,
-                                &hw_addr, &nh_ipv6[0]);
+
+			dest_if = INVALID_DESTIF;
+
+			uint32_t src_phy_port = pkts[pkt_index]->port;
+
+			gw_get_nh_port_ipv6((uint8_t *) &dst_addr[0],
+					src_phy_port, &dest_if, &nh_ipv6[0]);
+
+			ret_nd_data = get_dest_mac_addr_ipv6(&nh_ipv6[0],
+					dest_if, &hw_addr);
 			*outport_id = p_nat->outport_id[dest_if];
 
 			if (nd_cache_dest_mac_present(dest_if)) {
 				ether_addr_copy(get_link_hw_addr(dest_if),
-					(struct ether_addr *)eth_src);
+						(struct ether_addr *)eth_src);
 				update_nhip_access(dest_if);
 
 				if (unlikely(ret_nd_data && ret_nd_data->num_pkts)) {
 					p_nat->naptedPktCount += ret_nd_data->num_pkts;
 					nd_send_buffered_pkts(ret_nd_data,
-						 (struct ether_addr *)eth_dest,
-						 *outport_id);
+							(struct ether_addr *)eth_dest,
+							*outport_id);
 				}
 			} else {
 				if (unlikely(ret_nd_data == NULL)) {
@@ -2330,45 +2208,48 @@ static int cgnapt_in_port_ah_mix(struct rte_pipeline *rte_p,
 			} else {
 				*dst_addr = rte_bswap32(entry->data.u.prv_ip);
 				dest_address = entry->data.u.prv_ip;
-				ret = local_get_nh_ipv4(dest_address, &dest_if,
-					&nhip, p_nat);
-				if (!ret) {
-					dest_if = get_pub_to_prv_port(
-						&dest_address, IP_VERSION_4);
+				/* Gateway Proc Starts */
+
+				struct arp_entry_data *ret_arp_data = NULL;
+				dest_if = INVALID_DESTIF;
+				uint32_t src_phy_port = *src_port;
+
+				gw_get_nh_port_ipv4(dest_address, src_phy_port,
+						&dest_if, &nhip);
+
 				if (dest_if == INVALID_DESTIF) {
 					p_nat->invalid_packets |=
 						1LLU << pkt_index;
 					p_nat->naptDroppedPktCount++;
-					#ifdef CGNAPT_DEBUGGING
+#ifdef CGNAPT_DEBUGGING
 					p_nat->naptDroppedPktCount6++;
-					#endif
+#endif
 					continue;
 				}
-					do_local_nh_ipv4_cache(dest_if, p_nat);
-				};
 
 				*outport_id = p_nat->outport_id[dest_if];
-				struct arp_entry_data *ret_arp_data;
-				ret_arp_data = get_dest_mac_addr_port(dest_address,
-					&dest_if, (struct ether_addr *)eth_dest);
+
+				ret_arp_data = get_dest_mac_addr_ipv4(nhip,
+						dest_if, &hw_addr);
 
 				if (unlikely(ret_arp_data == NULL)) {
 
-					#ifdef CGNAPT_DEBUGGING
+#ifdef CGNAPT_DEBUGGING
 					printf("%s: NHIP Not Found, nhip: %x, "
-					"outport_id: %d\n", __func__, nhip,
-					*outport_id);
-					#endif
-
+							"outport_id: %d\n", __func__, nhip,
+							*outport_id);
+#endif
 					/* Drop the pkt */
 					p_nat->invalid_packets |= pkt_mask;
 					p_nat->naptDroppedPktCount++;
 
-					#ifdef CGNAPT_DEBUGGING
+#ifdef CGNAPT_DEBUGGING
 					p_nat->naptDroppedPktCount4++;
-					#endif
+#endif
 					continue;
 				}
+
+				/* Gateway Proc Ends */
 
 				if (ret_arp_data->status == COMPLETE) {
 
@@ -3708,7 +3589,7 @@ pkt_work_cgnapt_ipv4_prv(
 
 	uint8_t protocol = RTE_MBUF_METADATA_UINT8(pkt, PROT_OFST_IP4);
 
-	uint32_t dest_if = 0xff;	/* Added for Multiport */
+	uint32_t dest_if = INVALID_DESTIF;	/* Added for Multiport */
 	uint16_t *outport_id =
 		RTE_MBUF_METADATA_UINT16_PTR(pkt, cgnapt_meta_offset);
 
@@ -3817,7 +3698,6 @@ pkt_work_cgnapt_ipv4_prv(
 	if (entry->data.ttl == NAPT_ENTRY_STALE)
 		entry->data.ttl = NAPT_ENTRY_VALID;
 
-	struct ether_addr hw_addr;
 	uint32_t dest_address = 0;
 
 	/* Egress */
@@ -3835,8 +3715,14 @@ pkt_work_cgnapt_ipv4_prv(
 	dest_address = rte_bswap32(*dst_addr);
 	uint32_t nhip = 0;
 	struct arp_entry_data *ret_arp_data = NULL;
-	ret_arp_data = get_dest_mac_addr_port(dest_address,
-		 &dest_if, (struct ether_addr *)eth_dest);
+
+	uint32_t src_phy_port = *src_port;
+
+	gw_get_nh_port_ipv4(dest_address, src_phy_port, &dest_if, &nhip);
+
+	ret_arp_data = get_dest_mac_addr_ipv4(nhip, dest_if,
+			(struct ether_addr *)eth_dest);
+
 	*outport_id = p_nat->outport_id[dest_if];
 
 	if (arp_cache_dest_mac_present(dest_if)) {
@@ -3845,7 +3731,7 @@ pkt_work_cgnapt_ipv4_prv(
 		if (unlikely(ret_arp_data && ret_arp_data->num_pkts)) {
 			p_nat->naptedPktCount += ret_arp_data->num_pkts;
 			arp_send_buffered_pkts(ret_arp_data,
-				 (struct ether_addr *)eth_dest, *outport_id);
+					(struct ether_addr *)eth_dest, *outport_id);
 
 		}
 	} else {
@@ -4078,7 +3964,7 @@ pkt_work_cgnapt_ipv4_pub(
 
 	uint8_t protocol = RTE_MBUF_METADATA_UINT8(pkt, PROT_OFST_IP4);
 
-	uint32_t dest_if = 0xff;	/* Added for Multiport */
+	uint32_t dest_if = INVALID_DESTIF;	/* Added for Multiport */
 	uint16_t *outport_id =
 		RTE_MBUF_METADATA_UINT16_PTR(pkt, cgnapt_meta_offset);
 
@@ -4161,7 +4047,6 @@ pkt_work_cgnapt_ipv4_pub(
 	if (entry->data.ttl == NAPT_ENTRY_STALE)
 		entry->data.ttl = NAPT_ENTRY_VALID;
 
-	struct ether_addr hw_addr;
 	uint32_t dest_address = 0;
 
 	/* Multiport Changes */
@@ -4183,8 +4068,13 @@ pkt_work_cgnapt_ipv4_pub(
 
 	dest_address = entry->data.u.prv_ip;
 	struct arp_entry_data *ret_arp_data = NULL;
-	ret_arp_data = get_dest_mac_addr_port(dest_address,
-		 &dest_if, (struct ether_addr *)eth_dest);
+
+	uint32_t src_phy_port = *src_port;
+
+	gw_get_nh_port_ipv4(dest_address, src_phy_port, &dest_if, &nhip);
+
+	ret_arp_data = get_dest_mac_addr_ipv4(nhip, dest_if,
+			(struct ether_addr *)eth_dest);
 	*outport_id = p_nat->outport_id[dest_if];
 
 	if (arp_cache_dest_mac_present(dest_if)) {
@@ -4436,7 +4326,7 @@ pkt4_work_cgnapt_ipv4_prv(
 	__rte_unused void *arg,
 	struct pipeline_cgnapt *p_nat)
 {
-	uint32_t dest_if = 0xff;	/* Added for Multiport */
+	uint32_t dest_if = INVALID_DESTIF;	/* Added for Multiport */
 	struct rte_mbuf *pkt;
 	uint8_t i;
 	uint8_t pkt_num;
@@ -4597,7 +4487,6 @@ pkt4_work_cgnapt_ipv4_prv(
 		if (entry->data.ttl == NAPT_ENTRY_STALE)
 			entry->data.ttl = NAPT_ENTRY_VALID;
 
-		struct ether_addr hw_addr;
 		uint32_t dest_address = 0;
 		/*Multiport Changes */
 		uint32_t nhip = 0;
@@ -4621,9 +4510,15 @@ pkt4_work_cgnapt_ipv4_prv(
 		dest_address = rte_bswap32(*dst_addr);
 		struct arp_entry_data *ret_arp_data = NULL;
 		uint64_t start, end;
-		ret_arp_data = get_dest_mac_addr_port(dest_address,
-			 &dest_if, (struct ether_addr *)eth_dest);
+		uint32_t src_phy_port = *src_port;
+
+		gw_get_nh_port_ipv4(dest_address, src_phy_port, &dest_if, &nhip);
+
+		ret_arp_data = get_dest_mac_addr_ipv4(nhip, dest_if,
+				(struct ether_addr *)eth_dest);
+
 		*outport_id = p_nat->outport_id[dest_if];
+
 		if (arp_cache_dest_mac_present(dest_if)) {
 			ether_addr_copy(get_link_hw_addr(dest_if),
 				 (struct ether_addr *)eth_src);
@@ -4877,7 +4772,7 @@ pkt4_work_cgnapt_ipv4_pub(
 
 		uint8_t protocol = RTE_MBUF_METADATA_UINT8(pkt, PROT_OFST_IP4);
 
-		uint32_t dest_if = 0xff;	/* Added for Multiport */
+		uint32_t dest_if = INVALID_DESTIF;	/* Added for Multiport */
 		uint16_t *outport_id =
 			RTE_MBUF_METADATA_UINT16_PTR(pkt, cgnapt_meta_offset);
 
@@ -4967,7 +4862,6 @@ pkt4_work_cgnapt_ipv4_pub(
 		if (entry->data.ttl == NAPT_ENTRY_STALE)
 			entry->data.ttl = NAPT_ENTRY_VALID;
 
-		struct ether_addr hw_addr;
 		uint32_t dest_address = 0;
 		/* Multiport Changes */
 		uint32_t nhip = 0;
@@ -4987,23 +4881,29 @@ pkt4_work_cgnapt_ipv4_pub(
 		}
 		dest_address = entry->data.u.prv_ip;
 		struct arp_entry_data *ret_arp_data = NULL;
-		ret_arp_data = get_dest_mac_addr_port(dest_address,
-			 &dest_if, (struct ether_addr *)eth_dest);
+		uint32_t src_phy_port = *src_port;
+
+		gw_get_nh_port_ipv4(dest_address, src_phy_port, &dest_if, &nhip);
+
+		ret_arp_data = get_dest_mac_addr_ipv4(nhip, dest_if,
+				(struct ether_addr *)eth_dest);
+
 		*outport_id = p_nat->outport_id[dest_if];
 
-	if (arp_cache_dest_mac_present(dest_if)) {
-		ether_addr_copy(get_link_hw_addr(dest_if), (struct ether_addr *)eth_src);
-		update_nhip_access(dest_if);
+		if (arp_cache_dest_mac_present(dest_if)) {
+			ether_addr_copy(get_link_hw_addr(dest_if),
+					(struct ether_addr *)eth_src);
+			update_nhip_access(dest_if);
 
-		if (ret_arp_data && ret_arp_data->num_pkts) {
-			p_nat->naptedPktCount += ret_arp_data->num_pkts;
-			arp_send_buffered_pkts(ret_arp_data,
-				 (struct ether_addr *)eth_dest, *outport_id);
-		}
+			if (ret_arp_data && ret_arp_data->num_pkts) {
+				p_nat->naptedPktCount += ret_arp_data->num_pkts;
+				arp_send_buffered_pkts(ret_arp_data,
+						(struct ether_addr *)eth_dest, *outport_id);
+			}
 
-	} else {
+		} else {
 
-		if (unlikely(ret_arp_data == NULL)) {
+			if (unlikely(ret_arp_data == NULL)) {
 
 			#ifdef CGNAPT_DEBUGGING
 			printf("%s: NHIP Not Found, nhip: %x, "
@@ -6054,7 +5954,6 @@ pkt_work_cgnapt_ipv6_prv(
 
 	struct ipv6_hdr ipv6_hdr;
 
-	struct ether_addr hw_addr;
 	uint32_t dest_address = 0;
 	uint32_t nhip = 0;
 	/* Egress */
@@ -6160,9 +6059,16 @@ pkt_work_cgnapt_ipv6_prv(
 	#endif
 
 	struct arp_entry_data *ret_arp_data;
-	ret_arp_data = get_dest_mac_addr_port(dest_address,
-		 &dest_if, (struct ether_addr *)eth_dest);
+
+	uint32_t src_phy_port = *src_port;
+
+	gw_get_nh_port_ipv4(dest_address, src_phy_port, &dest_if, &nhip);
+
+	ret_arp_data = get_dest_mac_addr_ipv4(nhip, dest_if,
+			(struct ether_addr *)eth_dest);
+
 	*outport_id = p_nat->outport_id[dest_if];
+
 	if (arp_cache_dest_mac_present(dest_if)) {
 		ether_addr_copy(get_link_hw_addr(dest_if),
 			(struct ether_addr *)eth_src);
@@ -6338,11 +6244,16 @@ pkt_work_cgnapt_ipv6_pub(
 
 	memset(nh_ipv6, 0, 16);
 	struct nd_entry_data *ret_nd_data = NULL;
-	ret_nd_data = get_dest_mac_address_ipv6_port(
-                &dest_addr_ipv6[0],
-                &dest_if,
-                (struct ether_addr *)eth_dest,
-                &nh_ipv6[0]);
+
+	dest_if = INVALID_DESTIF;
+
+	uint32_t src_phy_port = pkt->port;
+
+	gw_get_nh_port_ipv6((uint8_t *) &dest_addr_ipv6[0],
+			src_phy_port, &dest_if, &nh_ipv6[0]);
+
+	ret_nd_data = get_dest_mac_addr_ipv6(&nh_ipv6[0],
+			dest_if, (struct ether_addr *)eth_dest);
 
 	*outport_id = p_nat->outport_id[dest_if];
 
@@ -6532,7 +6443,6 @@ pkt4_work_cgnapt_ipv6_prv(
 		p_nat->entries[pkt_num] = &(entry->head);
 
 		struct ipv6_hdr ipv6_hdr;
-		struct ether_addr hw_addr;
 		uint32_t dest_address = 0;
 		uint8_t nh_ipv6[16];
 		uint32_t nhip = 0;
@@ -6641,15 +6551,18 @@ pkt4_work_cgnapt_ipv6_prv(
 
 	{
 		struct arp_entry_data *ret_arp_data;
-		ret_arp_data = get_dest_mac_addr_port(dest_address,
-			 &dest_if, (struct ether_addr *)eth_dest);
+		uint32_t src_phy_port = *src_port;
+
+		gw_get_nh_port_ipv4(dest_address, src_phy_port, &dest_if, &nhip);
+
+		ret_arp_data = get_dest_mac_addr_ipv4(nhip, dest_if,
+				(struct ether_addr *)eth_dest);
 		*outport_id = p_nat->outport_id[dest_if];
 
 		if (arp_cache_dest_mac_present(dest_if)) {
 			ether_addr_copy(get_link_hw_addr(dest_if),
 				(struct ether_addr *)eth_src);
 			update_nhip_access(dest_if);
-
 			if (unlikely(ret_arp_data && ret_arp_data->num_pkts)) {
 				p_nat->naptedPktCount += ret_arp_data->num_pkts;
 				arp_send_buffered_pkts(ret_arp_data,
@@ -6842,10 +6755,15 @@ pkt4_work_cgnapt_ipv6_pub(
 
 		memset(nh_ipv6, 0, 16);
 		struct nd_entry_data *ret_nd_data = NULL;
-		ret_nd_data = get_dest_mac_address_ipv6_port
-				(&dest_addr_ipv6[0], &dest_if,
-				(struct ether_addr *)eth_dest, &nh_ipv6[0]);
+		dest_if = INVALID_DESTIF;
 
+		uint32_t src_phy_port = pkt->port;
+
+		gw_get_nh_port_ipv6((uint8_t *) &dest_addr_ipv6[0],
+				src_phy_port, &dest_if, &nh_ipv6[0]);
+
+		ret_nd_data = get_dest_mac_addr_ipv6(&nh_ipv6[0],
+				dest_if, (struct ether_addr *)eth_dest);
 		*outport_id = p_nat->outport_id[dest_if];
 
 		if (nd_cache_dest_mac_present(dest_if)) {
