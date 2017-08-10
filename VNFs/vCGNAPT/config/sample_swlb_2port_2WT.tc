@@ -20,8 +20,8 @@ link 1 up
 ;p 1 arpadd 1 0064:ff9b:0:0:0:0:ac10:2814 00:00:00:00:00:02
 
 routeadd 0 202.16.100.20 0xff000000
-routeadd 2 172.16.40.20  0xff000000
+routeadd 1 172.16.40.20  0xff000000
 
-;routeadd <port #> <ipv6 nhip address in hex> <Depth>
-;routeadd 0 0064:ff9b:0:0:0:0:ca10:6414 64
-;routeadd 1 0064:ff9b:0:0:0:0:ac10:6414 64
+; routeadd <net/host> <port #> <ipv4 nhip address in decimal> <Mask/NotApplicable>
+;routeadd net 0 0064:ff9b:0:0:0:0:ca10:6414 64
+;routeadd net 1 0064:ff9b:0:0:0:0:ac10:6414 64
