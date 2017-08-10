@@ -35,6 +35,7 @@ VPATH += $(VNF_CORE)/common/VIL/pipeline_passthrough
 VPATH += $(SRCDIR)/pipeline
 VPATH += $(VNF_CORE)/common/VIL/pipeline_txrx
 VPATH += $(VNF_CORE)/common/VIL/l2l3_stack
+VPATH += $(VNF_CORE)/common/VIL/gateway
 
 INC += $(wildcard *.h)
 INC += $(wildcard pipeline/*.h)
@@ -47,6 +48,7 @@ INC += $(wildcard $(VNF_CORE)/common/VIL/pipeline_master/*.h)
 INC += $(wildcard $(VNF_CORE)/common/VIL/pipeline_passthrough/*.h)
 INC += $(wildcard $(VNF_CORE)/common/VIL/pipeline_txrx/*.h)
 INC += $(wildcard $(VNF_CORE)/common/VIL/l2l3_stack/*.h)
+INC += $(wildcard $(VNF_CORE)/common/VIL/gateway/*.h)
 
 CFLAGS += -I$(SRCDIR) -mrtm -mhle -I$(SRCDIR)/pipeline -I$(VNF_CORE)/common/vnf_common
 CFLAGS += -I$(VNF_CORE)/common/VIL/conntrack -I$(VNF_CORE)/common/VIL/l2l3_stack
@@ -54,6 +56,7 @@ CFLAGS += -I$(VNF_CORE)/common/VIL/pipeline_common -I$(VNF_CORE)/common/VIL/pipe
 CFLAGS += -I$(VNF_CORE)/common/VIL/pipeline_master -I$(VNF_CORE)/common/VIL/pipeline_passthrough
 CFLAGS += -I$(VNF_CORE)/common/VIL/pipeline_txrx
 CFLAGS += -I$(VNF_CORE)/common/VIL/pipeline_arpicmp
+CFLAGS += -I$(VNF_CORE)/common/VIL/gateway
 
 # all source are stored in SRCS-y
 SRCS-y := main.c
@@ -84,6 +87,7 @@ SRCS-y += pipeline_loadb.c
 SRCS-y += pipeline_loadb_be.c
 SRCS-y += vnf_common.c
 SRCS-y += pipeline_arpicmp_be.c
+SRCS-y += gateway.c
 
 CFLAGS += -O3 $(USER_FLAGS)
 CFLAGS += $(WERROR_FLAGS)

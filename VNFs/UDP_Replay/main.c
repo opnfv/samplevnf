@@ -94,6 +94,7 @@ performance of the solution should be sufficient for testing the UDP NAT perform
 #include "lib_icmpv6.h"
 #include "app.h"
 #include "vnf_common.h"
+#include "gateway.h"
 #define IN6ADDRSZ 16
 #define INADDRSZ 4
 #define APP_LOOKUP_EXACT_MATCH          0
@@ -2921,6 +2922,7 @@ main(int argc, char **argv)
 	ifm_init();
 	nb_ports = rte_eth_dev_count();
 	num_ports = nb_ports;
+	gw_init(num_ports);
 	if (nb_ports > RTE_MAX_ETHPORTS)
 		nb_ports = RTE_MAX_ETHPORTS;
 
