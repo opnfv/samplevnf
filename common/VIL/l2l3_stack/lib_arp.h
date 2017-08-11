@@ -58,6 +58,17 @@ extern void prefetch(void);
 extern void update_nhip_access(uint8_t);
 uint32_t get_arp_buf(void);
 uint32_t get_nd_buf(void);
+extern int my_inet_pton_ipv6(int af, const char *src, void *dst);
+extern struct rte_hash *arp_hash_handle;
+extern uint32_t lib_arp_get_mac_req;
+extern uint32_t lib_arp_nh_found;
+extern uint32_t lib_arp_no_nh_found;
+extern uint32_t lib_arp_arp_entry_found;
+extern uint32_t lib_arp_no_arp_entry_found;
+extern uint32_t lib_arp_populate_called;
+extern uint32_t lib_arp_delete_called;
+extern uint32_t lib_arp_duplicate_found;
+extern uint32_t arp_route_tbl_index;
 
 enum {
 	ARP_FOUND,

@@ -40,6 +40,9 @@
 #include "cgnapt_pcp_fe.h"
 #endif
 
+struct app_params *myapp;
+#define MAX_BUF_SIZE	2048
+
 /**
  * A structure defining the CG-NAPT entry that is stored on
  * front end.
@@ -1403,7 +1406,8 @@ cmd_cgnapt_stats_parsed(
 	__rte_unused struct cmdline *cl,
 	__rte_unused void *data)
 {
-	all_cgnapt_stats();
+	char buf[2048];
+	all_cgnapt_stats(&buf[0]);
 }
 
 static cmdline_parse_token_string_t cmd_cgnapt_stats_p_string =
@@ -1455,7 +1459,8 @@ cmd_cgnapt_clear_stats_parsed(
 	__rte_unused struct cmdline *cl,
 	__rte_unused void *data)
 {
-	all_cgnapt_clear_stats();
+	char buf[2048];
+	all_cgnapt_clear_stats(&buf[0]);
 }
 
 static cmdline_parse_token_string_t cmd_cgnapt_clear_stats_p_string =
@@ -1472,6 +1477,88 @@ TOKEN_STRING_INITIALIZER(struct cmd_cgnapt_clear_stats_result,
 static cmdline_parse_token_string_t cmd_cgnapt_clear_stats_stats_string =
 TOKEN_STRING_INITIALIZER(struct cmd_cgnapt_clear_stats_result, stats_string,
 				"stats");
+
+#ifdef REST_API_SUPPORT
+int cgnapt_stats_handler(struct mg_connection *conn, void *cbdata)
+{
+	uint32_t num_links = 0, len = 0;
+	char buf[1024];
+        const struct mg_request_info *ri = mg_get_request_info(conn);
+        struct app_params *app = myapp;
+	int i;
+
+	if (!strcmp(ri->request_method, "GET")) {
+		all_cgnapt_stats(&buf[0]);
+        	mg_printf(conn, "%s\n", &buf[0]);
+                return 1; 
+        }
+
+	if (strcmp(ri->request_method, "POST")) {
+                int ret = mg_get_request_link(conn, buf, sizeof(buf));
+
+                mg_printf(conn,
+                    "HTTP/1.1 405 Method Not Allowed\r\nConnection: close\r\n");
+                mg_printf(conn, "Content-Type: text/plain\r\n\r\n");
+                mg_printf(conn,
+                          "%s method not allowed in the GET handler\n",
+                          ri->request_method);
+	}
+
+	all_cgnapt_clear_stats(&buf[0]);
+	mg_printf(conn, "%s\n", &buf[0]);
+	return 1;
+
+}
+
+int cgnapt_cmd_ver_handler(struct mg_connection *conn, void *cbdata)
+{
+        const struct mg_request_info *req_info = mg_get_request_info(conn);
+	int r, status;
+        uint32_t cmd = 0, d1, pipe_num;
+        char buf[MAX_BUF_SIZE];
+        struct app_params *app = myapp;
+        uint8_t msg[4];
+
+        mg_printf(conn,
+                  "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: "
+                  "close\r\n\r\n");
+        mg_printf(conn, "<html><body>");
+        mg_printf(conn, "</body></html>\n");
+
+        r = mg_read(conn, buf, sizeof(buf));
+	json_object * jobj = json_tokener_parse(buf);
+	json_object_object_foreach(jobj, key, val) {
+		if (!strcmp(key, "cmd")) {
+			cmd = atoi(json_object_get_string(val));
+		} else if (!strcmp(key, "d1")) {
+			d1 = atoi(json_object_get_string(val));
+		} else if (!strcmp(key, "pipeline")) {
+			pipe_num = atoi(json_object_get_string(val));
+		}
+	}
+
+        msg[0] = cmd;
+        msg[1] = d1;
+
+	status = app_pipeline_cgnapt_ver(app, pipe_num, msg);
+        if (status != 0) {
+        	mg_printf(conn, "<p>CG-NAPT entry ver command failed</p>");
+                return 1;
+        }
+
+        mg_printf(conn, "<p>Command Passed</p>");
+	return 1;
+}
+
+void rest_api_cgnapt_init(struct mg_context *ctx, struct app_params *app)
+{
+	myapp = app;
+
+	mg_set_request_handler(ctx, "/vnf/status", cgnapt_cmd_ver_handler, 0);
+	mg_set_request_handler(ctx, "/vnf/stats", cgnapt_stats_handler, 0);
+
+}
+#endif
 
 static cmdline_parse_inst_t cmd_clear_stats = {
 	 .f = cmd_cgnapt_clear_stats_parsed,

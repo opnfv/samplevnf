@@ -17,6 +17,7 @@
 #include "app.h"
 
 static struct app_params app;
+extern void rest_api_vfw_init(struct mg_context *ctx, struct app_params *app);
 
 int
 main(int argc, char **argv)
@@ -25,6 +26,11 @@ main(int argc, char **argv)
 
 	/* Config */
 	app_config_init(&app);
+
+#ifdef REST_API_SUPPORT
+        /* initialize the rest api */
+        struct mg_context *ctx = rest_api_init(&app);
+#endif
 
 	app_config_args(&app, argc, argv);
 
@@ -39,6 +45,11 @@ main(int argc, char **argv)
 
 	/* Init */
 	app_init(&app);
+
+#ifdef REST_API_SUPPORT
+        /* rest api's for cgnapt */
+        rest_api_vfw_init(ctx, &app);
+#endif
 
 	/* Run-time */
 	rte_eal_mp_remote_launch(

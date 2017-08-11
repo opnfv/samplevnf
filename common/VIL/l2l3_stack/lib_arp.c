@@ -71,7 +71,7 @@ uint32_t nd_buffer = ARP_BUF_DEFAULT;
 #define IN6ADDRSZ 16
 #define MAX_PORTS	32
 
-static int my_inet_pton_ipv6(int af, const char *src, void *dst);
+int my_inet_pton_ipv6(int af, const char *src, void *dst);
 static int inet_pton_ipv6(const char *src, unsigned char *dst);
 static int inet_pton_ipv4(const char *src, unsigned char *dst);
 static void local_arp_cache_init(void);
@@ -1132,10 +1132,13 @@ void remove_arp_entry(struct arp_entry_data *ret_arp_data, void *arg)
 	struct arp_timer_key *arp_key = (struct arp_timer_key *)arg;
 	lib_arp_delete_called++;
 
-	rte_timer_stop(ret_arp_data->timer);
-	rte_free(ret_arp_data->timer_key);
-	rte_free(ret_arp_data->buf_pkts);
-        ret_arp_data->buf_pkts = NULL;
+	if (ret_arp_data->timer) {
+		rte_timer_stop(ret_arp_data->timer);
+		rte_free(ret_arp_data->timer_key);
+		rte_free(ret_arp_data->buf_pkts);
+		ret_arp_data->buf_pkts = NULL;
+	}
+
 	if (ARPICMP_DEBUG) {
 		RTE_LOG(INFO, LIBARP,
 			"ARP Entry Deleted for IP :%d.%d.%d.%d , port %d\n",
@@ -2042,7 +2045,7 @@ void process_arpicmp_pkt(struct rte_mbuf *pkt, l2_phy_interface_t *port)
  * author:
  *      Paul Vixie, 1996.
  */
-static int my_inet_pton_ipv6(int af, const char *src, void *dst)
+int my_inet_pton_ipv6(int af, const char *src, void *dst)
 {
 	switch (af) {
 	case AF_INET:
