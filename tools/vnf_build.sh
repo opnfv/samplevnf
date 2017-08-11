@@ -25,6 +25,7 @@ HUGEPGSZ=`cat /proc/meminfo  | grep Hugepagesize | cut -d : -f 2 | tr -d ' '`
 MODPROBE="/sbin/modprobe"
 INSMOD="/sbin/insmod"
 DPDK_DOWNLOAD="Not initialized"
+CIVETWEB_DOWNLOAD="Not initialized"
 DPDK_DIR=$VNF_CORE/dpdk
 DPDK_RTE_VER="17.02"
 
@@ -134,6 +135,8 @@ step_2()
 	FUNC[4]="install_dpdk"
 	TEXT[5]="Setup hugepages"
 	FUNC[5]="setup_hugepages"
+	TEXT[6]="Download civetweb"
+	FUNC[6]="download_civetweb_zip"
 }
 get_agreement_download()
 {
@@ -195,6 +198,20 @@ download_dpdk_zip()
 	fi
 	unzip -o ${DPDK_DOWNLOAD##*/}
 	mv $VNF_CORE/dpdk-$DPDK_RTE_VER $VNF_CORE/dpdk
+}
+
+download_civetweb_zip()
+{
+	echo "Download CIVETWEB zip"
+	CIVETWEB_DOWNLOAD="https://sourceforge.net/projects/civetweb/files/1.9/CivetWeb_V1.9.zip"
+	if [ ! -e ${CIVETWEB_DOWNLOAD##*/} ] ; then
+		wget ${CIVETWEB_DOWNLOAD}
+	fi
+	unzip -o ${CIVETWEB_DOWNLOAD##*/}
+	mv $VNF_CORE/civetweb_master $VNF_CORE/civetweb
+	pushd $VNF_CORE/civetweb
+	make
+	popd
 }
 
 install_dpdk()
@@ -308,6 +325,9 @@ non_interactive()
 
     echo "Download dpdk for VNF build..."
     download_dpdk_zip
+
+    echo "Download civetweb for VNF build..."
+    download_civetweb_zip
 
     echo "Build dpdk..."
     install_dpdk

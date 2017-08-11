@@ -28,6 +28,10 @@
 
 #include "pipeline.h"
 #include "pipeline_cgnapt_common.h"
+#ifdef REST_API_SUPPORT
+#include <civetweb.h>
+#include <json/json.h>
+#endif
 
 /**
  * Add NAPT rule to the NAPT rule table.
@@ -129,6 +133,12 @@ int
 app_pipeline_cgnapt_nsp_del_entry(struct app_params *app,
 					uint32_t pipeline_id,
 					struct pipeline_cgnapt_nsp_t *nsp);
+#ifdef REST_API_SUPPORT
+/* REST api's are defined here */
+int cgnapt_cmd_ver_handler(struct mg_connection *conn, void *cbdata);
+int cgnapt_stats_handler(struct mg_connection *conn, void *cbdata);
+void rest_api_cgnapt_init(struct mg_context *ctx, struct app_params *app);
+#endif
 
 /*
  * Pipeline type

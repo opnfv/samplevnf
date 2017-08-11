@@ -566,6 +566,17 @@ do {									\
 		fprintf(stdout, "[APP] " fmt "\n", ## __VA_ARGS__);	\
 } while (0)
 
+#ifdef REST_API_SUPPORT
+static inline int rest_api_supported(void)
+{
+	return 1;
+}
+#else
+static inline int rest_api_supported(void)
+{
+	return 0;
+}
+#endif
 static inline uint32_t
 app_link_get_n_rxq(struct app_params *app, struct app_link_params *link)
 {
@@ -954,6 +965,8 @@ void app_config_save(struct app_params *app,
 int app_config_check(struct app_params *app);
 
 int app_init(struct app_params *app);
+
+struct mg_context *rest_api_init(struct app_params *app);
 
 int app_thread(void *arg);
 

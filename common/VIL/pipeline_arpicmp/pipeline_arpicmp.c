@@ -70,6 +70,14 @@ struct cmd_arp_add_result {
 
 };
 
+uint16_t str2flowtype(char *string);
+int parse_flexbytes(const char *q_arg, uint8_t *flexbytes,
+	 uint16_t max_num);
+enum rte_eth_input_set_field str2inset(char *string);
+int app_pipeline_arpicmp_entry_dbg(struct app_params *app,
+			uint32_t pipeline_id, uint8_t *msg);
+
+
 static void
 cmd_arp_add_parsed(void *parsed_result,
 			 __rte_unused struct cmdline *cl, __rte_unused void *data)
@@ -952,8 +960,7 @@ cmdline_parse_inst_t cmd_set_fwd_mode = {
 
 #if 1
 
-static uint16_t
-str2flowtype(char *string)
+uint16_t str2flowtype(char *string)
 {
 	uint8_t i = 0;
 	static const struct {
@@ -983,7 +990,7 @@ str2flowtype(char *string)
 	return RTE_ETH_FLOW_UNKNOWN;
 }
 
-static inline int
+int
 parse_flexbytes(const char *q_arg, uint8_t *flexbytes, uint16_t max_num)
 {
 	char s[256];
@@ -1442,7 +1449,7 @@ struct cmd_set_hash_input_set_result {
 	cmdline_fixed_string_t select;
 };
 
-static enum rte_eth_input_set_field
+enum rte_eth_input_set_field
 str2inset(char *string)
 {
 	uint16_t i;
@@ -1966,7 +1973,7 @@ cmdline_parse_inst_t cmd_set_sym_hash_ena_per_port = {
 };
 #endif
 
-static int
+int
 app_pipeline_arpicmp_entry_dbg(struct app_params *app,
 					uint32_t pipeline_id, uint8_t *msg)
 {
