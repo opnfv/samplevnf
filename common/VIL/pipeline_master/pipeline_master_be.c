@@ -28,6 +28,8 @@
 #include "app.h"
 #include "pipeline_master_be.h"
 
+struct cmdline *pipe_cl;
+
 struct pipeline_master {
 	struct app_params *app;
 	struct cmdline *cl;
@@ -59,6 +61,7 @@ pipeline_init(__rte_unused struct pipeline_params *params, void *arg)
 		rte_free(p);
 		return NULL;
 	}
+	pipe_cl = p->cl;
 
 	p->script_file_done = 0;
 	if (app->script_file == NULL)
@@ -85,6 +88,7 @@ static int
 pipeline_run(void *pipeline)
 {
 	struct pipeline_master *p = (struct pipeline_master *) pipeline;
+
 	int status;
 
 	if (p->script_file_done == 0) {

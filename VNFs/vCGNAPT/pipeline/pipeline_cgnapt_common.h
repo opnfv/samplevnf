@@ -265,7 +265,7 @@ struct pipeline_cgnapt_entry_dbg_msg_req {
 
 extern struct pipeline_be_ops pipeline_cgnapt_be_ops;
 void print_num_ip_clients(void);
-void all_cgnapt_stats(void);
-void all_cgnapt_clear_stats(void);
+void all_cgnapt_stats(char *);
+void all_cgnapt_clear_stats(char *);
 void print_static_cgnapt_entries(void);
 #endif
