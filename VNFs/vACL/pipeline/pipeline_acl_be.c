@@ -884,6 +884,9 @@ pkt_work_acl_key(struct rte_pipeline *p,
 					(struct ether_addr *)eth_dest, *port_out_id);
 
 				}
+				p_acl->counters->tpkts_processed++;
+				p_acl->counters->bytes_processed +=
+				    packet_length;
 			} else {
 				if (unlikely(ret_arp_data == NULL)) {
 					if (ACL_DEBUG)
@@ -994,6 +997,9 @@ pkt_work_acl_key(struct rte_pipeline *p,
 					nd_send_buffered_pkts(ret_nd_data,
 					(struct ether_addr *)eth_dest, *port_out_id);
 				}
+				p_acl->counters->tpkts_processed++;
+				p_acl->counters->bytes_processed +=
+				    packet_length;
 			} else {
 				if (unlikely(ret_nd_data == NULL)) {
 					if (ACL_DEBUG)
@@ -1567,6 +1573,9 @@ pkt_work_acl_ipv4_key(struct rte_pipeline *p,
 					(struct ether_addr *)eth_dest, *port_out_id);
 
 				}
+				p_acl->counters->tpkts_processed++;
+				p_acl->counters->bytes_processed +=
+				    packet_length;
 			} else {
 				if (unlikely(ret_arp_data == NULL)) {
 
@@ -2271,6 +2280,9 @@ pkt_work_acl_ipv6_key(struct rte_pipeline *p,
 					nd_send_buffered_pkts(ret_nd_data,
 					(struct ether_addr *)eth_dest, *port_out_id);
 				}
+				p_acl->counters->tpkts_processed++;
+				p_acl->counters->bytes_processed +=
+				    packet_length;
 			} else {
 				if (unlikely(ret_nd_data == NULL)) {
 					if (ACL_DEBUG)
