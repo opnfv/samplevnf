@@ -1855,7 +1855,8 @@ void process_arpicmp_pkt(struct rte_mbuf *pkt, l2_phy_interface_t *port)
 							DYNAMIC_ARP);
 
 				} else {
-					RTE_LOG(INFO, LIBARP,"ARP requested IP address mismatches interface IP - discarding\n");
+		   if (ARPICMP_DEBUG)
+					    RTE_LOG(INFO, LIBARP,"ARP requested IP address mismatches interface IP - discarding\n");
 				}
 			}
 			/// revise conditionals to allow processing of requests with target ip = this ip and

@@ -662,7 +662,7 @@ void hw_checksum(struct rte_mbuf *pkt, enum PKT_TYPE ver)
 		prot_offset = PROT_OFST_IP4 + temp;
 		break;
 	default:
-		printf("hw_checksum: pkt version is invalid\n");
+		    printf("hw_checksum: pkt version is invalid\n");
 	}
 	protocol = (uint8_t *) RTE_MBUF_METADATA_UINT8_PTR(pkt,
 			 prot_offset);
@@ -710,7 +710,9 @@ void hw_checksum(struct rte_mbuf *pkt, enum PKT_TYPE ver)
 		break;
 
 	default:
-		printf("hw_checksum() : Neither TCP or UDP pkt\n");
+	 #ifdef CGNAPT_DEBUGGING
+		    printf("hw_checksum() : Neither TCP or UDP pkt\n");
+  #endif
 		break;
 	}
 }
@@ -768,7 +770,7 @@ void sw_checksum(struct rte_mbuf *pkt, enum PKT_TYPE ver)
 		prot_offset = PROT_OFST_IP4 + temp;
 		break;
 	default:
-		printf("sw_checksum: pkt version is invalid\n");
+		     printf("sw_checksum: pkt version is invalid\n");
 	}
 	protocol = (uint8_t *) RTE_MBUF_METADATA_UINT8_PTR(pkt,
 			 prot_offset);
@@ -821,7 +823,9 @@ void sw_checksum(struct rte_mbuf *pkt, enum PKT_TYPE ver)
 		break;
 
 	default:
-		printf("sw_checksum() : Neither TCP or UDP pkt\n");
+	 #ifdef CGNAPT_DEBUGGING
+		    printf("sw_checksum() : Neither TCP or UDP pkt\n");
+		#endif
 		break;
 	}
 }
@@ -868,7 +872,6 @@ static uint8_t check_arp_icmp(
 
 	/* ARP outport number */
 	uint16_t out_port = p_nat->p.n_ports_out - 1;
-	printf("check_arp_icmp called*****\n");
 	uint8_t *protocol;
 	uint32_t prot_offset;
 
@@ -1048,8 +1051,10 @@ int napt_port_alloc_init(struct pipeline_cgnapt *p_nat)
 	uint32_t vnf_set_num = p_nat->vnf_set;
 	/*uint32_t vnf_set_num = get_vnf_set_num(p_nat->pipeline_num); */
 
-	printf("VNF set number for CGNAPT %d is %d.\n", p_nat->pipeline_num,
-			 vnf_set_num);
+	#ifdef CGNAPT_DBG_PRNT
+	     printf("VNF set number for CGNAPT %d is %d.\n", p_nat->pipeline_num,
+             vnf_set_num);
+	#endif
 	if (vnf_set_num == 0xFF) {
 		printf("VNF set number for CGNAPT %d is invalid %d.\n",
 				 p_nat->pipeline_num, vnf_set_num);
@@ -4920,7 +4925,6 @@ pkt4_work_cgnapt_ipv4_pub(
 				#ifdef CGNAPT_DEBUGGING
 				p_nat->naptDroppedPktCount3++;
 				#endif
-				printf("causing p_nat->naptDroppedPktCount3\n");
 				continue;
 			}
 
@@ -8861,7 +8865,6 @@ void *pipeline_cgnapt_msg_req_entry_add_handler(struct pipeline *p, void *msg)
 
 	 printf("PhyPort %d, ttl %u,", rx_port, ttl);
 	 printf("entry_type %d\n", type);
-
 	 #ifdef NAT_ONLY_CONFIG_REQ
 	if (nat_only_config_flag) {
 		if (!p_nat->is_static_cgnapt) {
@@ -8889,9 +8892,10 @@ void *pipeline_cgnapt_msg_req_entry_add_handler(struct pipeline *p, void *msg)
 				return msg;
 		}
 
+  #ifdef CGNAPT_DBG_PRNT
 		printf("Success - pipeline_cgnapt_msg_req_entry_addm_handler");
 		printf("added %d rule pairs.\n", count);
-
+  #endif
 		return msg;
 	}
 	 #endif
@@ -8922,9 +8926,10 @@ void *pipeline_cgnapt_msg_req_entry_add_handler(struct pipeline *p, void *msg)
 	}
 
 
+  #ifdef CGNAPT_DBG_PRNT
 	 printf("\nSuccess - pipeline_cgnapt_msg_req_entry_add_handler "
 		"added\n");
-
+  #endif
 	return msg;
 }
 
@@ -9108,7 +9113,6 @@ void *pipeline_cgnapt_msg_req_entry_addm_handler(struct pipeline *p, void *msg)
 	printf("PhyPort %d, ttl %u, NumUe %d,", rx_port, ttl, max_ue);
 	printf("mPrvPort %d, mPubPort %d,", max_src_port, max_dest_port);
 	printf("entry_type %d\n", type);
-
 	#ifdef NAT_ONLY_CONFIG_REQ
 	if (nat_only_config_flag) {
 		if (!p_nat->is_static_cgnapt) {
@@ -9149,8 +9153,10 @@ void *pipeline_cgnapt_msg_req_entry_addm_handler(struct pipeline *p, void *msg)
 			dest_ip++;
 		}
 
+  #ifdef CGNAPT_DBG_PRNT
 		printf("Success - pipeline_cgnapt_msg_req_entry_addm_handler");
 		printf("added %d rule pairs.\n", count);
+  #endif
 
 		return msg;
 	}
@@ -9201,9 +9207,10 @@ void *pipeline_cgnapt_msg_req_entry_addm_handler(struct pipeline *p, void *msg)
 		}
 	}
 
+ #ifdef CGNAPT_DBG_PRNT
 	printf("\nSuccess - pipeline_cgnapt_msg_req_entry_addm_handler added");
 	printf("%d rule pairs.\n", count);
-
+ #endif
 	return msg;
 }
 

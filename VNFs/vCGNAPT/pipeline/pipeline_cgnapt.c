@@ -475,7 +475,9 @@ app_pipeline_cgnapt_delete_entry(struct app_params *app,
 	/* Read response */
 	if (rsp->status || !rsp->key_found) {
 		app_msg_free(app, rsp);
-		printf("Successfully deleted the entry\n");
+  #ifdef CGNAPT_DBG_PRNT
+		    printf("Successfully deleted the entry\n");
+		#endif
 		return 0;
 	}
 
