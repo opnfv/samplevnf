@@ -1,0 +1,38 @@
+
+link 0 down
+link 0 config 202.16.100.21 24
+link 0 up
+link 1 down
+link 1 config 172.16.40.21 24
+link 1 up
+
+
+; uncomment to enable static NAPT
+;p <cgnapt pipeline id> entry addm <prv_ipv4/6> prvport> <pub_ip> <pub_port> <phy_port> <ttl> <no_of_entries> <end_prv_port> <end_pub_port>
+;p 3 entry addm 202.16.100.20 1234 152.16.40.10 1 0 500 65535 1234 65535
+
+; uncomment below lines to enable static arp
+;p 1 arpadd 0 202.16.100.20 00:00:00:00:00:01
+;p 1 arpadd 1 172.16.40.20 00:00:00:00:00:02
+
+; uncomment below lines to enable static arp
+;p 1 arpadd 0 0064:ff9b:0:0:0:0:ca10:6414 00:00:00:00:00:01
+;p 1 arpadd 1 0064:ff9b:0:0:0:0:ac10:2814 00:00:00:00:00:02
+
+routeadd 0 202.16.100.20 0xff000000
+routeadd 2 172.16.40.20  0xff000000
+
+;routeadd <port #> <ipv6 nhip address in hex> <Depth>
+;routeadd 0 0064:ff9b:0:0:0:0:ca10:6414 64
+;routeadd 1 0064:ff9b:0:0:0:0:ac10:6414 64
+
+
+set fwd rxonly
+set_sym_hash_ena_per_port 0 enable
+set_hash_global_config 0 simple_xor ipv4-udp enable
+set_sym_hash_ena_per_port 1 enable
+set_hash_global_config 1 simple_xor ipv4-udp enable
+set_hash_input_set 0 ipv4-udp src-ipv4 udp-src-port add
+set_hash_input_set 1 ipv4-udp dst-ipv4 udp-dst-port add
+set_hash_input_set 0 ipv4-udp src-ipv6 udp-src-port add
+set_hash_input_set 1 ipv4-udp dst-ipv6 udp-dst-port add
