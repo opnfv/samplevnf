@@ -13,24 +13,33 @@
 ; limitations under the License.
 
 link 0 down
-link 0 config 192.16.100.10 8
+link 0 config 202.16.100.10 8
 link 0 up
+
 link 1 down
-link 1 config 152.16.40.10 8
+link 1 config 172.16.40.10 8
 link 1 up
 
-p 1 arpadd 1 152.16.40.20 00:00:00:00:00:02
-p 1 arpadd 0 192.16.100.20 00:00:00:00:00:01
+; routeadd <port #> <ipv4 nhip address in decimal> <Mask>
+routeadd 0 202.16.100.20 0xff000000
+routeadd 1 172.16.40.20  0xff000000
+
+; IPv4 static ARP
+;p 1 arpadd 1 172.16.40.20 00:00:00:00:00:04
+;p 1 arpadd 0 202.16.100.20 00:00:00:00:00:01
+
 p action add 0 accept
 p action add 0 fwd 0 
 p action add 0 count
+
 p action add 1 accept
 p action add 1 fwd 1
 p action add 1 count
 
-p acl add 1 192.16.100.0 8 152.16.40.0 8 0 65535 0 65535 0 0 1
-p acl add 1 152.16.40.0 8 192.16.100.0 8 0 65535 0 65535 0 0 0 
-p acl applyruleset
+; IPv4 rules
+p acl add 1 202.16.100.20 8 172.16.40.20 8 0 65535 0 65535 0 0 1
+p acl add 1 172.16.40.20 8 202.16.100.20 8 0 65535 0 65535 0 0 0
+
 set fwd rxonly
 set_sym_hash_ena_per_port 0 enable
 set_hash_global_config 0 simple_xor ipv4-udp enable
