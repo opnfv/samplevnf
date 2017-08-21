@@ -1,0 +1,123 @@
+.. This work is licensed under a Creative Commons Attribution 4.0 International License.
+.. http://creativecommons.org/licenses/by/4.0
+.. (c) OPNFV, Intel Corporation and others.
+
+.. OPNFV SAMPLEVNF Documentation design file.
+
+===================================
+SampleVNF Highlevel Desing
+===================================
+
+vFW - Design
+=============
+
+Requirements
+-----------------
+Following are the design requierments of the vFW.
+
+-  The firewall will examine packets and verify that they are appropriate for the
+   current state of the connection. Inappropriate packets will be discarded, and
+   counter(s) incremented.
+-  Support both IPv4 and IPv6 traffic type for TCP/UDP/ICMP.
+-  All packet inspection features like firewall, synproxy, connection tracker
+   in this component may be turned off or on through CLI commands
+-  The Static filtering is done thorugh ACL using DPDK libraries. The rules
+   can be added/modified through CLI commands.
+-  Multiple instance of the vFW Pipeline running on multipe cores should be
+   supported for scaling the performance scaling.
+-  Should follow the DPDK IP pipeline framework
+-  Sould use the DPDK libraries and functionalities for better performance
+-  The memory should be allocated in Hugepages using DPDK RTE calls for better
+   performance.
+   
+
+High Level Design
+=================
+
+The Firewall performs basic filtering for malformed packets and dynamic packet
+filtering incoming packets using the connection tracker library.
+The connection data will be stored using a DPDK hash table. There will be one
+entry in the hash table for each connection. The hash key will be based on
+source address/port,destination address/port, and protocol of a packet. The
+hash key will be processed to allow a single entry to be used, regardless of
+which direction the packet is flowing (thus changing source and destination).
+The ACL is implemented as libray stattically linked to vFW, which is used for
+used for rule based packet filtering.
+
+TCP connections and UDP pseudo connections will be tracked separately even if
+theaddresses and ports are identical. Including the protocol in the hash key
+will ensure this.
+
+The Input FIFO contains all the incoming packets for vFW filtering.  The vFW
+Filter has no dependency on which component has written to the Input FIFO.
+Packets will be dequeued from the FIFO in bulk for processing by the vFW.
+Packets will be enqueued to the output FIFO.
+
+The software or hardware loadbalancing can be used for traffic distribution
+across multiple worker threads. The hardware loadbalancing require ethernet
+flow director support from hardware (eg. Fortville x710 NIC card).
+The Input and Output FIFOs will be implemented using DPDK Ring Buffers.
+
+Components of vFW
+=================
+
+In vFW, each component is constructed using packet framework pipelines.
+It includes Rx and Tx Driver, Master pipeline, load balancer pipeline and
+vfw worker pipeline components. A Pipeline framework is a collection of input
+ports, table(s),output ports and actions (functions).
+
+---------------------------
+Receive and Transmit Driver
+---------------------------
+Packets will be received in bulk and provided to LoadBalancer(LB) thread.
+Transimit takes packets from worker threads in a dedicated ring and sent to
+hardware queue.
+
+---------------
+Master Pipeline
+---------------
+The Master component is part of all the IP Pipeline applications. This component
+does not process any packets and should configure with Core 0, to allow
+other cores for processing of the traffic. This component is responsible for
+1. Initializing each component of the Pipeline application in different threads
+2. Providing CLI shell for the user control/debug
+3. Propagating the commands from user to the corresponding components
+
+----------------
+ARPICMP Pipeline
+----------------
+This pipeline processes the APRICMP packets.
+
+--------------
+TXRX Pipelines
+--------------
+The TXTX and RXRX pipelines are pass through pipelines to forward both ingress
+and egress traffic to Loadbalancer. This is required when the Software
+Loadbalancer is used.
+
+----------------------
+Load Balancer Pipeline
+----------------------
+The vFW support both hardware and software balancing for load balancing of
+traffic across multiple VNF threads. The Hardware load balancing require support
+from hardware like Flow Director for steering of packets to application through
+hardware queues.
+
+The Software Load balancer is also supported if hardware load balancing can't be
+used for any reason. The TXRX along with LOADB pipeline provides support for
+software load balancing by distributing the flows to Multiple vFW worker
+threads.
+Loadbalancer (HW or SW) distributes traffic based on the 5 tuple (src addr, src
+port, dest addr, dest port and protocol) applying an XOR logic distributing to
+active worker threads, thereby maintaining an affinity of flows to worker
+threads.
+
+------------
+vFW Pipeline
+------------
+The vFW performs the basic packet filtering and will drop the invalid and
+malformed packets.The Dynamic packet filtering done using the connection tracker
+library. The packets are processed in bulk and Hash table is used to maintain
+the connection details.
+Every TCP/UDP packets are passed through connection tracker library for valid
+connection. The ACL library integrated to firewall provide rule based filtering.
