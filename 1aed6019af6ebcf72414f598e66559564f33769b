@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "da33351e_514af280",
+        "filename": "VNFs/vCGNAPT/config/sample_hwlb_2port_2WT.tc",
+        "patchSetId": 2
+      },
+      "lineNbr": 23,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-08-21T12:42:00Z",
+      "side": 1,
+      "message": "2 Looks wrong ? Port doesn\u0027t exist",
+      "range": {
+        "startLine": 23,
+        "startChar": 9,
+        "endLine": 23,
+        "endChar": 10
+      },
+      "revId": "1aed6019af6ebcf72414f598e66559564f33769b",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da33351e_b15ede43",
+        "filename": "VNFs/vCGNAPT/config/sample_swlb_2port_2WT.tc",
+        "patchSetId": 2
+      },
+      "lineNbr": 23,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-08-21T12:42:00Z",
+      "side": 1,
+      "message": "2 Looks wrong ? Port doesn\u0027t exist",
+      "range": {
+        "startLine": 23,
+        "startChar": 9,
+        "endLine": 23,
+        "endChar": 10
+      },
+      "revId": "1aed6019af6ebcf72414f598e66559564f33769b",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
