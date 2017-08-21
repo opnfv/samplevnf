@@ -1,0 +1,72 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "da33351e_b189becc",
+        "filename": "VNFs/vACL/config/IPv4_hwlb_acl.tc",
+        "patchSetId": 2
+      },
+      "lineNbr": 42,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-08-21T12:31:26Z",
+      "side": 1,
+      "message": "\"p acl applyruleset\" Missing, it is required for make the standby copy to be updated to active copy of the rule table.",
+      "revId": "b9e53c1355314ff83e8e0f78cea8cb46cda6396e",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da33351e_f19346f8",
+        "filename": "VNFs/vACL/config/IPv4_swlb_acl.tc",
+        "patchSetId": 2
+      },
+      "lineNbr": 42,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-08-21T12:31:26Z",
+      "side": 1,
+      "message": "\"p acl applyruleset\" Missing, it is required for make the standby copy to be updated to active copy of the rule table.",
+      "revId": "b9e53c1355314ff83e8e0f78cea8cb46cda6396e",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da33351e_716e1603",
+        "filename": "VNFs/vACL/config/IPv6_hwlb_acl.tc",
+        "patchSetId": 2
+      },
+      "lineNbr": 42,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-08-21T12:31:26Z",
+      "side": 1,
+      "message": "\"p acl applyruleset\" Missing, it is required for make the standby copy to be \nupdated to active copy of the rule table.",
+      "revId": "b9e53c1355314ff83e8e0f78cea8cb46cda6396e",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da33351e_11698af9",
+        "filename": "VNFs/vACL/config/IPv6_swlb_acl.tc",
+        "patchSetId": 2
+      },
+      "lineNbr": 41,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-08-21T12:31:26Z",
+      "side": 1,
+      "message": "\"p acl applyruleset\" Missing, it is required for make the standby copy to be \nupdated to active copy of the rule table.",
+      "revId": "b9e53c1355314ff83e8e0f78cea8cb46cda6396e",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
