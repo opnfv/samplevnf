@@ -1316,9 +1316,27 @@ populate_arp_entry(const struct ether_addr *hw_addr, uint32_t ipaddr,
 			arp_key.ip, arp_key.port_id);
 
 	new_arp_data = retrieve_arp_entry(arp_key, mode);
+
+	/* if current mode is dynamic , but a static entry is added
+	 * change the state
+	 */
+	if (new_arp_data && (new_arp_data->mode == DYNAMIC_ARP
+		&& mode == STATIC_ARP)) {
+		rte_timer_stop(new_arp_data->timer);
+		rte_free(new_arp_data->timer_key);
+		rte_free(new_arp_data->buf_pkts);
+		new_arp_data->eth_addr = *hw_addr;
+		new_arp_data->status = COMPLETE;
+		new_arp_data->port = portid;
+		new_arp_data->ip = ipaddr;
+		new_arp_data->mode = mode;
+		new_arp_data->num_pkts = 0;
+
+		return;
+	}
+
 	if (new_arp_data && ((new_arp_data->mode == STATIC_ARP
-		&& mode == DYNAMIC_ARP) || (new_arp_data->mode == DYNAMIC_ARP
-		&& mode == STATIC_ARP))) {
+		&& mode == DYNAMIC_ARP))) {
 		if (ARPICMP_DEBUG)
 			RTE_LOG(INFO, LIBARP,"populate_arp_entry: ARP entry "
 				"already exists(%d %d)\n", new_arp_data->mode, mode);
