@@ -16,6 +16,6 @@ SampleVNF User Guide
    02-methodology
    03-architecture
    04-installation
-   05-BKMs
+   05-How_to_run_SampleVNFs
    glossary
    references
