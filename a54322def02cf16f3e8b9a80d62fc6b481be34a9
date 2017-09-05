@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "da33351e_1814dd9e",
+        "filename": "docs/testing/developer/design/04-SampleVNF_Desgin.rest",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1402
+      },
+      "writtenOn": "2017-09-05T03:23:12Z",
+      "side": 1,
+      "message": "s/Desgin/Design/\n\ntry codespell to help check spelling\n\nhttps://github.com/lucasdemarchi/codespell\n\npip install codespell",
+      "revId": "a54322def02cf16f3e8b9a80d62fc6b481be34a9",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da33351e_d84a75c4",
+        "filename": "docs/testing/developer/design/04-SampleVNF_Desgin.rest",
+        "patchSetId": 1
+      },
+      "lineNbr": 298,
+      "author": {
+        "id": 1402
+      },
+      "writtenOn": "2017-09-05T03:23:12Z",
+      "side": 1,
+      "message": "expand tabs to 8 spaces, otherwise the diagrams all messed up.",
+      "revId": "a54322def02cf16f3e8b9a80d62fc6b481be34a9",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
