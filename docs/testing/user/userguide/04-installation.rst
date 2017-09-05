@@ -251,8 +251,3 @@ Commands to run vFW
  
   HW_LoadB
   ./vFW -p <port mask> -f <config> -s <script> -hwlb <num_WT>
-
-
-Proxy Support (**Todo**)
----------------------------
-
