@@ -1,0 +1,142 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "da33351e_cfe1059c",
+        "filename": "docs/testing/user/userguide/04-installation.rst",
+        "patchSetId": 2
+      },
+      "lineNbr": 243,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-09-06T09:26:04Z",
+      "side": 1,
+      "message": "File name (installation) and content(Run vFW) are not matching..",
+      "range": {
+        "startLine": 242,
+        "startChar": 0,
+        "endLine": 243,
+        "endChar": 45
+      },
+      "revId": "a1754a591f58c5af8f7abc097d8add19ee7f33b2",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da33351e_af55a151",
+        "filename": "docs/testing/user/userguide/05-How_to_run_SampleVNFs.rst",
+        "patchSetId": 2
+      },
+      "lineNbr": 92,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-09-06T09:26:04Z",
+      "side": 1,
+      "message": "Correct it to OVS-DPDK",
+      "range": {
+        "startLine": 92,
+        "startChar": 9,
+        "endLine": 92,
+        "endChar": 17
+      },
+      "revId": "a1754a591f58c5af8f7abc097d8add19ee7f33b2",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da33351e_8fd7fdbe",
+        "filename": "docs/testing/user/userguide/05-How_to_run_SampleVNFs.rst",
+        "patchSetId": 2
+      },
+      "lineNbr": 210,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-09-06T09:26:04Z",
+      "side": 1,
+      "message": "Gateway common code format..\n; routeadd \u003cnet/host\u003e \u003cport #\u003e \u003cipv4 nhip address in decimal\u003e \u003cMask/NotApplicable\u003e\n\nrouteadd net 0 \u003ctraffic generator port 0 IP eg 202.16.100.20\u003e 0xff000000\nrouteadd net 1 \u003ctraffic generator port 1 IP eg 172.16.40.20\u003e 0xff000000",
+      "range": {
+        "startLine": 208,
+        "startChar": 0,
+        "endLine": 210,
+        "endChar": 78
+      },
+      "revId": "a1754a591f58c5af8f7abc097d8add19ee7f33b2",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da33351e_6fd399d6",
+        "filename": "docs/testing/user/userguide/05-How_to_run_SampleVNFs.rst",
+        "patchSetId": 2
+      },
+      "lineNbr": 275,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-09-06T09:26:04Z",
+      "side": 1,
+      "message": "will be updated for gateway common code",
+      "range": {
+        "startLine": 273,
+        "startChar": 9,
+        "endLine": 275,
+        "endChar": 78
+      },
+      "revId": "a1754a591f58c5af8f7abc097d8add19ee7f33b2",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da33351e_afdc81e5",
+        "filename": "docs/testing/user/userguide/05-How_to_run_SampleVNFs.rst",
+        "patchSetId": 2
+      },
+      "lineNbr": 411,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-09-06T09:26:04Z",
+      "side": 1,
+      "message": "To be updated as per gateway common code format..",
+      "range": {
+        "startLine": 409,
+        "startChar": 0,
+        "endLine": 411,
+        "endChar": 78
+      },
+      "revId": "a1754a591f58c5af8f7abc097d8add19ee7f33b2",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da33351e_efe689b3",
+        "filename": "docs/testing/user/userguide/05-How_to_run_SampleVNFs.rst",
+        "patchSetId": 2
+      },
+      "lineNbr": 488,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-09-06T09:26:04Z",
+      "side": 1,
+      "message": "Auto doesn\u0027t have option to select this.",
+      "range": {
+        "startLine": 488,
+        "startChar": 45,
+        "endLine": 488,
+        "endChar": 52
+      },
+      "revId": "a1754a591f58c5af8f7abc097d8add19ee7f33b2",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
