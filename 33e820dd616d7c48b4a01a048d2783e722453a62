@@ -1,0 +1,188 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "da33351e_0f300d55",
+        "filename": "docs/testing/developer/design/04-SampleVNF_Design.rst",
+        "patchSetId": 4
+      },
+      "lineNbr": 8,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-09-06T08:58:30Z",
+      "side": 1,
+      "message": "Spelling \"Design\"",
+      "range": {
+        "startLine": 8,
+        "startChar": 20,
+        "endLine": 8,
+        "endChar": 26
+      },
+      "revId": "33e820dd616d7c48b4a01a048d2783e722453a62",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da33351e_6f37194f",
+        "filename": "docs/testing/developer/design/04-SampleVNF_Design.rst",
+        "patchSetId": 4
+      },
+      "lineNbr": 44,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-09-06T08:58:30Z",
+      "side": 1,
+      "message": "Spelling \"commonly\"",
+      "range": {
+        "startLine": 44,
+        "startChar": 53,
+        "endLine": 44,
+        "endChar": 61
+      },
+      "revId": "33e820dd616d7c48b4a01a048d2783e722453a62",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da33351e_8f3b7d37",
+        "filename": "docs/testing/developer/design/04-SampleVNF_Design.rst",
+        "patchSetId": 4
+      },
+      "lineNbr": 69,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-09-06T08:58:30Z",
+      "side": 1,
+      "message": "typo... to be fixed",
+      "range": {
+        "startLine": 69,
+        "startChar": 72,
+        "endLine": 69,
+        "endChar": 75
+      },
+      "revId": "33e820dd616d7c48b4a01a048d2783e722453a62",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da33351e_af4001a6",
+        "filename": "docs/testing/developer/design/04-SampleVNF_Design.rst",
+        "patchSetId": 4
+      },
+      "lineNbr": 69,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-09-06T08:58:30Z",
+      "side": 1,
+      "message": "typo... to be fixed",
+      "range": {
+        "startLine": 69,
+        "startChar": 42,
+        "endLine": 69,
+        "endChar": 45
+      },
+      "revId": "33e820dd616d7c48b4a01a048d2783e722453a62",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da33351e_4f3a1537",
+        "filename": "docs/testing/developer/design/04-SampleVNF_Design.rst",
+        "patchSetId": 4
+      },
+      "lineNbr": 69,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-09-06T08:58:30Z",
+      "side": 1,
+      "message": "typo... to be fixed",
+      "range": {
+        "startLine": 69,
+        "startChar": 23,
+        "endLine": 69,
+        "endChar": 25
+      },
+      "revId": "33e820dd616d7c48b4a01a048d2783e722453a62",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da33351e_ef2169fc",
+        "filename": "docs/testing/developer/design/04-SampleVNF_Design.rst",
+        "patchSetId": 4
+      },
+      "lineNbr": 241,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-09-06T08:58:30Z",
+      "side": 1,
+      "message": "This is repeating multiple time... Better to remove this.",
+      "range": {
+        "startLine": 233,
+        "startChar": 0,
+        "endLine": 241,
+        "endChar": 50
+      },
+      "revId": "33e820dd616d7c48b4a01a048d2783e722453a62",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da33351e_2f7b51f6",
+        "filename": "docs/testing/developer/design/04-SampleVNF_Design.rst",
+        "patchSetId": 4
+      },
+      "lineNbr": 407,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-09-06T08:58:30Z",
+      "side": 1,
+      "message": "Remove this duplicated section.. as it is already there at the beginning of the doc.",
+      "range": {
+        "startLine": 399,
+        "startChar": 0,
+        "endLine": 407,
+        "endChar": 31
+      },
+      "revId": "33e820dd616d7c48b4a01a048d2783e722453a62",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da33351e_0f7e4de4",
+        "filename": "docs/testing/developer/design/04-SampleVNF_Design.rst",
+        "patchSetId": 4
+      },
+      "lineNbr": 503,
+      "author": {
+        "id": 6761
+      },
+      "writtenOn": "2017-09-06T08:58:30Z",
+      "side": 1,
+      "message": "Remove this..",
+      "range": {
+        "startLine": 495,
+        "startChar": 0,
+        "endLine": 503,
+        "endChar": 50
+      },
+      "revId": "33e820dd616d7c48b4a01a048d2783e722453a62",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
