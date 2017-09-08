@@ -34,6 +34,40 @@
       "revId": "2a76a8b758f9c331c9fe6490e7265a9e627f96d9",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da33351e_a81632ef",
+        "filename": "VNFs/DPPD-PROX/handle_lb_5tuple.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 66,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2017-09-08T14:18:24Z",
+      "side": 1,
+      "message": "This should be done by changing mask0, so that all masking operations are done in one (128 bits) operation",
+      "revId": "2a76a8b758f9c331c9fe6490e7265a9e627f96d9",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da33351e_28e22203",
+        "filename": "VNFs/DPPD-PROX/handle_lb_5tuple.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 68,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2017-09-08T14:18:24Z",
+      "side": 1,
+      "message": "Without changing the tuple.lua file, I do not think that it will work for all IP addresses, as tuples.lua populates the hash table with 0.0.0.x, with x varying from 0 to 31. SO, IP like 10.1.1.128 is not in the table.",
+      "revId": "2a76a8b758f9c331c9fe6490e7265a9e627f96d9",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
     }
   ]
 }
