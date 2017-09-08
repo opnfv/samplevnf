@@ -60,7 +60,12 @@ static inline uint8_t get_ipv4_dst_port(struct task_lb_5tuple *task, void *ipv4_
 	ipv4_hdr = (uint8_t *)ipv4_hdr + offsetof(struct ipv4_hdr, time_to_live);
 	__m128i data = _mm_loadu_si128((__m128i*)(ipv4_hdr));
 	/* Get 5 tuple: dst port, src port, dst IP address, src IP address and protocol */
-	key.xmm = _mm_and_si128(data, mask0);
+        key.xmm = _mm_and_si128(data, mask0);
+
+        /* Apply hash algorithm based on ip address 0.0.0.xxxxxxxxx */
+        key.ip_src = key.ip_src & 0xFF000000 ;
+        key.ip_dst = key.ip_dst & 0xFF000000 ;
+
 
 	/* Get 5 tuple: dst port, src port, dst IP address, src IP address and protocol */
 	/*
