@@ -39,8 +39,9 @@
 #include "quit.h"
 
 #define BYTE_VALUE_MAX 256
-#define ALL_32_BITS 0xffffffff
-#define BIT_8_TO_15 0x0000ff00
+#define BIT_8_TO_10    0x0000e000         // for protocol field
+#define BIT_27_TO_31   0x1f000000         // for IP addresses
+#define BIT_12_TO_16_27_TO_31 0x1f001f00  // for ports
 
 #define HASH_MAX_SIZE 4*8*1024*1024
 
@@ -60,7 +61,7 @@ static inline uint8_t get_ipv4_dst_port(struct task_lb_5tuple *task, void *ipv4_
 	ipv4_hdr = (uint8_t *)ipv4_hdr + offsetof(struct ipv4_hdr, time_to_live);
 	__m128i data = _mm_loadu_si128((__m128i*)(ipv4_hdr));
 	/* Get 5 tuple: dst port, src port, dst IP address, src IP address and protocol */
-	key.xmm = _mm_and_si128(data, mask0);
+        key.xmm = _mm_and_si128(data, mask0);
 
 	/* Get 5 tuple: dst port, src port, dst IP address, src IP address and protocol */
 	/*
@@ -120,8 +121,7 @@ static void init_task_lb_5tuple(struct task_base *tbase, struct task_args *targ)
 	struct task_lb_5tuple *task = (struct task_lb_5tuple *)tbase;
 	const int socket_id = rte_lcore_to_socket_id(targ->lconf->id);
 
-	mask0 = _mm_set_epi32(ALL_32_BITS, ALL_32_BITS, ALL_32_BITS, BIT_8_TO_15);
-
+        mask0 = _mm_set_epi32(BIT_12_TO_16_27_TO_31, BIT_27_TO_31, BIT_27_TO_31, BIT_8_TO_10);
 	uint8_t *out_table = task->out_if;
 	int ret = lua_to_tuples(prox_lua(), GLOBAL, "tuples", socket_id, &task->lookup_hash, &out_table);
 	PROX_PANIC(ret, "Failed to read tuples from config\n");
