@@ -302,6 +302,7 @@ static void init_port(struct prox_port_cfg *port_cfg)
 	    !strcmp(port_cfg->short_name, "i40e") ||
 #endif
 	    !strcmp(port_cfg->short_name, "i40e_vf") ||
+	    !strcmp(port_cfg->short_name, "avp") || /* Wind River */
 	    !strcmp(port_cfg->driver_name, "") || /* NULL device */
 	    !strcmp(port_cfg->short_name, "vmxnet3")) {
 		port_cfg->port_conf.intr_conf.lsc = 0;
