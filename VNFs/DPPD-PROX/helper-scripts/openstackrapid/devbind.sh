@@ -16,9 +16,11 @@
 ## limitations under the License.
 ##
 
-echo 128 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages
-mount -t hugetlbfs nodev /mnt/huge
-modprobe uio
-insmod /root/dpdk/x86_64-native-linuxapp-gcc/kmod/igb_uio.ko
-/root/dpdk/usertools/dpdk-devbind.py --force --bind igb_uio 00:04.0
-iptables -F
+link="$(ip -o link | grep MACADDRESS |cut -d":" -f 2)"
+if [ -n "$link" ];
+then
+	echo Need to bind
+	/root/dpdk/usertools/dpdk-devbind.py --force --bind igb_uio $(/root/dpdk/usertools/dpdk-devbind.py --status |grep  $link | cut -d" " -f 1)
+else
+       echo Assuming port is already bound to DPDK
+fi
