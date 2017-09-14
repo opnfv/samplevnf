@@ -51,18 +51,20 @@ parameters:
     type: string
     description: The Availability Zone to launch the instance.
     default: nova
+  gen_sriov_port:
+    type: string
+    description: The sriov port to be used by the generator
+    default: Port3
+  sut_sriov_port:
+    type: string
+    description: The sriov port to be used by the sut
+    default: Port4
 
 resources:
   sut_admin_port:
      type: OS::Neutron::Port
      properties:
        network: {get_param: admin_network}
-       security_groups:
-         - default
-  sut_dataplane_port:
-     type: OS::Neutron::Port
-     properties:
-       network: {get_param: dataplane_network}
        security_groups:
          - default
   sut_floating_ip:
@@ -81,17 +83,11 @@ resources:
       flavor: { get_param: flavor }
       networks:
         - port: {get_resource: sut_admin_port}
-        - port: {get_resource: sut_dataplane_port}
+        - port: {get_param: sut_sriov_port}
   gen_admin_port:
      type: OS::Neutron::Port
      properties:
        network: {get_param: admin_network}
-       security_groups:
-         - default
-  gen_dataplane_port:
-     type: OS::Neutron::Port
-     properties:
-       network: {get_param: dataplane_network}
        security_groups:
          - default
   gen_floating_ip:
@@ -110,7 +106,7 @@ resources:
       flavor: { get_param: flavor }
       networks:
         - port: {get_resource: gen_admin_port}
-        - port: {get_resource: gen_dataplane_port}
+        - port: {get_param: gen_sriov_port}
 
 outputs:
   sut_private_ip:
@@ -121,10 +117,10 @@ outputs:
     value: { get_attr: [ sut_floating_ip, floating_ip_address ] }
   sut_dataplane_ip:
     description: IP address of sut dataplane port
-    value: { get_attr: [sut_dataplane_port, fixed_ips, 0, ip_address] }
+    value: { get_attr: [sut, networks,{get_param: dataplane_network},0] }
   sut_dataplane_mac:
     description: The MAC address of the sut dataplane port
-    value: { get_attr: [sut_dataplane_port, mac_address] }
+    value: { get_attr: [sut, addresses, {get_param: dataplane_network}] }
   gen_private_ip:
     description: IP address of the gen admin port
     value: { get_attr: [gen_admin_port, fixed_ips, 0, ip_address] }
@@ -133,7 +129,8 @@ outputs:
     value: { get_attr: [ gen_floating_ip, floating_ip_address ] }
   gen_dataplane_ip:
     description: IP address of gen dataplane port
-    value: { get_attr: [gen_dataplane_port, fixed_ips, 0, ip_address] }
+    value: { get_attr: [gen, networks,{get_param: dataplane_network},0] }
   gen_dataplane_mac:
     description: The MAC address of the gen dataplane port
-    value: { get_attr: [gen_dataplane_port, mac_address] }
+    value: { get_attr: [gen, addresses, {get_param: dataplane_network}] }
+
