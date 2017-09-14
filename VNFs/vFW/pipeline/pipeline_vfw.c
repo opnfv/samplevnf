@@ -29,6 +29,7 @@
 #include <string.h>
 #include <sys/queue.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include <rte_common.h>
 #include <rte_hexdump.h>
@@ -45,9 +46,15 @@
 
 #include "app.h"
 #include "pipeline_common_fe.h"
+#include "pipeline_master.h"
 #include "pipeline_vfw.h"
 #include "pipeline_vfw_be.h"
 #include "rte_cnxn_tracking.h"
+
+struct app_params *myapp;
+#define MAX_BUF_SIZE    2048
+extern struct cmdline *pipe_cl;
+extern int my_inet_pton_ipv6(int af, const char *src, void *dst);
 
 /**
  * A structure defining the VFW rule for the TAILQ Tables.
@@ -4618,6 +4625,477 @@ TOKEN_STRING_INITIALIZER(struct cmd_vfw_synproxy_flag_result,
 cmdline_parse_token_num_t cmd_vfw_synproxy_flag =
 TOKEN_NUM_INITIALIZER(struct cmd_vfw_synproxy_flag_result, synproxy_flag,
               UINT8);
+
+static uint32_t rules_loaded;
+static int vfw_field_found(const char *key,
+            const char *filename,
+            char *path,
+            size_t pathlen,
+            void *user_data);
+
+static int vfw_field_get(const char *key, const char *value, size_t valuelen,
+ void *user_data);
+static int vfw_field_stored(const char *path, long long file_size, void *user_data);
+
+int vfw_clearrules_handler(struct mg_connection *conn, __rte_unused void *cbdata)
+{
+       struct app_params *app = myapp;
+       int status;
+       mg_printf(conn,
+                 "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: "
+                 "close\r\n\r\n");
+       mg_printf(conn, "<html><body>");
+       mg_printf(conn, "</body></html>\n");
+
+       status = app_pipeline_vfw_clearrules(app);
+
+       if (status != 0) {
+              mg_printf(conn, "Command failed\n");
+              return 1;
+       }
+
+       mg_printf(conn, "Command Success\n");
+       return 1;
+}
+
+int vfw_clearstats_handler(__rte_unused struct mg_connection *conn,
+		 __rte_unused void *cbdata)
+{
+       int i;
+       struct rte_CT_counter_block *ct_counters;
+
+       for (i = 0; i <= rte_VFW_hi_counter_block_in_use; i++) {
+              ct_counters = rte_vfw_counter_table[i].ct_counters;
+              rte_vfw_counter_table[i].bytes_processed = 0;
+              rte_vfw_counter_table[i].pkts_drop_without_rule = 0;
+              rte_vfw_counter_table[i].pkts_received = 0;
+              rte_vfw_counter_table[i].pkts_drop_ttl = 0;
+              rte_vfw_counter_table[i].pkts_drop_bad_size = 0;
+              rte_vfw_counter_table[i].pkts_drop_fragmented = 0;
+              rte_vfw_counter_table[i].pkts_drop_unsupported_type = 0;
+              rte_vfw_counter_table[i].pkts_drop_without_arp_entry = 0;
+              rte_vfw_counter_table[i].internal_time_sum = 0;
+              rte_vfw_counter_table[i].external_time_sum = 0;
+              rte_vfw_counter_table[i].time_measurements = 0;
+              rte_vfw_counter_table[i].ct_counters->pkts_forwarded = 0;
+              rte_vfw_counter_table[i].ct_counters->pkts_drop = 0;
+              rte_vfw_counter_table[i].pkts_fw_forwarded = 0;
+              rte_vfw_counter_table[i].pkts_acl_forwarded = 0;
+              ct_counters->current_active_sessions = 0;
+              ct_counters->sessions_activated = 0;
+              ct_counters->sessions_reactivated = 0;
+              ct_counters->sessions_established = 0;
+              ct_counters->sessions_closed = 0;
+              ct_counters->sessions_timedout = 0;
+              ct_counters->pkts_drop_invalid_conn = 0;
+              ct_counters->pkts_drop_invalid_state = 0;
+              ct_counters->pkts_drop_invalid_rst = 0;
+              ct_counters->pkts_drop_outof_window = 0;
+       }
+
+       memset(&action_counter_table, 0, sizeof(action_counter_table));
+       rte_vfw_reset_running_averages();
+       return 1;
+}
+
+int vfw_stats_handler(struct mg_connection *conn, __rte_unused void *cbdata)
+{
+       const struct mg_request_info *ri = mg_get_request_info(conn);
+       int i, j;
+       struct rte_VFW_counter_block vfw_counter_sums;
+       struct rte_CT_counter_block ct_counter_sums;
+       struct rte_CT_counter_block *ct_counters;
+       struct action_counter_block action_counter_sum[action_array_max];
+       uint64_t sum_pkts_drop_fw = 0;
+       
+       if (!strcmp(ri->request_method, "POST")) {
+               mg_printf(conn,
+                       "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: "
+                       "close\r\n\r\n");
+               mg_printf(conn, "<html><body>");
+               mg_printf(conn, "Command Passed \n");
+               vfw_clearstats_handler(conn, cbdata);
+               mg_printf(conn, "</body></html>\n");
+               return 1;
+       }
+
+       if (strcmp(ri->request_method, "GET")) {
+               mg_printf(conn,
+                         "HTTP/1.1 405 Method Not Allowed\r\nConnection: close\r\n");
+               mg_printf(conn, "Content-Type: text/plain\r\n\r\n");
+               mg_printf(conn,
+                         "%s method not allowed in the GET handler\n",
+                         ri->request_method);
+               return 1;
+       }
+
+       memset(&vfw_counter_sums, 0, sizeof(vfw_counter_sums));
+       memset(&ct_counter_sums, 0, sizeof(ct_counter_sums));
+
+       mg_printf(conn,
+                "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: "
+                "close\r\n\r\n");
+       mg_printf(conn, "<html><body>");
+       mg_printf(conn, "VFW Stats\n");
+       for (i = 0; i <= rte_VFW_hi_counter_block_in_use; i++) {
+              struct rte_VFW_counter_block *vfw_ctrs =
+                  &rte_vfw_counter_table[i];
+              ct_counters = rte_vfw_counter_table[i].ct_counters;
+
+              uint64_t average_internal_time =
+                  vfw_ctrs->time_measurements ==
+                  0 ? 0 : vfw_ctrs->internal_time_sum /
+                  vfw_ctrs->time_measurements;
+              uint64_t average_external_time =
+                  vfw_ctrs->time_measurements ==
+                  0 ? 0 : vfw_ctrs->external_time_sum /
+                  vfw_ctrs->time_measurements;
+              uint64_t average_pkts_in_batch =
+                  vfw_ctrs->num_pkts_measurements ==
+                  0 ? 0 : vfw_ctrs->num_batch_pkts_sum /
+                  vfw_ctrs->num_pkts_measurements;
+              uint64_t pkts_drop_fw = vfw_ctrs->pkts_drop_ttl +
+                                   vfw_ctrs->pkts_drop_bad_size +
+                                   vfw_ctrs->pkts_drop_fragmented +
+                                   vfw_ctrs->pkts_drop_unsupported_type;
+
+              mg_printf(conn, "{\"VFW_counters\" : {\"id\" : \"%s\", \" pkts_received\": %"
+                     PRIu64 ", \" pkts_fw_forwarded\": %"
+                     PRIu64 ", \" pkts_drop_fw\": %"
+                     PRIu64 ", \" pkts_acl_forwarded\": %"
+                     PRIu64 ", \"pkts_drop_without_rule\" : %"
+                     PRIu64 ", \"average_pkts_in_batch\" : %"
+                     PRIu64 ", \"average_internal_time_in_clocks\" : %"
+                     PRIu64 ", \"average_external_time_in_clocks\" : %"
+                     PRIu64 ", \"total_time_measures\" : %"
+                     PRIu32 ", \"ct_packets_forwarded\" : %"
+                     PRIu64 ", \"ct_packets_dropped\" : %"
+                     PRIu64 ", \"bytes_processed \": %"
+                     PRIu64 ", \"ct_sessions\" : {"
+                     "\"active\" : %" PRIu64 ", \"open_attempt\" : %"
+                     PRIu64 ", \"re-open_attempt\" : %"
+                     PRIu64 ", \"established\" : %"
+                     PRIu64 ", \"closed\" : %"
+                     PRIu64 ", \"timeout\" : %"
+                     PRIu64 "}, \"ct_drops\" : {"
+                     "\"out_of_window\" : %" PRIu64 ", \"invalid_conn\" : %"
+                     PRIu64 ", \"invalid_state_transition\" : %"
+                     PRIu64 " \"RST\" : %"
+                     PRIu64 "}}\n",
+                     vfw_ctrs->name,
+                     vfw_ctrs->pkts_received,
+                     vfw_ctrs->pkts_fw_forwarded,
+                     pkts_drop_fw,
+                     vfw_ctrs->pkts_acl_forwarded,
+                     vfw_ctrs->pkts_drop_without_rule,
+                     average_pkts_in_batch,
+                     average_internal_time,
+                     average_external_time,
+                     vfw_ctrs->time_measurements,
+                     ct_counters->pkts_forwarded,
+                     ct_counters->pkts_drop,
+                     vfw_ctrs->bytes_processed,
+                     ct_counters->current_active_sessions,
+                     ct_counters->sessions_activated,
+                     ct_counters->sessions_reactivated,
+                     ct_counters->sessions_established,
+                     ct_counters->sessions_closed,
+                     ct_counters->sessions_timedout,
+                     ct_counters->pkts_drop_outof_window,
+                     ct_counters->pkts_drop_invalid_conn,
+                     ct_counters->pkts_drop_invalid_state,
+                     ct_counters->pkts_drop_invalid_rst);
+
+              vfw_counter_sums.bytes_processed +=
+                  vfw_ctrs->bytes_processed;
+
+              vfw_counter_sums.internal_time_sum +=
+                  vfw_ctrs->internal_time_sum;
+              vfw_counter_sums.external_time_sum +=
+                  vfw_ctrs->external_time_sum;
+              vfw_counter_sums.time_measurements +=
+                  vfw_ctrs->time_measurements;
+
+              vfw_counter_sums.pkts_drop_ttl += vfw_ctrs->pkts_drop_ttl;
+              vfw_counter_sums.pkts_drop_bad_size +=
+                  vfw_ctrs->pkts_drop_bad_size;
+              vfw_counter_sums.pkts_drop_fragmented +=
+                  vfw_ctrs->pkts_drop_fragmented;
+              vfw_counter_sums.pkts_drop_unsupported_type +=
+                  vfw_ctrs->pkts_drop_unsupported_type;
+              vfw_counter_sums.pkts_drop_without_arp_entry +=
+                  vfw_ctrs->pkts_drop_without_arp_entry;
+
+              vfw_counter_sums.pkts_drop_without_rule +=
+                  vfw_ctrs->pkts_drop_without_rule;
+              vfw_counter_sums.pkts_received += vfw_ctrs->pkts_received;
+              vfw_counter_sums.pkts_fw_forwarded +=
+                     vfw_ctrs->pkts_fw_forwarded;
+              vfw_counter_sums.pkts_acl_forwarded +=
+                     vfw_ctrs->pkts_acl_forwarded;
+              sum_pkts_drop_fw += pkts_drop_fw;
+              ct_counter_sums.pkts_forwarded += ct_counters->pkts_forwarded;
+              ct_counter_sums.pkts_drop += ct_counters->pkts_drop;
+              ct_counter_sums.current_active_sessions +=
+                  ct_counters->current_active_sessions;
+              ct_counter_sums.sessions_activated +=
+                  ct_counters->sessions_activated;
+              ct_counter_sums.sessions_reactivated +=
+                  ct_counters->sessions_reactivated;
+              ct_counter_sums.sessions_established +=
+                  ct_counters->sessions_established;
+              ct_counter_sums.sessions_closed += ct_counters->sessions_closed;
+              ct_counter_sums.sessions_timedout +=
+                  ct_counters->sessions_timedout;
+              ct_counter_sums.pkts_drop_invalid_conn +=
+                  ct_counters->pkts_drop_invalid_conn;
+              ct_counter_sums.pkts_drop_invalid_state +=
+                  ct_counters->pkts_drop_invalid_state;
+              ct_counter_sums.pkts_drop_invalid_rst +=
+                  ct_counters->pkts_drop_invalid_rst;
+              ct_counter_sums.pkts_drop_outof_window +=
+                  ct_counters->pkts_drop_outof_window;
+
+       }
+
+       mg_printf(conn, "VFW TOTAL: pkts_received: %"
+                     PRIu64 ", \"pkts_fw_forwarded\": %"
+                     PRIu64 ", \"pkts_drop_fw\": %"
+                     PRIu64 ", \"fw_drops\" : {"
+                     "\"TTL_zero\" : %" PRIu64 ", \"bad_size\" : %"
+                     PRIu64 ", \"fragmented_packet\" : %"
+                     PRIu64 ", \"unsupported_packet_types\" : %"
+                     PRIu64 ", \"no_arp_entry\" : %"
+                     PRIu64 "}, \"pkts_acl_forwarded\": %"
+                     PRIu64 ", \"pkts_drop_without_rule\": %"
+                     PRIu64 ", \"packets_last_sec\" : %"
+                     PRIu32 ", \"average_packets_per_sec\" : %"
+                     PRIu32 ", \"bytes_last_sec\" : %"
+                     PRIu32 ", \"average_bytes_per_sec\" : %"
+                     PRIu32 ", \"bytes_processed \": %"
+                     PRIu64 "\n",
+                     vfw_counter_sums.pkts_received,
+                     vfw_counter_sums.pkts_fw_forwarded,
+                     sum_pkts_drop_fw,
+                     vfw_counter_sums.pkts_drop_ttl,
+                     vfw_counter_sums.pkts_drop_bad_size,
+                     vfw_counter_sums.pkts_drop_fragmented,
+                     vfw_counter_sums.pkts_drop_unsupported_type,
+                     vfw_counter_sums.pkts_drop_without_arp_entry,
+                     vfw_counter_sums.pkts_acl_forwarded,
+                     vfw_counter_sums.pkts_drop_without_rule,
+                     rte_vfw_performance_measures.pkts_last_second,
+                     rte_vfw_performance_measures.ave_pkts_per_second,
+                     rte_vfw_performance_measures.bytes_last_second,
+                     rte_vfw_performance_measures.ave_bytes_per_second,
+                     vfw_counter_sums.bytes_processed);
+
+       mg_printf(conn, "\"CT TOTAL: ct_packets_forwarded\" : %"
+                     PRIu64 ", \" ct_packets_dropped\" : %"
+                     PRIu64 ", \"ct_sessions\" : {"
+                     "\"active\" : %" PRIu64 ", \"open_attempt\" : %"
+                     PRIu64 ", \"re-open_attempt\" : %"
+                     PRIu64 ", \"established\" : %"
+                     PRIu64 ", \"closed\" : %"
+                     PRIu64 ", \"timeout\" : %"
+                     PRIu64 "}, \"ct_drops\" : {"
+                     "\"out_of_window\" : %" PRIu64 ", \"invalid_conn\" : %"
+                     PRIu64 ", \"invalid_state_transition\" : %"
+                     PRIu64 " \"RST\" : %"
+                     PRIu64 "}\n",
+                     ct_counter_sums.pkts_forwarded,
+                     ct_counter_sums.pkts_drop,
+                     ct_counter_sums.current_active_sessions,
+                     ct_counter_sums.sessions_activated,
+                     ct_counter_sums.sessions_reactivated,
+                     ct_counter_sums.sessions_established,
+                     ct_counter_sums.sessions_closed,
+                     ct_counter_sums.sessions_timedout,
+                     ct_counter_sums.pkts_drop_outof_window,
+                     ct_counter_sums.pkts_drop_invalid_conn,
+                     ct_counter_sums.pkts_drop_invalid_state,
+                     ct_counter_sums.pkts_drop_invalid_rst);
+
+       for (i = 0; i <= rte_VFW_hi_counter_block_in_use; i++) {
+              for (j = 0; j < action_array_max; j++) {
+                     if (action_array_active[j].
+                         action_bitmap & lib_acl_action_count) {
+                            action_counter_sum[j].packetCount +=
+                                action_counter_table[i][j].packetCount;
+                            action_counter_sum[j].byteCount +=
+                                action_counter_table[i][j].byteCount;
+                     }
+              }
+       }
+
+       for (j = 0; j < action_array_max; j++) {
+              if (action_array_active[j].action_bitmap & lib_acl_action_count)
+                     mg_printf(conn, "Action ID: %02u, packetCount: %" PRIu64
+                            ", byteCount: %" PRIu64 "\n", j,
+                            action_counter_sum[j].packetCount,
+                            action_counter_sum[j].byteCount);
+       }
+       mg_printf(conn, "</body></html>");
+
+       return 1;
+
+}
+
+int vfw_rules_handler(struct mg_connection *conn, __rte_unused void *cbdata)
+{
+ 
+        const struct mg_request_info *req_info = mg_get_request_info(conn);
+	if (strcmp(req_info->request_method, "GET")) {
+        	mg_printf(conn, "Only GET method allowed");
+		return 1;
+	}
+
+        mg_printf(conn,
+                 "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: "
+                 "close\r\n\r\n");
+        mg_printf(conn, "<html><body>");
+        mg_printf(conn, "<h2> These are the methods that are supported </h2>");
+        mg_printf(conn, "<h3>     /load  </h3>");
+        mg_printf(conn, "<h3>     /clear </h3>");
+        mg_printf(conn, "<html><body>");
+	
+        mg_printf(conn, "</body></html>\n");
+
+	return 1;
+}
+
+static int vfw_field_found(const char *key,
+            const char *filename,
+            char *path,
+            size_t pathlen,
+            void *user_data)
+{
+        struct mg_connection *conn = (struct mg_connection *)user_data;
+
+        mg_printf(conn, "\r\n\r\n%s:\r\n", key);
+	mg_printf(conn, "Inside vfw_field_found %s \n", filename);
+
+        if (filename && *filename) {
+		snprintf(path, pathlen, "/tmp/%s", filename);
+		int fd;
+
+		mg_printf(conn, "path: %s\n", path);
+
+		/* Make sure the file exists before clearing rules and actions */
+		fd = open(path, O_RDONLY);
+		if (fd < 0) {
+			mg_printf(conn, "Cannot open file \"%s\"\n", filename);
+			return FORM_FIELD_STORAGE_GET;
+		}
+		close(fd);
+
+		return FORM_FIELD_STORAGE_STORE;
+	}
+        
+	return FORM_FIELD_STORAGE_GET;
+}
+
+static int vfw_field_get(const char *key, const char *value, size_t valuelen,
+	 void *user_data)
+{
+        struct mg_connection *conn = (struct mg_connection *)user_data;
+
+        if (key[0]) {
+                mg_printf(conn, "%s = ", key);
+        }
+        mg_write(conn, value, valuelen);
+
+        return 0;
+}
+
+static int vfw_field_stored(const char *path, long long file_size,
+	 void *user_data)
+{
+        struct mg_connection *conn = (struct mg_connection *)user_data;
+	int status;
+
+        mg_printf(conn,
+                  "stored as %s (%lu bytes)\r\n\r\n",
+                  path,
+                  (unsigned long)file_size);
+
+	/* Clear all rules and actions */
+	status = app_pipeline_vfw_clearrules(myapp);
+	if (status != 0) {
+		mg_printf(conn, "Command clearrules failed\n");
+		return 1;
+	}
+
+	/* Process commands in script file */
+	app_loadrules_file(pipe_cl->ctx, path);
+	rules_loaded = 1;
+
+        return 0;
+}
+
+int vfw_cmd_ver_handler(__rte_unused struct mg_connection *conn, __rte_unused void *cbdata)
+{
+        mg_printf(conn,
+                  "HTTP/1.1 200 OK\r\nContent-Type: "
+                  "text/plain\r\nConnection: close\r\n\r\n");
+        mg_printf(conn, "<html><body>");
+	mg_printf(conn, "<p>Command Passed</p>");
+        mg_printf(conn, "</body></html>\n");
+
+	return 1;
+}
+
+int vfw_load_rules_handler(struct mg_connection *conn, __rte_unused void *cbdata)
+{
+        /* Handler may access the request info using mg_get_request_info */
+	int ret;
+        const struct mg_request_info *req_info = mg_get_request_info(conn);
+        struct mg_form_data_handler fdh = {vfw_field_found, vfw_field_get,
+						 vfw_field_stored, 0};
+
+        /* It would be possible to check the request info here before calling
+         * mg_handle_form_request. */
+        (void)req_info;
+
+        mg_printf(conn,
+                  "HTTP/1.1 200 OK\r\nContent-Type: "
+                  "text/plain\r\nConnection: close\r\n\r\n");
+
+        if (!strcmp(req_info->request_method, "GET")) {
+		mg_printf(conn, "Rule file is %s\n", rules_loaded? "LOADED":"NOT LOADED");
+	}
+
+        if (strcmp(req_info->request_method, "PUT")) {
+        	mg_printf(conn, "Only PUT method allowed");
+		return 1;
+	}
+
+        fdh.user_data = (void *)conn;
+
+        /* Call the form handler */
+        mg_printf(conn, "Form data:");
+        ret = mg_handle_form_request(conn, &fdh);
+        mg_printf(conn, "\r\n%i fields found", ret);
+
+        //mg_handle_form_request(conn, &fdh);
+        //mg_printf(conn, "\r\n script file handled");
+	//rules_loaded = 1;
+
+        return 1;
+}
+
+void rest_api_vfw_init(struct mg_context *ctx, struct app_params *app)
+{
+	myapp = app;
+
+	/* vFW commands */
+	mg_set_request_handler(ctx, "/vnf/config/rules", vfw_rules_handler, 0);
+	mg_set_request_handler(ctx, "/vnf/config/rules/load", vfw_load_rules_handler, 0);
+	mg_set_request_handler(ctx, "/vnf/config/rules/clear", vfw_clearrules_handler, 0);
+	mg_set_request_handler(ctx, "/vnf/stats", vfw_stats_handler, 0);
+	mg_set_request_handler(ctx, "/vnf/status", vfw_cmd_ver_handler, 0);
+
+}
 
 cmdline_parse_inst_t cmd_vfw_synproxy = {
        .f = cmd_vfw_synproxy_flag_parsed,
