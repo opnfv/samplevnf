@@ -30,6 +30,9 @@
 #include "app.h"
 #include "pipeline_vfw_be.h"
 
+#include <civetweb.h>
+#include <json/json.h>
+
 /* VFW IPV4 and IPV6 enable flags for debugging (Default both on) */
 extern int vfw_ipv4_enabled;
 extern int vfw_ipv6_enabled;
@@ -141,5 +144,17 @@ app_pipeline_action_delete(struct app_params *app,
                         struct pipeline_action_key *key);
 
 extern struct pipeline_type pipeline_vfw;
+
+#ifdef REST_API_SUPPORT
+/* REST Api's defined here */
+int vfw_rules_handler(struct mg_connection *conn, void *cbdata);
+int vfw_load_rules_handler(struct mg_connection *conn, void *cbdata);
+int vfw_clearrules_handler(struct mg_connection *conn, void *cbdata);
+int vfw_stats_handler(struct mg_connection *conn, void *cbdata);
+int vfw_clearstats_handler(__rte_unused struct mg_connection *conn,
+	 __rte_unused void *cbdata);
+int vfw_cmd_ver_handler(struct mg_connection *conn, __rte_unused void *cbdata);
+void rest_api_vfw_init(struct mg_context *ctx, struct app_params *app);
+#endif
 
 #endif

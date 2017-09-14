@@ -75,6 +75,7 @@ app_init_core_mask(struct app_params *app)
 			p->socket_id,
 			p->core_id,
 			p->hyper_th_id);
+		printf("lcore_id:%d\n", lcore_id);
 
 		if (lcore_id < 0)
 			rte_panic("Cannot create CPU core mask\n");

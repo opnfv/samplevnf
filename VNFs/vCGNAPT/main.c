@@ -15,18 +15,26 @@
 */
 
 #include "app.h"
+#include "pipeline_cgnapt.h"
 
 static struct app_params app;
 
 int
 main(int argc, char **argv)
 {
+	struct mg_context *ctx = NULL;
 	rte_openlog_stream(stderr);
 
 	/* Config */
 	app_config_init(&app);
 
 	app_config_args(&app, argc, argv);
+
+	/* initialize the rest api */
+	if (is_rest_support()) {
+		set_vnf_type("VCGNAPT");
+		ctx = rest_api_init(&app);
+	}
 
 	app_config_preproc(&app);
 
@@ -39,6 +47,11 @@ main(int argc, char **argv)
 
 	/* Init */
 	app_init(&app);
+
+	if (is_rest_support()) {
+		/* rest api's for cgnapt */
+		rest_api_cgnapt_init(ctx, &app);
+	}
 
 	/* Run-time */
 	rte_eal_mp_remote_launch(

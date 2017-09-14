@@ -3264,12 +3264,16 @@ app_config_args(struct app_params *app, int argc, char **argv)
 					"more than once\n");
 			f_present = 1;
 
+			/* REST API not needed as user has supplied the config file */
+			rest_support = 0;
+
 			if (!strlen(optarg))
 				rte_panic("Error: Config file name is null\n");
 
 			app->config_file = strdup(optarg);
 			if (app->config_file == NULL)
 				rte_panic("Error: Memory allocation failure\n");
+
 
 			break;
 

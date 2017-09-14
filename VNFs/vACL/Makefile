@@ -30,7 +30,6 @@ include $(RTE_SDK)/mk/rte.vars.mk
 # binary name
 APP = vACL
 
-
 VPATH += $(VNF_CORE)/common/vnf_common
 VPATH += $(VNF_CORE)/common/VIL/conntrack
 VPATH += $(VNF_CORE)/common/VIL/pipeline_common
@@ -54,7 +53,7 @@ INC += $(wildcard $(VNF_CORE)/common/VIL/pipeline_master/*.h)
 INC += $(wildcard $(VNF_CORE)/common/VIL/pipeline_passthrough/*.h)
 INC += $(wildcard $(VNF_CORE)/common/VIL/pipeline_txrx/*.h)
 INC += $(wildcard $(VNF_CORE)/common/VIL/l2l3_stack/*.h)
-INC += $(wildcard $(VNF_CORE)/common/VIL/gateway/*.h
+INC += $(wildcard $(VNF_CORE)/common/VIL/gateway/*.h)
 
 CFLAGS += -I$(SRCDIR) -mrtm -mhle -I$(SRCDIR)/pipeline -I$(VNF_CORE)/common/vnf_common
 CFLAGS += -I$(VNF_CORE)/common/VIL/l2l3_stack -I$(VNF_CORE)/common/VIL/conntrack
@@ -64,9 +63,16 @@ CFLAGS += -I$(VNF_CORE)/common/VIL/pipeline_txrx
 CFLAGS += -I$(VNF_CORE)/common/VIL/pipeline_arpicmp
 CFLAGS += -I$(VNF_CORE)/common/VIL/gateway
 
+TOP = $(RTE_SDK)/../civetweb
+CFLAGS += -I$(TOP)/include $(COPT) -DUSE_WEBSOCKET -DUSE_IPV6 -DUSE_SSL_DH=1
+CFLAGS += -DREST_API_SUPPORT
+LDFLAGS +=  -ljson -lcrypto -lssl
+LDFLAGS += -L$(RTE_SDK)/../civetweb/ -lcivetweb
+
 # all source are stored in SRCS-y
 SRCS-$(CONFIG_RTE_LIBRTE_PIPELINE) := main.c
 SRCS-$(CONFIG_RTE_LIBRTE_PIPELINE) += config_parse.c
+SRCS-$(CONFIG_RTE_LIBRTE_PIPELINE) += rest_api.c
 SRCS-$(CONFIG_RTE_LIBRTE_PIPELINE) += config_parse_tm.c
 SRCS-$(CONFIG_RTE_LIBRTE_PIPELINE) += config_check.c
 SRCS-$(CONFIG_RTE_LIBRTE_PIPELINE) += init.c
