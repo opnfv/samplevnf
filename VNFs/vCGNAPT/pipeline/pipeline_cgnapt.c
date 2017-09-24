@@ -29,6 +29,12 @@
 #include <cmdline_parse_string.h>
 #include <cmdline_parse_ipaddr.h>
 #include <cmdline_parse_etheraddr.h>
+#include <cmdline_rdline.h>
+#include <cmdline_socket.h>
+#include <cmdline.h>
+
+#include <fcntl.h>
+#include <unistd.h>
 
 #include "app.h"
 #include "pipeline_common_fe.h"
@@ -39,6 +45,8 @@
 #ifdef PCP_ENABLE
 #include "cgnapt_pcp_fe.h"
 #endif
+
+#define MAX_BUF_SIZE	2048
 
 /**
  * A structure defining the CG-NAPT entry that is stored on
@@ -65,6 +73,12 @@ struct pipeline_cgnapt_t {
 	uint32_t n_entries;
 
 };
+
+int nat_load_handler(struct mg_connection *conn, __rte_unused void *cbdata);
+int nat_handler(struct mg_connection *conn, __rte_unused void *cbdata);
+uint32_t rules_loaded = 0;
+extern struct cmdline *pipe_cl;
+struct app_params *myapp;
 
 /**
  * Init function for CG-NAPT FE.
@@ -1405,7 +1419,8 @@ cmd_cgnapt_stats_parsed(
 	__rte_unused struct cmdline *cl,
 	__rte_unused void *data)
 {
-	all_cgnapt_stats();
+	char buf[2048];
+	all_cgnapt_stats(&buf[0]);
 }
 
 static cmdline_parse_token_string_t cmd_cgnapt_stats_p_string =
@@ -1457,7 +1472,8 @@ cmd_cgnapt_clear_stats_parsed(
 	__rte_unused struct cmdline *cl,
 	__rte_unused void *data)
 {
-	all_cgnapt_clear_stats();
+	char buf[2048];
+	all_cgnapt_clear_stats(&buf[0]);
 }
 
 static cmdline_parse_token_string_t cmd_cgnapt_clear_stats_p_string =
@@ -1474,6 +1490,212 @@ TOKEN_STRING_INITIALIZER(struct cmd_cgnapt_clear_stats_result,
 static cmdline_parse_token_string_t cmd_cgnapt_clear_stats_stats_string =
 TOKEN_STRING_INITIALIZER(struct cmd_cgnapt_clear_stats_result, stats_string,
 				"stats");
+
+int cgnapt_stats_handler(struct mg_connection *conn, void *cbdata)
+{
+	uint32_t num_links = 0, len = 0;
+	char buf[1024];
+        const struct mg_request_info *ri = mg_get_request_info(conn);
+        struct app_params *app = myapp;
+	int i;
+
+	if (!strcmp(ri->request_method, "GET")) {
+		all_cgnapt_stats(&buf[0]);
+        	mg_printf(conn, "%s\n", &buf[0]);
+                return 1; 
+        }
+
+	if (strcmp(ri->request_method, "POST")) {
+                mg_printf(conn,
+                    "HTTP/1.1 405 Method Not Allowed\r\nConnection: close\r\n");
+                mg_printf(conn, "Content-Type: text/plain\r\n\r\n");
+                mg_printf(conn,
+                          "%s method not allowed in the GET handler\n",
+                          ri->request_method);
+	}
+
+	all_cgnapt_clear_stats(&buf[0]);
+	mg_printf(conn, "%s\n", &buf[0]);
+	return 1;
+
+}
+
+int cgnapt_cmd_ver_handler(struct mg_connection *conn, void *cbdata)
+{
+        const struct mg_request_info *req_info = mg_get_request_info(conn);
+
+        mg_printf(conn,
+                  "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: "
+                  "close\r\n\r\n");
+        mg_printf(conn, "<html><body>");
+        mg_printf(conn, "<p>Command Passed</p>");
+        mg_printf(conn, "</body></html>\n");
+
+	return 1;
+}
+
+/*
+ * loadrules
+ */
+
+/**
+ * Open file and process all commands in the file.
+ *
+ * @param ctx
+ *  A pointer to the CLI context
+ * @param file_name
+ *  A pointer to the file to process.
+ *
+ */
+static void cgnapt_loadrules_file(cmdline_parse_ctx_t *ctx, const char *file_name)
+{
+       struct cmdline *file_cl;
+       int fd;
+
+       fd = open(file_name, O_RDONLY);
+       if (fd < 0) {
+              printf("Cannot open file \"%s\"\n", file_name);
+              return;
+       }
+
+       file_cl = cmdline_new(ctx, "", fd, 1);
+       cmdline_interact(file_cl);
+       close(fd);
+}
+
+
+int nat_handler(struct mg_connection *conn, __rte_unused void *cbdata)
+{
+
+	const struct mg_request_info *req_info = mg_get_request_info(conn);
+	if (strcmp(req_info->request_method, "GET")) {
+		mg_printf(conn, "Only GET method allowed");
+		return 1;
+	}
+
+	mg_printf(conn,
+		 "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: "
+		 "close\r\n\r\n");
+	mg_printf(conn, "<html><body>");
+	mg_printf(conn, "<h2> These are the methods that are supported </h2>");
+	mg_printf(conn, "<h3>     /load  </h3>");
+	mg_printf(conn, "<html><body>");
+
+	mg_printf(conn, "</body></html>\n");
+
+	return 1;
+}
+
+static int nat_field_found(const char *key,
+	const char *filename,
+	char *path,
+	size_t pathlen,
+	void *user_data)
+{
+	struct mg_connection *conn = (struct mg_connection *)user_data;
+
+	mg_printf(conn, "\r\n\r\n%s:\r\n", key);
+	mg_printf(conn, "Inside vfw_field_found %s \n", filename);
+
+	if (filename && *filename) {
+		snprintf(path, pathlen, "/tmp/%s", filename);
+		struct app_params *app = myapp;
+		int status;
+		int fd;
+
+		mg_printf(conn, "path: %s\n", path);
+
+		/* Make sure the file exists before clearing rules and actions */
+		fd = open(path, O_RDONLY);
+		if (fd < 0) {
+			mg_printf(conn, "Cannot open file \"%s\"\n", filename);
+			return FORM_FIELD_STORAGE_GET;
+		}
+
+		close(fd);
+		return FORM_FIELD_STORAGE_STORE;
+	}
+
+	return FORM_FIELD_STORAGE_GET;
+}
+
+static int nat_field_get(const char *key, const char *value, size_t valuelen,
+	void *user_data)
+{
+	struct mg_connection *conn = (struct mg_connection *)user_data;
+
+	if (key[0]) {
+		mg_printf(conn, "%s = ", key);
+	}
+	mg_write(conn, value, valuelen);
+
+	return 0;
+}
+
+static int nat_field_stored(const char *path, long long file_size,
+	void *user_data)
+{
+	struct mg_connection *conn = (struct mg_connection *)user_data;
+	int status;
+
+	mg_printf(conn,
+		  "stored as %s (%lu bytes)\r\n\r\n",
+		  path,
+		  (unsigned long)file_size);
+
+	/* Process commands in script file */
+	cgnapt_loadrules_file(pipe_cl->ctx, path);
+	rules_loaded = 1;
+
+	return 0;
+}
+
+int nat_load_handler(struct mg_connection *conn, __rte_unused void *cbdata)
+{
+	/* Handler may access the request info using mg_get_request_info */
+	int ret;
+	const struct mg_request_info *req_info = mg_get_request_info(conn);
+	struct mg_form_data_handler fdh = {nat_field_found, nat_field_get,
+				 nat_field_stored, 0};
+
+	/* It would be possible to check the request info here before calling
+	 * mg_handle_form_request. */
+	(void)req_info;
+
+	mg_printf(conn,
+		  "HTTP/1.1 200 OK\r\nContent-Type: "
+		  "text/plain\r\nConnection: close\r\n\r\n");
+
+	if (!strcmp(req_info->request_method, "GET")) {
+		mg_printf(conn, "Rule file is %s\n", rules_loaded? "LOADED":"NOT LOADED");
+	}
+
+	if (strcmp(req_info->request_method, "PUT")) {
+		mg_printf(conn, "Only PUT method allowed");
+		return 1;
+	}
+
+	fdh.user_data = (void *)conn;
+
+	/* Call the form handler */
+	mg_printf(conn, "Form data:");
+	ret = mg_handle_form_request(conn, &fdh);
+	mg_printf(conn, "\r\n%i fields found", ret);
+
+	return 1;
+}
+
+void rest_api_cgnapt_init(struct mg_context *ctx, struct app_params *app)
+{
+	myapp = app;
+
+        /* vCGNAPT commands */
+        mg_set_request_handler(ctx, "/vnf/config/nat", nat_handler, 0);
+        mg_set_request_handler(ctx, "/vnf/config/nat/load", nat_load_handler, 0);
+	mg_set_request_handler(ctx, "/vnf/status", cgnapt_cmd_ver_handler, 0);
+	mg_set_request_handler(ctx, "/vnf/stats", cgnapt_stats_handler, 0);
+
+}
 
 static cmdline_parse_inst_t cmd_clear_stats = {
 	 .f = cmd_cgnapt_clear_stats_parsed,
