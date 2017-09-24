@@ -705,7 +705,7 @@ app_init_link(struct app_params *app)
 	port_config = rte_zmalloc(NULL, (app->n_links * size),
 			RTE_CACHE_LINE_SIZE);
 	if (port_config == NULL)
-		rte_panic("port_config is NULL: Memory Allocation failure\n");
+		rte_panic("port_config is NULL: Memory Allocation failure num_links %d %d\n", app->n_links, app->n_links * size);
 
 	for (i = 0; i < app->n_links; i++) {
 		struct app_link_params *p_link = &app->link_params[i];

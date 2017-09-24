@@ -15,18 +15,26 @@
 */
 
 #include "app.h"
+#include "pipeline_acl.h"
 
 static struct app_params app;
 
 int
 main(int argc, char **argv)
 {
+	struct mg_context *ctx = NULL;
 	rte_openlog_stream(stderr);
 
 	/* Config */
 	app_config_init(&app);
 
 	app_config_args(&app, argc, argv);
+
+	if (is_rest_support()) {
+		/* initialize the rest api */
+		set_vnf_type("VACL");
+		ctx = rest_api_init(&app);
+	}
 
 	app_config_preproc(&app);
 
@@ -40,11 +48,21 @@ main(int argc, char **argv)
 	/* Init */
 	app_init(&app);
 
+	if (is_rest_support() && (ctx != NULL)) {
+		/* rest api's for cgnapt */
+		rest_api_acl_init(ctx, &app);
+	}
+
 	/* Run-time */
 	rte_eal_mp_remote_launch(
 		app_thread,
 		(void *) &app,
 		CALL_MASTER);
+
+	if (is_rest_support() && (ctx != NULL)) {
+		mg_stop(ctx);
+		printf("Civet server stopped.\n");
+	}
 
 	return 0;
 }

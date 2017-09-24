@@ -28,6 +28,8 @@
 
 #include "pipeline.h"
 #include "pipeline_acl_be.h"
+#include <civetweb.h>
+#include <json/json.h>
 
 /* ACL IPV4 and IPV6 enable flags for debugging (Default both on) */
 extern int acl_ipv4_enabled;
@@ -46,6 +48,8 @@ extern void *acl_rule_table_ipv6_standby;
 #define acl_add_command		0
 #define acl_delete_command	1
 #define IPV6_32BIT_LENGTH	4
+
+void rest_api_acl_init(struct mg_context *ctx, struct app_params *app);
 
 /**
  * Add ACL rule to the ACL rule table.

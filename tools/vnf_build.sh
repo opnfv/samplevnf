@@ -25,6 +25,7 @@ HUGEPGSZ=`cat /proc/meminfo  | grep Hugepagesize | cut -d : -f 2 | tr -d ' '`
 MODPROBE="/sbin/modprobe"
 INSMOD="/sbin/insmod"
 DPDK_DOWNLOAD="Not initialized"
+CIVETWEB_DOWNLOAD="Not initialized"
 DPDK_DIR=$VNF_CORE/dpdk
 DPDK_RTE_VER="17.02"
 
@@ -134,6 +135,8 @@ step_2()
 	FUNC[4]="install_dpdk"
 	TEXT[5]="Setup hugepages"
 	FUNC[5]="setup_hugepages"
+	TEXT[6]="Download civetweb"
+	FUNC[6]="download_civetweb_zip"
 }
 get_agreement_download()
 {
@@ -176,7 +179,8 @@ install_libs()
 	sudo apt-get update
 	sudo apt-get -y install build-essential linux-headers-$(uname -r) git unzip libpcap0.8-dev gcc \
 		make libc6 libc6-dev g++-multilib libzmq3-dev libcurl4-openssl-dev net-tools wget gcc unzip \
-                libpcap-dev libncurses-dev libedit-dev pciutils liblua5.2-dev libncursesw5-dev
+                libpcap-dev libncurses-dev libedit-dev pciutils liblua5.2-dev libncursesw5-dev libjson0 \
+		libjson0-dev libssl-dev
 	touch .download
 }
 
@@ -195,6 +199,20 @@ download_dpdk_zip()
 	fi
 	unzip -o ${DPDK_DOWNLOAD##*/}
 	mv $VNF_CORE/dpdk-$DPDK_RTE_VER $VNF_CORE/dpdk
+}
+
+download_civetweb_zip()
+{
+	echo "Download CIVETWEB zip"
+	CIVETWEB_DOWNLOAD="https://sourceforge.net/projects/civetweb/files/1.9/CivetWeb_V1.9.zip"
+	if [ ! -e ${CIVETWEB_DOWNLOAD##*/} ] ; then
+		wget ${CIVETWEB_DOWNLOAD}
+	fi
+	unzip -o ${CIVETWEB_DOWNLOAD##*/}
+	mv $VNF_CORE/civetweb-master $VNF_CORE/civetweb
+	pushd $VNF_CORE/civetweb
+	make lib
+	popd
 }
 
 install_dpdk()
@@ -220,7 +238,7 @@ install_dpdk()
 			patch -p1 < $VNF_CORE/patches/dpdk_custom_patch/set-log-level-to-info.patch
 	fi
 
-	make -j install T=$RTE_TARGET
+	make -j16 install T=$RTE_TARGET
 	if [ $? -ne 0 ] ; then
 		echo "Failed to build dpdk, please check the errors."
 		return
@@ -308,6 +326,9 @@ non_interactive()
 
     echo "Download dpdk for VNF build..."
     download_dpdk_zip
+
+    echo "Download civetweb for VNF build..."
+    download_civetweb_zip
 
     echo "Build dpdk..."
     install_dpdk

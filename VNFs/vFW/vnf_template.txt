@@ -1,0 +1,82 @@
+[MASTER]
+type = MASTER
+core = 0
+
+[ARPICMP]
+type = ARPICMP
+core = 1
+pktq_in  = SWQ0
+pktq_out = TXQ0.0 TXQ1.0
+pktq_in_prv =  RXQ0.0
+prv_to_pub_map = (0,1)
+prv_que_handler = (0)
+
+[TIMER]
+type = TIMER
+core = 2
+n_flows = 1048576
+
+[TXRX-BEGIN]
+type = TXRX
+core = 2
+pktq_in  = RXQ0.0 RXQ1.0
+pktq_out = SWQ0 SWQ1 SWQ2
+pipeline_txrx_type = RXRX
+dest_if_offset=176
+
+[TXRX-END]
+type = TXRX
+core = 5
+pktq_in  = SWQ5 SWQ6
+pktq_out = TXQ0.1 TXQ1.1
+pipeline_txrx_type = TXTX
+
+[LOADB]
+type = LOADB
+core = 3
+pktq_in  = SWQ0 SWQ1
+pktq_out = SWQ3 SWQ4
+outport_offset = 136
+phyport_offset = 204
+n_vnf_threads = 1
+prv_que_handler = (0)
+
+[VACL]
+type = ACL
+core = 4
+pktq_in  = SWQ3 SWQ4
+pktq_out = SWQ5 SWQ6
+n_flows = 1000000
+pkt_type = ipv6
+traffic_type = 6
+
+[VCGNAPT]
+type = CGNAPT
+core = 3
+pktq_in = RXQ0.0 RXQ1.0
+pktq_out = TXQ0.1 TXQ1.1 SWQ0
+phyport_offset = 204
+n_flows = 1048576
+key_offset = 192;64
+key_size = 8
+hash_offset = 200;72
+timer_period = 100
+max_clients_per_ip = 65535
+max_port_per_client = 10
+public_ip_port_range = 98103214:(1, 65535)
+vnf_set = (3,4,5)
+pkt_type = ipv4
+cgnapt_meta_offset = 128
+prv_que_handler = (0,)
+
+[VFW]
+type = VFW
+core = s0c4
+pktq_in  = SWQ3 SWQ4
+pktq_out = SWQ7 SWQ8;TXQ0.0 TXQ1.0
+n_rules = 10000
+n_flows = 1000000
+pkt_type = ipv6
+traffic_type = 6
+tcp_time_wait = 10
+
