@@ -66,9 +66,15 @@ CFLAGS += -I$(VNF_CORE)/common/VIL/acl
 CFLAGS += -I$(VNF_CORE)/common/VIL/pipeline_arpicmp
 CFLAGS += -I$(VNF_CORE)/common/VIL/gateway
 
+TOP = $(RTE_SDK)/../civetweb
+CFLAGS += -I$(TOP)/include $(COPT) -DUSE_WEBSOCKET -DUSE_IPV6 -DUSE_SSL_DH=1 -DREST_API_SUPPORT=1
+LDFLAGS +=  -ljson -lcrypto -lssl
+LDFLAGS += -L$(RTE_SDK)/../civetweb/ -lcivetweb
+
 # all source are stored in SRCS-y
 SRCS-$(CONFIG_RTE_LIBRTE_PIPELINE) := main.c
 SRCS-$(CONFIG_RTE_LIBRTE_PIPELINE) += config_parse.c
+SRCS-$(CONFIG_RTE_LIBRTE_PIPELINE) += rest_api.c
 SRCS-$(CONFIG_RTE_LIBRTE_PIPELINE) += config_parse_tm.c
 SRCS-$(CONFIG_RTE_LIBRTE_PIPELINE) += config_check.c
 SRCS-$(CONFIG_RTE_LIBRTE_PIPELINE) += init.c
