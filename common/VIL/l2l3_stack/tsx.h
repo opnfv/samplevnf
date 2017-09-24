@@ -16,8 +16,14 @@
 #ifndef _TSX_H_
 #define _RSX_H_
 #include <rte_atomic.h>
+
+#ifndef TRUE
 #define TRUE 1
+#endif
+
+#ifndef FALSE
 #define FALSE 0
+#endif
 
 volatile int mutex_val;
 

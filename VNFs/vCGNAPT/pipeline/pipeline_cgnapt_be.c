@@ -10469,9 +10469,9 @@ void *pipeline_cgnapt_msg_req_ver_handler(__rte_unused struct pipeline *p,
  * Function to show CGNAPT stats
  *
  */
-void all_cgnapt_stats(void)
+void all_cgnapt_stats(char *buf)
 {
-	int i;
+	int i, len = 0;
 	struct pipeline_cgnapt *p_nat;
 	uint64_t receivedPktCount = 0;
 	uint64_t missedPktCount = 0;
@@ -10481,7 +10481,7 @@ void all_cgnapt_stats(void)
 	uint64_t enaptedPktCount = 0;
 	uint64_t arpicmpPktCount = 0;
 
-	printf("\nCG-NAPT Packet Stats:\n");
+	len += sprintf(buf + len, "\nCG-NAPT Packet Stats:\n");
 	for (i = 0; i < n_cgnapt_pipeline; i++) {
 		p_nat = all_pipeline_cgnapt[i];
 
@@ -10493,43 +10493,43 @@ void all_cgnapt_stats(void)
 		enaptedPktCount		+= p_nat->enaptedPktCount;
 		arpicmpPktCount		+= p_nat->arpicmpPktCount;
 
-		printf("pipeline %d stats:\n", p_nat->pipeline_num);
-		printf("Received %" PRIu64 ",", p_nat->receivedPktCount);
-		printf("Missed %" PRIu64 ",", p_nat->missedPktCount);
-		printf("Dropped %" PRIu64 ",",  p_nat->naptDroppedPktCount);
-		printf("Translated %" PRIu64 ",", p_nat->naptedPktCount);
-		printf("ingress %" PRIu64 ",",  p_nat->inaptedPktCount);
-		printf("egress %" PRIu64 "\n", p_nat->enaptedPktCount);
-		printf("arpicmp pkts %" PRIu64 "\n", p_nat->arpicmpPktCount);
+		len += sprintf(buf + len, "pipeline %d stats:\n", p_nat->pipeline_num);
+		len += sprintf(buf + len, "Received %" PRIu64 ",", p_nat->receivedPktCount);
+		len += sprintf(buf + len, "Missed %" PRIu64 ",", p_nat->missedPktCount);
+		len += sprintf(buf + len, "Dropped %" PRIu64 ",",  p_nat->naptDroppedPktCount);
+		len += sprintf(buf + len, "Translated %" PRIu64 ",", p_nat->naptedPktCount);
+		len += sprintf(buf + len, "ingress %" PRIu64 ",",  p_nat->inaptedPktCount);
+		len += sprintf(buf + len, "egress %" PRIu64 "\n", p_nat->enaptedPktCount);
+		len += sprintf(buf + len, "arpicmp pkts %" PRIu64 "\n", p_nat->arpicmpPktCount);
 
 
 		#ifdef CGNAPT_DEBUGGING
-		printf("\n Drop detail 1:%" PRIu64 ",",
+		len += sprintf(buf + len, "\n Drop detail 1:%" PRIu64 ",",
 				p_nat->naptDroppedPktCount1);
-		printf("\n Drop detail 2:%" PRIu64 ",",
+		len += sprintf(buf + len, "\n Drop detail 2:%" PRIu64 ",",
 				p_nat->naptDroppedPktCount2);
-		printf("\n Drop detail 3:%" PRIu64 ",",
+		len += sprintf(buf + len, "\n Drop detail 3:%" PRIu64 ",",
 				p_nat->naptDroppedPktCount3);
-		printf("\n Drop detail 4:%" PRIu64 ",",
+		len += sprintf(buf + len, "\n Drop detail 4:%" PRIu64 ",",
 				p_nat->naptDroppedPktCount4);
-		printf("\n Drop detail 5:%" PRIu64 ",",
+		len += sprintf(buf + len, "\n Drop detail 5:%" PRIu64 ",",
 				p_nat->naptDroppedPktCount5);
-		printf("\n Drop detail 6:%" PRIu64 "",
+		len += sprintf(buf + len, "\n Drop detail 6:%" PRIu64 "",
 				p_nat->naptDroppedPktCount6);
 
-		printf("\nPkt_miss: %" PRIu64 " %" PRIu64 "",
+		len += sprintf(buf + len, "\nPkt_miss: %" PRIu64 " %" PRIu64 "",
 				p_nat->missedpktcount1,
 				p_nat->missedpktcount2);
-		printf("\nPkt_miss: %" PRIu64 " %" PRIu64 "",
+		len += sprintf(buf + len, "\nPkt_miss: %" PRIu64 " %" PRIu64 "",
 				p_nat->missedpktcount3,
 				p_nat->missedpktcount4);
-		printf("\nPkt_miss: %" PRIu64 " %" PRIu64 "",
+		len += sprintf(buf + len, "\nPkt_miss: %" PRIu64 " %" PRIu64 "",
 				p_nat->missedpktcount5,
 				p_nat->missedpktcount6);
-		printf("\nPkt_miss: %" PRIu64 " %" PRIu64 "",
+		len += sprintf(buf + len, "\nPkt_miss: %" PRIu64 " %" PRIu64 "",
 				p_nat->missedpktcount7,
 				p_nat->missedpktcount8);
-		printf("\nPkt_miss: %" PRIu64 " %" PRIu64 "",
+		len += sprintf(buf + len, "\nPkt_miss: %" PRIu64 " %" PRIu64 "",
 				p_nat->missedpktcount9,
 				p_nat->missedpktcount10);
 
@@ -10537,32 +10537,35 @@ void all_cgnapt_stats(void)
 
 	}
 
-	printf("\nTotal pipeline stats:\n");
-	printf("Received %" PRIu64 ",", receivedPktCount);
-	printf("Missed %" PRIu64 ",", missedPktCount);
-	printf("Dropped %" PRIu64 ",",  naptDroppedPktCount);
-	printf("Translated %" PRIu64 ",", naptedPktCount);
-	printf("ingress %" PRIu64 ",",  inaptedPktCount);
-	printf("egress %" PRIu64 "\n", enaptedPktCount);
-	printf("arpicmp pkts %" PRIu64 "\n", arpicmpPktCount);
+	len += sprintf(buf + len, "\nTotal pipeline stats:\n");
+	len += sprintf(buf + len, "Received %" PRIu64 ",", receivedPktCount);
+	len += sprintf(buf + len, "Missed %" PRIu64 ",", missedPktCount);
+	len += sprintf(buf + len, "Dropped %" PRIu64 ",",  naptDroppedPktCount);
+	len += sprintf(buf + len, "Translated %" PRIu64 ",", naptedPktCount);
+	len += sprintf(buf + len, "ingress %" PRIu64 ",",  inaptedPktCount);
+	len += sprintf(buf + len, "egress %" PRIu64 "\n", enaptedPktCount);
+	len += sprintf(buf + len, "arpicmp pkts %" PRIu64 "\n", arpicmpPktCount);
+
+	if (!rest_api_supported())
+		printf("%s\n", buf);
 }
 
-void all_cgnapt_clear_stats(void)
+void all_cgnapt_clear_stats(char *buf)
 {
-	int i;
+	int i, len = 0;
 	struct pipeline_cgnapt *p_nat;
-		printf("\nCG-NAPT Packet Stats:\n");
+		len += sprintf(buf + len, "\nCG-NAPT Packet Stats:\n");
 	for (i = 0; i < n_cgnapt_pipeline; i++) {
 		p_nat = all_pipeline_cgnapt[i];
 
-		printf("pipeline %d stats:\n", p_nat->pipeline_num);
-		printf("Received %" PRIu64 ",", p_nat->receivedPktCount);
-		printf("Missed %" PRIu64 ",", p_nat->missedPktCount);
-		printf("Dropped %" PRIu64 ",",  p_nat->naptDroppedPktCount);
-		printf("Translated %" PRIu64 ",", p_nat->naptedPktCount);
-		printf("ingress %" PRIu64 ",",  p_nat->inaptedPktCount);
-		printf("egress %" PRIu64 "\n", p_nat->enaptedPktCount);
-		printf("arpicmp pkts %" PRIu64 "\n", p_nat->arpicmpPktCount);
+		len += sprintf(buf + len, "pipeline %d stats:\n", p_nat->pipeline_num);
+		len += sprintf(buf + len, "Received %" PRIu64 ",", p_nat->receivedPktCount);
+		len += sprintf(buf + len, "Missed %" PRIu64 ",", p_nat->missedPktCount);
+		len += sprintf(buf + len, "Dropped %" PRIu64 ",",  p_nat->naptDroppedPktCount);
+		len += sprintf(buf + len, "Translated %" PRIu64 ",", p_nat->naptedPktCount);
+		len += sprintf(buf + len, "ingress %" PRIu64 ",",  p_nat->inaptedPktCount);
+		len += sprintf(buf + len, "egress %" PRIu64 "\n", p_nat->enaptedPktCount);
+		len += sprintf(buf + len, "arpicmp pkts %" PRIu64 "\n", p_nat->arpicmpPktCount);
 
 		p_nat->receivedPktCount = 0;
 		p_nat->missedPktCount = 0;
@@ -10573,38 +10576,41 @@ void all_cgnapt_clear_stats(void)
 		p_nat->arpicmpPktCount = 0;
 
 		#ifdef CGNAPT_DEBUGGING
-		printf("\n Drop detail 1:%" PRIu64 ",",
+		len += sprintf(buf + len, "\n Drop detail 1:%" PRIu64 ",",
 				p_nat->naptDroppedPktCount1);
-		printf("\n Drop detail 2:%" PRIu64 ",",
+		len += sprintf(buf + len, "\n Drop detail 2:%" PRIu64 ",",
 				p_nat->naptDroppedPktCount2);
-		printf("\n Drop detail 3:%" PRIu64 ",",
+		len += sprintf(buf + len, "\n Drop detail 3:%" PRIu64 ",",
 				p_nat->naptDroppedPktCount3);
-		printf("\n Drop detail 4:%" PRIu64 ",",
+		len += sprintf(buf + len, "\n Drop detail 4:%" PRIu64 ",",
 				p_nat->naptDroppedPktCount4);
-		printf("\n Drop detail 5:%" PRIu64 ",",
+		len += sprintf(buf + len, "\n Drop detail 5:%" PRIu64 ",",
 				p_nat->naptDroppedPktCount5);
-		printf("\n Drop detail 6:%" PRIu64 "",
+		len += sprintf(buf + len, "\n Drop detail 6:%" PRIu64 "",
 				p_nat->naptDroppedPktCount6);
 
-		printf("\nPkt_miss: %" PRIu64 " %" PRIu64 "",
+		len += sprintf(buf + len, "\nPkt_miss: %" PRIu64 " %" PRIu64 "",
 				p_nat->missedpktcount1,
 				p_nat->missedpktcount2);
-		printf("\nPkt_miss: %" PRIu64 " %" PRIu64 "",
+		len += sprintf(buf + len, "\nPkt_miss: %" PRIu64 " %" PRIu64 "",
 				p_nat->missedpktcount3,
 				p_nat->missedpktcount4);
-		printf("\nPkt_miss: %" PRIu64 " %" PRIu64 "",
+		len += sprintf(buf + len, "\nPkt_miss: %" PRIu64 " %" PRIu64 "",
 				p_nat->missedpktcount5,
 				p_nat->missedpktcount6);
-		printf("\nPkt_miss: %" PRIu64 " %" PRIu64 "",
+		len += sprintf(buf + len, "\nPkt_miss: %" PRIu64 " %" PRIu64 "",
 				p_nat->missedpktcount7,
 				p_nat->missedpktcount8);
-		printf("\nPkt_miss: %" PRIu64 " %" PRIu64 "",
+		len += sprintf(buf + len, "\nPkt_miss: %" PRIu64 " %" PRIu64 "",
 				p_nat->missedpktcount9,
 				p_nat->missedpktcount10);
 
 		#endif
 
 	}
+
+	if (!rest_api_supported())
+		printf("%s\n", buf);
 }
 
 /**

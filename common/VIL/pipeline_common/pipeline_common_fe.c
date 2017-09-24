@@ -34,6 +34,8 @@
 #include "interface.h"
 #include "lib_arp.h"
 
+void app_run_file(cmdline_parse_ctx_t *ctx, const char *file_name);
+
 int
 app_pipeline_ping(struct app_params *app,
 	uint32_t pipeline_id)
@@ -1469,7 +1471,7 @@ static cmdline_parse_inst_t cmd_quit = {
  * run
  */
 
-static void
+void
 app_run_file(
 	cmdline_parse_ctx_t *ctx,
 	const char *file_name)
