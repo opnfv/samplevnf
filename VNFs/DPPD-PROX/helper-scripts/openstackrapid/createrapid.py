@@ -356,7 +356,6 @@ config.set('OpenStack', 'admin_network', admin_network)
 config.add_section('rapid')
 config.set('rapid', 'loglevel', loglevel)
 config.set('rapid', 'version', version)
-config.add_section('DEFAULT')
 config.set('DEFAULT', 'admin_ip', 'none')
 # Writing our configuration file
 with open(stack+'.cfg', 'wb') as configfile:
