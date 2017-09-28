@@ -10502,6 +10502,7 @@ void all_cgnapt_stats(char *buf)
 		len += sprintf(buf + len, "egress %" PRIu64 "\n", p_nat->enaptedPktCount);
 		len += sprintf(buf + len, "arpicmp pkts %" PRIu64 "\n", p_nat->arpicmpPktCount);
 
+	printf("\nCG-NAPT Packet Stats:\n");
 		printf("pipeline %d stats:\n", p_nat->pipeline_num);
 		printf("Received %" PRIu64 ",", p_nat->receivedPktCount);
 		printf("Missed %" PRIu64 ",", p_nat->missedPktCount);
