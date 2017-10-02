@@ -221,9 +221,9 @@ Step 3: Bind the datapath ports to DPDK
            link 1 config <VNF port 0 IP eg 172.16.40.10> 8
            link 1 up
 
-           ; routeadd <port #> <ipv4 nhip address in decimal> <Mask>
-           routeadd 0 <traffic generator port 0 IP eg 202.16.100.20> 0xff000000
-           routeadd 1 <traffic generator port 1 IP eg 172.16.40.20> 0xff000000
+           ; routeadd <net/host> <port #> <ipv4 nhip address in decimal> <Mask>
+           routeadd net 0 <traffic generator port 0 IP eg 202.16.100.20> 0xff000000
+           routeadd net 1 <traffic generator port 1 IP eg 172.16.40.20> 0xff000000
 
            ; IPv4 static ARP; disable if dynamic arp is enabled.
            p 1 arpadd 0 <traffic generator port 0 IP eg 202.16.100.20> <traffic generator port 0 MAC>
@@ -288,9 +288,10 @@ Step 3: Bind the datapath ports to DPDK
            link 1 down
            link 1 config <VNF port 0 IP eg 172.16.40.10> 8
            link 1 up
+
            ; routeadd <port #> <ipv4 nhip address in decimal> <Mask>
-           routeadd 0 <traffic generator port 0 IP eg 202.16.100.20> 0xff000000
-           routeadd 1 <traffic generator port 1 IP eg 172.16.40.20> 0xff000000
+           routeadd net 0 <traffic generator port 0 IP eg 202.16.100.20> 0xff000000
+           routeadd net 1 <traffic generator port 1 IP eg 172.16.40.20> 0xff000000
 
            ; IPv4 static ARP; disable if dynamic arp is enabled.
            p 1 arpadd 0 <traffic generator port 0 IP eg 202.16.100.20> <traffic generator port 0 MAC>
@@ -355,9 +356,10 @@ Step 3: Bind the datapath ports to DPDK
            link 1 down
            link 1 config <VNF port 0 IP eg 172.16.40.10> 8
            link 1 up
-           ; routeadd <port #> <ipv4 nhip address in decimal> <Mask>
-           routeadd 0 <traffic generator port 0 IP eg 202.16.100.20> 0xff000000
-           routeadd 1 <traffic generator port 1 IP eg 172.16.40.20> 0xff000000
+
+           ; routeadd <net/host> <port #> <ipv4 nhip address in decimal> <Mask>
+           routeadd net 0 <traffic generator port 0 IP eg 202.16.100.20> 0xff000000
+           routeadd net 1 <traffic generator port 1 IP eg 172.16.40.20> 0xff000000
 
            ; IPv4 static ARP; disable if dynamic arp is enabled.
            p 1 arpadd 0 <traffic generator port 0 IP eg 202.16.100.20> <traffic generator port 0 MAC>
@@ -427,10 +429,9 @@ Step 3: Bind the datapath ports to DPDK
            ;p <cgnapt pipeline id> entry addm <prv_ipv4/6> prvport> <pub_ip> <pub_port> <phy_port> <ttl> <no_of_entries> <end_prv_port> <end_pub_port>
            ;p 5 entry addm 202.16.100.20 1234 152.16.40.10 1 0 500 65535 1234 65535
 
-
-           ; routeadd <port #> <ipv4 nhip address in decimal> <Mask>
-           routeadd 0 <traffic generator port 0 IP eg 202.16.100.20> 0xff000000
-           routeadd 1 <traffic generator port 1 IP eg 172.16.40.20> 0xff000000
+           ; routeadd <net/host> <port #> <ipv4 nhip address in decimal> <Mask>
+           routeadd net 0 <traffic generator port 0 IP eg 202.16.100.20> 0xff000000
+           routeadd net 1 <traffic generator port 1 IP eg 172.16.40.20> 0xff000000
 
            ; IPv4 static ARP; disable if dynamic arp is enabled.
            p 1 arpadd 0 <traffic generator port 0 IP eg 202.16.100.20> <traffic generator port 0 MAC>
