@@ -30,7 +30,7 @@ of Sample† Traffic Flows.
  * Not a commercial product. Encourage the community to contribute and close the feature gaps.
  † No Vendor/Proprietary Workloads
 
-t helps to facilitate deterministic & repeatable bench-marking on Industry
+t helpsIt helps to facilitate deterministic & repeatable bench-marking on Industry
 standard high volume Servers. It augments well with a Test Infrastructure to
 help facilitate consistent/repeatable methodologies for characterizing &
 validating the sample VNFs through OPEN SOURCE VNF approximations and test tools.
@@ -85,7 +85,7 @@ Test Framework
 
 .. _Yardstick_NSB: http://artifacts.opnfv.org/yardstick/docs/testing_user_userguide/index.html#document-13-nsb-overview
 
-SampleVNF Test Infrastructure (NSB (Yardstick_NSB_))in yardstick helps to facilitate
+SampleVNF Test Infrastructure (NSB (Yardstick_NSB_)) in yardstick helps to facilitate
 consistent/repeatable methodologies for characterizing & validating the
 sample VNFs (:term:`VNF`) through OPEN SOURCE VNF approximations.
 
@@ -93,7 +93,7 @@ sample VNFs (:term:`VNF`) through OPEN SOURCE VNF approximations.
 Network Service Benchmarking in yardstick framework follows ETSI GS NFV-TST001_
 to verify/characterize both :term:`NFVI` & :term:`VNF`
 
-For more inforamtion refer, 
+For more inforamtion refer, Yardstick_NSB_
 
 SampleVNF Directory structure
 =============================
