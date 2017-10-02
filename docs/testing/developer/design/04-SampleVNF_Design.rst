@@ -108,6 +108,61 @@ This library provides API for taking decision of whether pkt belongs to local
 system or to forwarding.It Provides API for IPv4/IPv6 local packet out send
 function. It Provides API for packet forwarding - LPM lookup function.
 
+Common Code - Gateway routing
+-----------------------------
+
+Introduction
+^^^^^^^^^^^^
+
+Gateway common code is created to support routing functionality for both
+network and direct attached interfaces. It is supported for both IPv4 and
+IPv6 routes.
+
+The routeadd command is enhanced to support both net and host interfaces.
+The net is used to define the gateway and host is used for direct
+attached devices.
+
+The routing tables are allocated per port basis limited for MAX_PORTS. The
+number of route entries are supported upto 32 per interface. These sizes
+can be changed at compile time based on the requirement. Memory is
+allocated only for the nb_ports which is configured as per the VNF application
+configuration.
+
+Design
+^^^^^^
+The next hop IP and Port numbers are retrieved from the routing table based on
+the destinantion IP addreess. The destination IP address anded with mask is
+looked in the routing table for the match. The port/interface number which
+also stored as a part of the table entry is also retrieved.
+
+The routing table will be added with entries when the routeadd CLI command is
+executed through script or run time. There can be multiple routing entries per
+interface/port.
+
+The routeadd will report error if the match entry already exists or also if any
+of parameters provide in the commands are not valied. Example the if port
+number is bigger than the supported number ports/interface per application
+configuration.
+
+
+Reference routeadd command
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Following are typical reference commands and syntax for adding routes using the CLI.
+
+::
+
+;routeadd <net/host> <port #> <ipv4 nhip address in decimal> <Mask/NotApplicable>
+routeadd net 0 202.16.100.20 0xffff0000
+routeadd net 1 172.16.40.20 0xffff0000
+routeadd host 0 202.16.100.20
+routeadd host 1 172.16.40.20
+
+;routeadd <net/host> <port #> <ipv6 nhip address in hex> <Depth/NotApplicable>
+routeadd net 0 fec0::6a05:caff:fe30:21b0 64
+routeadd net 1 2012::6a05:caff:fe30:2081 64
+routeadd host 0 fec0::6a05:caff:fe30:21b0
+routeadd host 1 2012::6a05:caff:fe30:2081
 
 vFW - Design
 =============
