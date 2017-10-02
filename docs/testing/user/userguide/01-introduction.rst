@@ -52,7 +52,7 @@ This document consists of the following chapters:
 
 * Chapter :doc:`04-installation` provides instructions to install *SampleVNF*.
 
-* Chapter :doc:`05-BKMs` provides example on how installing and running *SampleVNF*.
+* Chapter :doc:`05-How_to_run_SampleVNFs` provides example on how installing and running *SampleVNF*.
 
 Contact SampleVNF
 =================
