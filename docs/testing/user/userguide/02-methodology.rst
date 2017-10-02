@@ -72,6 +72,7 @@ The metrics, as defined by ETSI GS NFV-TST001, are shown in
 |         | * Latency between NFVI nodes                                      |
 |         | * Packet delay variation (jitter) between VMs                     |
 |         | * Packet delay variation (jitter) between NFVI nodes              |
+|         | * RFC 3511 benchmark                                              |
 |         |                                                                   |
 +---------+-------------------------------------------------------------------+
 
