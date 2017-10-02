@@ -2302,6 +2302,7 @@ static int arp_parse_args(struct pipeline_params *params)
 				lentry->nh = nh_ip;
 				lentry->nh_mask = nh_ip & mask;
 				p_route_data[tx_port]->route_ent_cnt++;
+				vnf_gateway = 1;
 				token = strtok(NULL, "(");
 			}
 
@@ -2366,6 +2367,7 @@ static int arp_parse_args(struct pipeline_params *params)
 				lentry->port = tx_port;
 
 				p_nd_route_data[tx_port]->nd_route_ent_cnt++;
+				vnf_gateway = 1;
 
 				token = strtok(NULL, "(");
 			}
