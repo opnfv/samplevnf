@@ -22,7 +22,7 @@ related to VNF/Network service for high performance VNFs.
 The sample VNFs are Open Source approximations* of Telco grade :term:`VNF`
 using optimized VNF + NFVi Infrastructure libraries, with Performance Characterization of Sample† Traffic Flows.
 • * Not a commercial product. Encourage the community to contribute and close the feature gaps.
-• † No Vendor/Proprietary Workloads 
+• † No Vendor/Proprietary Workloads
 
 ETSI-NFV
 ========
