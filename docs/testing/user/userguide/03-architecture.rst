@@ -30,8 +30,8 @@ of Sample† Traffic Flows.
  * Not a commercial product. Encourage the community to contribute and close the feature gaps.
  † No Vendor/Proprietary Workloads
 
-t helpsIt helps to facilitate deterministic & repeatable bench-marking on Industry
-standard high volume Servers. It augments well with a Test Infrastructure to
+It helps to facilitate deterministic & repeatable bench-marking on Industry
+standard high volume Servers. It augments well with a Test infrastructure to
 help facilitate consistent/repeatable methodologies for characterizing &
 validating the sample VNFs through OPEN SOURCE VNF approximations and test tools.
 The VNFs belongs to this project are never meant for field deployment.
@@ -40,7 +40,7 @@ All the VNF source code part of this project requires Apache License Version 2.0
 Supported deployment:
 ----------------------
 * Bare-Metal - All VNFs can run on a Bare-Metal DUT
-* Standalone Virtualization: All VNFs can run on SV like VPP as switch, ovs,
+* Standalone Virtualization(SV): All VNFs can run on SV like VPP as switch, ovs,
   ovs-dpdk, srioc
 * Openstack: Latest Openstack supported
 
@@ -75,7 +75,7 @@ VNF supported
       Packet pROcessing eXecution Engine (PROX) which is a DPDK application.
       PROX can do operations on packets in a highly configurable manner.
       The PROX application is also displaying performance statistics that can
-      be used for performance investigations. 
+      be used for performance investigations.
       Intel® DPPD - PROX is an application built on top of DPDK which allows
       creating software architectures, such as the one depicted below, through
       small and readable configuration files.
@@ -106,7 +106,7 @@ SampleVNF Directory structure
           user guides and SampleVNF descriptions.
 
 *tools/* - Currently contains tools to build image for VMs which are deployed
-           by Heat. Currently contains helper scripts like install, setup env 
+           by Heat. Currently contains helper scripts like install, setup env
 
 *VNFs/* - all VNF source code directory.
 
