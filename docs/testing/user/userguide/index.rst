@@ -17,5 +17,6 @@ SampleVNF User Guide
    03-architecture
    04-installation
    05-How_to_run_SampleVNFs
+   06-How_to_use_REST_api
    glossary
    references
