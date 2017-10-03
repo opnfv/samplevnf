@@ -26,7 +26,7 @@ real life use-case based testing and NFVi characterization for the same.
 The sample VNFs are Open Source approximations* of Telco grade VNF’s using optimized
 VNF + NFVi Infrastructure libraries, with Performance Characterization of Sample† Traffic Flows.
   * * Not a commercial product. Encourage the community to contribute and close the feature gaps.
-  * † No Vendor/Proprietary Workloads 
+  * † No Vendor/Proprietary Workloads
 
 It helps to facilitate deterministic & repeatable bench-marking on
 Industry standard high volume Servers. It augments well with a Test Infrastructure
@@ -46,6 +46,6 @@ Integrate into CI tool chain and existing test frameworks for VNF feature and de
 Testability:
 -----------
 Network Service Testing framework added into the Yardstick will be used as a test
-tool for Functional/Performance verification of all the sample VNFs. 
+tool for Functional/Performance verification of all the sample VNFs.
 Planning to extend the same to FuncTest and Models project to include the testcases
 related to sample VNFs.
