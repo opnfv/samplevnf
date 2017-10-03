@@ -9,8 +9,8 @@ SampleVNF - How to run
 Prerequisites
 -------------
 
-Supported Test setup:
---------------------
+Supported Test setup
+^^^^^^^^^^^^^^^^^^^^
 The device under test (DUT) consists of a system following;
   * A single or dual processor and PCH chip, except for System on Chip (SoC) cases
   * DRAM memory size and frequency (normally single DIMM per channel)
@@ -21,18 +21,19 @@ Connected to the DUT is an IXIA* or Software Traffic generator like pktgen or TR
 simulation platform to generate packet traffic to the DUT ports and
 determine the throughput/latency at the tester side.
 
-Below are the supported/tested (:term `VNF`) deployment type.
+Below are the supported/tested (:term: `VNF`) deployment type.
 
 .. image:: images/deploy_type.png
    :width: 800px
    :alt: SampleVNF supported topology
 
 Hardware & Software Ingredients
--------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 SUT requirements:
-^^^^^^^^^^^^^^^^
-::
+
+  ::
+
    +-----------+------------------+
    | Item      | Description      |
    +-----------+------------------+
@@ -48,8 +49,9 @@ SUT requirements:
    +-----------+------------------+
 
 Boot and BIOS settings:
-^^^^^^^^^^^^^^^^^^^^^^
-::
+
+   ::
+
    +------------------+---------------------------------------------------+
    | Boot settings    | default_hugepagesz=1G hugepagesz=1G hugepages=16  |
    |                  | hugepagesz=2M hugepages=2048 isolcpus=1-11,22-33  |
@@ -73,6 +75,7 @@ The ethernet cables should be connected between traffic generator and the VNF se
 SRIOV or OVS) setup based on the test profile.
 
 The connectivity could be
+
 1) Single port pair : One pair ports used for traffic 
    ::
      e.g. Single port pair link0 and link1 of VNF are used
@@ -111,11 +114,13 @@ Setup Traffic generator
 -----------------------
 
 Step 0: Preparing hardware connection
+
   ::
     Connect Traffic generator and VNF system back to back as shown in previous section
     TRex port 0 ↔ (VNF Port 0) ↔ (VNF Port 1) ↔ TRex port 1
 
 Step 1: Setting up Traffic generator (TRex)
+
   ::
     TRex Software preparations
     ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -131,12 +136,14 @@ Step 1: Setting up Traffic generator (TRex)
 
 Build SampleVNFs
 -----------------
+
 Step 2: Procedure to build SampleVNFs
+
   ::
    a) Clone sampleVNF project repository  - git clone https://git.opnfv.org/samplevnf
    b) Build VNFs
       Auto Build
-      ^^^^^^^^^^
+
           * Interactive options:
               ./tools/vnf_build.sh -i
               Follow the steps in the screen from option [1] –> [9] and select option [8] to build the vnfs.
@@ -167,7 +174,7 @@ Step 2: Procedure to build SampleVNFs
               ./tools/vnf_build.sh -s -d=<dpdk version eg 17.02>
 
       Manual Build
-      ^^^^^^^^^^^^
+
            1) Download DPDK supported version from dpdk.org
               http://dpdk.org/browse/dpdk/snapshot/dpdk-$DPDK_RTE_VER.zip
               unzip dpdk-$DPDK_RTE_VER.zip and apply dpdk patches only in case of 16.04 (Not required for other DPDK versions)
@@ -204,7 +211,8 @@ Virtual Firewall - How to run
 -----------------------------
 
 Step 3: Bind the datapath ports to DPDK
-  ::
+
+   ::
     a) Bind ports to DPDK
         For DPDK versions 17.xx
         1) cd <samplevnf>/dpdk
@@ -250,6 +258,7 @@ Step 3: Bind the datapath ports to DPDK
           ./build/vFW -p 0x3 -f ./config/VFW_SWLB_SinglePortPair_4Thread.cfg  -s ./config/VFW_SWLB_SinglePortPair_script.tc
 
 step 4: Run Test using traffic geneator
+
   ::
     On traffic generator system:
     cd <trex eg v2.28/stl>
@@ -272,6 +281,7 @@ Virtual Access Control list - How to run
 ----------------------------------------
 
 Step 3: Bind the datapath ports to DPDK
+
   ::
     a) Bind ports to DPDK
         For DPDK versions 17.xx
@@ -318,6 +328,7 @@ Step 3: Bind the datapath ports to DPDK
         ./build/vFW -p 0x3 -f ./config/IPv4_swlb_acl_1LB_1t.cfg  -s ./config/IPv4_swlb_acl.tc.
 
 step 4: Run Test using traffic geneator
+
   ::
     On traffic generator system:
     cd <trex eg v2.28/stl>
@@ -336,78 +347,12 @@ step 4: Run Test using traffic geneator
     start -f stl/bench.py -m 50% --port 0 3 -t size=590,vm=var1
     For more details refer: https://trex-tgn.cisco.com/trex/doc/trex_stateless_bench.html
 
-Virtual Access Control list - How to run
-----------------------------------------
-
-Step 3: Bind the datapath ports to DPDK
-  ::
-    a) Bind ports to DPDK
-        For DPDK versions 17.xx
-        1) cd <samplevnf>/dpdk
-        2) ./usertools/dpdk-devbind.py --status <--- List the network device
-        3) ./usertools/dpdk-devbind.py -b igb_uio <PCI Port 0> <PCI Port 1>
-        .. _More details: http://dpdk.org/doc/guides-17.05/linux_gsg/build_dpdk.html#binding-and-unbinding-network-ports-to-from-the-kernel-modules 
-    b) Prepare script to enalble VNF to route the packets
-          cd <samplevnf>/VNFs/vACL/config
-          Open -> IPv4_swlb_acl.tc. Replace the bold items based on your setting.
-
-           link 0 config <VNF port 0 IP eg 202.16.100.10> 8
-           link 0 up
-           link 1 down
-           link 1 config <VNF port 0 IP eg 172.16.40.10> 8
-           link 1 up
-
-           ; routeadd <net/host> <port #> <ipv4 nhip address in decimal> <Mask>
-           routeadd net 0 <traffic generator port 0 IP eg 202.16.100.20> 0xff000000
-           routeadd net 1 <traffic generator port 1 IP eg 172.16.40.20> 0xff000000
-
-           ; IPv4 static ARP; disable if dynamic arp is enabled.
-           p 1 arpadd 0 <traffic generator port 0 IP eg 202.16.100.20> <traffic generator port 0 MAC>
-           p 1 arpadd 1  <traffic generator port 1 IP eg 172.16.40.20> <traffic generator port 1 MAC>
-           p action add 0 accept
-           p action add 0 fwd 0
-           p action add 0 count
-           p action add 1 accept
-           p action add 1 fwd 1
-           p action add 1 count
-           p action add 2 drop
-           p action add 2 count
-           p action add 0 conntrack
-           p action add 1 conntrack
-           p action add 2 conntrack
-           p action add 3 conntrack
-           ; IPv4 rules
-           p acl add 1 <traffic generator port 0 IP eg 202.16.100.20> 8 <traffic generator port 1 IP eg 172.16.40.20> 8 0 65535 67 69 0 0 2
-           p acl add 2 <traffic generator port 0 IP eg 202.16.100.20> 8 <traffic generator port 1 IP eg 172.16.40.20> 8 0 65535 0 65535 0 0 1
-           p acl add 2 <traffic generator port 1 IP eg 172.16.40.20> 8 <traffic generator port 0 IP eg 202.16.100.20> 8 0 65535 0 65535 0 0 0
-           p acl applyruleset
-     c) Run below cmd to launch the VNF. Please make sure both hugepages and ports to be used are bind to dpdk.
-        cd <samplevnf>/VNFs/vACL/
-        ./build/vACL -p 0x3 -f ./config/IPv4_swlb_acl_1LB_1t.cfg  -s ./config/IPv4_swlb_acl.tc.
-
-step 4: Run Test using traffic geneator
-  ::
-    On traffic generator system:
-    cd <trex eg v2.28/stl>
-    Update the bench.py to generate the traffic.
-
-    class STLBench(object):
-    ip_range = {}
-    ip_range['src'] = {'start': '<traffic generator port 0 IP eg 202.16.100.20>', 'end': '<traffic generator port 0 IP eg 202.16.100.20>'}
-    ip_range['dst'] = {'start': '<traffic generator port 1 IP eg 172.16.40.20>', 'end': '<traffic generator port 1 IP eg 172.16.40.20>'}
-    cd <trex eg v2.28>
-    Run the TRex server: sudo ./t-rex-64 -i -c 7
-    In another shell run TRex console: trex-console
-    The console can be run from another computer with -s argument, --help for more info.
-    Other options for TRex client are automation or GUI
-    In the console, run "tui" command, and then send the traffic with commands like:
-    start -f stl/bench.py -m 50% --port 0 3 -t size=590,vm=var1
-    For more details refer: https://trex-tgn.cisco.com/trex/doc/trex_stateless_bench.html
 
 vCGNAPT - How to run
-----------------------------------------
+--------------------
 
 Step 3: Bind the datapath ports to DPDK
+
   ::
     a) Bind ports to DPDK
         For DPDK versions 17.xx
@@ -445,6 +390,7 @@ Step 3: Bind the datapath ports to DPDK
 
 
 step 4: Run Test using traffic geneator
+
   ::
         On traffic generator system:
         cd <trex eg v2.28/stl>
@@ -467,6 +413,7 @@ UDP_Replay - How to run
 ----------------------------------------
 
 Step 3: Bind the datapath ports to DPDK
+
   ::
     a) Bind ports to DPDK
         For DPDK versions 17.xx
@@ -480,6 +427,7 @@ Step 3: Bind the datapath ports to DPDK
           e.g ./build/UDP_Replay -c 0x7 -n 4 -w 0000:07:00.0 -w 0000:07:00.1 -- --no-hw-csum -p 0x3 --config='(0, 0, 1)(1, 0, 2)'
 
 step 4: Run Test using traffic geneator
+
   ::
     On traffic generator system:
     cd <trex eg v2.28/stl>
