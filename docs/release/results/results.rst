@@ -15,18 +15,20 @@ Feature Test Results
 
 The following features were verified by SampleVNF test cases:
 
-   * vFirewall
-      * Basic Packet filter dropping malformed, invalid packets based on L3/L4 packet headers
-      * Policy based filtering
-      * Dynamic Packet filtering through Connection Tracker for TCP and UDP
-      * SYN-flood protection via synproxy for TCP
-      * UDP, TCP and ICMP protocol pass-through
-      * CLI based enable/disable connection tracking, synproxy, basic packet filtering
-      * Multithread support
-      * Multiple physical port support
-      * Providing statistics on traffic traversing the VNF
+   - vFW - Virtual Firewall
 
-   * vCG-NAPT- Carrier Grade Network Address and port Translation
+     * Basic Packet filter dropping malformed, invalid packets based on L3/L4 packet headers
+     * Policy based filtering
+     * Dynamic Packet filtering through Connection Tracker for TCP and UDP
+     * SYN-flood protection via synproxy for TCP
+     * UDP, TCP and ICMP protocol pass-through
+     * CLI based enable/disable connection tracking, synproxy, basic packet filtering
+     * Multithread support
+     * Multiple physical port support
+     * Providing statistics on traffic traversing the VNF
+
+   - vCG-NAPT - Carrier Grade Network Address and port Translation
+
      * Static and dynamic Network address translation.
      * Static and dynamic Network address and port translation
      * ARP (request, response, gratuitous)
@@ -38,7 +40,8 @@ The following features were verified by SampleVNF test cases:
      * Live Session tracking to NAT flow
      * NAT64 – connectivity between IPv6 access network to IPv4 data network.
 
-   * vACL - Access Control List
+   - vACL - Access Control List
+
      * CLI based Run-time rule configuration (Add, Delete, List, Display, Clear, Modify)
      * IPv4 and IPv6 5 tuple packet Selector support
      * Counting packets and bytes per rule
@@ -47,7 +50,8 @@ The following features were verified by SampleVNF test cases:
      * Forwarding packets to specific ports on base of rules
      * Rules definition on base TCP/UDP connection tracking
 
-   * Prox - Packet pROcessing eXecution engine.
+   - Prox - Packet pROcessing eXecution engine.
+
      * Classify
      * Drop
      * Basic Forwarding (no touch)
