@@ -25,7 +25,7 @@ Connected to the DUT is an IXIA* or Software Traffic generator like pktgen or TR
 simulation platform to generate packet traffic to the DUT ports and
 determine the throughput/latency at the tester side.
 
-Below are the supported/tested (:term `VNF`) deployment type.
+Below are the supported/tested (:term: `VNF`) deployment type.
 .. image:: images/deploy_type.png
    :width: 800px
    :alt: SampleVNF supported topology

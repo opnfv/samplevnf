@@ -30,8 +30,8 @@ of Sample† Traffic Flows.
  * Not a commercial product. Encourage the community to contribute and close the feature gaps.
  † No Vendor/Proprietary Workloads
 
-t helpsIt helps to facilitate deterministic & repeatable bench-marking on Industry
-standard high volume Servers. It augments well with a Test Infrastructure to
+It helps to facilitate deterministic & repeatable bench-marking on Industry
+standard high volume Servers. It augments well with a Test infrastructure to
 help facilitate consistent/repeatable methodologies for characterizing &
 validating the sample VNFs through OPEN SOURCE VNF approximations and test tools.
 The VNFs belongs to this project are never meant for field deployment.
@@ -40,7 +40,7 @@ All the VNF source code part of this project requires Apache License Version 2.0
 Supported deployment:
 ----------------------
 * Bare-Metal - All VNFs can run on a Bare-Metal DUT
-* Standalone Virtualization: All VNFs can run on SV like VPP as switch, ovs,
+* Standalone Virtualization(SV): All VNFs can run on SV like VPP as switch, ovs,
   ovs-dpdk, srioc
 * Openstack: Latest Openstack supported
 
