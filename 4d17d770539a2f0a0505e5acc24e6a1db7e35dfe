@@ -1,0 +1,8 @@
+Code-Review+1: ANAND B JYOTI <anand.b.jyoti@intel.com>
+Code-Review+2: Deepak S <deepak.s@linux.intel.com>
+Verified+1: Deepak S <deepak.s@linux.intel.com>
+Submitted-by: Deepak S <deepak.s@linux.intel.com>
+Submitted-at: Tue, 03 Oct 2017 06:00:49 +0000
+Reviewed-on: https://gerrit.opnfv.org/gerrit/44001
+Project: samplevnf
+Branch: refs/heads/master
