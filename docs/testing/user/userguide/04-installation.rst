@@ -10,7 +10,7 @@ Abstract
 --------
 
 This project provides a placeholder for various sample VNF
-(Virtual Network Function (:term `VNF`)) development which includes example
+(Virtual Network Function (:term: `VNF`)) development which includes example
 reference architecture and optimization methods related to VNF/Network service
 for high performance VNFs.
 The sample VNFs are Open Source approximations* of Telco grade VNF’s using
@@ -20,21 +20,21 @@ of Sample† Traffic Flows.
 ::
 
   * Not a commercial product. Encourage the community to contribute and close the feature gaps.
-    † No Vendor/Proprietary Workloads 
+  † No Vendor/Proprietary Workloads
 
 SampleVNF supports installation directly in Ubuntu. The installation procedure
 are detailed in the sections below.
 
 The steps needed to run SampleVNF are:
   1) Install and Build SampleVNF.
-  2) deploy the VNF on the target and modify the config based on the Network under test
+  2) Deploy the VNF on the target and modify the config based on the Network under test
   3) Run the traffic generator to generate the traffic.
 
 Prerequisites
 -------------
 
-Supported Test setup:
---------------------
+Supported Test setup
+^^^^^^^^^^^^^^^^^^^^^
 The device under test (DUT) consists of a system following;
   * A single or dual processor and PCH chip, except for System on Chip (SoC) cases
   * DRAM memory size and frequency (normally single DIMM per channel)
@@ -45,17 +45,17 @@ Connected to the DUT is an IXIA* or Software Traffic generator like pktgen or TR
 simulation platform to generate packet traffic to the DUT ports and
 determine the throughput/latency at the tester side.
 
-Below are the supported/tested (:term `VNF`) deployment type.
+Below are the supported/tested (:term: `VNF`) deployment type.
 
 .. image:: images/deploy_type.png
    :width: 800px
    :alt: SampleVNF supported topology
 
 Hardware & Software Ingredients
--------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 SUT requirements:
-^^^^^^^^^^^^^^^^
+
 ::
    +-----------+------------------+
    | Item      | Description      |
@@ -72,7 +72,7 @@ SUT requirements:
    +-----------+------------------+
 
 Boot and BIOS settings:
-^^^^^^^^^^^^^^^^^^^^^^
+
 ::
    +------------------+---------------------------------------------------+
    | Boot settings    | default_hugepagesz=1G hugepagesz=1G hugepages=16  |
@@ -97,18 +97,20 @@ The ethernet cables should be connected between traffic generator and the VNF se
 SRIOV or OVS) setup based on the test profile.
 
 The connectivity could be
-1) Single port pair : One pair ports used for traffic 
+1) Single port pair : One pair ports used for traffic
+
    ::
      e.g. Single port pair link0 and link1 of VNF are used
      TG:port 0 <------> VNF:Port 0
      TG:port 1 <------> VNF:Port 1
 
 2) Multi port pair :  More than one pair of traffic
+
    ::
      e.g. Two port pair link 0, link1, link2 and link3 of VNF are used
      TG:port 0 <------> VNF:Port 0
      TG:port 1 <------> VNF:Port 1
-     TG:port 2 <------> VNF:Port 2 
+     TG:port 2 <------> VNF:Port 2
      TG:port 3 <------> VNF:Port 3
 
      For correalted traffic, use below configuration
@@ -138,7 +140,8 @@ Build VNFs on the DUT:
 
    Auto Build - Using script to build VNFs
    ^^^^^^^^^^
-     * Interactive options: 
+     * Interactive options:
+
        ::
          ./tools/vnf_build.sh -i
          Follow the steps in the screen from option [1] –> [9] and
@@ -175,27 +178,27 @@ Build VNFs on the DUT:
    Manual Build
    ^^^^^^^^^^^^
    ::
-      1.Download DPDK supported version from dpdk.org
+      1. Download DPDK supported version from dpdk.org
         http://dpdk.org/browse/dpdk/snapshot/dpdk-$DPDK_RTE_VER.zip
         unzip dpdk-$DPDK_RTE_VER.zip and apply dpdk patches only in case of 16.04 (Not required for other DPDK versions)
         cd dpdk
         make config T=x86_64-native-linuxapp-gcc O=x86_64-native-linuxapp-gcc
         cd x86_64-native-linuxapp-gcc
         make -j
-      2.Setup huge pages
+      2. Setup huge pages
         For 1G/2M hugepage sizes, for example 1G pages, the size must be specified
         explicitly and can also be optionally set as the default hugepage size
         for the system. For example, to reserve 8G of hugepage memory in the form
         of eight 1G pages, the following options should be passed to the
         kernel: * default_hugepagesz=1G hugepagesz=1G hugepages=8 hugepagesz=2M hugepages=2048
-      3.Add this to Go to /etc/default/grub configuration file.
+      3. Add this to Go to /etc/default/grub configuration file.
         Append “default_hugepagesz=1G hugepagesz=1G hugepages=8 hugepagesz=2M hugepages=2048”to the GRUB_CMDLINE_LINUX entry.
-      4.Setup Environment Variable
+      4. Setup Environment Variable
         export RTE_SDK=<samplevnf>/dpdk
         export RTE_TARGET=x86_64-native-linuxapp-gcc
         export VNF_CORE=<samplevnf>
         or using ./tools/setenv.sh
-      5.Build vACL VNFs
+      5. Build vACL VNFs
         cd <samplevnf>/VNFs/vACL
         make clean
         make
@@ -205,6 +208,7 @@ Build VNFs on the DUT:
 2) Standalone virtualization/Openstack:
 
    Build VM image from script in  yardstick
+
    ::
      1) git clone https://git.opnfv.org/yardstick
      2) cd yardstick and run

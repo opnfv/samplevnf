@@ -59,11 +59,11 @@ In this way, individual commits can be traced to JIRA issues and we also know wh
 commits were used to resolve a JIRA issue.
 If you want to contribute to samplevnf, you can pick a issue from SampleVNF's
 JIRA dashboard or you can create you own issue and submit it to JIRA.
- 
+
 Submitting code to Gerrit
 Installing and configuring Git and Git-Review is necessary in order to submit code to Gerrit.
 The Getting to the code page will provide you with some help for that.
- 
+
 Comitting the code with Git
 Open a terminal window and set the project's directory to the working directory using the cd command.
 In this case "/home/opnfv/samplevnf" is the path to the samplevnf project folder on my computer.
@@ -97,11 +97,11 @@ it is time to actually commit your work to your local Git repository.
 
 ::
   git commit --signoff -m "Title of change
-     
+
   Test of change that describes in high level what
   was done. There is a lot of documentation in code
   so you do not need to repeat it here.
-     
+
   JIRA: SAMPLEVNF-XXX"
 
 The message that is required for the commit should follow a specific set of rules.
@@ -122,7 +122,7 @@ This will automatically push your local commit into Gerrit.
 
 Code review
 You can add Samplevnf committers and contributors to review your codes.
- 
+
 Modifying the code under review in Gerrit
 At the same time the code is being reviewed in Gerrit, you may need to edit it to
 make some changes and then send it back for review. The following steps go through the procedure.
@@ -132,7 +132,7 @@ The 'status' command is very helpful at this point as it provides an overview of
 ::
   git status
 The output of the command provides us with the files that have been modified after the latest commit.
- 
+
 You can now stage the files that have been modified as part of the Gerrit code review
 edition/modification/improvement using git add command.
 It is now time to commit the newly modified files, but the objective here is not to
