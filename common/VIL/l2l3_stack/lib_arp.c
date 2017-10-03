@@ -2235,7 +2235,7 @@ static int arp_parse_args(struct pipeline_params *params)
 		if (strcmp(arg_name, "arp_route_tbl") == 0) {
 			arp_route_tbl_present = 1;
 			uint32_t dest_ip = 0, mask = 0, tx_port = 0, nh_ip = 0,
-				 i = 0, j = 0, k = 0;
+				 i = 0, j = 0, k = 0, l = 0;
 			uint32_t arp_route_tbl_str_max_len = 10;
 			char dest_ip_str[arp_route_tbl_str_max_len];
 			char mask_str[arp_route_tbl_str_max_len];
@@ -2243,36 +2243,44 @@ static int arp_parse_args(struct pipeline_params *params)
 			char nh_ip_str[arp_route_tbl_str_max_len];
 			char *token = strtok(arg_value, "(");
 			while (token) {
-				i = 0;
-				while ((i < (arp_route_tbl_str_max_len - 1))
-							 && (token[i] != ',')) {
-					nh_ip_str[i] = token[i];
-					i++;
-				}
-				nh_ip_str[i] = '\0';
-				nh_ip = strtoul(nh_ip_str, NULL, 16);
+                                i = 0;
+                                while ((i < (arp_route_tbl_str_max_len - 1))
+                                       && (token[i] != ',')) {
+                                        dest_ip_str[i] = token[i];
+                                        i++;
+                                }
+                                dest_ip_str[i] = '\0';
+                                dest_ip = strtoul(dest_ip_str, NULL, 16);
 
-				i++;
-				j = 0;
-				while ((j < (arp_route_tbl_str_max_len - 1))
-							 && (token[i + j] != ',')) {
-					mask_str[j] = token[i + j];
-					j++;
-				}
-				mask_str[j] = '\0';
-				mask = strtoul(mask_str, NULL, 16);
+                                i++;
+                                j = 0;
+                                while ((j < (arp_route_tbl_str_max_len - 1))
+                                       && (token[i + j] != ',')) {
+                                        mask_str[j] = token[i + j];
+                                        j++;
+                                }
+                                mask_str[j] = '\0';
+                                mask = strtoul(mask_str, NULL, 16);
 
-				j++;
-				k = 0;
-				while ((k < (arp_route_tbl_str_max_len - 1))
-							 && (token[i + j + k] != ',')) {
-					tx_port_str[k] = token[i + j + k];
-					k++;
-				}
-				tx_port_str[k] = '\0';
-				tx_port = strtoul(tx_port_str, NULL, 16);	//atoi(tx_port_str);
+                                j++;
+                                k = 0;
+                                while ((k < (arp_route_tbl_str_max_len - 1))
+                                       && (token[i + j + k] != ',')) {
+                                        tx_port_str[k] = token[i + j + k];
+                                        k++;
+                                }
+                                tx_port_str[k] = '\0';
+                                tx_port = strtoul(tx_port_str, NULL, 16);       //atoi(tx_port_str);
 
-				k++;
+                                k++;
+                                l = 0;
+                                while ((l < (arp_route_tbl_str_max_len - 1))
+                                       && (token[i + j + k + l] != ')')) {
+                                        nh_ip_str[l] = token[i + j + k + l];
+                                        l++;
+                                }
+                                nh_ip_str[l] = '\0';
+                                nh_ip = strtoul(nh_ip_str, NULL, 16);   //atoi(nh_ip_str);
 
 				if (1) {
 					RTE_LOG(INFO, LIBARP, "token: %s, "
@@ -2301,6 +2309,7 @@ static int arp_parse_args(struct pipeline_params *params)
 				lentry->port = tx_port;
 				lentry->nh = nh_ip;
 				lentry->nh_mask = nh_ip & mask;
+				printf("*********lentry_mask:%x lentry_port:%d lentry_nh:%x mask:%x\n", lentry->mask, lentry->port, lentry->nh, lentry->nh_mask);
 				p_route_data[tx_port]->route_ent_cnt++;
 				vnf_gateway = 1;
 				token = strtok(NULL, "(");
@@ -2312,9 +2321,10 @@ static int arp_parse_args(struct pipeline_params *params)
 		/* nd_route_tbl */
 		if (strcmp(arg_name, "nd_route_tbl") == 0) {
 			nd_route_tbl_present = 1;
-
+			uint8_t dest_ipv6[16];
+			char dest_ipv6_str[128];
 			uint8_t depth = 0, tx_port = 0, nh_ipv6[16];
-			uint8_t i = 0, j = 0, k = 0;
+			uint8_t i = 0, j = 0, k = 0, l = 0;
 			uint8_t nd_route_tbl_str_max_len = 128;	//64;
 //			char dest_ipv6_str[nd_route_tbl_str_max_len];
 			char depth_str[nd_route_tbl_str_max_len];
@@ -2322,39 +2332,50 @@ static int arp_parse_args(struct pipeline_params *params)
 			char nh_ipv6_str[nd_route_tbl_str_max_len];
 			char *token = strtok(arg_value, "(");
 			while (token) {
-				i = 0;
-				while ((i < (nd_route_tbl_str_max_len - 1))
-							 && (token[i] != ',')) {
-					nh_ipv6_str[i] = token[i];
-					i++;
-				}
-				nh_ipv6_str[i] = '\0';
-				my_inet_pton_ipv6(AF_INET6, nh_ipv6_str,
-							&nh_ipv6);
-				i++;
-				j = 0;
-				while ((j < (nd_route_tbl_str_max_len - 1))
-							 && (token[i + j] != ',')) {
-					depth_str[j] = token[i + j];
-					j++;
-				}
-				depth_str[j] = '\0';
-				//converting string char to integer
-				int s;
-				for (s = 0; depth_str[s] != '\0'; ++s)
-					depth = depth * 10 + depth_str[s] - '0';
+                                i = 0;
+                                while ((i < (nd_route_tbl_str_max_len - 1))
+                                       && (token[i] != ',')) {
+                                        dest_ipv6_str[i] = token[i];
+                                        i++;
+                                }
+                                dest_ipv6_str[i] = '\0';
+                                my_inet_pton_ipv6(AF_INET6, dest_ipv6_str,
+                                                  &dest_ipv6);
 
-				j++;
-				k = 0;
-				while ((k < (nd_route_tbl_str_max_len - 1))
-							 && (token[i + j + k] != ',')) {
-					tx_port_str[k] = token[i + j + k];
-					k++;
-				}
-				tx_port_str[k] = '\0';
-				tx_port = strtoul(tx_port_str, NULL, 16);	//atoi(tx_port_str);
+                                i++;
+                                j = 0;
+                                while ((j < (nd_route_tbl_str_max_len - 1))
+                                       && (token[i + j] != ',')) {
+                                        depth_str[j] = token[i + j];
+                                        j++;
+                                }
+                                depth_str[j] = '\0';
+                                //converting string char to integer
+                                int s;
+                                for (s = 0; depth_str[s] != '\0'; ++s)
+                                        depth = depth * 10 + depth_str[s] - '0';
 
-				k++;
+                                j++;
+                                k = 0;
+                                while ((k < (nd_route_tbl_str_max_len - 1))
+                                       && (token[i + j + k] != ',')) {
+                                        tx_port_str[k] = token[i + j + k];
+                                        k++;
+                                }
+                                tx_port_str[k] = '\0';
+                                tx_port = strtoul(tx_port_str, NULL, 16);       //atoi(tx_port_str);
+
+                                k++;
+                                l = 0;
+                                while ((l < (nd_route_tbl_str_max_len - 1))
+                                       && (token[i + j + k + l] != ')')) {
+                                        nh_ipv6_str[l] = token[i + j + k + l];
+                                        l++;
+                                }
+                                nh_ipv6_str[l] = '\0';
+                                my_inet_pton_ipv6(AF_INET6, nh_ipv6_str,
+                                                  &nh_ipv6);
+
 				struct nd_route_table_entry *lentry =
 					&p_nd_route_data[tx_port]->nd_route_table
 				[p_nd_route_data[tx_port]->nd_route_ent_cnt];
