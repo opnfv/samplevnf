@@ -12,12 +12,13 @@ are licensed under a Creative Commons Attribution 4.0 International License.
 You should have received a copy of the license along with this.
 If not, see <http://creativecommons.org/licenses/by/4.0/>.
 :
-The *SampleVNFs*, the *SampleVNF test cases* are opensource software,
- licensed under the terms of the Apache License, Version 2.0.
 
-===========================================
+The *SampleVNFs*, the *SampleVNF test cases* are opensource software,
+licensed under the terms of the Apache License, Version 2.0.
+
+==========================================
 OPNFV Euphrates Release Note for SampleVNF
-===========================================
+==========================================
 
 .. toctree::
    :maxdepth: 2
@@ -78,12 +79,12 @@ OPNFV platform, including:
 
 * SampleVNF source code
 
-For Euphrates release, the *SampleVNF * is used for the following
+For Euphrates release, the *SampleVNF* is used for the following
 testing:
 
 * OPNFV platform testing - generic test cases to measure the categories:
 
-  * NFVi Characterization:
+  * NFVI Characterization:
 
     * Network
 
@@ -131,9 +132,9 @@ Deliverables
 Documents
 ---------
 
- - User Guide:  To be added
+ - User Guide
 
- - Developer Guide: To be added
+ - Developer Guide
 
 
 Software Deliverables
@@ -183,7 +184,7 @@ Feature additions
 
 
 Known Issues/Faults
-------------
+-------------------
 
 
 
