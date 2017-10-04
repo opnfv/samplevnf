@@ -64,7 +64,7 @@ extern uint8_t ACL_DEBUG;
  * One counter block per ACL Thread
  */
 struct rte_ACL_counter_block {
-	char name[32];
+	char name[PIPELINE_NAME_SIZE];
 	/* as long as a counter doesn't cross cache line, writes are atomic */
 	uint64_t tpkts_processed;
 	uint64_t bytes_processed;	/* includes all L3 and higher headers */
