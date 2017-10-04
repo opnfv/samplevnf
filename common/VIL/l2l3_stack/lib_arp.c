@@ -294,13 +294,20 @@ struct arp_entry_data *get_dest_mac_addr_ipv4(const uint32_t nhip,
 				 uint32_t phy_port, struct ether_addr *hw_addr)
 {
 	struct arp_entry_data *ret_arp_data = NULL;
+	struct ether_addr *x;
 	uint8_t index;
 
 	/* as part of optimization we store mac address in cache
 	 * & thus can be sent without having to retrieve
 	 */
 	if (arp_cache_dest_mac_present(phy_port)) {
-		ether_addr_copy(get_local_cache_hw_addr(phy_port, nhip), hw_addr);
+		x = get_local_cache_hw_addr(phy_port, nhip);
+		if (!x) {
+			printf("local copy of address not stored\n");
+			return NULL;
+		}
+
+		ether_addr_copy(x, hw_addr);
 		return &arp_entry_data_default;
 	}
 
@@ -352,11 +359,17 @@ struct nd_entry_data *get_dest_mac_addr_ipv6(uint8_t nhipv6[],
 
 	struct nd_entry_data *ret_nd_data = NULL;
 	struct nd_key_ipv6 tmp_nd_key;
+	struct ether_addr *addr;
 	tmp_nd_key.port_id = phy_port;
 
 	if (nd_cache_dest_mac_present(phy_port)) {
-		ether_addr_copy(get_nd_local_link_hw_addr(
-					(uint8_t)phy_port, nhipv6), hw_addr);
+		addr = get_nd_local_link_hw_addr((uint8_t)phy_port, nhipv6);
+		if (!addr) {
+			printf("local copy not stored\n");
+			return NULL;
+		}
+
+		ether_addr_copy(addr, hw_addr);
 		return &nd_entry_data_default;
 	}
 
@@ -743,6 +756,7 @@ struct arp_entry_data *retrieve_arp_entry(struct arp_key_ipv4 arp_key, uint8_t m
 struct nd_entry_data *retrieve_nd_entry(struct nd_key_ipv6 nd_key, uint8_t mode)
 {
 	struct nd_entry_data *ret_nd_data = NULL;
+	l2_phy_interface_t *port;
 	nd_key.filler1 = 0;
 	nd_key.filler2 = 0;
 	nd_key.filler3 = 0;
@@ -822,7 +836,14 @@ struct nd_entry_data *retrieve_nd_entry(struct nd_key_ipv6 nd_key, uint8_t mode)
 
                 ret_nd_data->timer_key = callback_key;
 		/* send nd request */
-		request_nd(callback_key->ipv6, ifm_get_port(callback_key->port_id));
+		port = ifm_get_port(callback_key->port_id);
+		if (!port) {
+			printf("port returned is NULL inside retrieve_nd_entry\n");
+			rte_rwlock_write_unlock(&ret_nd_data->queue_lock);
+			return NULL;
+		}
+
+		request_nd(callback_key->ipv6, port);
 		rte_rwlock_write_unlock(&ret_nd_data->queue_lock);
 	} else {
 		if (ret_nd_data &&
@@ -1052,7 +1073,7 @@ arp_send_buffered_pkts(struct arp_entry_data *ret_arp_data,
 	int i;
 
 
-	if (!hw_addr || !ret_arp_data)
+	if (!hw_addr || !ret_arp_data || !port)
 		return;
 
 	rte_rwlock_write_lock(&ret_arp_data->queue_lock);
@@ -1097,7 +1118,7 @@ nd_send_buffered_pkts(struct nd_entry_data *ret_nd_data,
 	uint8_t *eth_dest, *eth_src;
 	int i;
 
-	if (!hw_addr || !ret_nd_data)
+	if (!hw_addr || !ret_nd_data || !port)
 		return;
 
 	rte_rwlock_write_lock(&ret_nd_data->queue_lock);
@@ -1193,8 +1214,8 @@ populate_arp_entry(const struct ether_addr *hw_addr, uint32_t ipaddr,
 		} else {
 			rte_rwlock_write_lock(&new_arp_data->queue_lock);
 			ether_addr_copy(hw_addr, &new_arp_data->eth_addr);
-			if ((new_arp_data->status == INCOMPLETE) ||
-				(new_arp_data->status == PROBE)) {
+			if (new_arp_data && ((new_arp_data->status == INCOMPLETE) ||
+				(new_arp_data->status == PROBE))) {
 				new_arp_data->status = COMPLETE;
 				new_arp_data->mode = mode;
 				new_arp_data->n_confirmed = rte_rdtsc();
@@ -1360,8 +1381,8 @@ void populate_nd_entry(const struct ether_addr *hw_addr, uint8_t ipv6[],
 		} else {
 			rte_rwlock_write_lock(&new_nd_data->queue_lock);
 			ether_addr_copy(hw_addr, &new_nd_data->eth_addr);
-			if ((new_nd_data->status == INCOMPLETE) ||
-				(new_nd_data->status == PROBE)) {
+			if (new_nd_data && ((new_nd_data->status == INCOMPLETE) ||
+				(new_nd_data->status == PROBE))) {
 				new_nd_data->status = COMPLETE;
 				new_nd_data->mode = mode;
 				new_nd_data->n_confirmed = rte_rdtsc();
@@ -2082,7 +2103,7 @@ static int arp_parse_args(struct pipeline_params *params)
 	uint32_t prv_to_pub_map_present = 0;
 
 	uint8_t n_prv_in_port = 0;
-	int i;
+	int i, len;
 	for (i = 0; i < PIPELINE_MAX_PORT_IN; i++) {
 		in_port_dir_a[i] = 0;	//make all RX ports ingress initially
 		prv_to_pub_map[i] = 0xff;
@@ -2094,6 +2115,8 @@ static int arp_parse_args(struct pipeline_params *params)
 	for (numArg = 0; numArg < params->n_args; numArg++) {
 		char *arg_name = params->args_name[numArg];
 		char *arg_value = params->args_value[numArg];
+		len = strlen(params->args_value[numArg]);
+		*(arg_value + len) = '\0';
 
 		/* arp timer expiry */
 		if (strcmp(arg_name, "arp_timer_expiry") == 0) {
@@ -2192,12 +2215,16 @@ static int arp_parse_args(struct pipeline_params *params)
 					tx_phy_port_num, txport);
 
 				if ((rxport >= PIPELINE_MAX_PORT_IN) ||
-						(txport >= PIPELINE_MAX_PORT_IN) ||
-						(in_port_dir_a[rxport] != 1)) {
+						(txport >= PIPELINE_MAX_PORT_IN)) {
 					printf
 							("CG-NAPT parse error - incorrect prv-pub translation. Rx %d, Tx %d, Rx Dir %d\n",
 							 rxport, txport,
 							 in_port_dir_a[rxport]);
+					return -1;
+				}
+
+				if (in_port_dir_a[rxport] != 1) {
+					printf("CG-NAPT parse error - incorrect rx_port supplied\n");
 					return -1;
 				}
 
@@ -2271,6 +2298,10 @@ static int arp_parse_args(struct pipeline_params *params)
                                 }
                                 tx_port_str[k] = '\0';
                                 tx_port = strtoul(tx_port_str, NULL, 16);       //atoi(tx_port_str);
+                                if (tx_port > MAX_ROUTE_ENTRY_SIZE) {
+                                        printf("tx_port is greater than route entry max size\n");
+                                        continue;
+                                }
 
                                 k++;
                                 l = 0;
@@ -2710,6 +2741,7 @@ void nd_timer_callback(struct rte_timer *timer, void *arg)
 	int j;
 	struct nd_entry_data *ret_nd_data = NULL;
 	uint64_t now;
+	l2_phy_interface_t *port;
 
         nd_key.port_id = timer_key->port_id;
         nd_key.filler1 = 0;
@@ -2755,9 +2787,13 @@ void nd_timer_callback(struct rte_timer *timer, void *arg)
 						"TIMER STARTED FOR %u seconds\n",
 							ARP_TIMER_EXPIRY);
 					}
+					port = ifm_get_port(ret_nd_data->port);
+					if (!port) {
+						printf("port is NULL in nd_timer_callback\n");
+						return;
+					}
 
-					request_nd(ret_nd_data->ipv6,
-						 ifm_get_port(ret_nd_data->port));
+					request_nd(ret_nd_data->ipv6, port);
 					if (rte_timer_reset(ret_nd_data->timer,
 								(PROBE_TIME *
 								 rte_get_tsc_hz()/ 1000),

@@ -175,6 +175,12 @@ populate_ftp_alg_entry(uint32_t ipaddr, uint8_t portid)
 	}
 	new_alg_data = (struct ftp_alg_table_entry *)
 			malloc(sizeof(new_alg_data));
+
+	if (!new_alg_data) {
+		printf("new_alg_data could not be allocated\n");
+		return;
+	}
+
 	//new_alg_data->status = INCOMPLETE;
 	new_alg_data->l4port = rte_bswap16(portid);
 	new_alg_data->ip_address = rte_bswap32(ipaddr);
@@ -488,7 +494,7 @@ void ftp_alg_dpi(
 	uint32_t public_address;
 	uint8_t *bptr_private_address;
 	/* also for PASV string */
-	char port_string[FTP_MAXIMUM_PORT_STRING_LENGTH];
+	char port_string[65];
 	char port_string_translated[FTP_MAXIMUM_PORT_STRING_LENGTH];
 	int16_t new_port_string_length;
 	int16_t old_port_string_length;

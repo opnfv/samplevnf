@@ -381,11 +381,17 @@ int get_pipelines_tokens(char *buf)
         uint32_t id;
 
         token = strtok(buf, "/ ");
+	if (!token)
+		return -1;
+
         if (strcmp(token, "pipelines")) {
                 return -1;
         }
 
         token = strtok(NULL, "/ ");
+	if (!token)
+		return -1;
+
         id = atoi(token);
         if (id > rapp->n_pipelines) {
                 return -1;
@@ -593,6 +599,11 @@ int set_hash_input_set_2(struct mg_connection *conn, uint32_t port_id,
                   "close\r\n\r\n");
         mg_printf(conn, "<html><body>");
         mg_printf(conn, "</body></html>\n");
+
+	if (!inset_field0 || !inset_field1 || !flow_type) {
+                mg_printf(conn, "inset_field0/1 or flow_type may be NULL!\n");
+		return 1;
+	}
 
         if (enable_flow_dir) {
                 mg_printf(conn, "FDIR Filter is Defined!\n");
@@ -830,11 +841,17 @@ int get_link_tokens(char *buf)
         int linkid;
 
         token = strtok(buf, "/ ");
+	if (!token)
+		return -1;
+
         if (strcmp(token, "link")) {
                 return -1;
         }
 
         token = strtok(NULL, "/ ");
+	if (!token)
+		return -1;
+
         linkid = atoi(token);
         if (linkid > current_cfg.num_ports) {
                 return -1;
@@ -1205,7 +1222,7 @@ int route_handler(struct mg_connection *conn, __rte_unused void *cbdata)
 	json_object_object_foreach(jobj, key, val) {
 		if (!strcmp(key, "portid")) {
 			portid = atoi(json_object_get_string(val));
-			if (portid > 64) {
+			if (portid >= 64) {
 				mg_printf(conn, "Port not supported!!!\n");
 				return 1;
 			} else if (current_route_parms[portid].enable) {
@@ -1566,7 +1583,7 @@ int static_cfg_handler(struct mg_connection *conn, __rte_unused void *cbdata)
 		str = strdup(json_object_get_string(values));
 		if (str)
 			memcpy(&current_cfg.ip_range[pub_ip++].value, str,
-				 sizeof(str));
+				 strlen(str));
 	}
 
 	json_object_object_get_ex(jobj, "num_worker", &values);
@@ -1976,8 +1993,6 @@ void fix_pipelines_data_types(FILE *f, const char *sect_name, struct rte_cfgfile
 				workers = 0;
 			}
 		} else {
-			//if (((workers % (current_cfg.num_workers/current_cfg.num_lb)) == 0) &&
-			//	 (workers != current_cfg.num_workers)) {
 			if (workers == (current_cfg.num_workers/current_cfg.num_lb)) {
 				tx_start_port += 2;
 				rx_start_port += 2;
@@ -2160,8 +2175,8 @@ int flow_director_handler(struct mg_connection *conn, __rte_unused void *cbdata)
         /* Handler may access the request info using mg_get_request_info */
         const struct mg_request_info *req_info = mg_get_request_info(conn);
         uint32_t port_id = 0, tuple = 0;
-        char trans_type[24], buf[MAX_BUF_SIZE];
-	char *str, field0[MAX_SIZE], field1[MAX_SIZE], field2[MAX_SIZE],
+        char buf[MAX_BUF_SIZE];
+	char field0[MAX_SIZE], field1[MAX_SIZE], field2[MAX_SIZE],
 		 field3[MAX_SIZE], flow_type[MAX_SIZE];
 
         if (!strcmp(req_info->request_method, "GET")) {
@@ -2192,7 +2207,6 @@ int flow_director_handler(struct mg_connection *conn, __rte_unused void *cbdata)
 	json_object * jobj = json_tokener_parse(buf);
 	json_object_object_foreach(jobj, key, val) {
 		if (!strcmp(key, "trans_type")) {
-			memcpy(&trans_type, str, sizeof(trans_type));
 			if (!strcmp(key, "udp")) {
 				memcpy(field2,"udp-src-port", sizeof("udp-src-port"));
 				memcpy(field3,"udp-dst-port", sizeof("udp-dst-port"));
@@ -2440,8 +2454,6 @@ rest_api_init(struct app_params *app)
 
 	app->config_file = strdup(buf);
 	app->parser_file = strdup(buf);
-
-	printf("Config file loaded :%s %s\n", app->config_file, traffic_type);
 
 end:
 	return ctx;
