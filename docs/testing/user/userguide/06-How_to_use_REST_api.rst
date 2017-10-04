@@ -91,68 +91,67 @@ for your VNF.
 URI definition for different VNF’s
 ===================================
 
-::
 
-URI	   				REST Method	     Arguments			Description
+URI           				REST Method	     Arguments			Description
 ===========================================================================================================================
-/vnf          				GET  		       	None           		Displays top level methods available
+/vnf                  			GET  		       	None           		Displays top level methods available
 
-/vnf/config   				GET         		None           		Displays the current config set
-					POST        		pci_white_list: 	Command success/failure
-								num_worker(o):
-								vnf_type(o):
-								pkt_type (o):
-								num_lb(o):
-								sw_lb(o):
-								sock_in(o):
-								hyperthread(o) :
+/vnf/config           			GET         		None           		Displays the current config set
+                                        POST                    pci_white_list:         Command success/failure
+                                                                num_worker(o):
+                                                                vnf_type(o):
+                                                                pkt_type (o):
+                                                                num_lb(o):
+                                                                sw_lb(o):
+                                                                sock_in(o):
+                                                                hyperthread(o) :
 
-/vnf/config/arp				GET			None			Displays ARP/ND info
-					POST			action: <add/del/req>	Command success/failure
-								ipv4/ipv6: <address>
-								portid: <>
-								macaddr: <> for add
+/vnf/config/arp                         GET                     None                    Displays ARP/ND info
+                                        POST                    action: <add/del/req>   Command success/failure
+                                                                ipv4/ipv6: <address>
+                                                                portid: <>
+                                                                macaddr: <> for add
 
-/vnf/config/link			GET			None
-					POST			link_id:<>		Command success/failure
-								state: <1/0>
+/vnf/config/link                        GET                     None
+                                        POST                    link_id:<>              Command success/failure
+                                                                state: <1/0>
 
-/vnf/config/link/<link id>		GET			None
-					POST						Command success/failure
-								ipv4/ipv6: <address>
-								depth: <>
+/vnf/config/link/<link id>              GET                     None
+                                        POST                    ipv4/ipv6: <address>    Command success/failure
+                                                                depth: <>
 
-/vnf/config/route			GET			None			Displays gateway route entries
-					POST			portid: <>		Adds route entries for default gateway
-								nhipv4/nhipv6: <addr>
-								depth: <>
-								type:"net/host"
 
-/vnf/config/rules(vFW/vACL only)	GET			None			Displays the methods /load/clear
-/vnf/config/rules/load			GET			None			Displays if file was loaded
-					PUT			<script file
-								with cmds>		Executes each command from script file
-/vnf/config/rules/clear			GET			None			Command success/failure clear the stat
+/vnf/config/route                       GET                     None                    Displays gateway route entries
+                                        POST                    portid: <>              Adds route entries for default gateway
+                                                                nhipv4/nhipv6: <addr>
+                                                                depth: <>
+                                                                type:"net/host"
 
-/vnf/config/nat(vCGNAPT only)		GET			None			Displays the methods /load/clear
-/vnf/config/nat/load			GET			None			Displays if file was loaded
-					PUT			<script file
-								with commands>		Executes each command from script file
+/vnf/config/rules(vFW/vACL only)        GET                     None                    Displays the methods /load/clear
+/vnf/config/rules/load                  GET                     None                    Displays if file was loaded
+                                        PUT                     <script file
+                                                                with cmds>              Executes each command from script file
+/vnf/config/rules/clear                 GET                     None                    Command success/failure clear the stat
 
-/vnf/config/nat/clear			GET			None			Command success/failure clear the stats
-/vnf/log				GET			None			This needs to be implemented for each VNF
-											just keeping this as placeholder.
+/vnf/config/nat(vCGNAPT only)           GET                     None                    Displays the methods /load/clear
+/vnf/config/nat/load                    GET                     None                    Displays if file was loaded
+                                        PUT                     <script file
+                                                                 with commands>         Executes each command from script file
 
-/vnf/dbg				GET			None			Will display methods supported like /pipelines/cmd
-/vnf/dbg/pipelines			GET			None			Displays pipeline information(names)
-											of each pipelines
-/vnf/dbg/pipelines/<pipe id>		GET			None			Displays debug level for particular pipeline
+/vnf/config/nat/clear                   GET                     None                    Command success/failure clear the stats
+/vnf/log                                GET                     None                    This needs to be implemented for each VNF
+                                                                                        just keeping this as placeholder.
 
-/vnf/dbg/cmd				GET			None			Last executed command parameters
-					POST			cmd:			Command success/failure
-								dbg:
-								d1:
-								d2:
+/vnf/dbg                                GET                     None                    Will display methods supported like /pipelines/cmd
+/vnf/dbg/pipelines                      GET                     None                    Displays pipeline information(names)
+                                                                                        of each pipelines
+/vnf/dbg/pipelines/<pipe id>            GET                     None                    Displays debug level for particular pipeline
+
+/vnf/dbg/cmd                            GET                     None                    Last executed command parameters
+                                        POST                    cmd:                    Command success/failure
+                                                                dbg:
+                                                                d1:
+                                                                d2:
 
 API Usage
 ===============
@@ -181,7 +180,7 @@ void rest_api_<vnf>_init(struct mg_context *ctx, struct app_params *app)
 {
         myapp = app;
 
-	VNF specific command registration
+        VNF specific command registration
         mg_set_request_handler(,,,);
 
 }
@@ -199,7 +198,7 @@ export VNF_CORE=`pwd`
 export RTE_SDK=`pwd`/dpdk-16.04
 export RTE_TARGET=x86_64-native-linuxapp-gcc
 
-./build/vFW -p 0x3 (Without the -f & -s option)
+./build/vFW (Without the -f & -s option)
 
 1. When VNF(vCGNAPT/vACL/vFW) is launched it waits for user to provide the
 /vnf/config REST method. A typical curl command if used will look like below
@@ -220,10 +219,10 @@ public_ip_port_range being added, please note the "/" being used to seperate mul
 inputs for public_ip_port_range.
 
 e.g curl -X POST -H "Content-Type:application/json" -d '{"pci_white_list": "0000:05:00.0 0000:05:00.2 0000:07:00.0 0000:07:00.2",
-		 "num_lb":"2", "num_worker":"10","public_ip_port_range_0": "04040000:(1, 65535)/04040001:(1, 65535)",
-		 "public_ip_port_range_1": "05050000:(1, 65535)/05050001:(1, 65535)" }' http://10.223.197.179/vnf/config
+                "num_lb":"2", "num_worker":"10","public_ip_port_range_0": "04040000:(1, 65535)/04040001:(1, 65535)",
+                "public_ip_port_range_1": "05050000:(1, 65535)/05050001:(1, 65535)" }' http://10.223.197.179/vnf/config
 
-2. Check the Link IP's using the REST API
+2. Check the Link IP's using the REST API (vCGNAPT/vACL/vFW)
 e.g curl <IP>/vnf/config/link
 
 This would indicate the number of links enabled. You should enable all the links
@@ -234,7 +233,7 @@ http://<IP>/vnf/config/link
 curl -X POST -H "Content-Type:application/json" -d '{"linkid": "1", "state": "1"}'
 http://<IP>/vnf/config/link
 
-3. Now that links are enabled we can configure IP's using link method as follows
+3. Now that links are enabled we can configure IP's using link method as follows (vCGNAPT/vACL/vFW)
 
 e.g  curl -X POST -H "Content-Type:application/json" -d '{"ipv4":"<IP to be configured>","depth":"24"}'
 http://<IP>/vnf/config/link/0
@@ -248,32 +247,58 @@ required.
 curl -X POST -H "Content-Type:application/json" -d '{"portid":"0", "nhipv4":"IPV4 address",
  "depth":"8", "type":"net"}' http://<IP>/vnf/config/route
 
+4. Adding arp entries we can use this method (vCGNAPT/vACL/vFW)
+/vnf/config/arp
 
-4. For Firewall/ACL in order to load the rules a script file needs to be posted
-using a script.
+e.g curl -X POST -H "Content-Type:application/json" -d '{"action":"add", "ipv4":"202.16.100.20",
+					 "portid":"0", "macaddr":"00:00:00:00:00:01"}'
+					 http://10.223.166.213/vnf/config/arp
+curl -X POST -H "Content-Type:application/json" -d '{"action":"add", "ipv4":"172.16.40.20",
+					 "portid":"1", "macaddr":"00:00:00:00:00:02"}'
+					 http://10.223.166.213/vnf/config/arp
+
+5. Adding route entries we can use this method (vCGNAPT/vACL/vFW)
+vnf/config/route
+
+e.g curl -X POST -H "Content-Type:application/json" -d '{"type":"net", "depth":"8", "nhipv4":"202.16.100.20",
+						 "portid":"0"}' http://10.223.166.240/vnf/config/route
+curl -X POST -H "Content-Type:application/json" -d '{"type":"net", "depth":8", "nhipv4":"172.16.100.20",
+						 "portid":"1"}' http://10.223.166.240/vnf/config/route
+
+5. In order to load the rules a script file needs to be posting a script.(vACL/vFW)
 /vnf/config/rules/load
 
 Typical example for loading a script file is shown below
 curl -X PUT -F 'image=@<path to file>' http://<IP>/vnf/config/rules/load
 
-vCGNAPT can use the following REST api's for runtime configuring through a script
+typically arpadd/routeadd commands can be provided as part of this to
+add static arp entries & adding route entries providing the NHIP's.
+
+6. The following REST api's for runtime configuring through a script (vCGNAPT Only)
 /vnf/config/rules/clear
-/vnf/config/nat(vCGNAPT only)
+/vnf/config/nat
 /vnf/config/nat/load
 
-For debug purpose following REST API's could be used as described above.
+7. For debug purpose following REST API's could be used as described above.(vCGNAPT/vACL/vFW)
 
 /vnf/dbg
+
+e.g curl http://10.223.166.240/vnf/config/dbg
+
 /vnf/dbg/pipelines
+e.g curl http://10.223.166.240/vnf/config/dbg/pipelines
+
 /vnf/dbg/pipelines/<pipe id>
+e.g curl http://10.223.166.240/vnf/config/dbg/pipelines/<id>
+
 /vnf/dbg/cmd
 
-5. For stats we can use the following method
+8. For stats we can use the following method (vCGNAPT/vACL/vFW)
 
 /vnf/stats
 e.g curl <IP>/vnf/stats
 
-6. For quittiong the application
+9. For quittiong the application (vCGNAPT/vACL/vFW)
 /vnf/quit
 
 e.g curl <IP>/vnf/quit
