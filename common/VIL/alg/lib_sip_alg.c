@@ -162,6 +162,7 @@ void lib_sip_alg_init(void)
 }
 
 char *itoa(long n);
+char itoa_buf[25];
 char *itoa(long n)
 {
 	int len = n == 0 ? 1 : floor(log10l(labs(n))) + 1;
@@ -169,10 +170,8 @@ char *itoa(long n)
 	if (n < 0)
 		len++;		/* room for negative sign '-' */
 
-	char *buf = calloc(sizeof(char), len + 1);	// +1 for null
-	if(buf != NULL)
-		snprintf(buf, len + 1, "%ld", n);
-	return buf;
+	snprintf(itoa_buf, len + 1, "%ld", n);
+        return (char *)&itoa_buf;
 }
 
 struct sip_alg_table_entry *retrieve_sip_alg_entry(
@@ -340,6 +339,10 @@ int sip_alg_dpi(struct rte_mbuf *pkt, enum pkt_dir pkt_direction,
 			sip_call_id =
 					getSipCallIdStr(pSipMsg + pos +
 							TAG_TO_DATAPOS(SIP_ALG_CALLID));
+			if (!sip_call_id) {
+				printf("sip_call_id returned is NULL\n");
+				return 0;
+			}
 
 		if (ALG_DEBUG)
 			printf("sipalgdpi: %d call id %s\n", __LINE__,
@@ -571,6 +574,9 @@ char *sip_alg_process(struct rte_mbuf *pkt, uint16_t pkt_direction,
 		}
 
 	int sipMsgLen = (pTmpSipMsg - pSipMsg);
+
+	if ((sipMsgLen + sdpDataLen) > strlen(pSipMsg))
+		return NULL;
 
 	char *pSipMsgEnd = pSipMsg + sipMsgLen + sdpDataLen;
 
@@ -1889,7 +1895,11 @@ SipMsgAdvance2:
 
 		sdpMsgLen += sdpDataLen;
 		tmpSdpLen = itoa(sdpMsgLen);
-		int tmpStrLen = strlen(tmpSdpLen);
+		int tmpStrLen;
+		if (tmpSdpLen)
+			tmpStrLen = strlen(tmpSdpLen);
+		else
+			tmpStrLen = 0;
 
 	/* move to Content length field & change the length to sipMsgLen */
 		if (natSipAlgMsgFieldPos(pSipMsg, SIP_ALG_CONTENT_LEN, &pos, 0)
@@ -2224,6 +2234,9 @@ char *natSipAlgModifyPayloadAddrPort(
 	/* output difflen between old str len & modified new str length */
 	if (newStrLen > oldStrLen)
 		*diffLen = newStrLen - oldStrLen;
+
+	if (tmpPort)
+		free(tmpPort);
 
 	return pSipMsg;		/* modified SIP Msg */
 }
