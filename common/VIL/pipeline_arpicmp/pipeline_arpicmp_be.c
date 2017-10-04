@@ -210,7 +210,7 @@ void register_pipeline_Qs(uint8_t pipeline_num, struct pipeline *p)
 		switch (myApp->pipeline_params[pipeline_num].
 			 pktq_in[port_count].type){
 
-		case APP_PKTQ_OUT_HWQ:
+		case APP_PKTQ_IN_HWQ:
 			 hwq = rte->ports_in[port_count].h_port;
 			 out_swq = rte->ports_out[port_count].h_port;
 			 printf("out_swq: %s\n",
@@ -230,7 +230,7 @@ void register_pipeline_Qs(uint8_t pipeline_num, struct pipeline *p)
 			}
 		break;
 
-		case APP_PKTQ_OUT_SWQ:
+		case APP_PKTQ_IN_SWQ:
 			 in_swq = rte->ports_in[port_count].h_port;
 			 out_swq = rte->ports_out[port_count].h_port;
 			 printf("in_swq : %s\n",
@@ -432,7 +432,7 @@ void set_phy_inport_id(uint8_t pipeline_num, struct pipeline *p, uint8_t *map)
 		switch (myApp->pipeline_params[pipeline_num].
 			pktq_in[port_count].type) {
 
-		case APP_PKTQ_OUT_HWQ:
+		case APP_PKTQ_IN_HWQ:
 			hwq = rte->ports_in[port_count].h_port;
 			map[hwq->port_id] = index++;
 			printf("outport_id[%d]:%d\n", index - 1,
