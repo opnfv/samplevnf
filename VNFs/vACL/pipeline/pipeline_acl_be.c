@@ -2638,7 +2638,7 @@ static void *pipeline_acl_init(struct pipeline_params *params,
 	if (p == NULL)
 		return NULL;
 
-	strcpy(p->name, params->name);
+	strncpy(p->name, params->name, PIPELINE_NAME_SIZE);
 	p->log_level = params->log_level;
 
 	PLOG(p, HIGH, "ACL");
@@ -2681,7 +2681,7 @@ static void *pipeline_acl_init(struct pipeline_params *params,
 
 	rte_ACL_hi_counter_block_in_use++;
 	counter_ptr = &rte_acl_counter_table[rte_ACL_hi_counter_block_in_use];
-	strcpy(counter_ptr->name, params->name);
+	strncpy(counter_ptr->name, params->name,PIPELINE_NAME_SIZE);
 	p_acl->action_counter_index = rte_ACL_hi_counter_block_in_use;
 
 	p_acl->counters = counter_ptr;
