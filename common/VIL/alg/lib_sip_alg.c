@@ -169,6 +169,9 @@ char *itoa(long n)
 	if (n < 0)
 		len++;		/* room for negative sign '-' */
 
+	if (n > (len + 1))
+		n = len + 1;
+
 	char *buf = calloc(sizeof(char), len + 1);	// +1 for null
 	if(buf != NULL)
 		snprintf(buf, len + 1, "%ld", n);
@@ -340,6 +343,10 @@ int sip_alg_dpi(struct rte_mbuf *pkt, enum pkt_dir pkt_direction,
 			sip_call_id =
 					getSipCallIdStr(pSipMsg + pos +
 							TAG_TO_DATAPOS(SIP_ALG_CALLID));
+			if (!sip_call_id) {
+				printf("sip_call_id returned is NULL\n");
+				return 0;
+			}
 
 		if (ALG_DEBUG)
 			printf("sipalgdpi: %d call id %s\n", __LINE__,
@@ -571,6 +578,9 @@ char *sip_alg_process(struct rte_mbuf *pkt, uint16_t pkt_direction,
 		}
 
 	int sipMsgLen = (pTmpSipMsg - pSipMsg);
+
+	if ((sipMsgLen + sdpDataLen) > strlen(pSipMsg))
+		return NULL;
 
 	char *pSipMsgEnd = pSipMsg + sipMsgLen + sdpDataLen;
 
