@@ -19,5 +19,6 @@ SampleVNF User Guide
    05-How_to_run_SampleVNFs
    06-How_to_use_REST_api
    07-Config_files
+   08-CLI_Commands_Reference
    glossary
    references
