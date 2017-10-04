@@ -100,14 +100,20 @@ app_init_eal(struct app_params *app)
 	uint32_t i;
 	int status;
 
+	if (unlikely (n_args >= APP_EAL_ARGC))
+		goto error_exit;
 	app->eal_argv[n_args++] = strdup(app->app_name);
 
 	app_core_build_core_mask_string(app, core_mask_str);
 	snprintf(buffer, sizeof(buffer), "-c%s", core_mask_str);
+	if (unlikely (n_args >= APP_EAL_ARGC))
+		goto error_exit;
 	app->eal_argv[n_args++] = strdup(buffer);
 
 	if (p->coremap) {
 		snprintf(buffer, sizeof(buffer), "--lcores=%s", p->coremap);
+		if (unlikely (n_args >= APP_EAL_ARGC))
+			goto error_exit;
 		app->eal_argv[n_args++] = strdup(buffer);
 	}
 
@@ -116,19 +122,27 @@ app_init_eal(struct app_params *app)
 			sizeof(buffer),
 			"--master-lcore=%" PRIu32,
 			p->master_lcore);
+		if (unlikely (n_args >= APP_EAL_ARGC))
+			goto error_exit;
 		app->eal_argv[n_args++] = strdup(buffer);
 	}
 
 	snprintf(buffer, sizeof(buffer), "-n%" PRIu32, p->channels);
+	if (unlikely (n_args >= APP_EAL_ARGC))
+		goto error_exit;
 	app->eal_argv[n_args++] = strdup(buffer);
 
 	if (p->memory_present) {
 		snprintf(buffer, sizeof(buffer), "-m%" PRIu32, p->memory);
+		if (unlikely (n_args >= APP_EAL_ARGC))
+			goto error_exit;
 		app->eal_argv[n_args++] = strdup(buffer);
 	}
 
 	if (p->ranks_present) {
 		snprintf(buffer, sizeof(buffer), "-r%" PRIu32, p->ranks);
+		if (unlikely (n_args >= APP_EAL_ARGC))
+			goto error_exit;
 		app->eal_argv[n_args++] = strdup(buffer);
 	}
 
@@ -140,6 +154,8 @@ app_init_eal(struct app_params *app)
 			sizeof(buffer),
 			"--pci-blacklist=%s",
 			p->pci_blacklist[i]);
+		if (unlikely (n_args >= APP_EAL_ARGC))
+			goto error_exit;
 		app->eal_argv[n_args++] = strdup(buffer);
 	}
 
@@ -163,6 +179,8 @@ app_init_eal(struct app_params *app)
 				sizeof(buffer),
 				"--pci-whitelist=%s",
 				pci_bdf);
+			if (unlikely (n_args >= APP_EAL_ARGC))
+				goto error_exit;
 			app->eal_argv[n_args++] = strdup(buffer);
 		}
 
@@ -174,11 +192,15 @@ app_init_eal(struct app_params *app)
 			sizeof(buffer),
 			"--vdev=%s",
 			p->vdev[i]);
+		if (unlikely (n_args >= APP_EAL_ARGC))
+			goto error_exit;
 		app->eal_argv[n_args++] = strdup(buffer);
 	}
 
 	if ((p->vmware_tsc_map_present) && p->vmware_tsc_map) {
 		snprintf(buffer, sizeof(buffer), "--vmware-tsc-map");
+		if (unlikely (n_args >= APP_EAL_ARGC))
+			goto error_exit;
 		app->eal_argv[n_args++] = strdup(buffer);
 	}
 
@@ -187,11 +209,15 @@ app_init_eal(struct app_params *app)
 			sizeof(buffer),
 			"--proc-type=%s",
 			p->proc_type);
+		if (unlikely (n_args >= APP_EAL_ARGC))
+			goto error_exit;
 		app->eal_argv[n_args++] = strdup(buffer);
 	}
 
 	if (p->syslog) {
 		snprintf(buffer, sizeof(buffer), "--syslog=%s", p->syslog);
+		if (unlikely (n_args >= APP_EAL_ARGC))
+			goto error_exit;
 		app->eal_argv[n_args++] = strdup(buffer);
 	}
 
@@ -200,41 +226,57 @@ app_init_eal(struct app_params *app)
 			sizeof(buffer),
 			"--log-level=%" PRIu32,
 			p->log_level);
+		if (unlikely (n_args >= APP_EAL_ARGC))
+			goto error_exit;
 		app->eal_argv[n_args++] = strdup(buffer);
 	}
 
 	if ((p->version_present) && p->version) {
 		snprintf(buffer, sizeof(buffer), "-v");
+		if (unlikely (n_args >= APP_EAL_ARGC))
+			goto error_exit;
 		app->eal_argv[n_args++] = strdup(buffer);
 	}
 
 	if ((p->help_present) && p->help) {
 		snprintf(buffer, sizeof(buffer), "--help");
+		if (unlikely (n_args >= APP_EAL_ARGC))
+			goto error_exit;
 		app->eal_argv[n_args++] = strdup(buffer);
 	}
 
 	if ((p->no_huge_present) && p->no_huge) {
 		snprintf(buffer, sizeof(buffer), "--no-huge");
+		if (unlikely (n_args >= APP_EAL_ARGC))
+			goto error_exit;
 		app->eal_argv[n_args++] = strdup(buffer);
 	}
 
 	if ((p->no_pci_present) && p->no_pci) {
 		snprintf(buffer, sizeof(buffer), "--no-pci");
+		if (unlikely (n_args >= APP_EAL_ARGC))
+			goto error_exit;
 		app->eal_argv[n_args++] = strdup(buffer);
 	}
 
 	if ((p->no_hpet_present) && p->no_hpet) {
 		snprintf(buffer, sizeof(buffer), "--no-hpet");
+		if (unlikely (n_args >= APP_EAL_ARGC))
+			goto error_exit;
 		app->eal_argv[n_args++] = strdup(buffer);
 	}
 
 	if ((p->no_shconf_present) && p->no_shconf) {
 		snprintf(buffer, sizeof(buffer), "--no-shconf");
+		if (unlikely (n_args >= APP_EAL_ARGC))
+			goto error_exit;
 		app->eal_argv[n_args++] = strdup(buffer);
 	}
 
 	if (p->add_driver) {
 		snprintf(buffer, sizeof(buffer), "-d=%s", p->add_driver);
+		if (unlikely (n_args >= APP_EAL_ARGC))
+			goto error_exit;
 		app->eal_argv[n_args++] = strdup(buffer);
 	}
 
@@ -243,11 +285,15 @@ app_init_eal(struct app_params *app)
 			sizeof(buffer),
 			"--socket-mem=%s",
 			p->socket_mem);
+		if (unlikely (n_args >= APP_EAL_ARGC))
+			goto error_exit;
 		app->eal_argv[n_args++] = strdup(buffer);
 	}
 
 	if (p->huge_dir) {
 		snprintf(buffer, sizeof(buffer), "--huge-dir=%s", p->huge_dir);
+		if (unlikely (n_args >= APP_EAL_ARGC))
+			goto error_exit;
 		app->eal_argv[n_args++] = strdup(buffer);
 	}
 
@@ -256,6 +302,8 @@ app_init_eal(struct app_params *app)
 			sizeof(buffer),
 			"--file-prefix=%s",
 			p->file_prefix);
+		if (unlikely (n_args >= APP_EAL_ARGC))
+			goto error_exit;
 		app->eal_argv[n_args++] = strdup(buffer);
 	}
 
@@ -264,11 +312,15 @@ app_init_eal(struct app_params *app)
 			sizeof(buffer),
 			"--base-virtaddr=%s",
 			p->base_virtaddr);
+		if (unlikely (n_args >= APP_EAL_ARGC))
+			goto error_exit;
 		app->eal_argv[n_args++] = strdup(buffer);
 	}
 
 	if ((p->create_uio_dev_present) && p->create_uio_dev) {
 		snprintf(buffer, sizeof(buffer), "--create-uio-dev");
+		if (unlikely (n_args >= APP_EAL_ARGC))
+			goto error_exit;
 		app->eal_argv[n_args++] = strdup(buffer);
 	}
 
@@ -277,15 +329,21 @@ app_init_eal(struct app_params *app)
 			sizeof(buffer),
 			"--vfio-intr=%s",
 			p->vfio_intr);
+		if (unlikely (n_args >= APP_EAL_ARGC))
+			goto error_exit;
 		app->eal_argv[n_args++] = strdup(buffer);
 	}
 
 	if ((p->xen_dom0_present) && (p->xen_dom0)) {
 		snprintf(buffer, sizeof(buffer), "--xen-dom0");
+		if (unlikely (n_args >= APP_EAL_ARGC))
+			goto error_exit;
 		app->eal_argv[n_args++] = strdup(buffer);
 	}
 
 	snprintf(buffer, sizeof(buffer), "--");
+	if (unlikely (n_args >= APP_EAL_ARGC))
+		goto error_exit;
 	app->eal_argv[n_args++] = strdup(buffer);
 
 	app->eal_argc = n_args;
@@ -301,8 +359,10 @@ app_init_eal(struct app_params *app)
 	}
 
 	status = rte_eal_init(app->eal_argc, app->eal_argv);
-	if (status < 0)
+	if (status < 0) {
+error_exit:
 		rte_panic("EAL init error\n");
+	}
 }
 
 static inline int
@@ -536,7 +596,7 @@ app_link_up_internal(struct app_params *app, struct app_link_params *cp)
 	struct rte_eth_link link;
 
         if(app == NULL || cp == NULL)
-                printf("NULL Pointers");
+		rte_panic("NULL Pointers");
 
 #if RTE_VERSION < 0x100b0000
 	if (app_link_is_virtual(cp)) {
@@ -559,7 +619,7 @@ app_link_down_internal(struct app_params *app, struct app_link_params *cp)
 	struct rte_eth_link link;
 
         if(app == NULL || cp == NULL)
-                printf("NULL Pointers");
+                rte_panic("NULL Pointers");
 
 #if RTE_VERSION < 0x100b0000
 	if (app_link_is_virtual(cp)) {

@@ -2235,7 +2235,7 @@ static int cgnapt_in_port_ah_mix(struct rte_pipeline *rte_p,
 				*outport_id = p_nat->outport_id[dest_if];
 
 				ret_arp_data = get_dest_mac_addr_ipv4(nhip,
-						dest_if, (struct ether_addr *)eth_dest);
+						dest_if, (struct ether_addr *)&hw_addr);
 
 				if (unlikely(ret_arp_data == NULL)) {
 
@@ -3695,6 +3695,12 @@ pkt_work_cgnapt_ipv4_prv(
 		src_port = RTE_MBUF_METADATA_UINT16_PTR(pkt, src_port_offset);
 		dst_port = RTE_MBUF_METADATA_UINT16_PTR(pkt, dst_port_offset);
 	break;
+	default: /* KW fix: unknown is treated as TCP/UDP */
+		src_port_offset = SRC_PRT_OFST_IP4_TCP;
+		dst_port_offset = DST_PRT_OFST_IP4_TCP;
+		src_port = RTE_MBUF_METADATA_UINT16_PTR(pkt, src_port_offset);
+		dst_port = RTE_MBUF_METADATA_UINT16_PTR(pkt, dst_port_offset);
+	break;
 	}
 
 	uint8_t *eth_dest = RTE_MBUF_METADATA_UINT8_PTR(pkt, MBUF_HDR_ROOM);
@@ -4476,6 +4482,14 @@ pkt4_work_cgnapt_ipv4_prv(
 			/*Sequence number */
 			dst_port_offset = MBUF_HDR_ROOM + ETH_HDR_SIZE +
 						IP_HDR_SIZE + 6;
+			src_port = RTE_MBUF_METADATA_UINT16_PTR(pkt,
+					src_port_offset);
+			dst_port = RTE_MBUF_METADATA_UINT16_PTR(pkt,
+					dst_port_offset);
+		break;
+		default: /* KW fix: unknown is treated as TCP/UDP */
+			src_port_offset = SRC_PRT_OFST_IP4_TCP;
+			dst_port_offset = DST_PRT_OFST_IP4_TCP;
 			src_port = RTE_MBUF_METADATA_UINT16_PTR(pkt,
 					src_port_offset);
 			dst_port = RTE_MBUF_METADATA_UINT16_PTR(pkt,
@@ -8107,7 +8121,7 @@ static void *pipeline_cgnapt_init(struct pipeline_params *params, void *arg)
 
 	all_pipeline_cgnapt[n_cgnapt_pipeline++] = p_nat;
 
-	strcpy(p->name, params->name);
+	strncpy(p->name, params->name,PIPELINE_NAME_SIZE);
 	p->log_level = params->log_level;
 
 	PLOG(p, HIGH, "CG-NAPT");
@@ -10502,7 +10516,7 @@ void all_cgnapt_stats(char *buf)
 		len += sprintf(buf + len, "egress %" PRIu64 "\n", p_nat->enaptedPktCount);
 		len += sprintf(buf + len, "arpicmp pkts %" PRIu64 "\n", p_nat->arpicmpPktCount);
 
-	printf("\nCG-NAPT Packet Stats:\n");
+		printf("\nCG-NAPT Packet Stats:\n");
 		printf("pipeline %d stats:\n", p_nat->pipeline_num);
 		printf("Received %" PRIu64 ",", p_nat->receivedPktCount);
 		printf("Missed %" PRIu64 ",", p_nat->missedPktCount);
@@ -10557,7 +10571,7 @@ void all_cgnapt_stats(char *buf)
 	len += sprintf(buf + len, "egress %" PRIu64 "\n", enaptedPktCount);
 	len += sprintf(buf + len, "arpicmp pkts %" PRIu64 "\n", arpicmpPktCount);
 
- printf("\nTotal pipeline stats:\n");
+	printf("\nTotal pipeline stats:\n");
 	printf("Received %" PRIu64 ",", receivedPktCount);
 	printf("Missed %" PRIu64 ",", missedPktCount);
 	printf("Dropped %" PRIu64 ",",  naptDroppedPktCount);

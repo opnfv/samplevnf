@@ -1993,6 +1993,7 @@ main_loop(__attribute__((unused)) void *dummy)
 #endif /* ENABLE_MULTI_BUFFER_OPTIMIZE */
 		}
 	}
+	return 0;
 }
 
 /* display usage */

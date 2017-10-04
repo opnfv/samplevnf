@@ -1969,7 +1969,7 @@ pipeline_vfw_parse_args(struct pipeline_vfw *vfw_pipe,
               if (strcmp(arg_name, "n_flows") == 0) {
                      int n_flows = atoi(arg_value);
 
-                     if (n_flows == 0)
+                     if ((n_flows == 0) || (n_flows > 8000000))
                             return -1;
 
                      /* must be power of 2, round up if not */
