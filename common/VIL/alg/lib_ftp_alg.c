@@ -174,7 +174,13 @@ populate_ftp_alg_entry(uint32_t ipaddr, uint8_t portid)
 		return;
 	}
 	new_alg_data = (struct ftp_alg_table_entry *)
-			malloc(sizeof(new_alg_data));
+			malloc(sizeof(struct ftp_alg_table_entry));
+
+	if (!new_alg_data) {
+		printf("new_alg_data could not be allocated\n");
+		return;
+	}
+
 	//new_alg_data->status = INCOMPLETE;
 	new_alg_data->l4port = rte_bswap16(portid);
 	new_alg_data->ip_address = rte_bswap32(ipaddr);
@@ -482,18 +488,18 @@ void ftp_alg_dpi(
 	uint16_t private_port_number;
 	uint16_t public_port_number;
 	uint16_t ip1, ip2, ip3, ip4, port1, port2;
-	int16_t tcpSeqdiff;
+	int16_t tcpSeqdiff = 0;
 	int16_t ackSeqdiff, ackAdjust;
 	uint32_t private_address;
 	uint32_t public_address;
 	uint8_t *bptr_private_address;
 	/* also for PASV string */
-	char port_string[FTP_MAXIMUM_PORT_STRING_LENGTH];
+	char port_string[65];
 	char port_string_translated[FTP_MAXIMUM_PORT_STRING_LENGTH];
-	int16_t new_port_string_length;
+	int16_t new_port_string_length = 0;
 	int16_t old_port_string_length;
 	int dummy_value;
-	struct cgnapt_table_entry *egress_entry, *ingress_entry;
+	struct cgnapt_table_entry *egress_entry = NULL, *ingress_entry;
 	uint32_t ct_key[10];
 	uint8_t key_direction;
 	/*Since v6 is not supported now*/
@@ -597,7 +603,7 @@ void ftp_alg_dpi(
 		&ip1, &ip2, &ip3, &ip4, &port1, &port2) ==
 		FTP_PASV_PARAMETER_COUNT){
 
-	sprintf (port_string, FTP_PASV_PARAMETER_STRING, FTP_PASV_RETURN_CODE,
+	snprintf (port_string, sizeof(port_string), FTP_PASV_PARAMETER_STRING, FTP_PASV_RETURN_CODE,
 		ip1, ip2, ip3, ip4, port1, port2);
 
 	int i = 0;
@@ -672,22 +678,25 @@ void ftp_alg_dpi(
 			((thdr->data_off & 0xf0) >> 2) - ip_hdr_size_bytes;
 	cgnat_cnxn_tracker->hash_table_entries[ct_position].
 			tcp_payload_size = tmp_tcp_paylod_size;
+	if(egress_entry) {
 
-	/*Adding ALG entry , params to be derived from egress entry*/
-	populate_ftp_alg_entry(egress_entry->data.pub_ip,
-			egress_entry->data.pub_port);
-	/* payload modification */
-	new_port_string_length = ftp_alg_modify_payload(egress_entry,
-					port_string,
-					port_string_translated, 1);
-	strncpy(tcp_header_end, port_string_translated,
-		strlen(port_string_translated));
-	tcpSeqdiff = ftp_alg_delta_tcp_sequence( pkt, port_string,
+		/*Adding ALG entry , params to be derived from egress entry*/
+		populate_ftp_alg_entry(egress_entry->data.pub_ip,
+				egress_entry->data.pub_port);
+
+		/* payload modification */
+		new_port_string_length = ftp_alg_modify_payload(egress_entry,
+				port_string,
+				port_string_translated, 1);
+		strncpy(tcp_header_end, port_string_translated,
+				strlen(port_string_translated));
+		tcpSeqdiff = ftp_alg_delta_tcp_sequence( pkt, port_string,
 			cgnat_cnxn_tracker->hash_table_entries
 			[ct_position].tcpSeqdiff,
 			old_port_string_length,
 			new_port_string_length);
 
+	}
 	/* same as rte_synproxy_adjust_pkt_length() in ct */
 	ftp_alg_modify_pkt_len(pkt);
 	/*
@@ -822,19 +831,21 @@ void ftp_alg_dpi(
 			tcp_payload_size = tmp_tcp_paylod_size;
 		/*ALG entry add, params to be derived from egress entry*/
 
-		populate_ftp_alg_entry(egress_entry->data.pub_ip,
-			egress_entry->data.pub_port);
-		/* payload modification */
-		new_port_string_length = ftp_alg_modify_payload(egress_entry,
-						port_string,
-						port_string_translated, 0);
-		strncpy(tcp_header_end, port_string_translated,
-				strlen(port_string_translated));
-		tcpSeqdiff = ftp_alg_delta_tcp_sequence( pkt, port_string,
-				cgnat_cnxn_tracker->hash_table_entries
-				[ct_position].tcpSeqdiff,
-				old_port_string_length,
-				new_port_string_length);
+		if(egress_entry) {
+			populate_ftp_alg_entry(egress_entry->data.pub_ip,
+					egress_entry->data.pub_port);
+			/* payload modification */
+			new_port_string_length = ftp_alg_modify_payload(egress_entry,
+					port_string,
+					port_string_translated, 0);
+			strncpy(tcp_header_end, port_string_translated,
+					strlen(port_string_translated));
+			tcpSeqdiff = ftp_alg_delta_tcp_sequence( pkt, port_string,
+					cgnat_cnxn_tracker->hash_table_entries
+					[ct_position].tcpSeqdiff,
+					old_port_string_length,
+					new_port_string_length);
+		}
 		/* same as rte_synproxy_adjust_pkt_length() in ct */
 		ftp_alg_modify_pkt_len(pkt);
 

@@ -363,7 +363,7 @@ struct rte_mbuf *request_nd(uint8_t ipv6[], l2_phy_interface_t *port)
 	int i;
 
 	struct rte_mbuf *icmpv6_pkt = lib_nd_pkt[port->pmdid];
-	if (icmpv6_pkt == NULL) {
+	if ((icmpv6_pkt == NULL) || (port == NULL)) {
 		if (ARPICMP_DEBUG)
 			printf("Error allocating icmpv6_pkt rte_mbuf\n");
 		return NULL;

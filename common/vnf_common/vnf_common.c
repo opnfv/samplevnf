@@ -141,10 +141,11 @@ void trim(char *input)
 	char result[len + 1];
 
 	memset(result, 0, sizeof(result));
-	for (i = 0; input[i] != '\0'; i++) {
+	for (i = 0; (input[i] != '\0') && (i < PIPELINE_MAX_ARGS); i++) {
 		if (!isspace(input[i]))
 			result[j++] = input[i];
 	}
+	result[j] = '\0';
 
-	strncpy(input, result, len);
+	strncpy(input, result, strlen(result));
 }
