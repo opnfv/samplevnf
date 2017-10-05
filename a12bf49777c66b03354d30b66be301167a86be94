@@ -1,0 +1,7 @@
+Code-Review+2: Deepak S <deepak.s@linux.intel.com>
+Verified+1: Deepak S <deepak.s@linux.intel.com>
+Submitted-by: Deepak S <deepak.s@linux.intel.com>
+Submitted-at: Thu, 05 Oct 2017 04:44:45 +0000
+Reviewed-on: https://gerrit.opnfv.org/gerrit/44305
+Project: samplevnf
+Branch: refs/heads/stable/euphrates
