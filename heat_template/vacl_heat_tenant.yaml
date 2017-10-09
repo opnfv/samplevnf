@@ -1,0 +1,521 @@
+{
+    "description": "Stack built by the yardstick framework for root on host d891f47de4a1 2017-10-08 19:41:19.\nAll referred generated resources are prefixed with the template\nname (i.e. vacl).",
+    "heat_template_version": "2013-05-23",
+    "outputs": {
+        "vacl.vacl": {
+            "description": "VM UUID",
+            "value": {
+                "get_resource": "vacl.vacl"
+            }
+        },
+        "vacl.vacl-fip": {
+            "description": "floating ip vacl.vacl-fip",
+            "value": {
+                "get_attr": [
+                    "vacl.vacl-fip",
+                    "ip"
+                ]
+            }
+        },
+        "vacl.vacl-mgmt-port": {
+            "description": "Address for interface vacl.vacl-mgmt-port",
+            "value": {
+                "get_attr": [
+                    "vacl.vacl-mgmt-port",
+                    "fixed_ips",
+                    0,
+                    "ip_address"
+                ]
+            }
+        },
+        "vacl.vacl-mgmt-port-device_id": {
+            "description": "Device ID for interface vacl.vacl-mgmt-port",
+            "value": {
+                "get_attr": [
+                    "vacl.vacl-mgmt-port",
+                    "device_id"
+                ]
+            }
+        },
+        "vacl.vacl-mgmt-port-mac_address": {
+            "description": "MAC Address for interface vacl.vacl-mgmt-port",
+            "value": {
+                "get_attr": [
+                    "vacl.vacl-mgmt-port",
+                    "mac_address"
+                ]
+            }
+        },
+        "vacl.vacl-mgmt-port-network_id": {
+            "description": "Network ID for interface vacl.vacl-mgmt-port",
+            "value": {
+                "get_attr": [
+                    "vacl.vacl-mgmt-port",
+                    "network_id"
+                ]
+            }
+        },
+        "vacl.vacl-mgmt-port-subnet_id": {
+            "description": "Address for interface vacl.vacl-mgmt-port",
+            "value": {
+                "get_attr": [
+                    "vacl.vacl-mgmt-port",
+                    "fixed_ips",
+                    0,
+                    "subnet_id"
+                ]
+            }
+        },
+        "vacl.vacl-xe0-port": {
+            "description": "Address for interface vacl.vacl-xe0-port",
+            "value": {
+                "get_attr": [
+                    "vacl.vacl-xe0-port",
+                    "fixed_ips",
+                    0,
+                    "ip_address"
+                ]
+            }
+        },
+        "vacl.vacl-xe0-port-device_id": {
+            "description": "Device ID for interface vacl.vacl-xe0-port",
+            "value": {
+                "get_attr": [
+                    "vacl.vacl-xe0-port",
+                    "device_id"
+                ]
+            }
+        },
+        "vacl.vacl-xe0-port-mac_address": {
+            "description": "MAC Address for interface vacl.vacl-xe0-port",
+            "value": {
+                "get_attr": [
+                    "vacl.vacl-xe0-port",
+                    "mac_address"
+                ]
+            }
+        },
+        "vacl.vacl-xe0-port-network_id": {
+            "description": "Network ID for interface vacl.vacl-xe0-port",
+            "value": {
+                "get_attr": [
+                    "vacl.vacl-xe0-port",
+                    "network_id"
+                ]
+            }
+        },
+        "vacl.vacl-xe0-port-subnet_id": {
+            "description": "Address for interface vacl.vacl-xe0-port",
+            "value": {
+                "get_attr": [
+                    "vacl.vacl-xe0-port",
+                    "fixed_ips",
+                    0,
+                    "subnet_id"
+                ]
+            }
+        },
+        "vacl.vacl-xe1-port": {
+            "description": "Address for interface vacl.vacl-xe1-port",
+            "value": {
+                "get_attr": [
+                    "vacl.vacl-xe1-port",
+                    "fixed_ips",
+                    0,
+                    "ip_address"
+                ]
+            }
+        },
+        "vacl.vacl-xe1-port-device_id": {
+            "description": "Device ID for interface vacl.vacl-xe1-port",
+            "value": {
+                "get_attr": [
+                    "vacl.vacl-xe1-port",
+                    "device_id"
+                ]
+            }
+        },
+        "vacl.vacl-xe1-port-mac_address": {
+            "description": "MAC Address for interface vacl.vacl-xe1-port",
+            "value": {
+                "get_attr": [
+                    "vacl.vacl-xe1-port",
+                    "mac_address"
+                ]
+            }
+        },
+        "vacl.vacl-xe1-port-network_id": {
+            "description": "Network ID for interface vacl.vacl-xe1-port",
+            "value": {
+                "get_attr": [
+                    "vacl.vacl-xe1-port",
+                    "network_id"
+                ]
+            }
+        },
+        "vacl.vacl-xe1-port-subnet_id": {
+            "description": "Address for interface vacl.vacl-xe1-port",
+            "value": {
+                "get_attr": [
+                    "vacl.vacl-xe1-port",
+                    "fixed_ips",
+                    0,
+                    "subnet_id"
+                ]
+            }
+        },
+        "vacl-flavor": {
+            "description": "Flavor vacl-flavor ID",
+            "value": {
+                "get_resource": "vacl-flavor"
+            }
+        },
+        "vacl-mgmt-subnet": {
+            "description": "subnet vacl-mgmt-subnet ID",
+            "value": {
+                "get_resource": "vacl-mgmt-subnet"
+            }
+        },
+        "vacl-mgmt-subnet-cidr": {
+            "description": "subnet vacl-mgmt-subnet cidr",
+            "value": {
+                "get_attr": [
+                    "vacl-mgmt-subnet",
+                    "cidr"
+                ]
+            }
+        },
+        "vacl-mgmt-subnet-gateway_ip": {
+            "description": "subnet vacl-mgmt-subnet gateway_ip",
+            "value": {
+                "get_attr": [
+                    "vacl-mgmt-subnet",
+                    "gateway_ip"
+                ]
+            }
+        },
+        "vacl-secgroup": {
+            "description": "ID of Security Group",
+            "value": {
+                "get_resource": "vacl-secgroup"
+            }
+        },
+        "vacl-xe0-subnet": {
+            "description": "subnet vacl-xe0-subnet ID",
+            "value": {
+                "get_resource": "vacl-xe0-subnet"
+            }
+        },
+        "vacl-xe0-subnet-cidr": {
+            "description": "subnet vacl-xe0-subnet cidr",
+            "value": {
+                "get_attr": [
+                    "vacl-xe0-subnet",
+                    "cidr"
+                ]
+            }
+        },
+        "vacl-xe0-subnet-gateway_ip": {
+            "description": "subnet vacl-xe0-subnet gateway_ip",
+            "value": {
+                "get_attr": [
+                    "vacl-xe0-subnet",
+                    "gateway_ip"
+                ]
+            }
+        },
+        "vacl-xe1-subnet": {
+            "description": "subnet vacl-xe1-subnet ID",
+            "value": {
+                "get_resource": "vacl-xe1-subnet"
+            }
+        },
+        "vacl-xe1-subnet-cidr": {
+            "description": "subnet vacl-xe1-subnet cidr",
+            "value": {
+                "get_attr": [
+                    "vacl-xe1-subnet",
+                    "cidr"
+                ]
+            }
+        },
+        "vacl-xe1-subnet-gateway_ip": {
+            "description": "subnet vacl-xe1-subnet gateway_ip",
+            "value": {
+                "get_attr": [
+                    "vacl-xe1-subnet",
+                    "gateway_ip"
+                ]
+            }
+        }
+    },
+    "resources": {
+        "vacl.vacl": {
+            "depends_on": [
+                "vacl-flavor",
+                "vacl-key",
+                "vacl.vacl-mgmt-port",
+                "vacl.vacl-xe0-port",
+                "vacl.vacl-xe1-port"
+            ],
+            "properties": {
+                "admin_user": "ubuntu",
+                "config_drive": true,
+                "flavor": {
+                    "get_resource": "vacl-flavor"
+                },
+                "image": "yardstick-samplevnfs",
+                "key_name": {
+                    "get_resource": "vacl-key"
+                },
+                "name": "vacl.vacl",
+                "networks": [
+                    {
+                        "port": {
+                            "get_resource": "vacl.vacl-mgmt-port"
+                        }
+                    },
+                    {
+                        "port": {
+                            "get_resource": "vacl.vacl-xe0-port"
+                        }
+                    },
+                    {
+                        "port": {
+                            "get_resource": "vacl.vacl-xe1-port"
+                        }
+                    }
+                ]
+            },
+            "type": "OS::Nova::Server"
+        },
+        "vacl.vacl-fip": {
+            "depends_on": [
+                "vacl.vacl-mgmt-port",
+                "vacl-mgmt-router-if0",
+                "vacl-secgroup"
+            ],
+            "properties": {
+                "pool": "yardstick-public"
+            },
+            "type": "OS::Nova::FloatingIP"
+        },
+        "vacl.vacl-fip-assoc": {
+            "depends_on": [
+                "vacl.vacl-mgmt-port"
+            ],
+            "properties": {
+                "floatingip_id": {
+                    "get_resource": "vacl.vacl-fip"
+                },
+                "port_id": {
+                    "get_resource": "vacl.vacl-mgmt-port"
+                }
+            },
+            "type": "OS::Neutron::FloatingIPAssociation"
+        },
+        "vacl.vacl-mgmt-port": {
+            "depends_on": [
+                "vacl-mgmt-subnet",
+                "vacl-secgroup"
+            ],
+            "properties": {
+                "binding:vnic_type": "normal",
+                "fixed_ips": [
+                    {
+                        "subnet": {
+                            "get_resource": "vacl-mgmt-subnet"
+                        }
+                    }
+                ],
+                "name": "vacl.vacl-mgmt-port",
+                "network_id": {
+                    "get_resource": "vacl-mgmt"
+                },
+                "replacement_policy": "AUTO",
+                "security_groups": [
+                    "vacl-secgroup"
+                ]
+            },
+            "type": "OS::Neutron::Port"
+        },
+        "vacl.vacl-xe0-port": {
+            "depends_on": [
+                "vacl-xe0-subnet"
+            ],
+            "properties": {
+                "binding:vnic_type": "normal",
+                "fixed_ips": [
+                    {
+                        "subnet": {
+                            "get_resource": "vacl-xe0-subnet"
+                        }
+                    }
+                ],
+                "name": "vacl.vacl-xe0-port",
+                "network_id": {
+                    "get_resource": "vacl-xe0"
+                },
+                "replacement_policy": "AUTO"
+            },
+            "type": "OS::Neutron::Port"
+        },
+        "vacl.vacl-xe1-port": {
+            "depends_on": [
+                "vacl-xe1-subnet"
+            ],
+            "properties": {
+                "binding:vnic_type": "normal",
+                "fixed_ips": [
+                    {
+                        "subnet": {
+                            "get_resource": "vacl-xe1-subnet"
+                        }
+                    }
+                ],
+                "name": "vacl.vacl-xe1-port",
+                "network_id": {
+                    "get_resource": "vacl-xe1"
+                },
+                "replacement_policy": "AUTO"
+            },
+            "type": "OS::Neutron::Port"
+        },
+        "vacl-flavor": {
+            "properties": {
+                "disk": 6,
+                "ephemeral": 0,
+                "extra_specs": {
+                    "hw:cpu_cores": 10,
+                    "hw:cpu_sockets": 1,
+                    "hw:cpu_threads": 1
+                },
+                "flavorid": "vacl-flavor",
+                "is_public": true,
+                "name": "vacl-flavor",
+                "ram": 20480,
+                "rxtx_factor": 1.0,
+                "swap": 0,
+                "vcpus": 10
+            },
+            "type": "OS::Nova::Flavor"
+        },
+        "vacl-key": {
+            "properties": {
+                "name": "vacl-key",
+                "public_key": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDpNQ5/uWHvNfs9s5qqx9Nksx3g355aBKuCMwa/tWegva1F22qkTQas9JemZdMbURLntyo7ifYCKPkzWPo3yTY9zOOUD2Ugtuaq4FxuhJqo8WGB0TNQCbtWpoapFvRS0CoKj4GCXl3yVMZrFmTaB/Us326oQoxrdhcHUGxYQLuswdqSqDI/IOXnljRMEPT2KNvRjYI6R6yxeu673qCNpE12RgphCptp9uKUxvLnBmVJgfg4Sn1AzqF/p6Zk+CeyhtiGEDAyaVVvhCMcjsQpG7jkklWnE7ftDxbCvihQhl5amqxArk/MgJRAL6tGvVwKSpXibKhep1dwQVaFbowowxGB\n"
+            },
+            "type": "OS::Nova::KeyPair"
+        },
+        "vacl-mgmt": {
+            "properties": {
+                "name": "vacl-mgmt"
+            },
+            "type": "OS::Neutron::Net"
+        },
+        "vacl-mgmt-router": {
+            "depends_on": [
+                "vacl-mgmt-subnet"
+            ],
+            "properties": {
+                "external_gateway_info": {
+                    "network": "yardstick-public"
+                },
+                "name": "vacl-mgmt-router"
+            },
+            "type": "OS::Neutron::Router"
+        },
+        "vacl-mgmt-router-if0": {
+            "depends_on": [
+                "vacl-mgmt-router",
+                "vacl-mgmt-subnet"
+            ],
+            "properties": {
+                "router_id": {
+                    "get_resource": "vacl-mgmt-router"
+                },
+                "subnet_id": {
+                    "get_resource": "vacl-mgmt-subnet"
+                }
+            },
+            "type": "OS::Neutron::RouterInterface"
+        },
+        "vacl-mgmt-subnet": {
+            "depends_on": "vacl-mgmt",
+            "properties": {
+                "cidr": "10.0.1.0/24",
+                "enable_dhcp": "true",
+                "name": "vacl-mgmt-subnet",
+                "network_id": {
+                    "get_resource": "vacl-mgmt"
+                }
+            },
+            "type": "OS::Neutron::Subnet"
+        },
+        "vacl-secgroup": {
+            "properties": {
+                "description": "Group allowing icmp and upd/tcp on all ports",
+                "name": "vacl-secgroup",
+                "rules": [
+                    {
+                        "port_range_max": "65535",
+                        "port_range_min": "1",
+                        "protocol": "tcp",
+                        "remote_ip_prefix": "0.0.0.0/0"
+                    },
+                    {
+                        "port_range_max": "65535",
+                        "port_range_min": "1",
+                        "protocol": "udp",
+                        "remote_ip_prefix": "0.0.0.0/0"
+                    },
+                    {
+                        "protocol": "icmp",
+                        "remote_ip_prefix": "0.0.0.0/0"
+                    }
+                ]
+            },
+            "type": "OS::Neutron::SecurityGroup"
+        },
+        "vacl-xe0": {
+            "properties": {
+                "name": "vacl-xe0",
+                "port_security_enabled": false
+            },
+            "type": "OS::Neutron::Net"
+        },
+        "vacl-xe0-subnet": {
+            "depends_on": "vacl-xe0",
+            "properties": {
+                "cidr": "10.0.2.0/24",
+                "enable_dhcp": "false",
+                "gateway_ip": null,
+                "name": "vacl-xe0-subnet",
+                "network_id": {
+                    "get_resource": "vacl-xe0"
+                }
+            },
+            "type": "OS::Neutron::Subnet"
+        },
+        "vacl-xe1": {
+            "properties": {
+                "name": "vacl-xe1",
+                "port_security_enabled": false
+            },
+            "type": "OS::Neutron::Net"
+        },
+        "vacl-xe1-subnet": {
+            "depends_on": "vacl-xe1",
+            "properties": {
+                "cidr": "10.0.3.0/24",
+                "enable_dhcp": "false",
+                "gateway_ip": null,
+                "name": "vacl-xe1-subnet",
+                "network_id": {
+                    "get_resource": "vacl-xe1"
+                }
+            },
+            "type": "OS::Neutron::Subnet"
+        }
+    }
+}
