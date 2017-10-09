@@ -1,0 +1,528 @@
+{
+    "description": "Stack built by the yardstick framework for root on host d891f47de4a1 2017-10-08 21:59:14.\nAll referred generated resources are prefixed with the template\nname (i.e. cgnapt_provider).",
+    "heat_template_version": "2013-05-23",
+    "outputs": {
+        "cgnapt_vnf.cgnapt_provider": {
+            "description": "VM UUID",
+            "value": {
+                "get_resource": "cgnapt_vnf.cgnapt_provider"
+            }
+        },
+        "cgnapt_vnf.cgnapt_provider-fip": {
+            "description": "floating ip cgnapt_vnf.cgnapt_provider-fip",
+            "value": {
+                "get_attr": [
+                    "cgnapt_vnf.cgnapt_provider-fip",
+                    "ip"
+                ]
+            }
+        },
+        "cgnapt_vnf.cgnapt_provider-mgmt-port": {
+            "description": "Address for interface cgnapt_vnf.cgnapt_provider-mgmt-port",
+            "value": {
+                "get_attr": [
+                    "cgnapt_vnf.cgnapt_provider-mgmt-port",
+                    "fixed_ips",
+                    0,
+                    "ip_address"
+                ]
+            }
+        },
+        "cgnapt_vnf.cgnapt_provider-mgmt-port-device_id": {
+            "description": "Device ID for interface cgnapt_vnf.cgnapt_provider-mgmt-port",
+            "value": {
+                "get_attr": [
+                    "cgnapt_vnf.cgnapt_provider-mgmt-port",
+                    "device_id"
+                ]
+            }
+        },
+        "cgnapt_vnf.cgnapt_provider-mgmt-port-mac_address": {
+            "description": "MAC Address for interface cgnapt_vnf.cgnapt_provider-mgmt-port",
+            "value": {
+                "get_attr": [
+                    "cgnapt_vnf.cgnapt_provider-mgmt-port",
+                    "mac_address"
+                ]
+            }
+        },
+        "cgnapt_vnf.cgnapt_provider-mgmt-port-network_id": {
+            "description": "Network ID for interface cgnapt_vnf.cgnapt_provider-mgmt-port",
+            "value": {
+                "get_attr": [
+                    "cgnapt_vnf.cgnapt_provider-mgmt-port",
+                    "network_id"
+                ]
+            }
+        },
+        "cgnapt_vnf.cgnapt_provider-mgmt-port-subnet_id": {
+            "description": "Address for interface cgnapt_vnf.cgnapt_provider-mgmt-port",
+            "value": {
+                "get_attr": [
+                    "cgnapt_vnf.cgnapt_provider-mgmt-port",
+                    "fixed_ips",
+                    0,
+                    "subnet_id"
+                ]
+            }
+        },
+        "cgnapt_vnf.cgnapt_provider-xe0-port": {
+            "description": "Address for interface cgnapt_vnf.cgnapt_provider-xe0-port",
+            "value": {
+                "get_attr": [
+                    "cgnapt_vnf.cgnapt_provider-xe0-port",
+                    "fixed_ips",
+                    0,
+                    "ip_address"
+                ]
+            }
+        },
+        "cgnapt_vnf.cgnapt_provider-xe0-port-device_id": {
+            "description": "Device ID for interface cgnapt_vnf.cgnapt_provider-xe0-port",
+            "value": {
+                "get_attr": [
+                    "cgnapt_vnf.cgnapt_provider-xe0-port",
+                    "device_id"
+                ]
+            }
+        },
+        "cgnapt_vnf.cgnapt_provider-xe0-port-mac_address": {
+            "description": "MAC Address for interface cgnapt_vnf.cgnapt_provider-xe0-port",
+            "value": {
+                "get_attr": [
+                    "cgnapt_vnf.cgnapt_provider-xe0-port",
+                    "mac_address"
+                ]
+            }
+        },
+        "cgnapt_vnf.cgnapt_provider-xe0-port-network_id": {
+            "description": "Network ID for interface cgnapt_vnf.cgnapt_provider-xe0-port",
+            "value": {
+                "get_attr": [
+                    "cgnapt_vnf.cgnapt_provider-xe0-port",
+                    "network_id"
+                ]
+            }
+        },
+        "cgnapt_vnf.cgnapt_provider-xe0-port-subnet_id": {
+            "description": "Address for interface cgnapt_vnf.cgnapt_provider-xe0-port",
+            "value": {
+                "get_attr": [
+                    "cgnapt_vnf.cgnapt_provider-xe0-port",
+                    "fixed_ips",
+                    0,
+                    "subnet_id"
+                ]
+            }
+        },
+        "cgnapt_vnf.cgnapt_provider-xe1-port": {
+            "description": "Address for interface cgnapt_vnf.cgnapt_provider-xe1-port",
+            "value": {
+                "get_attr": [
+                    "cgnapt_vnf.cgnapt_provider-xe1-port",
+                    "fixed_ips",
+                    0,
+                    "ip_address"
+                ]
+            }
+        },
+        "cgnapt_vnf.cgnapt_provider-xe1-port-device_id": {
+            "description": "Device ID for interface cgnapt_vnf.cgnapt_provider-xe1-port",
+            "value": {
+                "get_attr": [
+                    "cgnapt_vnf.cgnapt_provider-xe1-port",
+                    "device_id"
+                ]
+            }
+        },
+        "cgnapt_vnf.cgnapt_provider-xe1-port-mac_address": {
+            "description": "MAC Address for interface cgnapt_vnf.cgnapt_provider-xe1-port",
+            "value": {
+                "get_attr": [
+                    "cgnapt_vnf.cgnapt_provider-xe1-port",
+                    "mac_address"
+                ]
+            }
+        },
+        "cgnapt_vnf.cgnapt_provider-xe1-port-network_id": {
+            "description": "Network ID for interface cgnapt_vnf.cgnapt_provider-xe1-port",
+            "value": {
+                "get_attr": [
+                    "cgnapt_vnf.cgnapt_provider-xe1-port",
+                    "network_id"
+                ]
+            }
+        },
+        "cgnapt_vnf.cgnapt_provider-xe1-port-subnet_id": {
+            "description": "Address for interface cgnapt_vnf.cgnapt_provider-xe1-port",
+            "value": {
+                "get_attr": [
+                    "cgnapt_vnf.cgnapt_provider-xe1-port",
+                    "fixed_ips",
+                    0,
+                    "subnet_id"
+                ]
+            }
+        },
+        "cgnapt_provider-flavor": {
+            "description": "Flavor cgnapt_provider-flavor ID",
+            "value": {
+                "get_resource": "cgnapt_provider-flavor"
+            }
+        },
+        "cgnapt_provider-mgmt-subnet": {
+            "description": "subnet cgnapt_provider-mgmt-subnet ID",
+            "value": {
+                "get_resource": "cgnapt_provider-mgmt-subnet"
+            }
+        },
+        "cgnapt_provider-mgmt-subnet-cidr": {
+            "description": "subnet cgnapt_provider-mgmt-subnet cidr",
+            "value": {
+                "get_attr": [
+                    "cgnapt_provider-mgmt-subnet",
+                    "cidr"
+                ]
+            }
+        },
+        "cgnapt_provider-mgmt-subnet-gateway_ip": {
+            "description": "subnet cgnapt_provider-mgmt-subnet gateway_ip",
+            "value": {
+                "get_attr": [
+                    "cgnapt_provider-mgmt-subnet",
+                    "gateway_ip"
+                ]
+            }
+        },
+        "cgnapt_provider-secgroup": {
+            "description": "ID of Security Group",
+            "value": {
+                "get_resource": "cgnapt_provider-secgroup"
+            }
+        },
+        "cgnapt_provider-xe0-subnet": {
+            "description": "subnet cgnapt_provider-xe0-subnet ID",
+            "value": {
+                "get_resource": "cgnapt_provider-xe0-subnet"
+            }
+        },
+        "cgnapt_provider-xe0-subnet-cidr": {
+            "description": "subnet cgnapt_provider-xe0-subnet cidr",
+            "value": {
+                "get_attr": [
+                    "cgnapt_provider-xe0-subnet",
+                    "cidr"
+                ]
+            }
+        },
+        "cgnapt_provider-xe0-subnet-gateway_ip": {
+            "description": "subnet cgnapt_provider-xe0-subnet gateway_ip",
+            "value": {
+                "get_attr": [
+                    "cgnapt_provider-xe0-subnet",
+                    "gateway_ip"
+                ]
+            }
+        },
+        "cgnapt_provider-xe1-subnet": {
+            "description": "subnet cgnapt_provider-xe1-subnet ID",
+            "value": {
+                "get_resource": "cgnapt_provider-xe1-subnet"
+            }
+        },
+        "cgnapt_provider-xe1-subnet-cidr": {
+            "description": "subnet cgnapt_provider-xe1-subnet cidr",
+            "value": {
+                "get_attr": [
+                    "cgnapt_provider-xe1-subnet",
+                    "cidr"
+                ]
+            }
+        },
+        "cgnapt_provider-xe1-subnet-gateway_ip": {
+            "description": "subnet cgnapt_provider-xe1-subnet gateway_ip",
+            "value": {
+                "get_attr": [
+                    "cgnapt_provider-xe1-subnet",
+                    "gateway_ip"
+                ]
+            }
+        }
+    },
+    "resources": {
+        "cgnapt_vnf.cgnapt_provider": {
+            "depends_on": [
+                "cgnapt_provider-flavor",
+                "cgnapt_provider-key",
+                "cgnapt_vnf.cgnapt_provider-mgmt-port",
+                "cgnapt_vnf.cgnapt_provider-xe0-port",
+                "cgnapt_vnf.cgnapt_provider-xe1-port"
+            ],
+            "properties": {
+                "admin_user": "ubuntu",
+                "config_drive": true,
+                "flavor": {
+                    "get_resource": "cgnapt_provider-flavor"
+                },
+                "image": "yardstick-samplevnfs",
+                "key_name": {
+                    "get_resource": "cgnapt_provider-key"
+                },
+                "name": "cgnapt_vnf.cgnapt_provider",
+                "networks": [
+                    {
+                        "port": {
+                            "get_resource": "cgnapt_vnf.cgnapt_provider-mgmt-port"
+                        }
+                    },
+                    {
+                        "port": {
+                            "get_resource": "cgnapt_vnf.cgnapt_provider-xe0-port"
+                        }
+                    },
+                    {
+                        "port": {
+                            "get_resource": "cgnapt_vnf.cgnapt_provider-xe1-port"
+                        }
+                    }
+                ],
+                "scheduler_hints": {
+                    "different_host": []
+                }
+            },
+            "type": "OS::Nova::Server"
+        },
+        "cgnapt_vnf.cgnapt_provider-fip": {
+            "depends_on": [
+                "cgnapt_vnf.cgnapt_provider-mgmt-port",
+                "cgnapt_provider-mgmt-router-if0",
+                "cgnapt_provider-secgroup"
+            ],
+            "properties": {
+                "pool": "yardstick-public"
+            },
+            "type": "OS::Nova::FloatingIP"
+        },
+        "cgnapt_vnf.cgnapt_provider-fip-assoc": {
+            "depends_on": [
+                "cgnapt_vnf.cgnapt_provider-mgmt-port"
+            ],
+            "properties": {
+                "floatingip_id": {
+                    "get_resource": "cgnapt_vnf.cgnapt_provider-fip"
+                },
+                "port_id": {
+                    "get_resource": "cgnapt_vnf.cgnapt_provider-mgmt-port"
+                }
+            },
+            "type": "OS::Neutron::FloatingIPAssociation"
+        },
+        "cgnapt_vnf.cgnapt_provider-mgmt-port": {
+            "depends_on": [
+                "cgnapt_provider-mgmt-subnet",
+                "cgnapt_provider-secgroup"
+            ],
+            "properties": {
+                "binding:vnic_type": "normal",
+                "fixed_ips": [
+                    {
+                        "subnet": {
+                            "get_resource": "cgnapt_provider-mgmt-subnet"
+                        }
+                    }
+                ],
+                "name": "cgnapt_vnf.cgnapt_provider-mgmt-port",
+                "network_id": {
+                    "get_resource": "cgnapt_provider-mgmt"
+                },
+                "replacement_policy": "AUTO",
+                "security_groups": [
+                    "cgnapt_provider-secgroup"
+                ]
+            },
+            "type": "OS::Neutron::Port"
+        },
+        "cgnapt_vnf.cgnapt_provider-xe0-port": {
+            "depends_on": [
+                "cgnapt_provider-xe0-subnet"
+            ],
+            "properties": {
+                "binding:vnic_type": "normal",
+                "fixed_ips": [
+                    {
+                        "subnet": {
+                            "get_resource": "cgnapt_provider-xe0-subnet"
+                        }
+                    }
+                ],
+                "name": "cgnapt_vnf.cgnapt_provider-xe0-port",
+                "network_id": {
+                    "get_resource": "cgnapt_provider-xe0"
+                },
+                "replacement_policy": "AUTO"
+            },
+            "type": "OS::Neutron::Port"
+        },
+        "cgnapt_vnf.cgnapt_provider-xe1-port": {
+            "depends_on": [
+                "cgnapt_provider-xe1-subnet"
+            ],
+            "properties": {
+                "binding:vnic_type": "normal",
+                "fixed_ips": [
+                    {
+                        "subnet": {
+                            "get_resource": "cgnapt_provider-xe1-subnet"
+                        }
+                    }
+                ],
+                "name": "cgnapt_vnf.cgnapt_provider-xe1-port",
+                "network_id": {
+                    "get_resource": "cgnapt_provider-xe1"
+                },
+                "replacement_policy": "AUTO"
+            },
+            "type": "OS::Neutron::Port"
+        },
+        "cgnapt_provider-flavor": {
+            "properties": {
+                "disk": 6,
+                "ephemeral": 0,
+                "extra_specs": {
+                    "hw:cpu_cores": 10,
+                    "hw:cpu_sockets": 1,
+                    "hw:cpu_threads": 1
+                },
+                "flavorid": "cgnapt_provider-flavor",
+                "is_public": true,
+                "name": "cgnapt_provider-flavor",
+                "ram": 20480,
+                "rxtx_factor": 1.0,
+                "swap": 0,
+                "vcpus": 10
+            },
+            "type": "OS::Nova::Flavor"
+        },
+        "cgnapt_provider-key": {
+            "properties": {
+                "name": "cgnapt_provider-key",
+                "public_key": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC4/LMV8dMasxxb6qcfc7LspMZM8zwIm+4jPZdwcEBEdx+LO7T/HUpyeqjwKmH+0dE3YFQfoEH5rkJR+vxGSAFeMABR37JsymD1u/1w3HoTyI9t1XjsEXwrWApcOrlrEZSJRb2qedbGF9FQcV/pNJYhMG6YV6zVnd5gBxKoJuEunWMopxeK6NXsmpDGJsEkNR+uzKzc+1LuOG+6cDG44PiidxlVrX86LFkUBuZ7Wtzdu8fnYYyUbGDk9nLIuEynqg5WbMF8ScLca/r6KP/4QdUKR+U1+VCo7ylFzLPaFmeaHis0H/Xe09+MXX/4sdXJCwUOFH7JCoyxZUPAp2JrLk5L\n"
+            },
+            "type": "OS::Nova::KeyPair"
+        },
+        "cgnapt_provider-mgmt": {
+            "properties": {
+                "name": "cgnapt_provider-mgmt"
+            },
+            "type": "OS::Neutron::Net"
+        },
+        "cgnapt_provider-mgmt-router": {
+            "depends_on": [
+                "cgnapt_provider-mgmt-subnet"
+            ],
+            "properties": {
+                "external_gateway_info": {
+                    "network": "yardstick-public"
+                },
+                "name": "cgnapt_provider-mgmt-router"
+            },
+            "type": "OS::Neutron::Router"
+        },
+        "cgnapt_provider-mgmt-router-if0": {
+            "depends_on": [
+                "cgnapt_provider-mgmt-router",
+                "cgnapt_provider-mgmt-subnet"
+            ],
+            "properties": {
+                "router_id": {
+                    "get_resource": "cgnapt_provider-mgmt-router"
+                },
+                "subnet_id": {
+                    "get_resource": "cgnapt_provider-mgmt-subnet"
+                }
+            },
+            "type": "OS::Neutron::RouterInterface"
+        },
+        "cgnapt_provider-mgmt-subnet": {
+            "depends_on": "cgnapt_provider-mgmt",
+            "properties": {
+                "cidr": "10.0.1.0/24",
+                "enable_dhcp": "true",
+                "name": "cgnapt_provider-mgmt-subnet",
+                "network_id": {
+                    "get_resource": "cgnapt_provider-mgmt"
+                }
+            },
+            "type": "OS::Neutron::Subnet"
+        },
+        "cgnapt_provider-secgroup": {
+            "properties": {
+                "description": "Group allowing icmp and upd/tcp on all ports",
+                "name": "cgnapt_provider-secgroup",
+                "rules": [
+                    {
+                        "port_range_max": "65535",
+                        "port_range_min": "1",
+                        "protocol": "tcp",
+                        "remote_ip_prefix": "0.0.0.0/0"
+                    },
+                    {
+                        "port_range_max": "65535",
+                        "port_range_min": "1",
+                        "protocol": "udp",
+                        "remote_ip_prefix": "0.0.0.0/0"
+                    },
+                    {
+                        "protocol": "icmp",
+                        "remote_ip_prefix": "0.0.0.0/0"
+                    }
+                ]
+            },
+            "type": "OS::Neutron::SecurityGroup"
+        },
+        "cgnapt_provider-xe0": {
+            "properties": {
+                "name": "cgnapt_provider-xe0",
+                "network_type": "flat",
+                "physical_network": "phystenant1",
+                "port_security_enabled": false
+            },
+            "type": "OS::Neutron::ProviderNet"
+        },
+        "cgnapt_provider-xe0-subnet": {
+            "depends_on": "cgnapt_provider-xe0",
+            "properties": {
+                "cidr": "10.0.2.0/24",
+                "enable_dhcp": "true",
+                "gateway_ip": null,
+                "name": "cgnapt_provider-xe0-subnet",
+                "network_id": {
+                    "get_resource": "cgnapt_provider-xe0"
+                }
+            },
+            "type": "OS::Neutron::Subnet"
+        },
+        "cgnapt_provider-xe1": {
+            "properties": {
+                "name": "cgnapt_provider-xe1",
+                "network_type": "flat",
+                "physical_network": "phystenant2",
+                "port_security_enabled": false
+            },
+            "type": "OS::Neutron::ProviderNet"
+        },
+        "cgnapt_provider-xe1-subnet": {
+            "depends_on": "cgnapt_provider-xe1",
+            "properties": {
+                "cidr": "10.0.3.0/24",
+                "enable_dhcp": "true",
+                "gateway_ip": null,
+                "name": "cgnapt_provider-xe1-subnet",
+                "network_id": {
+                    "get_resource": "cgnapt_provider-xe1"
+                }
+            },
+            "type": "OS::Neutron::Subnet"
+        }
+    }
+}

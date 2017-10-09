@@ -1,0 +1,528 @@
+{
+    "description": "Stack built by the yardstick framework for root on host d891f47de4a1 2017-10-08 21:59:14.\nAll referred generated resources are prefixed with the template\nname (i.e. udp_replay_provider).",
+    "heat_template_version": "2013-05-23",
+    "outputs": {
+        "udp_replay_vnf.udp_replay_provider": {
+            "description": "VM UUID",
+            "value": {
+                "get_resource": "udp_replay_vnf.udp_replay_provider"
+            }
+        },
+        "udp_replay_vnf.udp_replay_provider-fip": {
+            "description": "floating ip udp_replay_vnf.udp_replay_provider-fip",
+            "value": {
+                "get_attr": [
+                    "udp_replay_vnf.udp_replay_provider-fip",
+                    "ip"
+                ]
+            }
+        },
+        "udp_replay_vnf.udp_replay_provider-mgmt-port": {
+            "description": "Address for interface udp_replay_vnf.udp_replay_provider-mgmt-port",
+            "value": {
+                "get_attr": [
+                    "udp_replay_vnf.udp_replay_provider-mgmt-port",
+                    "fixed_ips",
+                    0,
+                    "ip_address"
+                ]
+            }
+        },
+        "udp_replay_vnf.udp_replay_provider-mgmt-port-device_id": {
+            "description": "Device ID for interface udp_replay_vnf.udp_replay_provider-mgmt-port",
+            "value": {
+                "get_attr": [
+                    "udp_replay_vnf.udp_replay_provider-mgmt-port",
+                    "device_id"
+                ]
+            }
+        },
+        "udp_replay_vnf.udp_replay_provider-mgmt-port-mac_address": {
+            "description": "MAC Address for interface udp_replay_vnf.udp_replay_provider-mgmt-port",
+            "value": {
+                "get_attr": [
+                    "udp_replay_vnf.udp_replay_provider-mgmt-port",
+                    "mac_address"
+                ]
+            }
+        },
+        "udp_replay_vnf.udp_replay_provider-mgmt-port-network_id": {
+            "description": "Network ID for interface udp_replay_vnf.udp_replay_provider-mgmt-port",
+            "value": {
+                "get_attr": [
+                    "udp_replay_vnf.udp_replay_provider-mgmt-port",
+                    "network_id"
+                ]
+            }
+        },
+        "udp_replay_vnf.udp_replay_provider-mgmt-port-subnet_id": {
+            "description": "Address for interface udp_replay_vnf.udp_replay_provider-mgmt-port",
+            "value": {
+                "get_attr": [
+                    "udp_replay_vnf.udp_replay_provider-mgmt-port",
+                    "fixed_ips",
+                    0,
+                    "subnet_id"
+                ]
+            }
+        },
+        "udp_replay_vnf.udp_replay_provider-xe0-port": {
+            "description": "Address for interface udp_replay_vnf.udp_replay_provider-xe0-port",
+            "value": {
+                "get_attr": [
+                    "udp_replay_vnf.udp_replay_provider-xe0-port",
+                    "fixed_ips",
+                    0,
+                    "ip_address"
+                ]
+            }
+        },
+        "udp_replay_vnf.udp_replay_provider-xe0-port-device_id": {
+            "description": "Device ID for interface udp_replay_vnf.udp_replay_provider-xe0-port",
+            "value": {
+                "get_attr": [
+                    "udp_replay_vnf.udp_replay_provider-xe0-port",
+                    "device_id"
+                ]
+            }
+        },
+        "udp_replay_vnf.udp_replay_provider-xe0-port-mac_address": {
+            "description": "MAC Address for interface udp_replay_vnf.udp_replay_provider-xe0-port",
+            "value": {
+                "get_attr": [
+                    "udp_replay_vnf.udp_replay_provider-xe0-port",
+                    "mac_address"
+                ]
+            }
+        },
+        "udp_replay_vnf.udp_replay_provider-xe0-port-network_id": {
+            "description": "Network ID for interface udp_replay_vnf.udp_replay_provider-xe0-port",
+            "value": {
+                "get_attr": [
+                    "udp_replay_vnf.udp_replay_provider-xe0-port",
+                    "network_id"
+                ]
+            }
+        },
+        "udp_replay_vnf.udp_replay_provider-xe0-port-subnet_id": {
+            "description": "Address for interface udp_replay_vnf.udp_replay_provider-xe0-port",
+            "value": {
+                "get_attr": [
+                    "udp_replay_vnf.udp_replay_provider-xe0-port",
+                    "fixed_ips",
+                    0,
+                    "subnet_id"
+                ]
+            }
+        },
+        "udp_replay_vnf.udp_replay_provider-xe1-port": {
+            "description": "Address for interface udp_replay_vnf.udp_replay_provider-xe1-port",
+            "value": {
+                "get_attr": [
+                    "udp_replay_vnf.udp_replay_provider-xe1-port",
+                    "fixed_ips",
+                    0,
+                    "ip_address"
+                ]
+            }
+        },
+        "udp_replay_vnf.udp_replay_provider-xe1-port-device_id": {
+            "description": "Device ID for interface udp_replay_vnf.udp_replay_provider-xe1-port",
+            "value": {
+                "get_attr": [
+                    "udp_replay_vnf.udp_replay_provider-xe1-port",
+                    "device_id"
+                ]
+            }
+        },
+        "udp_replay_vnf.udp_replay_provider-xe1-port-mac_address": {
+            "description": "MAC Address for interface udp_replay_vnf.udp_replay_provider-xe1-port",
+            "value": {
+                "get_attr": [
+                    "udp_replay_vnf.udp_replay_provider-xe1-port",
+                    "mac_address"
+                ]
+            }
+        },
+        "udp_replay_vnf.udp_replay_provider-xe1-port-network_id": {
+            "description": "Network ID for interface udp_replay_vnf.udp_replay_provider-xe1-port",
+            "value": {
+                "get_attr": [
+                    "udp_replay_vnf.udp_replay_provider-xe1-port",
+                    "network_id"
+                ]
+            }
+        },
+        "udp_replay_vnf.udp_replay_provider-xe1-port-subnet_id": {
+            "description": "Address for interface udp_replay_vnf.udp_replay_provider-xe1-port",
+            "value": {
+                "get_attr": [
+                    "udp_replay_vnf.udp_replay_provider-xe1-port",
+                    "fixed_ips",
+                    0,
+                    "subnet_id"
+                ]
+            }
+        },
+        "udp_replay_provider-flavor": {
+            "description": "Flavor udp_replay_provider-flavor ID",
+            "value": {
+                "get_resource": "udp_replay_provider-flavor"
+            }
+        },
+        "udp_replay_provider-mgmt-subnet": {
+            "description": "subnet udp_replay_provider-mgmt-subnet ID",
+            "value": {
+                "get_resource": "udp_replay_provider-mgmt-subnet"
+            }
+        },
+        "udp_replay_provider-mgmt-subnet-cidr": {
+            "description": "subnet udp_replay_provider-mgmt-subnet cidr",
+            "value": {
+                "get_attr": [
+                    "udp_replay_provider-mgmt-subnet",
+                    "cidr"
+                ]
+            }
+        },
+        "udp_replay_provider-mgmt-subnet-gateway_ip": {
+            "description": "subnet udp_replay_provider-mgmt-subnet gateway_ip",
+            "value": {
+                "get_attr": [
+                    "udp_replay_provider-mgmt-subnet",
+                    "gateway_ip"
+                ]
+            }
+        },
+        "udp_replay_provider-secgroup": {
+            "description": "ID of Security Group",
+            "value": {
+                "get_resource": "udp_replay_provider-secgroup"
+            }
+        },
+        "udp_replay_provider-xe0-subnet": {
+            "description": "subnet udp_replay_provider-xe0-subnet ID",
+            "value": {
+                "get_resource": "udp_replay_provider-xe0-subnet"
+            }
+        },
+        "udp_replay_provider-xe0-subnet-cidr": {
+            "description": "subnet udp_replay_provider-xe0-subnet cidr",
+            "value": {
+                "get_attr": [
+                    "udp_replay_provider-xe0-subnet",
+                    "cidr"
+                ]
+            }
+        },
+        "udp_replay_provider-xe0-subnet-gateway_ip": {
+            "description": "subnet udp_replay_provider-xe0-subnet gateway_ip",
+            "value": {
+                "get_attr": [
+                    "udp_replay_provider-xe0-subnet",
+                    "gateway_ip"
+                ]
+            }
+        },
+        "udp_replay_provider-xe1-subnet": {
+            "description": "subnet udp_replay_provider-xe1-subnet ID",
+            "value": {
+                "get_resource": "udp_replay_provider-xe1-subnet"
+            }
+        },
+        "udp_replay_provider-xe1-subnet-cidr": {
+            "description": "subnet udp_replay_provider-xe1-subnet cidr",
+            "value": {
+                "get_attr": [
+                    "udp_replay_provider-xe1-subnet",
+                    "cidr"
+                ]
+            }
+        },
+        "udp_replay_provider-xe1-subnet-gateway_ip": {
+            "description": "subnet udp_replay_provider-xe1-subnet gateway_ip",
+            "value": {
+                "get_attr": [
+                    "udp_replay_provider-xe1-subnet",
+                    "gateway_ip"
+                ]
+            }
+        }
+    },
+    "resources": {
+        "udp_replay_vnf.udp_replay_provider": {
+            "depends_on": [
+                "udp_replay_provider-flavor",
+                "udp_replay_provider-key",
+                "udp_replay_vnf.udp_replay_provider-mgmt-port",
+                "udp_replay_vnf.udp_replay_provider-xe0-port",
+                "udp_replay_vnf.udp_replay_provider-xe1-port"
+            ],
+            "properties": {
+                "admin_user": "ubuntu",
+                "config_drive": true,
+                "flavor": {
+                    "get_resource": "udp_replay_provider-flavor"
+                },
+                "image": "yardstick-samplevnfs",
+                "key_name": {
+                    "get_resource": "udp_replay_provider-key"
+                },
+                "name": "udp_replay_vnf.udp_replay_provider",
+                "networks": [
+                    {
+                        "port": {
+                            "get_resource": "udp_replay_vnf.udp_replay_provider-mgmt-port"
+                        }
+                    },
+                    {
+                        "port": {
+                            "get_resource": "udp_replay_vnf.udp_replay_provider-xe0-port"
+                        }
+                    },
+                    {
+                        "port": {
+                            "get_resource": "udp_replay_vnf.udp_replay_provider-xe1-port"
+                        }
+                    }
+                ],
+                "scheduler_hints": {
+                    "different_host": []
+                }
+            },
+            "type": "OS::Nova::Server"
+        },
+        "udp_replay_vnf.udp_replay_provider-fip": {
+            "depends_on": [
+                "udp_replay_vnf.udp_replay_provider-mgmt-port",
+                "udp_replay_provider-mgmt-router-if0",
+                "udp_replay_provider-secgroup"
+            ],
+            "properties": {
+                "pool": "yardstick-public"
+            },
+            "type": "OS::Nova::FloatingIP"
+        },
+        "udp_replay_vnf.udp_replay_provider-fip-assoc": {
+            "depends_on": [
+                "udp_replay_vnf.udp_replay_provider-mgmt-port"
+            ],
+            "properties": {
+                "floatingip_id": {
+                    "get_resource": "udp_replay_vnf.udp_replay_provider-fip"
+                },
+                "port_id": {
+                    "get_resource": "udp_replay_vnf.udp_replay_provider-mgmt-port"
+                }
+            },
+            "type": "OS::Neutron::FloatingIPAssociation"
+        },
+        "udp_replay_vnf.udp_replay_provider-mgmt-port": {
+            "depends_on": [
+                "udp_replay_provider-mgmt-subnet",
+                "udp_replay_provider-secgroup"
+            ],
+            "properties": {
+                "binding:vnic_type": "normal",
+                "fixed_ips": [
+                    {
+                        "subnet": {
+                            "get_resource": "udp_replay_provider-mgmt-subnet"
+                        }
+                    }
+                ],
+                "name": "udp_replay_vnf.udp_replay_provider-mgmt-port",
+                "network_id": {
+                    "get_resource": "udp_replay_provider-mgmt"
+                },
+                "replacement_policy": "AUTO",
+                "security_groups": [
+                    "udp_replay_provider-secgroup"
+                ]
+            },
+            "type": "OS::Neutron::Port"
+        },
+        "udp_replay_vnf.udp_replay_provider-xe0-port": {
+            "depends_on": [
+                "udp_replay_provider-xe0-subnet"
+            ],
+            "properties": {
+                "binding:vnic_type": "normal",
+                "fixed_ips": [
+                    {
+                        "subnet": {
+                            "get_resource": "udp_replay_provider-xe0-subnet"
+                        }
+                    }
+                ],
+                "name": "udp_replay_vnf.udp_replay_provider-xe0-port",
+                "network_id": {
+                    "get_resource": "udp_replay_provider-xe0"
+                },
+                "replacement_policy": "AUTO"
+            },
+            "type": "OS::Neutron::Port"
+        },
+        "udp_replay_vnf.udp_replay_provider-xe1-port": {
+            "depends_on": [
+                "udp_replay_provider-xe1-subnet"
+            ],
+            "properties": {
+                "binding:vnic_type": "normal",
+                "fixed_ips": [
+                    {
+                        "subnet": {
+                            "get_resource": "udp_replay_provider-xe1-subnet"
+                        }
+                    }
+                ],
+                "name": "udp_replay_vnf.udp_replay_provider-xe1-port",
+                "network_id": {
+                    "get_resource": "udp_replay_provider-xe1"
+                },
+                "replacement_policy": "AUTO"
+            },
+            "type": "OS::Neutron::Port"
+        },
+        "udp_replay_provider-flavor": {
+            "properties": {
+                "disk": 6,
+                "ephemeral": 0,
+                "extra_specs": {
+                    "hw:cpu_cores": 10,
+                    "hw:cpu_sockets": 1,
+                    "hw:cpu_threads": 1
+                },
+                "flavorid": "udp_replay_provider-flavor",
+                "is_public": true,
+                "name": "udp_replay_provider-flavor",
+                "ram": 20480,
+                "rxtx_factor": 1.0,
+                "swap": 0,
+                "vcpus": 10
+            },
+            "type": "OS::Nova::Flavor"
+        },
+        "udp_replay_provider-key": {
+            "properties": {
+                "name": "udp_replay_provider-key",
+                "public_key": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC4/LMV8dMasxxb6qcfc7LspMZM8zwIm+4jPZdwcEBEdx+LO7T/HUpyeqjwKmH+0dE3YFQfoEH5rkJR+vxGSAFeMABR37JsymD1u/1w3HoTyI9t1XjsEXwrWApcOrlrEZSJRb2qedbGF9FQcV/pNJYhMG6YV6zVnd5gBxKoJuEunWMopxeK6NXsmpDGJsEkNR+uzKzc+1LuOG+6cDG44PiidxlVrX86LFkUBuZ7Wtzdu8fnYYyUbGDk9nLIuEynqg5WbMF8ScLca/r6KP/4QdUKR+U1+VCo7ylFzLPaFmeaHis0H/Xe09+MXX/4sdXJCwUOFH7JCoyxZUPAp2JrLk5L\n"
+            },
+            "type": "OS::Nova::KeyPair"
+        },
+        "udp_replay_provider-mgmt": {
+            "properties": {
+                "name": "udp_replay_provider-mgmt"
+            },
+            "type": "OS::Neutron::Net"
+        },
+        "udp_replay_provider-mgmt-router": {
+            "depends_on": [
+                "udp_replay_provider-mgmt-subnet"
+            ],
+            "properties": {
+                "external_gateway_info": {
+                    "network": "yardstick-public"
+                },
+                "name": "udp_replay_provider-mgmt-router"
+            },
+            "type": "OS::Neutron::Router"
+        },
+        "udp_replay_provider-mgmt-router-if0": {
+            "depends_on": [
+                "udp_replay_provider-mgmt-router",
+                "udp_replay_provider-mgmt-subnet"
+            ],
+            "properties": {
+                "router_id": {
+                    "get_resource": "udp_replay_provider-mgmt-router"
+                },
+                "subnet_id": {
+                    "get_resource": "udp_replay_provider-mgmt-subnet"
+                }
+            },
+            "type": "OS::Neutron::RouterInterface"
+        },
+        "udp_replay_provider-mgmt-subnet": {
+            "depends_on": "udp_replay_provider-mgmt",
+            "properties": {
+                "cidr": "10.0.1.0/24",
+                "enable_dhcp": "true",
+                "name": "udp_replay_provider-mgmt-subnet",
+                "network_id": {
+                    "get_resource": "udp_replay_provider-mgmt"
+                }
+            },
+            "type": "OS::Neutron::Subnet"
+        },
+        "udp_replay_provider-secgroup": {
+            "properties": {
+                "description": "Group allowing icmp and upd/tcp on all ports",
+                "name": "udp_replay_provider-secgroup",
+                "rules": [
+                    {
+                        "port_range_max": "65535",
+                        "port_range_min": "1",
+                        "protocol": "tcp",
+                        "remote_ip_prefix": "0.0.0.0/0"
+                    },
+                    {
+                        "port_range_max": "65535",
+                        "port_range_min": "1",
+                        "protocol": "udp",
+                        "remote_ip_prefix": "0.0.0.0/0"
+                    },
+                    {
+                        "protocol": "icmp",
+                        "remote_ip_prefix": "0.0.0.0/0"
+                    }
+                ]
+            },
+            "type": "OS::Neutron::SecurityGroup"
+        },
+        "udp_replay_provider-xe0": {
+            "properties": {
+                "name": "udp_replay_provider-xe0",
+                "network_type": "flat",
+                "physical_network": "phystenant1",
+                "port_security_enabled": false
+            },
+            "type": "OS::Neutron::ProviderNet"
+        },
+        "udp_replay_provider-xe0-subnet": {
+            "depends_on": "udp_replay_provider-xe0",
+            "properties": {
+                "cidr": "10.0.2.0/24",
+                "enable_dhcp": "true",
+                "gateway_ip": null,
+                "name": "udp_replay_provider-xe0-subnet",
+                "network_id": {
+                    "get_resource": "udp_replay_provider-xe0"
+                }
+            },
+            "type": "OS::Neutron::Subnet"
+        },
+        "udp_replay_provider-xe1": {
+            "properties": {
+                "name": "udp_replay_provider-xe1",
+                "network_type": "flat",
+                "physical_network": "phystenant2",
+                "port_security_enabled": false
+            },
+            "type": "OS::Neutron::ProviderNet"
+        },
+        "udp_replay_provider-xe1-subnet": {
+            "depends_on": "udp_replay_provider-xe1",
+            "properties": {
+                "cidr": "10.0.3.0/24",
+                "enable_dhcp": "true",
+                "gateway_ip": null,
+                "name": "udp_replay_provider-xe1-subnet",
+                "network_id": {
+                    "get_resource": "udp_replay_provider-xe1"
+                }
+            },
+            "type": "OS::Neutron::Subnet"
+        }
+    }
+}

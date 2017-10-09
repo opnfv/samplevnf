@@ -1,0 +1,528 @@
+{
+    "description": "Stack built by the yardstick framework for root on host d891f47de4a1 2017-10-08 21:59:14.\nAll referred generated resources are prefixed with the template\nname (i.e. vfw_provider).",
+    "heat_template_version": "2013-05-23",
+    "outputs": {
+        "vfw_vnf.vfw_provider": {
+            "description": "VM UUID",
+            "value": {
+                "get_resource": "vfw_vnf.vfw_provider"
+            }
+        },
+        "vfw_vnf.vfw_provider-fip": {
+            "description": "floating ip vfw_vnf.vfw_provider-fip",
+            "value": {
+                "get_attr": [
+                    "vfw_vnf.vfw_provider-fip",
+                    "ip"
+                ]
+            }
+        },
+        "vfw_vnf.vfw_provider-mgmt-port": {
+            "description": "Address for interface vfw_vnf.vfw_provider-mgmt-port",
+            "value": {
+                "get_attr": [
+                    "vfw_vnf.vfw_provider-mgmt-port",
+                    "fixed_ips",
+                    0,
+                    "ip_address"
+                ]
+            }
+        },
+        "vfw_vnf.vfw_provider-mgmt-port-device_id": {
+            "description": "Device ID for interface vfw_vnf.vfw_provider-mgmt-port",
+            "value": {
+                "get_attr": [
+                    "vfw_vnf.vfw_provider-mgmt-port",
+                    "device_id"
+                ]
+            }
+        },
+        "vfw_vnf.vfw_provider-mgmt-port-mac_address": {
+            "description": "MAC Address for interface vfw_vnf.vfw_provider-mgmt-port",
+            "value": {
+                "get_attr": [
+                    "vfw_vnf.vfw_provider-mgmt-port",
+                    "mac_address"
+                ]
+            }
+        },
+        "vfw_vnf.vfw_provider-mgmt-port-network_id": {
+            "description": "Network ID for interface vfw_vnf.vfw_provider-mgmt-port",
+            "value": {
+                "get_attr": [
+                    "vfw_vnf.vfw_provider-mgmt-port",
+                    "network_id"
+                ]
+            }
+        },
+        "vfw_vnf.vfw_provider-mgmt-port-subnet_id": {
+            "description": "Address for interface vfw_vnf.vfw_provider-mgmt-port",
+            "value": {
+                "get_attr": [
+                    "vfw_vnf.vfw_provider-mgmt-port",
+                    "fixed_ips",
+                    0,
+                    "subnet_id"
+                ]
+            }
+        },
+        "vfw_vnf.vfw_provider-xe0-port": {
+            "description": "Address for interface vfw_vnf.vfw_provider-xe0-port",
+            "value": {
+                "get_attr": [
+                    "vfw_vnf.vfw_provider-xe0-port",
+                    "fixed_ips",
+                    0,
+                    "ip_address"
+                ]
+            }
+        },
+        "vfw_vnf.vfw_provider-xe0-port-device_id": {
+            "description": "Device ID for interface vfw_vnf.vfw_provider-xe0-port",
+            "value": {
+                "get_attr": [
+                    "vfw_vnf.vfw_provider-xe0-port",
+                    "device_id"
+                ]
+            }
+        },
+        "vfw_vnf.vfw_provider-xe0-port-mac_address": {
+            "description": "MAC Address for interface vfw_vnf.vfw_provider-xe0-port",
+            "value": {
+                "get_attr": [
+                    "vfw_vnf.vfw_provider-xe0-port",
+                    "mac_address"
+                ]
+            }
+        },
+        "vfw_vnf.vfw_provider-xe0-port-network_id": {
+            "description": "Network ID for interface vfw_vnf.vfw_provider-xe0-port",
+            "value": {
+                "get_attr": [
+                    "vfw_vnf.vfw_provider-xe0-port",
+                    "network_id"
+                ]
+            }
+        },
+        "vfw_vnf.vfw_provider-xe0-port-subnet_id": {
+            "description": "Address for interface vfw_vnf.vfw_provider-xe0-port",
+            "value": {
+                "get_attr": [
+                    "vfw_vnf.vfw_provider-xe0-port",
+                    "fixed_ips",
+                    0,
+                    "subnet_id"
+                ]
+            }
+        },
+        "vfw_vnf.vfw_provider-xe1-port": {
+            "description": "Address for interface vfw_vnf.vfw_provider-xe1-port",
+            "value": {
+                "get_attr": [
+                    "vfw_vnf.vfw_provider-xe1-port",
+                    "fixed_ips",
+                    0,
+                    "ip_address"
+                ]
+            }
+        },
+        "vfw_vnf.vfw_provider-xe1-port-device_id": {
+            "description": "Device ID for interface vfw_vnf.vfw_provider-xe1-port",
+            "value": {
+                "get_attr": [
+                    "vfw_vnf.vfw_provider-xe1-port",
+                    "device_id"
+                ]
+            }
+        },
+        "vfw_vnf.vfw_provider-xe1-port-mac_address": {
+            "description": "MAC Address for interface vfw_vnf.vfw_provider-xe1-port",
+            "value": {
+                "get_attr": [
+                    "vfw_vnf.vfw_provider-xe1-port",
+                    "mac_address"
+                ]
+            }
+        },
+        "vfw_vnf.vfw_provider-xe1-port-network_id": {
+            "description": "Network ID for interface vfw_vnf.vfw_provider-xe1-port",
+            "value": {
+                "get_attr": [
+                    "vfw_vnf.vfw_provider-xe1-port",
+                    "network_id"
+                ]
+            }
+        },
+        "vfw_vnf.vfw_provider-xe1-port-subnet_id": {
+            "description": "Address for interface vfw_vnf.vfw_provider-xe1-port",
+            "value": {
+                "get_attr": [
+                    "vfw_vnf.vfw_provider-xe1-port",
+                    "fixed_ips",
+                    0,
+                    "subnet_id"
+                ]
+            }
+        },
+        "vfw_provider-flavor": {
+            "description": "Flavor vfw_provider-flavor ID",
+            "value": {
+                "get_resource": "vfw_provider-flavor"
+            }
+        },
+        "vfw_provider-mgmt-subnet": {
+            "description": "subnet vfw_provider-mgmt-subnet ID",
+            "value": {
+                "get_resource": "vfw_provider-mgmt-subnet"
+            }
+        },
+        "vfw_provider-mgmt-subnet-cidr": {
+            "description": "subnet vfw_provider-mgmt-subnet cidr",
+            "value": {
+                "get_attr": [
+                    "vfw_provider-mgmt-subnet",
+                    "cidr"
+                ]
+            }
+        },
+        "vfw_provider-mgmt-subnet-gateway_ip": {
+            "description": "subnet vfw_provider-mgmt-subnet gateway_ip",
+            "value": {
+                "get_attr": [
+                    "vfw_provider-mgmt-subnet",
+                    "gateway_ip"
+                ]
+            }
+        },
+        "vfw_provider-secgroup": {
+            "description": "ID of Security Group",
+            "value": {
+                "get_resource": "vfw_provider-secgroup"
+            }
+        },
+        "vfw_provider-xe0-subnet": {
+            "description": "subnet vfw_provider-xe0-subnet ID",
+            "value": {
+                "get_resource": "vfw_provider-xe0-subnet"
+            }
+        },
+        "vfw_provider-xe0-subnet-cidr": {
+            "description": "subnet vfw_provider-xe0-subnet cidr",
+            "value": {
+                "get_attr": [
+                    "vfw_provider-xe0-subnet",
+                    "cidr"
+                ]
+            }
+        },
+        "vfw_provider-xe0-subnet-gateway_ip": {
+            "description": "subnet vfw_provider-xe0-subnet gateway_ip",
+            "value": {
+                "get_attr": [
+                    "vfw_provider-xe0-subnet",
+                    "gateway_ip"
+                ]
+            }
+        },
+        "vfw_provider-xe1-subnet": {
+            "description": "subnet vfw_provider-xe1-subnet ID",
+            "value": {
+                "get_resource": "vfw_provider-xe1-subnet"
+            }
+        },
+        "vfw_provider-xe1-subnet-cidr": {
+            "description": "subnet vfw_provider-xe1-subnet cidr",
+            "value": {
+                "get_attr": [
+                    "vfw_provider-xe1-subnet",
+                    "cidr"
+                ]
+            }
+        },
+        "vfw_provider-xe1-subnet-gateway_ip": {
+            "description": "subnet vfw_provider-xe1-subnet gateway_ip",
+            "value": {
+                "get_attr": [
+                    "vfw_provider-xe1-subnet",
+                    "gateway_ip"
+                ]
+            }
+        }
+    },
+    "resources": {
+        "vfw_vnf.vfw_provider": {
+            "depends_on": [
+                "vfw_provider-flavor",
+                "vfw_provider-key",
+                "vfw_vnf.vfw_provider-mgmt-port",
+                "vfw_vnf.vfw_provider-xe0-port",
+                "vfw_vnf.vfw_provider-xe1-port"
+            ],
+            "properties": {
+                "admin_user": "ubuntu",
+                "config_drive": true,
+                "flavor": {
+                    "get_resource": "vfw_provider-flavor"
+                },
+                "image": "yardstick-samplevnfs",
+                "key_name": {
+                    "get_resource": "vfw_provider-key"
+                },
+                "name": "vfw_vnf.vfw_provider",
+                "networks": [
+                    {
+                        "port": {
+                            "get_resource": "vfw_vnf.vfw_provider-mgmt-port"
+                        }
+                    },
+                    {
+                        "port": {
+                            "get_resource": "vfw_vnf.vfw_provider-xe0-port"
+                        }
+                    },
+                    {
+                        "port": {
+                            "get_resource": "vfw_vnf.vfw_provider-xe1-port"
+                        }
+                    }
+                ],
+                "scheduler_hints": {
+                    "different_host": []
+                }
+            },
+            "type": "OS::Nova::Server"
+        },
+        "vfw_vnf.vfw_provider-fip": {
+            "depends_on": [
+                "vfw_vnf.vfw_provider-mgmt-port",
+                "vfw_provider-mgmt-router-if0",
+                "vfw_provider-secgroup"
+            ],
+            "properties": {
+                "pool": "yardstick-public"
+            },
+            "type": "OS::Nova::FloatingIP"
+        },
+        "vfw_vnf.vfw_provider-fip-assoc": {
+            "depends_on": [
+                "vfw_vnf.vfw_provider-mgmt-port"
+            ],
+            "properties": {
+                "floatingip_id": {
+                    "get_resource": "vfw_vnf.vfw_provider-fip"
+                },
+                "port_id": {
+                    "get_resource": "vfw_vnf.vfw_provider-mgmt-port"
+                }
+            },
+            "type": "OS::Neutron::FloatingIPAssociation"
+        },
+        "vfw_vnf.vfw_provider-mgmt-port": {
+            "depends_on": [
+                "vfw_provider-mgmt-subnet",
+                "vfw_provider-secgroup"
+            ],
+            "properties": {
+                "binding:vnic_type": "normal",
+                "fixed_ips": [
+                    {
+                        "subnet": {
+                            "get_resource": "vfw_provider-mgmt-subnet"
+                        }
+                    }
+                ],
+                "name": "vfw_vnf.vfw_provider-mgmt-port",
+                "network_id": {
+                    "get_resource": "vfw_provider-mgmt"
+                },
+                "replacement_policy": "AUTO",
+                "security_groups": [
+                    "vfw_provider-secgroup"
+                ]
+            },
+            "type": "OS::Neutron::Port"
+        },
+        "vfw_vnf.vfw_provider-xe0-port": {
+            "depends_on": [
+                "vfw_provider-xe0-subnet"
+            ],
+            "properties": {
+                "binding:vnic_type": "normal",
+                "fixed_ips": [
+                    {
+                        "subnet": {
+                            "get_resource": "vfw_provider-xe0-subnet"
+                        }
+                    }
+                ],
+                "name": "vfw_vnf.vfw_provider-xe0-port",
+                "network_id": {
+                    "get_resource": "vfw_provider-xe0"
+                },
+                "replacement_policy": "AUTO"
+            },
+            "type": "OS::Neutron::Port"
+        },
+        "vfw_vnf.vfw_provider-xe1-port": {
+            "depends_on": [
+                "vfw_provider-xe1-subnet"
+            ],
+            "properties": {
+                "binding:vnic_type": "normal",
+                "fixed_ips": [
+                    {
+                        "subnet": {
+                            "get_resource": "vfw_provider-xe1-subnet"
+                        }
+                    }
+                ],
+                "name": "vfw_vnf.vfw_provider-xe1-port",
+                "network_id": {
+                    "get_resource": "vfw_provider-xe1"
+                },
+                "replacement_policy": "AUTO"
+            },
+            "type": "OS::Neutron::Port"
+        },
+        "vfw_provider-flavor": {
+            "properties": {
+                "disk": 6,
+                "ephemeral": 0,
+                "extra_specs": {
+                    "hw:cpu_cores": 10,
+                    "hw:cpu_sockets": 1,
+                    "hw:cpu_threads": 1
+                },
+                "flavorid": "vfw_provider-flavor",
+                "is_public": true,
+                "name": "vfw_provider-flavor",
+                "ram": 20480,
+                "rxtx_factor": 1.0,
+                "swap": 0,
+                "vcpus": 10
+            },
+            "type": "OS::Nova::Flavor"
+        },
+        "vfw_provider-key": {
+            "properties": {
+                "name": "vfw_provider-key",
+                "public_key": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC4/LMV8dMasxxb6qcfc7LspMZM8zwIm+4jPZdwcEBEdx+LO7T/HUpyeqjwKmH+0dE3YFQfoEH5rkJR+vxGSAFeMABR37JsymD1u/1w3HoTyI9t1XjsEXwrWApcOrlrEZSJRb2qedbGF9FQcV/pNJYhMG6YV6zVnd5gBxKoJuEunWMopxeK6NXsmpDGJsEkNR+uzKzc+1LuOG+6cDG44PiidxlVrX86LFkUBuZ7Wtzdu8fnYYyUbGDk9nLIuEynqg5WbMF8ScLca/r6KP/4QdUKR+U1+VCo7ylFzLPaFmeaHis0H/Xe09+MXX/4sdXJCwUOFH7JCoyxZUPAp2JrLk5L\n"
+            },
+            "type": "OS::Nova::KeyPair"
+        },
+        "vfw_provider-mgmt": {
+            "properties": {
+                "name": "vfw_provider-mgmt"
+            },
+            "type": "OS::Neutron::Net"
+        },
+        "vfw_provider-mgmt-router": {
+            "depends_on": [
+                "vfw_provider-mgmt-subnet"
+            ],
+            "properties": {
+                "external_gateway_info": {
+                    "network": "yardstick-public"
+                },
+                "name": "vfw_provider-mgmt-router"
+            },
+            "type": "OS::Neutron::Router"
+        },
+        "vfw_provider-mgmt-router-if0": {
+            "depends_on": [
+                "vfw_provider-mgmt-router",
+                "vfw_provider-mgmt-subnet"
+            ],
+            "properties": {
+                "router_id": {
+                    "get_resource": "vfw_provider-mgmt-router"
+                },
+                "subnet_id": {
+                    "get_resource": "vfw_provider-mgmt-subnet"
+                }
+            },
+            "type": "OS::Neutron::RouterInterface"
+        },
+        "vfw_provider-mgmt-subnet": {
+            "depends_on": "vfw_provider-mgmt",
+            "properties": {
+                "cidr": "10.0.1.0/24",
+                "enable_dhcp": "true",
+                "name": "vfw_provider-mgmt-subnet",
+                "network_id": {
+                    "get_resource": "vfw_provider-mgmt"
+                }
+            },
+            "type": "OS::Neutron::Subnet"
+        },
+        "vfw_provider-secgroup": {
+            "properties": {
+                "description": "Group allowing icmp and upd/tcp on all ports",
+                "name": "vfw_provider-secgroup",
+                "rules": [
+                    {
+                        "port_range_max": "65535",
+                        "port_range_min": "1",
+                        "protocol": "tcp",
+                        "remote_ip_prefix": "0.0.0.0/0"
+                    },
+                    {
+                        "port_range_max": "65535",
+                        "port_range_min": "1",
+                        "protocol": "udp",
+                        "remote_ip_prefix": "0.0.0.0/0"
+                    },
+                    {
+                        "protocol": "icmp",
+                        "remote_ip_prefix": "0.0.0.0/0"
+                    }
+                ]
+            },
+            "type": "OS::Neutron::SecurityGroup"
+        },
+        "vfw_provider-xe0": {
+            "properties": {
+                "name": "vfw_provider-xe0",
+                "network_type": "flat",
+                "physical_network": "phystenant1",
+                "port_security_enabled": false
+            },
+            "type": "OS::Neutron::ProviderNet"
+        },
+        "vfw_provider-xe0-subnet": {
+            "depends_on": "vfw_provider-xe0",
+            "properties": {
+                "cidr": "10.0.2.0/24",
+                "enable_dhcp": "true",
+                "gateway_ip": null,
+                "name": "vfw_provider-xe0-subnet",
+                "network_id": {
+                    "get_resource": "vfw_provider-xe0"
+                }
+            },
+            "type": "OS::Neutron::Subnet"
+        },
+        "vfw_provider-xe1": {
+            "properties": {
+                "name": "vfw_provider-xe1",
+                "network_type": "flat",
+                "physical_network": "phystenant2",
+                "port_security_enabled": false
+            },
+            "type": "OS::Neutron::ProviderNet"
+        },
+        "vfw_provider-xe1-subnet": {
+            "depends_on": "vfw_provider-xe1",
+            "properties": {
+                "cidr": "10.0.3.0/24",
+                "enable_dhcp": "true",
+                "gateway_ip": null,
+                "name": "vfw_provider-xe1-subnet",
+                "network_id": {
+                    "get_resource": "vfw_provider-xe1"
+                }
+            },
+            "type": "OS::Neutron::Subnet"
+        }
+    }
+}
