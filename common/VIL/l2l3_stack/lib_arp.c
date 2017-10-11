@@ -2124,11 +2124,6 @@ static int arp_parse_args(struct pipeline_params *params)
 	RTE_SET_USED(arp_route_tbl_present);
 	for (numArg = 0; numArg < params->n_args; numArg++) {
 
-		if(strlen(params->args_value[numArg]) > PIPELINE_MAX_ARGS) {
-			/* KW Fix */
-			printf("WARNING: Non-Null terminated Parameter not processed\n");
-			continue;
-		}
 		char *arg_name = params->args_name[numArg];
 		char *arg_value = params->args_value[numArg];
 
