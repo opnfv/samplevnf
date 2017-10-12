@@ -784,7 +784,7 @@ pkt_work_acl_key(struct rte_pipeline *p,
                 /* Gateway Proc Starts */
                 struct ether_hdr *ehdr = (struct ether_hdr *)
                     RTE_MBUF_METADATA_UINT32_PTR(pkt,
-                            META_DATA_OFFSET + MBUF_HDR_ROOM);
+                            META_DATA_OFFSET + RTE_PKTMBUF_HEADROOM);
 
                 struct ipv4_hdr *ipv4hdr = (struct ipv4_hdr *)
                     RTE_MBUF_METADATA_UINT32_PTR(pkt, IP_START);
@@ -896,7 +896,7 @@ pkt_work_acl_key(struct rte_pipeline *p,
 
                 struct ether_hdr *ehdr = (struct ether_hdr *)
                     RTE_MBUF_METADATA_UINT32_PTR(pkt,
-                            META_DATA_OFFSET + MBUF_HDR_ROOM);
+                            META_DATA_OFFSET + RTE_PKTMBUF_HEADROOM);
 
                 struct ether_addr dst_mac;
                 uint8_t nhipv6[IPV6_ADD_SIZE];
@@ -1481,7 +1481,7 @@ pkt_work_acl_ipv4_key(struct rte_pipeline *p,
                 /* Gateway Proc Starts */
                 struct ether_hdr *ehdr = (struct ether_hdr *)
                     RTE_MBUF_METADATA_UINT32_PTR(pkt,
-                            META_DATA_OFFSET + MBUF_HDR_ROOM);
+                            META_DATA_OFFSET + RTE_PKTMBUF_HEADROOM);
 
                 struct ipv4_hdr *ipv4hdr = (struct ipv4_hdr *)
                     RTE_MBUF_METADATA_UINT32_PTR(pkt, IP_START);
@@ -2065,7 +2065,7 @@ pkt_work_acl_ipv6_key(struct rte_pipeline *p,
 
                 struct ether_hdr *ehdr = (struct ether_hdr *)
                     RTE_MBUF_METADATA_UINT32_PTR(pkt,
-                            META_DATA_OFFSET + MBUF_HDR_ROOM);
+                            META_DATA_OFFSET + RTE_PKTMBUF_HEADROOM);
 
                 struct ether_addr dst_mac;
                 uint32_t dest_if = INVALID_DESTIF;
