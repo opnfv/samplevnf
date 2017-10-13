@@ -1487,6 +1487,17 @@ void init_stat_cfg(void)
 	}
 }
 
+void set_port_mask(uint32_t num_ports)
+{
+	int i;
+	uint64_t mask = 0;
+
+	for (i = 0; i < num_ports; i++) {
+		mask |= (0x1 << i);
+	}
+	rapp->port_mask = mask;
+}
+
 void bind_the_ports(struct mg_connection *conn, char *pci_white_list)
 {
 	char *token;
@@ -1512,6 +1523,7 @@ void bind_the_ports(struct mg_connection *conn, char *pci_white_list)
 		x++;
 	}
 	current_cfg.num_ports = x;
+	set_port_mask(x);
 }
 
 int static_cfg_handler(struct mg_connection *conn, __rte_unused void *cbdata)
