@@ -22,6 +22,30 @@
       "revId": "d1663134989d12da03c206b3eb3c6020fbac1485",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_b481cc4c",
+        "filename": "common/vnf_common/rest_api.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1497,
+      "author": {
+        "id": 6507
+      },
+      "writtenOn": "2017-10-15T06:15:29Z",
+      "side": 1,
+      "message": "both logic give 0xfffffff incase of two ports. please check",
+      "parentUuid": "9a3d3df0_b2ca819f",
+      "range": {
+        "startLine": 1495,
+        "startChar": 0,
+        "endLine": 1497,
+        "endChar": 2
+      },
+      "revId": "d1663134989d12da03c206b3eb3c6020fbac1485",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
     }
   ]
 }
