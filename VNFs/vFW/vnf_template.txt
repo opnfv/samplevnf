@@ -4,7 +4,7 @@ core = 0
 
 [ARPICMP]
 type = ARPICMP
-core = 1
+core = 0
 pktq_in  = SWQ0
 pktq_out = TXQ0.0 TXQ1.0
 pktq_in_prv =  RXQ0.0
@@ -13,7 +13,7 @@ prv_que_handler = (0)
 
 [TIMER]
 type = TIMER
-core = 2
+core = 0
 n_flows = 1048576
 
 [TXRX-BEGIN]
@@ -64,7 +64,6 @@ timer_period = 100
 max_clients_per_ip = 65535
 max_port_per_client = 10
 public_ip_port_range = 98103214:(1, 65535)
-vnf_set = (3,4,5)
 pkt_type = ipv4
 cgnapt_meta_offset = 128
 prv_que_handler = (0,)

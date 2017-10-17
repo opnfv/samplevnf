@@ -39,7 +39,7 @@
 uint32_t rest_support = 1;
 
 static struct app_params app_params_default = {
-	.config_file = "./config/ip_pipeline.cfg",
+	.config_file = "./ip_pipeline.cfg",
 	.log_level = APP_LOG_LEVEL_HIGH,
 	.port_mask = 0,
 
