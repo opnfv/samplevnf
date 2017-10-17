@@ -1173,7 +1173,7 @@ int route_handler(struct mg_connection *conn, __rte_unused void *cbdata)
         /* Handler may access the request info using mg_get_request_info */
         const struct mg_request_info *req_info = mg_get_request_info(conn);
         uint32_t portid = 0;
-	uint32_t i, j, status;
+	uint32_t i, j, status, p;
 	char buf[MAX_BUF_SIZE];
 	uint32_t mask = 0, num = 31;
 
@@ -1195,7 +1195,7 @@ int route_handler(struct mg_connection *conn, __rte_unused void *cbdata)
 		mg_printf(conn, "\n\nND IPV6 routing table ...\n<br/>");
 		mg_printf(conn, "\nNH_IP_Address				"
 				"	Depth          Port \n<br/>");
-		for(uint32_t p = 0; p < gw_get_num_ports(); p++ ) {
+		for(p = 0; p < gw_get_num_ports(); p++ ) {
 			for (i = 0; i < p_nd_route_data[p]->nd_route_ent_cnt; i++) {
 				for (j = 0; j < ND_IPV6_ADDR_SIZE; j += 2) {
 					mg_printf(conn, "%02X%02X ",
