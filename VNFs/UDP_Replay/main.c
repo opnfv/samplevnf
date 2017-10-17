@@ -2122,7 +2122,7 @@ print_usage(const char *prgname)
 		"  [--enable-jumbo [--max-pkt-len PKTLEN]]\n"
 		"  -p PORTMASK: hexadecimal bitmask of ports to configure\n"
 		"  -P : enable promiscuous mode\n"
-		"  -v version: display app version\n"
+		"  --version: display app version\n"
 		"  --config (port,queue,lcore): rx queues configuration\n"
 		"  --eth-dest=X,MM:MM:MM:MM:MM:MM: optional, ethernet destination for port X\n"
 		"  --no-numa: optional, disable numa awareness\n"
@@ -2321,7 +2321,7 @@ parse_args(int argc, char **argv)
 
 	argvopt = argv;
 
-	while ((opt = getopt_long(argc, argvopt, "v:s:p:P",
+	while ((opt = getopt_long(argc, argvopt, "s:p:P",
 				lgopts, &option_index)) != EOF) {
 
 		switch (opt) {
@@ -2759,10 +2759,6 @@ main(int argc, char **argv)
 	struct pipeline_params *params;
 
 	/* parse application arguments (after the EAL ones) */
-	ret = parse_args(argc, argv);
-	if (ret < 0)
-		rte_exit(EXIT_FAILURE, "Invalid UDP_Replay parameters\n");
-
 	/* init EAL */
 	ret = rte_eal_init(argc, argv);
 	if (ret < 0)
@@ -2770,6 +2766,10 @@ main(int argc, char **argv)
 	argc -= ret;
 	argv += ret;
 	timer_lcore = rte_lcore_id();
+
+	ret = parse_args(argc, argv);
+	if (ret < 0)
+		rte_exit(EXIT_FAILURE, "Invalid UDP_Replay parameters\n");
 
 	if (check_lcore_params() < 0)
 		rte_exit(EXIT_FAILURE, "check_lcore_params failed\n");
