@@ -88,6 +88,7 @@ performance of the solution should be sufficient for testing the UDP NAT perform
 #include <lib_arp.h>
 #include "l2_proto.h"
 #include "interface.h"
+#include "version.h"
 #include "l3fwd_common.h"
 #include "l3fwd_lpm4.h"
 #include "l3fwd_lpm6.h"
@@ -2121,6 +2122,7 @@ print_usage(const char *prgname)
 		"  [--enable-jumbo [--max-pkt-len PKTLEN]]\n"
 		"  -p PORTMASK: hexadecimal bitmask of ports to configure\n"
 		"  -P : enable promiscuous mode\n"
+		"  -v version: display app version\n"
 		"  --config (port,queue,lcore): rx queues configuration\n"
 		"  --eth-dest=X,MM:MM:MM:MM:MM:MM: optional, ethernet destination for port X\n"
 		"  --no-numa: optional, disable numa awareness\n"
@@ -2294,6 +2296,7 @@ parse_eth_dest(const char *optarg)
 #define CMD_LINE_OPT_NO_HW_CSUM "no-hw-csum"
 #define CMD_LINE_OPT_IPV6 "ipv6"
 #define CMD_LINE_OPT_ENABLE_JUMBO "enable-jumbo"
+#define CMD_LINE_OPT_VERSION "version"
 #define CMD_LINE_OPT_HASH_ENTRY_NUM "hash-entry-num"
 
 /* Parse the argument given in the command line of the application */
@@ -2302,7 +2305,7 @@ parse_args(int argc, char **argv)
 {
 	int opt, ret;
 	char **argvopt;
-	int option_index;
+	int option_index, v_present = 0;
 	char *prgname = argv[0];
 	static struct option lgopts[] = {
 		{CMD_LINE_OPT_CONFIG, 1, 0, 0},
@@ -2311,13 +2314,14 @@ parse_args(int argc, char **argv)
 		{CMD_LINE_OPT_NO_HW_CSUM, 0, 0, 0},
 		{CMD_LINE_OPT_IPV6, 0, 0, 0},
 		{CMD_LINE_OPT_ENABLE_JUMBO, 0, 0, 0},
+		{CMD_LINE_OPT_VERSION, 0, 0, 0},
 		{CMD_LINE_OPT_HASH_ENTRY_NUM, 1, 0, 0},
 		{NULL, 0, 0, 0}
 	};
 
 	argvopt = argv;
 
-	while ((opt = getopt_long(argc, argvopt, "s:p:P",
+	while ((opt = getopt_long(argc, argvopt, "v:s:p:P",
 				lgopts, &option_index)) != EOF) {
 
 		switch (opt) {
@@ -2377,6 +2381,15 @@ parse_args(int argc, char **argv)
 				ipv6 = 1;
 			}
 #endif
+
+			if (!strncmp(lgopts[option_index].name, CMD_LINE_OPT_VERSION,
+				sizeof (CMD_LINE_OPT_VERSION))) {
+			  if (v_present)
+				  rte_panic("Error: VERSION is provided more than once\n");
+			  v_present = 1;
+			  printf("Version: %s\n", VERSION_STR);
+			  exit(0);
+      }
 
 			if (!strncmp(lgopts[option_index].name, CMD_LINE_OPT_ENABLE_JUMBO,
 				sizeof (CMD_LINE_OPT_ENABLE_JUMBO))) {
@@ -2745,6 +2758,11 @@ main(int argc, char **argv)
 	uint32_t size;
 	struct pipeline_params *params;
 
+	/* parse application arguments (after the EAL ones) */
+	ret = parse_args(argc, argv);
+	if (ret < 0)
+		rte_exit(EXIT_FAILURE, "Invalid UDP_Replay parameters\n");
+
 	/* init EAL */
 	ret = rte_eal_init(argc, argv);
 	if (ret < 0)
@@ -2752,10 +2770,6 @@ main(int argc, char **argv)
 	argc -= ret;
 	argv += ret;
 	timer_lcore = rte_lcore_id();
-	/* parse application arguments (after the EAL ones) */
-	ret = parse_args(argc, argv);
-	if (ret < 0)
-		rte_exit(EXIT_FAILURE, "Invalid UDP_Replay parameters\n");
 
 	if (check_lcore_params() < 0)
 		rte_exit(EXIT_FAILURE, "check_lcore_params failed\n");
