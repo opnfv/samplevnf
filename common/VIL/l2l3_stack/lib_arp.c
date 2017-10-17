@@ -979,10 +979,10 @@ void print_nd_table(void)
 		printf("\n");
 	}
 
-	uint32_t i = 0;
+	uint32_t i = 0, p = 0;
 	printf("\n\nND IPV6 routing table ...\n");
 	printf ("\nNH_IP_Address					Depth          Port \n");
-	for(uint32_t p = 0; p < gw_get_num_ports(); p++ ) {
+	for(p = 0; p < gw_get_num_ports(); p++ ) {
 		for (i = 0; i < p_nd_route_data[p]->nd_route_ent_cnt; i++) {
 			//		printf("\n");
 
