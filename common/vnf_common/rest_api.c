@@ -1487,6 +1487,17 @@ void init_stat_cfg(void)
 	}
 }
 
+static void set_port_mask(uint64_t num_ports)
+{
+	uint64_t i;
+	uint64_t mask = 0;
+
+	for (i = 0; i < num_ports; i++) {
+		mask |= (0x1 << i);
+	}
+	rapp->port_mask = mask;
+}
+
 void bind_the_ports(struct mg_connection *conn, char *pci_white_list)
 {
 	char *token;
@@ -1497,12 +1508,12 @@ void bind_the_ports(struct mg_connection *conn, char *pci_white_list)
 
 	while(token != NULL) {
 		mg_printf(conn, "%s ****\n", token);
-		sprintf(buf, "$RTE_SDK/usertools/dpdk-devbind.py -u %s", token);
+		sprintf(buf, "dpdk-devbind -u %s", token);
 		ret = system(buf);
 		if (ret)
 			mg_printf(conn, "wrong parameter sent\n");
 
-		sprintf(buf, "$RTE_SDK/usertools/dpdk-devbind.py -b igb_uio %s", token);
+		sprintf(buf, "dpdk-devbind -b igb_uio %s", token);
 		ret = system(buf);
 		if (ret)
 			mg_printf(conn, "wrong parameter sent\n");
@@ -1512,6 +1523,7 @@ void bind_the_ports(struct mg_connection *conn, char *pci_white_list)
 		x++;
 	}
 	current_cfg.num_ports = x;
+	set_port_mask(x);
 }
 
 int static_cfg_handler(struct mg_connection *conn, __rte_unused void *cbdata)
@@ -1592,6 +1604,7 @@ int static_cfg_handler(struct mg_connection *conn, __rte_unused void *cbdata)
 	if (values) {
 		memcpy(&current_cfg.ip_range[pub_ip++].value, json_object_get_string(values),
 			 strlen(json_object_get_string(values)));
+		current_cfg.num_workers = atoi(json_object_get_string(values));
 	}
 
 	json_object_object_get_ex(jobj, "pkt_type", &values);
@@ -1744,35 +1757,36 @@ void fix_pipelines_data_types(FILE *f, const char *sect_name, struct rte_cfgfile
 		}
 
 		if (strncmp(entries[i].name, "core", strlen(entries[i].name)) == 0) {
-			if ((strncmp(sect_name, "MASTER", strlen(sect_name)) == 0) &&
+			if (((strncmp(sect_name, "MASTER", strlen(sect_name)) == 0) ||
+                            (strncmp(sect_name, "TIMER", strlen(sect_name)) == 0) ||
+                            (strncmp(sect_name, "ARPICMP", strlen(sect_name)) == 0)) && 
 				!current_cfg.sock_in) {
-				continue;
-			}
-
-			if ((current_cfg.hyper_thread) && hyper) {
-				sprintf(str, "s%dc%dh", current_cfg.sock_in,
+				sprintf(str, "s%dc%d", current_cfg.sock_in,
 					 sock_cpus[current_cfg.sock_in][sock_index]);
 				memcpy(entries[i].value, &str, 8);
-				sock_index++;
 				hyper = 0;
 				continue;
 			}
-	
-			sprintf(str, "s%dc%d", current_cfg.sock_in,
-				 sock_cpus[current_cfg.sock_in][sock_index]);
 
-			if (!current_cfg.hyper_thread)
-				sock_index++;
-			else
-				hyper = 1;
-
-			if (current_cfg.sock_in) {
-				if (sock_index == sock1)
-					sock_index = 1;
-			} else {
-				if (sock_index == sock0)
-					sock_index = 1;
-			}
+                        if ((strncmp(sect_name, "TXRX-BEGIN", strlen(sect_name)) == 0) || (strncmp(sect_name, "LOADB", strlen(sect_name)) == 0) ||
+                            (strncmp(sect_name, "TXRX-END", strlen(sect_name)) == 0)) {
+                             sock_index++;
+			     sprintf(str, "s%dc%d", current_cfg.sock_in,
+			   	     sock_cpus[current_cfg.sock_in][sock_index]);
+			     memcpy(entries[i].value, &str, 8);
+		             hyper = 0;
+                             continue;
+                        } else {
+                             if (!hyper) {
+                                  sock_index++;
+                                  sprintf(str, "s%dc%d", current_cfg.sock_in, sock_cpus[current_cfg.sock_in][sock_index]);
+                                  if (current_cfg.hyper_thread)
+				      hyper = 1;
+                             } else {
+			          sprintf(str, "s%dc%dh", current_cfg.sock_in, sock_cpus[current_cfg.sock_in][sock_index]);
+				  hyper = 0;
+                             }
+                        }
 			memcpy(entries[i].value, &str, 8);
 		}
 	}
@@ -2018,7 +2032,7 @@ void fix_pipelines_data_types(FILE *f, const char *sect_name, struct rte_cfgfile
 				workers = 0;
 			}
 		} else {
-			if (current_cfg.num_ports > 2) {
+			if (workers == (current_cfg.num_workers/current_cfg.num_lb)) {
 				tx_start_port += 2;
 				rx_start_port += 2;
 				workers = 0;
@@ -2085,7 +2099,7 @@ void build_pipeline(void)
 		printf("Wrong VNF TYPE\n");
 
 	if (vnf_index == VNF_VCGNAPT)
-		pipe_arr[i++] = 2;
+	    pipe_arr[i++] = 2;
 
 	if (!current_cfg.sw_lb) {
 		for (k = 0; k < current_cfg.num_workers; k++)
@@ -2363,7 +2377,7 @@ rest_api_init(struct app_params *app)
 	if (ctx == NULL) {
 		printf("REST server did not start\n");
 		printf("REST services will not be supported.. Try again ");
-		printf("by disabling other webservers\n");
+		printf("by disabling other webservers running on port 80\n");
 		goto end;
 	}
 	
@@ -2393,10 +2407,10 @@ rest_api_init(struct app_params *app)
 
         mg_set_request_handler(ctx, "/vnf/quit", cmd_quit_handler, 0);
 
-	printf("Waiting for config input for 30 secs\n");
+	printf("Waiting for config input.... via rest\n");
 	index = 0;
 	while(1) {
-		if (post_not_received == 0 || (index == 30))
+		if (post_not_received == 0)
 			break;
 		sleep(1);
 		index++;
