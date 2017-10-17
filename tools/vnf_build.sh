@@ -252,6 +252,11 @@ install_dpdk()
 		echo "igb_uio" | sudo tee -a /etc/modules
 		sudo depmod
 	fi
+  if [ -d "dpdk/usertools/" ]; then
+	    cp usertools/dpdk-devbind.py /usr/sbin/dpdk-devbind
+	else
+	    cp tools/dpdk_nic_bind.py /usr/sbin/dpdk-devbind
+  fi
 	popd
 }
 
