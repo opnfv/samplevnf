@@ -4,44 +4,19 @@
 
 .. OPNFV SAMPLEVNF Documentation design file.
 
-===================================
+==========================
 SampleVNF Highlevel Design
-===================================
+==========================
 
-Introduction
---------------
-This project provides a placeholder for various sample VNF (Virtual Network Function)
-development which includes example reference architecture and optimization methods
-related to VNF/Network service for high performance VNFs. This project provides benefits
-to other OPNFV projects like Functest, Models, yardstick etc to perform real life
-use-case based testing and NFVi characterization for the same.
-The sample VNFs are Open Source approximations* of Telco grade VNF’s using optimized
-VNF + NFVi Infrastructure libraries, with Performance Characterization of Sample† Traffic Flows.
-  • * Not a commercial product. Encourage the community to contribute and close the feature gaps.
-  • † No Vendor/Proprietary Workloads
-
-About DPDK
-^^^^^^^^^^^
-The DPDK IP Pipeline Framework provides set of libraries to build a pipeline
-application. In this document, CG-NAT application will be explained with its
-own building blocks.
-
-This document assumes the reader possess the knowledge of DPDK concepts and IP
-Pipeline Framework. For more details, read DPDK Getting Started Guide, DPDK
-Programmers Guide, DPDK Sample Applications Guide.
-
-Scope
---------
-These application provides a standalone DPDK based high performance different
-Virtual Network Function implementation.
-
+The high level design of the VNF and common code is explained here.
 
 
 Common Code - L2L3 stack
--------------------------
+========================
 
 Introduction
-^^^^^^^^^^^^^^^
+------------
+
 L2L3 stack comprises of a set of libraries which are commonly used by all
 other VNF's. The different components of this stack is shown in the picture
 below.
@@ -50,14 +25,15 @@ below.
 
 It comprises of following components.
 
-  (i)   Interface Manager
-  (ii)  RTM Lock Library
-  (iii) ARP/ND & L2 adjacency Library
-  (iv)  L3 stack components
+  * Interface Manager
+  * RTM Lock Library
+  * ARP/ND & L2 adjacency Library
+  * L3 stack components
 
 
 Interface Manager
-^^^^^^^^^^^^^^^^^
+-----------------
+
 Interface manager is a set of API's which acts as a wrapper for the physical
 interfaces initialization & population. This set of api's assists in configuring
 an ethernet device, setting up TX & RX queues & starting of the devices. It
@@ -68,17 +44,18 @@ components who wants to listen to interface status. It Maintains table of all
 the interfaces present. It provides API for getting interface statistics.
 
 It Provides wrapper APIs on top of DPDKs LAG(link Aggregation) APIs, This
-includes creating/deleting BOND interfaces, knowing the properties like Bond mode,
-xmit policy, link up delay, link monitor frequency.
+includes creating/deleting BOND interfaces, knowing the properties like Bond
+mode, xmit policy, link up delay, link monitor frequency.
 
 
 RTM Lock Library
-^^^^^^^^^^^^^^^^^
+----------------
+
 It provides basic lock & unlock functions which should be used for synchronization
 purposes.
 
 ARP/ND & L2 adjacency Library
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+-----------------------------
 
 The ARP/ND state machine is given in the following diagram.
 
@@ -102,17 +79,18 @@ retrieval based on nexthop & port_id. It handles Gratuitous ARP.
 
 
 L3 stack Library
-^^^^^^^^^^^^^^^^^
+----------------
 
 This library provides API for taking decision of whether pkt belongs to local
 system or to forwarding.It Provides API for IPv4/IPv6 local packet out send
 function. It Provides API for packet forwarding - LPM lookup function.
 
+
 Common Code - Gateway routing
------------------------------
+=============================
 
 Introduction
-^^^^^^^^^^^^
+------------
 
 Gateway common code is created to support routing functionality for both
 network and direct attached interfaces. It is supported for both IPv4 and
@@ -129,7 +107,8 @@ allocated only for the nb_ports which is configured as per the VNF application
 configuration.
 
 Design
-^^^^^^
+------
+
 The next hop IP and Port numbers are retrieved from the routing table based on
 the destinantion IP addreess. The destination IP address anded with mask is
 looked in the routing table for the match. The port/interface number which
@@ -144,31 +123,30 @@ of parameters provide in the commands are not valied. Example the if port
 number is bigger than the supported number ports/interface per application
 configuration.
 
-
 Reference routeadd command
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+--------------------------
 
 Following are typical reference commands and syntax for adding routes using the CLI.
 
 ::
 
-;routeadd <net/host> <port #> <ipv4 nhip address in decimal> <Mask/NotApplicable>
-routeadd net 0 202.16.100.20 0xffff0000
-routeadd net 1 172.16.40.20 0xffff0000
-routeadd host 0 202.16.100.20
-routeadd host 1 172.16.40.20
+ ;routeadd <net/host> <port #> <ipv4 nhip address in decimal> <Mask/NotApplicable>
+ routeadd net 0 202.16.100.20 0xffff0000
+ routeadd net 1 172.16.40.20 0xffff0000
+ routeadd host 0 202.16.100.20
+ routeadd host 1 172.16.40.20
 
-;routeadd <net/host> <port #> <ipv6 nhip address in hex> <Depth/NotApplicable>
-routeadd net 0 fec0::6a05:caff:fe30:21b0 64
-routeadd net 1 2012::6a05:caff:fe30:2081 64
-routeadd host 0 fec0::6a05:caff:fe30:21b0
-routeadd host 1 2012::6a05:caff:fe30:2081
+ ;routeadd <net/host> <port #> <ipv6 nhip address in hex> <Depth/NotApplicable>
+ routeadd net 0 fec0::6a05:caff:fe30:21b0 64
+ routeadd net 1 2012::6a05:caff:fe30:2081 64
+ routeadd host 0 fec0::6a05:caff:fe30:21b0
+ routeadd host 1 2012::6a05:caff:fe30:2081
 
 vFW - Design
-=============
+============
 
 Requirements
--------------
+------------
 
 Following are the design requierments of the vFW.
 
@@ -188,7 +166,7 @@ Following are the design requierments of the vFW.
    performance.
 
 High Level Design
--------------------
+-----------------
 
 The Firewall performs basic filtering for malformed packets and dynamic packet
 filtering incoming packets using the connection tracker library.
@@ -274,10 +252,11 @@ connection. The ACL library integrated to firewall provide rule based filtering.
 
 
 vCGNAPT - Design
-=================
+================
 
 Introduction
-^^^^^^^^^^^^^^
+------------
+
 This application implements vCGNAPT. The idea of vCGNAPT is to extend the life of
 the service providers IPv4 network infrastructure and mitigate IPv4 address
 exhaustion by using address and port translation in large scale. It processes the
@@ -287,12 +266,14 @@ It also supports the connectivity between the IPv6 access network to IPv4 data n
 using the IPv6 to IPv4 address translation and vice versa.
 
 Scope
-^^^^^^
+-----
+
 This application provides a standalone DPDK based high performance vCGNAPT
 Virtual Network  Function implementation.
 
 Features
-^^^^^^^^^
+--------
+
 The vCGNAPT VNF currently supports the following functionality:
   • Static NAT
   • Dynamic NAT
@@ -308,9 +289,9 @@ The vCGNAPT VNF currently supports the following functionality:
   • Live Session tracking to NAT flow
   • NAT64
 
-
 High Level Design
-^^^^^^^^^^^^^^^^^^^
+-----------------
+
 The Upstream path defines the traffic from Private to Public and the downstream
 path defines the traffic from Public to Private. The vCGNAPT has same set of
 components to process Upstream and Downstream traffic.
@@ -327,46 +308,51 @@ information from which side packet is arrived. The actions can be forwarding to 
 output port (either egress or ingress) or to drop the packet.
 
 vCGNAPT Background
-^^^^^^^^^^^^^^^^^^^
+------------------
 The idea of vCGNAPT is to extend the life of the service providers IPv4 network infrastructure
 and mitigate IPv4 address exhaustion by using address and port translation in large scale.
-It processes the traffic in both the directions. ::
-+------------------+
-|      +-----+
-| Private consumer | CPE ----
-|   IPv4 traffic   +-----+  |
-+------------------+        |
+It processes the traffic in both the directions.
+
+::
+
+ +------------------+
+ |      +-----+
+ | Private consumer | CPE ----
+ |   IPv4 traffic   +-----+  |
+ +------------------+        |
           | +-------------------+             +------------------+
           | |      +------------+      -
           |-> -   Private IPv4   -   vCGNAPT  -      Public      -
           |-> -  access network  -    NAT44   -   IPv4 traffic   -
           | |      +------------+      -
           | +-------------------+             +------------------+
-+------------------+        |
-|      +-----+              |
-| Private consumer - CPE ----
-|   IPv4 traffic   +-----+
-+------------------+
+ +------------------+        |
+ |      +-----+              |
+ | Private consumer - CPE ----
+ |   IPv4 traffic   +-----+
+ +------------------+
       Figure: vCGNAPT deployment in Service provider network
 
 
 Components of vCGNAPT
 ---------------------
-In vCGNAPT, each component is constructed as a packet framework. It includes Master pipeline
-component, driver, load balancer pipeline component and vCGNAPT worker pipeline component. A
-pipeline framework is a collection of input ports, table(s), output ports and actions
-(functions).
+In vCGNAPT, each component is constructed as a packet framework. It includes
+Master pipeline component, driver, load balancer pipeline component and
+vCGNAPT worker pipeline component. A pipeline framework is a collection of
+input ports, table(s), output ports and actions (functions).
 
 Receive and transmit driver
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Packets will be received in bulk and provided to load balancer thread. The transmit takes
-packets from worker thread in a dedicated ring and sent to the hardware queue.
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Packets will be received in bulk and provided to load balancer thread. The
+transmit takes packets from worker thread in a dedicated ring and sent to the
+hardware queue.
 
 Master pipeline
 ^^^^^^^^^^^^^^^^
 This component does not process any packets and should configure with Core 0,
 to save cores for other components which processes traffic. The component
 is responsible for:
+
  1. Initializing each component of the Pipeline application in different threads
  2. Providing CLI shell for the user
  3. Propagating the commands from user to the corresponding components.
@@ -386,6 +372,7 @@ Tuple can be modified/configured using configuration file
 
 vCGNAPT - Static
 ------------------
+
 The vCGNAPT component performs translation of private IP & port to public IP &
 port at egress side and public IP & port to private IP & port at Ingress side
 based on the NAT rules added to the pipeline Hash table. The NAT rules are
@@ -397,87 +384,106 @@ the packets.
 
 vCGNAPT- Dynamic
 -----------------
-The vCGNAPT component performs translation of private IP & port to public IP & port
-at egress side and public IP & port to private IP & port at Ingress side based on the
-NAT rules added to the pipeline Hash table. Dynamic nature of vCGNAPT refers to the
-addition of NAT entries in the Hash table dynamically when new packet arrives. The NAT
-rules will be added to the Hash table automatically when there is no matching entry in
-the table and the packet is circulated through software queue. The packets that have a
-matching egress key or ingress key in the NAT table will be processed to change IP &
+
+The vCGNAPT component performs translation of private IP & port to public IP &
+port at egress side and public IP & port to private IP & port at Ingress side
+based on the NAT rules added to the pipeline Hash table. Dynamic nature of
+vCGNAPT refers to the addition of NAT entries in the Hash table dynamically
+when new packet arrives. The NAT rules will be added to the Hash table
+automatically when there is no matching entry in the table and the packet is
+circulated through software queue. The packets that have a matching egress
+key or ingress key in the NAT table will be processed to change IP &
 port and will be forwarded to the output port defined in the entry.
 
-Dynamic vCGNAPT acts as static one too, we can do NAT entries statically. Static NAT
-entries port range must not conflict to dynamic NAT port range.
+Dynamic vCGNAPT acts as static one too, we can do NAT entries statically.
+Static NAT entries port range must not conflict to dynamic NAT port range.
 
-vCGNAPT Static Topology:
---------------------------
+vCGNAPT Static Topology
+----------------------
+
 IXIA(Port 0)-->(Port 0)VNF(Port 1)-->(Port 1) IXIA
 operation:
   Egress --> The packets sent out from ixia(port 0) will be CGNAPTed to ixia(port 1).
   Igress --> The packets sent out from ixia(port 1) will be CGNAPTed to ixia(port 0).
 
-vCGNAPT Dynamic Topology (UDP_REPLAY):
---------------------------------------
+vCGNAPT Dynamic Topology (UDP_REPLAY)
+-------------------------------------
+
 IXIA(Port 0)-->(Port 0)VNF(Port 1)-->(Port 0)UDP_REPLAY
 operation:
   Egress --> The packets sent out from ixia will be CGNAPTed to L3FWD/L4REPLAY.
   Ingress --> The L4REPLAY upon reception of packets (Private to Public Network),
                     will immediately replay back the traffic to IXIA interface. (Pub -->Priv).
 
-How to run L4Replay:
---------------------
-  1. After the installation of ISB on L4Replay server
-     go to /opt/isb_bin
-  2. ./UDP_Replay -c  core_mask -n no_of_channels(let it be as 2) -- -p PORT_MASK --config="(port,queue,lcore)"
-     eg: ./UDP_Replay -c 0xf -n 4 -- -p 0x3 --config="(0,0,1)"
+How to run L4Replay
+-------------------
+
+After the installation of ISB on L4Replay server go to /opt/isb_bin and run the
+following command.
+
+::
+
+ ./UDP_Replay -c  core_mask -n no_of_channels(let it be as 2) -- -p PORT_MASK --config="(port,queue,lcore)"
+ eg: ./UDP_Replay -c 0xf -n 4 -- -p 0x3 --config="(0,0,1)"
 
 
 vACL - Design
-=================
+=============
 
 Introduction
 --------------
-This application implements Access Control List (ACL). ACL is typically used for rule
-based policy enforcement. It restricts access to a destination IP address/port based
-on various header fields, such as source IP address/port, destination IP address/port
-and protocol. It is built on top of DPDK and uses the packet framework infrastructure.
+This application implements Access Control List (ACL). ACL is typically used
+for rule based policy enforcement. It restricts access to a destination IP
+address/port based on various header fields, such as source IP address/port,
+destination IP address/port and protocol. It is built on top of DPDK and uses
+the packet framework infrastructure.
 
 Scope
 ------
-This application provides a standalone DPDK based high performance ACL Virtual Network
-Function implementation.
+This application provides a standalone DPDK based high performance ACL Virtual
+Network Function implementation.
 
 High Level Design
 ------------------
-The ACL Filter performs bulk filtering of incoming packets based on rules in current ruleset,
-discarding any packets not permitted by the rules. The mechanisms needed for building the
-rule database and performing lookups are provided by the DPDK API.
+The ACL Filter performs bulk filtering of incoming packets based on rules in
+current ruleset, discarding any packets not permitted by the rules. The
+mechanisms needed for building the rule database and performing lookups are
+provided by the DPDK API.
+
 http://dpdk.org/doc/api/rte__acl_8h.html
 
-The Input FIFO contains all the incoming packets for ACL filtering. Packets will be dequeued
-from the FIFO in bulk for processing by the ACL. Packets will be enqueued to the output FIFO.
+The Input FIFO contains all the incoming packets for ACL filtering. Packets
+will be dequeued from the FIFO in bulk for processing by the ACL. Packets will
+be enqueued to the output FIFO.
+
 The Input and Output FIFOs will be implemented using DPDK Ring Buffers.
 
-The DPDK ACL example: http://dpdk.org/doc/guides/sample_app_ug/l3_forward_access_ctrl.html
+The DPDK ACL example:
+
+http://dpdk.org/doc/guides/sample_app_ug/l3_forward_access_ctrl.html
+
 #figure-ipv4-acl-rule contains a suitable syntax and parser for ACL rules.
 
 Components of ACL
 ------------------
-In ACL, each component is constructed as a packet framework. It includes Master pipeline
-component, driver, load balancer pipeline component and ACL worker pipeline component. A
-pipeline framework is a collection of input ports, table(s), output ports and actions
-(functions).
+In ACL, each component is constructed as a packet framework. It includes
+Master pipeline component, driver, load balancer pipeline component and ACL
+worker pipeline component. A pipeline framework is a collection of input ports,
+table(s), output ports and actions (functions).
 
 Receive and transmit driver
 ---------------------------
-Packets will be received in bulk and provided to load balancer thread. The transmit takes
-packets from worker thread in a dedicated ring and it is sent to the hardware queue.
+Packets will be received in bulk and provided to load balancer thread. The
+transmit takes packets from worker thread in a dedicated ring and it is sent
+to the hardware queue.
 
 Master
--------
+------
 This component does not process any packets and should configure with Core 0,
-to save cores for other components which processes traffic. The component
-is responsible for:
+to save cores for other components which processes traffic.
+
+The component is responsible for
+
  1. Initializing each component of the Pipeline application in different threads
  2. Providing CLI shell for the user
  3. Propagating the commands from user to the corresponding components.
@@ -496,6 +502,7 @@ worker threads.
 ACL
 ---
 Visit the following link for DPDK ACL library implementation.
+
 http://dpdk.org/doc/api/rte__acl_8h.html
 http://dpdk.org/doc/guides/prog_guide/packet_classif_access_ctrl.html
 
@@ -504,10 +511,11 @@ Provides shadow copy for runtime rule configuration support
 Implements policy based packet forwarding
 
 vPE - Design
-=============
+============
 
 Introduction
----------------
+------------
+
 An Edge Router typically sits between two networks such as the provider core
 network and the provider access network. In the below diagram, Customer Edge
 (CE) Router sits in the provider access network and MPLS cloud network
@@ -529,12 +537,14 @@ IP Pipeline Framework. For more details, read DPDK Getting Started Guide, DPDK
 Programmers Guide, DPDK Sample Applications Guide.
 
 Scope
-------
+-----
+
 This application provides a standalone DPDK based high performance Provide
 Edge Router Network Function implementation.
 
 High Level Design
--------------------
+-----------------
+
 The Edge Router application processes the traffic between Customer and the core
 network.
 The Upstream path defines the traffic from Customer to Core and the downstream
@@ -596,6 +606,7 @@ Edge Router has the following functionalities in Upstream.
 
 Components of vPE
 -------------------
+
 The vPE has downstream and upstream pipelines controlled by Master component.
 Edge router processes two different types of traffic through pipelines
 I.  Downstream (Core-to-Customer)
@@ -618,6 +629,7 @@ II. Upstream (Customer-to-Core)
 
 Master Component
 -----------------
+
 The Master component is part of all the IP Pipeline applications. This
 component does not process any packets and should configure with Core0,
 to save cores for other components which processes traffic. The component
@@ -628,19 +640,25 @@ is responsible for
 
 Upstream and Downstream Pipelines
 ----------------------------------
+
 The downstream will have Firewall, Pass-through, Metering and Routing pipelines.
 The upstream will have Pass-through and Routing pipelines.
 
 To run the VNF, execute the following:
-isb_root/VNFs/vPE$ ./build/ip_pipeline -p 0x3 \
+
+::
+
+ isb_root/VNFs/vPE$ ./build/ip_pipeline -p 0x3 \
    -f config/auto_combo_1_instances_1_queues_2_ports_v2.cfg \
    -s config/auto_combo_1_instances_1_queues_2_ports_v2.txt
+
 
 Prox - Packet pROcessing eXecution engine
 ==========================================
 
-Overview:
-----------
+Introduction
+------------
+
 Packet pROcessing eXecution Engine (PROX) which is a DPDK application.
 PROX can do operations on packets in a highly configurable manner.
 The PROX application is also displaying performance statistics that can
@@ -653,6 +671,7 @@ configuration files.
 
 The figure shows that each core is executing a set of tasks. Currently,
 a task can be any one of the following:
+
 1. Classify
 2. Drop
 3. Basic Forwarding (no touch)
@@ -669,14 +688,15 @@ a task can be any one of the following:
 14. ACL ...
 
 One of the example configurations that is distributed with the source code is a
-Proof of Concept (PoC) implementation of a Broadband Network Gateway (BNG) with Quality of Service (QoS).
+Proof of Concept (PoC) implementation of a Broadband Network Gateway (BNG)
+with Quality of Service (QoS).
 The software architecture for this PoC is presented below.
 
 .. image:: images/prox-qo-img02.png
 
 The display shows per task statistics through an ncurses interface.
-Statistics include: estimated idleness; per second statistics for packets received,
-transmitted or dropped; per core cache occupancy; cycles per packet.
+Statistics include: estimated idleness; per second statistics for packets
+received, transmitted or dropped; per core cache occupancy; cycles per packet.
 These statistics can help pinpoint bottlenecks in the system.
 This information can then be used to optimize the configuration.
 Other features include debugging support, scripting,
