@@ -43,7 +43,6 @@ Version History
 | *Date*         | *Version*          | *Comment*                       |
 |                |                    |                                 |
 +----------------+--------------------+---------------------------------+
-+----------------+--------------------+---------------------------------+
 | "Oct 20 2017"  |  5.0               | SampleVNF for Euphrates release |
 |                |                    |                                 |
 +----------------+--------------------+---------------------------------+
@@ -80,21 +79,20 @@ OPNFV platform, including:
 
 For Euphrates release, the *SampleVNF* supported:
 
-::
-  +----------------+---------------------------------------------------------+-------------------+
-  | **VNF**        |                 **Name**                                |    **version**    |
-  +----------------+---------------------------------------------------------+-------------------+
-  | **CGNAPT**     | Carrier Grade Network Address and port Translation .5.0 |     v0.1.0        |
-  +----------------+---------------------------------------------------------+-------------------+
-  | **Prox**       | Packet pROcessing eXecution engine                      |     v0.39.0       |
-  |                  acts as traffic generator, L3FWD, L2FWD, BNG etc        |                   |
-  +----------------+---------------------------------------------------------+-------------------+
-  | **vACL**       | Access Control List                                     |     v0.1.0        |
-  +----------------+---------------------------------------------------------+-------------------+
-  | **vFW**        | Firewall                                                |     v0.1.0        |
-  +----------------+---------------------------------------------------------+-------------------+
-  | **UDP_replay** | UDP_Replay                                              |     v0.1.0        |
-  +----------------+---------------------------------------------------------+-------------------+
++----------------+---------------------------------------------------------+-------------------+
+| *VNF*          |                 *Name*                                  |    *version*      |
++----------------+---------------------------------------------------------+-------------------+
+| *CGNAPT*       | Carrier Grade Network Address and port Translation .5.0 |     v0.1.0        |
++----------------+---------------------------------------------------------+-------------------+
+| *Prox*         | Packet pROcessing eXecution engine                      |     v0.39.0       |
+|                |  acts as traffic generator, L3FWD, L2FWD, BNG etc       |                   |
++----------------+---------------------------------------------------------+-------------------+
+| *vACL*         | Access Control List                                     |     v0.1.0        |
++----------------+---------------------------------------------------------+-------------------+
+| *vFW*          | Firewall                                                |     v0.1.0        |
++----------------+---------------------------------------------------------+-------------------+
+| *UDP_replay*   | UDP_Replay                                              |     v0.1.0        |
++----------------+---------------------------------------------------------+-------------------+
 
 .. note:: Highlevel Desgin and features supported by each of the VNFs is described in Developer
           and user guide.
@@ -154,7 +152,7 @@ Documents
 
  - User Guide: http://artifacts.opnfv.org/samplevnf/euphrates/5.0.0/docs/testing_user_userguide/index.html
 
- - Developer Guide: http://artifacts.opnfv.org/samplevnf/euphrates/5.0.0/docs/testing_developer/index.html 
+ - Developer Guide: http://artifacts.opnfv.org/samplevnf/euphrates/5.0.0/docs/testing_developer/index.html
 
 
 Software Deliverables
