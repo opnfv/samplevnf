@@ -220,6 +220,6 @@ Manual Build
      1) git clone https://git.opnfv.org/samplevnf
      2) cd samplevnf and run
         ./tools/samplevnf-img-dpdk-samplevnf-modify tools/ubuntu-server-cloudimg-samplevnf-modify.sh
-        Image available in: /tmp/workspace/samplevnf/xenial-server-cloudimg-amd64-disk1.img 
+        Image available in: /tmp/workspace/samplevnf/xenial-server-cloudimg-amd64-disk1.img
 
 To run VNFs. Please refer chapter `05-How_to_run_SampleVNFs.rst`
