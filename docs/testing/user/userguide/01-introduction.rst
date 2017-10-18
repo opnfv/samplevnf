@@ -53,6 +53,14 @@ This document consists of the following chapters:
 
 * Chapter :doc:`05-How_to_run_SampleVNFs` provides example on how installing and running *SampleVNF*.
 
+* Chapter :doc:`06-How_to_use_REST_api` provides info on how to run REST API *SampleVNF*.
+
+* Chapter :doc:`07-Config_files` provides info *SampleVNF* configuration.
+
+* Chapter :doc:`08-CLI_Commands_Reference` provides info on CLI commands supported by *SampleVNF*
+
+* Chapter :doc:`09-Prox` provides info on PROX VNF.
+
 Contact SampleVNF
 =================
 
