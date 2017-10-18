@@ -8,7 +8,7 @@ REST API
 ========================================================
 
 Introduction
-===============
+---------------
 As the internet industry progresses creating REST API becomes more concrete
 with emerging best Practices. RESTful web services don’t follow a prescribed
 standard except fpr the protocol that is used which is HTTP, its important
@@ -30,7 +30,7 @@ Here are important points to be considered:
 
 
 REST API in SampleVNF
-=====================
+---------------------
 
 In SampleVNF project VNF’s are run under different contexts like BareMetal,
 SRIOV, OVS & Openstack etc. It becomes difficult to interact with the
@@ -45,7 +45,7 @@ REST api on VNF’s will help adapting with the new automation techniques
 being adapted in yardstick.
 
 Web server integration with VNF’s
-==================================
+----------------------------------
 
 In order to implement REST api’s in VNF one of the first task is to
 identify a simple web server that needs to be integrated with VNF’s.
@@ -67,13 +67,13 @@ Typical usage is shown below
 
 URI definition for different VNF’s
 ----------------------------------
-::
+  ::
   +---------------------------------+-----------------+--------------------------+----------------------------------------------------+
-  |        **URI**        	         | **REST Method** |      **Arguments**       |**Description**                                    |
+  |        **URI**       	          | **REST Method** |      **Arguments**       |**Description**                                     |
   +---------------------------------+-----------------+--------------------------+----------------------------------------------------+
-  |/vnf                  			     |   GET  		     | 	None           		      |Displays top level methods available                 |
+  |/vnf                  			      |   GET  		      | 	None           		     |Displays top level methods available                |
   +---------------------------------+-----------------+--------------------------+----------------------------------------------------+
-  |/vnf/config           		  	   |   GET         	 |  None           	 	      |Displays the current config set                      |
+  |/vnf/config           		  	    |   GET         	|  None           	 	     |Displays the current config set                     |
   |                                 |   POST          |  pci_white_list:         |                                                    |
   |                                 |                 |    num_worker(o):        |                                                    |
   |                                 |                 |    vnf_type(o):          |                                                    |
@@ -137,22 +137,21 @@ URI definition for different VNF’s
   PUT/POST - Command success/failure
 
 API Usage
-===============
+---------
 
-1. Run time Usage
-====================
+Run time Usage
+^^^^^^^^^^^^^^
 
 An application(say vFW) with REST API support is run as follows
 with just PORT MASK as input. The following environment variables
 need to be set before launching the application(To be run from
 samplevnf directory).
 
-::
-  ./build/vFW (Without the -f & -s option)
+   ::
+    ./build/vFW (Without the -f & -s option)
 
 1. When VNF(vCGNAPT/vACL/vFW) is launched it waits for user to provide the /vnf/config REST method.
-
-  ::
+   ::
     e.g curl -X POST -H "Content-Type:application/json" -d '{"pci_white_list": "0000:08:00.0 0000:08:00.1"}' http://<IP>/vnf/config
 
     Note: the config is mostly implemented based on existing VNF's. if new parameters
@@ -170,7 +169,6 @@ samplevnf directory).
         "public_ip_port_range_1": "05050000:(1, 65535)/05050001:(1, 65535)" }' http://10.223.197.179/vnf/config
 
 2. Check the Link IP's using the REST API (vCGNAPT/vACL/vFW)
-
    ::
      e.g curl <IP>/vnf/config/link
 
@@ -183,7 +181,6 @@ samplevnf directory).
      http://<IP>/vnf/config/link
 
 3. Now that links are enabled we can configure IP's using link method as follows (vCGNAPT/vACL/vFW)
-
    ::
      e.g  curl -X POST -H "Content-Type:application/json" -d '{"ipv4":"<IP to be configured>","depth":"24"}'
      http://<IP>/vnf/config/link/0
