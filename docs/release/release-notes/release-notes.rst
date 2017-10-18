@@ -152,7 +152,7 @@ Documents
 
  - User Guide: http://artifacts.opnfv.org/samplevnf/euphrates/5.0.0/docs/testing_user_userguide/index.html
 
- - Developer Guide: http://artifacts.opnfv.org/samplevnf/euphrates/5.0.0/docs/testing_developer/index.html 
+ - Developer Guide: http://artifacts.opnfv.org/samplevnf/euphrates/5.0.0/docs/testing_developer/index.html
 
 
 Software Deliverables

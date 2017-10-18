@@ -3,6 +3,7 @@
 .. http://creativecommons.org/licenses/by/4.0
 .. (c) OPNFV, Intel Corporation and others.
 
+==========================================
 PROX - Packet pROcessing eXecution engine.
 ==========================================
 
@@ -40,7 +41,7 @@ PROX COMMANDS AND SCREENS
         |update interval <value>                       | Update statistics refresh rate, in msec (must be >=10).                   |                            |
         |                                              | Default is 1 second                                                       |  update interval 500       |
         +----------------------------------------------+---------------------------------------------------------------------------+----------------------------+
-        |rx tx info                                    | Print connections between tasks on all cores                              |                            | 
+        |rx tx info                                    | Print connections between tasks on all cores                              |                            |
         +----------------------------------------------+---------------------------------------------------------------------------+----------------------------+
         |start <core list>|all <task_id>               | Start cores specified in <core list> or all cores.                        |  start all                 |
         |                                              | If <task_id> is not specified, all tasks for the specified cores          |  start 1                   |
@@ -69,7 +70,7 @@ PROX COMMANDS AND SCREENS
         +----------------------------------------------+---------------------------------------------------------------------------+----------------------------+
         |count <core id> <task id> <count>             | Generate <count> packets, then pause generating                           | count  1 0 5               |
         +----------------------------------------------+---------------------------------------------------------------------------+----------------------------+
-        |pkt_size <coreid> <taskid> <pktsize>          | Set the packet size to <pkt_size>                                         | pkt_size 1 3 255           |       
+        |pkt_size <coreid> <taskid> <pktsize>          | Set the packet size to <pkt_size>                                         | pkt_size 1 3 255           |
         +----------------------------------------------+---------------------------------------------------------------------------+----------------------------+
         |speed <core_id> <task_id> <speed percentage>  | Change the speed to <speed percentage> of a                               |
         |                                              | 10 Gbps line at which packets are being generated                         | speed 1 0 50               |
@@ -216,7 +217,7 @@ In order to make the configuration file easier to read and modify,
 DPDK ports are given a name with the name= option.
 The name serves as the reference, and in addition, it will show up in the display at runtime.
 
-:: 
+::
         PARAMETER    EXAMPLE         DESCRIPTION
         ----------------------------------------------------------------------------
         name         inet0           Use inet0 to later refer to this port
@@ -359,7 +360,7 @@ and if any patches are needed for the chosen DPDK version.
 The following packages need to be installed. (Example for destributions that are using rpm)
 
 ::
-  sudo yum install net-tools wget gcc unzip libpcap-devel ncurses-devel libedit-devel pciutils lua-devel kernel-devel 
+  sudo yum install net-tools wget gcc unzip libpcap-devel ncurses-devel libedit-devel pciutils lua-devel kernel-devel
   Jump Start
 
 The following instructions are here to help customers to start using PROX.
