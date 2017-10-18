@@ -9,7 +9,7 @@ Architecture
 
 Abstract
 ========
-This chapter describes the samplevnf  software architecture.
+This chapter describes the samplevnf software architecture.
 we will introduce it VNFs. More technical details will be introduced in this chapter.
 
 Overview
@@ -79,6 +79,7 @@ VNF supported
       Intel® DPPD - PROX is an application built on top of DPDK which allows
       creating software architectures, such as the one depicted below, through
       small and readable configuration files.
+      This VNF can act as L2FWD, L3FWD, BNG etc.
 
 Test Framework
 --------------
@@ -111,3 +112,5 @@ SampleVNF Directory structure
 *VNFs/* - all VNF source code directory.
 
 *VNF_Catalogue/* - Collection of all  Open Source VNFs
+
+*heat_template/* - Sample HEAT templates for VNFs

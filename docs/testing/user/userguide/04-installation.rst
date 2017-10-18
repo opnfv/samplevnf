@@ -108,6 +108,11 @@ The connectivity could be
      TG:port 0 <------> VNF:Port 0
      TG:port 1 <------> VNF:Port 1
 
+     For correalted traffic, use below configuration
+     TG_1:port 0 <------> VNF:Port 0
+                        VNF:Port 1 <------> TG_2:port 0 (UDP Replay)
+     (TG_2(UDP_Replay) reflects all the traffic on the given port)
+
 2) Multi port pair :  More than one pair of traffic
 
 ::
@@ -120,7 +125,9 @@ The connectivity could be
 
      For correalted traffic, use below configuration
      TG_1:port 0 <------> VNF:Port 0
-                        VNF:Port 1 <------> TG_2:port 0 (UDP Replay)
+                          VNF:Port 1 <------> TG_2:port 0 (UDP Replay)
+     TG_1:port 1 <------> VNF:Port 2
+                          VNF:Port 3 <------> TG_2:port 1 (UDP Replay)
      (TG_2(UDP_Replay) reflects all the traffic on the given port)
 
 * Bare-Metal
@@ -148,9 +155,7 @@ Build VNFs on the DUT:
 Auto Build - Using script to build VNFs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
      * Interactive options:
-
        ::
-
          ./tools/vnf_build.sh -i
          Follow the steps in the screen from option [1] –> [9] and
          select option [8] to build the vnfs.
@@ -179,52 +184,42 @@ Auto Build - Using script to build VNFs
          [8] Build all VNFs (vACL, vCGNAPT, vFW, UDP_Replay, DPPD-PROX)
 
          [9] Exit Script
+
      * non-Interactive options:
-
        ::
-
          ./tools/vnf_build.sh -s -d=<dpdk version eg 17.02>
 
 Manual Build
 ^^^^^^^^^^^^
 
    ::
-
       1. Download DPDK supported version from dpdk.org
-        http://dpdk.org/browse/dpdk/snapshot/dpdk-$DPDK_RTE_VER.zip
-        unzip dpdk-$DPDK_RTE_VER.zip and apply dpdk patches only in case of 16.04 (Not required for other DPDK versions)
-        cd dpdk
-        make config T=x86_64-native-linuxapp-gcc O=x86_64-native-linuxapp-gcc
-        cd x86_64-native-linuxapp-gcc
-        make -j
-      2. Setup huge pages
-        For 1G/2M hugepage sizes, for example 1G pages, the size must be specified
-        explicitly and can also be optionally set as the default hugepage size
-        for the system. For example, to reserve 8G of hugepage memory in the form
-        of eight 1G pages, the following options should be passed to the
-        kernel: * default_hugepagesz=1G hugepagesz=1G hugepages=8 hugepagesz=2M hugepages=2048
-      3. Add this to Go to /etc/default/grub configuration file.
-        Append “default_hugepagesz=1G hugepagesz=1G hugepages=8 hugepagesz=2M hugepages=2048”to the GRUB_CMDLINE_LINUX entry.
-      4. Setup Environment Variable
-        export RTE_SDK=<samplevnf>/dpdk
-        export RTE_TARGET=x86_64-native-linuxapp-gcc
-        export VNF_CORE=<samplevnf>
-        or using ./tools/setenv.sh
-      5. Build vACL VNFs
-        cd <samplevnf>/VNFs/vACL
-        make clean
-        make
-        The vACL executable will be created at the following location
-        <samplevnf>/VNFs/vACL/build/vACL
+         * http://dpdk.org/browse/dpdk/snapshot/dpdk-$DPDK_RTE_VER.zip
+         * unzip dpdk-$DPDK_RTE_VER.zip and apply dpdk patches only in case of 16.04 (Not required for other DPDK versions)
+         * cd dpdk
+         * make config T=x86_64-native-linuxapp-gcc O=x86_64-native-linuxapp-gcc
+         * cd x86_64-native-linuxapp-gcc
+         * make -j
+      2. Add this to Go to /etc/default/grub configuration file to setup hugepages.
+         * Append “default_hugepagesz=1G hugepagesz=1G hugepages=8 hugepagesz=2M hugepages=2048” to the GRUB_CMDLINE_LINUX entry.
+      3. Setup Environment Variable
+         * export RTE_SDK=<samplevnf>/dpdk
+         * export RTE_TARGET=x86_64-native-linuxapp-gcc
+         * export VNF_CORE=<samplevnf> or using ./tools/setenv.sh
+      4. Build SampleVNFs e.g, vACL
+         * cd <samplevnf>/VNFs/vACL
+         * make clean
+         * make
+         * The vACL executable will be created at the following location
+           <samplevnf>/VNFs/vACL/build/vACL
 
 2) Standalone virtualization/Openstack:
 
    Build VM image from script in  yardstick
-
    ::
-
-     1) git clone https://git.opnfv.org/yardstick
-     2) cd yardstick and run
-        ./tools/yardstick-img-modify tools/ubuntu-server-cloudimg-samplevnf-modify.sh
+     1) git clone https://git.opnfv.org/samplevnf
+     2) cd samplevnf and run
+        ./tools/samplevnf-img-dpdk-samplevnf-modify tools/ubuntu-server-cloudimg-samplevnf-modify.sh
+        Image available in: /tmp/workspace/samplevnf/xenial-server-cloudimg-amd64-disk1.img 
 
 To run VNFs. Please refer chapter `05-How_to_run_SampleVNFs.rst`

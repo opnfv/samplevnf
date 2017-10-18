@@ -42,7 +42,7 @@ SUT requirements:
    +-----------+------------------+
    | OS        | Ubuntu 16.04 LTS |
    +-----------+------------------+
-   | kernel    |  4.4.0-34-generic|
+   | kernel    | 4.4.0-34-generic |
    +-----------+------------------+
    | DPDK      | 17.02            |
    +-----------+------------------+
@@ -75,12 +75,19 @@ SRIOV or OVS) setup based on the test profile.
 The connectivity could be
 
 1) Single port pair : One pair ports used for traffic
+
    ::
      e.g. Single port pair link0 and link1 of VNF are used
      TG:port 0 <------> VNF:Port 0
      TG:port 1 <------> VNF:Port 1
 
+     For correalted traffic, use below configuration
+     TG_1:port 0 <------> VNF:Port 0
+                          VNF:Port 1 <------> TG_2:port 0 (UDP Replay)
+     (TG_2(UDP_Replay) reflects all the traffic on the given port)
+
 2) Multi port pair :  More than one pair of traffic
+
    ::
      e.g. Two port pair link 0, link1, link2 and link3 of VNF are used
      TG:port 0 <------> VNF:Port 0
@@ -90,8 +97,11 @@ The connectivity could be
 
      For correalted traffic, use below configuration
      TG_1:port 0 <------> VNF:Port 0
-                        VNF:Port 1 <------> TG_2:port 0 (UDP Replay)
+                          VNF:Port 1 <------> TG_2:port 0 (UDP Replay)
+     TG_1:port 1 <------> VNF:Port 2
+                          VNF:Port 3 <------> TG_2:port 1 (UDP Replay)
      (TG_2(UDP_Replay) reflects all the traffic on the given port)
+
  * Bare-Metal
    Refer: http://fast.dpdk.org/doc/pdf-guides/ to setup the DUT for VNF to run
 
@@ -114,17 +124,19 @@ Setup Traffic generator
 Step 0: Preparing hardware connection
 
     Connect Traffic generator and VNF system back to back as shown in previous section
-    TRex port 0 ↔ (VNF Port 0) ↔ (VNF Port 1) ↔ TRex port 1
+
+    ::
+        TRex port 0 ↔ (VNF Port 0) ↔ (VNF Port 1) ↔ TRex port 1
 
 Step 1: Setting up Traffic generator (TRex)
 
     TRex Software preparations
-    ^^^^^^^^^^^^^^^^^^^^^^^^^^
-    * Install the OS (Bare metal Linux, not VM!)
-    * Obtain the latest TRex package: wget https://trex-tgn.cisco.com/trex/release/latest
-    * Untar the package: tar -xzf latest
-    * Change dir to unzipped TRex
-    * Create config file using command: sudo python dpdk_setup_ports.py -i
+    **************************
+     * Install the OS (Bare metal Linux, not VM!)
+     * Obtain the latest TRex package: wget https://trex-tgn.cisco.com/trex/release/latest
+     * Untar the package: tar -xzf latest
+     * Change dir to unzipped TRex
+     * Create config file using command: sudo python dpdk_setup_ports.py -i
        In case of Ubuntu 16 need python3
        See paragraph config creation for detailed step-by-step
     (Refer: https://trex-tgn.cisco.com/trex/doc/trex_stateless_bench.html)
@@ -140,89 +152,87 @@ Step 2: Procedure to build SampleVNFs
 
 Auto Build
 ^^^^^^^^^^
-
 * Interactive options:
 
 ::
+   ./tools/vnf_build.sh -i
+   Follow the steps in the screen from option [1] –> [9] and select option [8] to build the vnfs.
+   It will automatically download selected DPDK version and any required patches and will setup everything and build VNFs.
+   Following are the options for setup:
+   ----------------------------------------------------------
+   Step 1: Environment setup.
+   ----------------------------------------------------------
+   [1] Check OS and network connection
+   [2] Select DPDK RTE version
 
-              ./tools/vnf_build.sh -i
-              Follow the steps in the screen from option [1] –> [9] and select option [8] to build the vnfs.
-              It will automatically download selected DPDK version and any required patches and will setup everything and build VNFs.
-              Following are the options for setup:
-              ----------------------------------------------------------
-              Step 1: Environment setup.
-              ----------------------------------------------------------
-              [1] Check OS and network connection
-              [2] Select DPDK RTE version
+   ----------------------------------------------------------
+   Step 2: Download and Install
+   ----------------------------------------------------------
+   [3] Agree to download
+   [4] Download packages
+   [5] Download DPDK zip
+   [6] Build and Install DPDK
+   [7] Setup hugepages
+   [8] Download civetweb
 
-              ----------------------------------------------------------
-              Step 2: Download and Install
-              ----------------------------------------------------------
-              [3] Agree to download
-              [4] Download packages
-              [5] Download DPDK zip
-              [6] Build and Install DPDK
-              [7] Setup hugepages
-              [8] Download civetweb
+   ----------------------------------------------------------
+   Step 3: Build VNFs
+   ----------------------------------------------------------
+   [9] Build all VNFs (vACL, vCGNAPT, vFW, UDP_Replay, DPPD-PROX)
 
-              ----------------------------------------------------------
-              Step 3: Build VNFs
-              ----------------------------------------------------------
-              [9] Build all VNFs (vACL, vCGNAPT, vFW, UDP_Replay, DPPD-PROX)
-
-              [10] Exit Script
+   [10] Exit Script
 
 
 * Non-Interactive options:
 
 ::
-
-              ./tools/vnf_build.sh -s -d=<dpdk version eg 17.02>
+   ./tools/vnf_build.sh -s -d=<dpdk version eg 17.02>
+   if system is behind the proxy
+   ./tools/vnf_build.sh -s -d=<dpdk version eg 17.02> -p=<proxy>
 
 Manual Build
 ^^^^^^^^^^^^
 
 ::
+   1) Download DPDK supported version from dpdk.org
+      http://dpdk.org/browse/dpdk/snapshot/dpdk-$DPDK_RTE_VER.zip
+      unzip dpdk-$DPDK_RTE_VER.zip and apply dpdk patches only in case of 16.04 (Not required for other DPDK versions)
+      cd dpdk
+      make config T=x86_64-native-linuxapp-gcc O=x86_64-native-linuxapp-gcc
+      cd x86_64-native-linuxapp-gcc
+      make
 
-           1) Download DPDK supported version from dpdk.org
-              http://dpdk.org/browse/dpdk/snapshot/dpdk-$DPDK_RTE_VER.zip
-              unzip dpdk-$DPDK_RTE_VER.zip and apply dpdk patches only in case of 16.04 (Not required for other DPDK versions)
-              cd dpdk
-              make config T=x86_64-native-linuxapp-gcc O=x86_64-native-linuxapp-gcc
-              cd x86_64-native-linuxapp-gcc
-              make
+   2) Download civetweb 1.9 version from the following link
+      https://sourceforge.net/projects/civetweb/files/1.9/CivetWeb_V1.9.zip
+      unzip CivetWeb_V1.9.zip
+      mv civetweb-master civetweb
+      cd civetweb
+      make lib
 
-           2) Download civetweb 1.9 version from the following link
-              https://sourceforge.net/projects/civetweb/files/1.9/CivetWeb_V1.9.zip
-              unzip CivetWeb_V1.9.zip
-              mv civetweb-master civetweb
-              cd civetweb
-              make lib
-
-           3) Setup huge pages
-              For 1G/2M hugepage sizes, for example 1G pages, the size must be
-              specified explicitly and can also be optionally set as the
-              default hugepage size for the system. For example, to reserve 8G
-              of hugepage memory in the form of eight 1G pages, the following
-              options should be passed to the kernel: * default_hugepagesz=1G
-              hugepagesz=1G hugepages=8 hugepagesz=2M hugepages=2048
-           4) Add this to Go to /etc/default/grub configuration file.
-              Append “default_hugepagesz=1G hugepagesz=1G hugepages=8 hugepagesz=2M hugepages=2048”
-              to the GRUB_CMDLINE_LINUX entry.
-           5) Setup Environment Variable
-              export RTE_SDK=<samplevnf>/dpdk
-              export RTE_TARGET=x86_64-native-linuxapp-gcc
-              export VNF_CORE=<samplevnf>
-              or using ./tools/setenv.sh
-           6) Build VNFs
-              cd <samplevnf>
-              make
-              or to build individual VNFs
-                cd <samplevnf>/VNFs/
-                make clean
-                make
-                The vFW executable will be created at the following location
-                <samplevnf>/VNFs/vFW/build/vFW
+   3) Setup huge pages
+      For 1G/2M hugepage sizes, for example 1G pages, the size must be
+      specified explicitly and can also be optionally set as the
+      default hugepage size for the system. For example, to reserve 8G
+      of hugepage memory in the form of eight 1G pages, the following
+      options should be passed to the kernel: * default_hugepagesz=1G
+      hugepagesz=1G hugepages=8 hugepagesz=2M hugepages=2048
+   4) Add this to Go to /etc/default/grub configuration file.
+      Append “default_hugepagesz=1G hugepagesz=1G hugepages=8 hugepagesz=2M hugepages=2048”
+      to the GRUB_CMDLINE_LINUX entry.
+   5) Setup Environment Variable
+      export RTE_SDK=<samplevnf>/dpdk
+      export RTE_TARGET=x86_64-native-linuxapp-gcc
+      export VNF_CORE=<samplevnf>
+      or using ./tools/setenv.sh
+   6) Build VNFs
+      cd <samplevnf>
+      make
+      or to build individual VNFs
+        cd <samplevnf>/VNFs/
+        make clean
+        make
+        The vFW executable will be created at the following location
+        <samplevnf>/VNFs/vFW/build/vFW
 
 
 Virtual Firewall - How to run
@@ -234,58 +244,57 @@ a) Bind ports to DPDK
 
   ::
 
-        For DPDK versions 17.xx
-        1) cd <samplevnf>/dpdk
-        2) ./usertools/dpdk-devbind.py --status <--- List the network device
-        3) ./usertools/dpdk-devbind.py -b igb_uio <PCI Port 0> <PCI Port 1>
-        .. _More details: http://dpdk.org/doc/guides-17.05/linux_gsg/build_dpdk.html#binding-and-unbinding-network-ports-to-from-the-kernel-modules
+    For DPDK versions 17.xx
+    1) cd <samplevnf>/dpdk
+    2) ./usertools/dpdk-devbind.py --status <--- List the network device
+    3) ./usertools/dpdk-devbind.py -b igb_uio <PCI Port 0> <PCI Port 1>
+    .. _More details: http://dpdk.org/doc/guides-17.05/linux_gsg/build_dpdk.html#binding-and-unbinding-network-ports-to-from-the-kernel-modules
 
 
 b) Prepare script to enalble VNF to route the packets
 
   ::
 
-          cd <samplevnf>/VNFs/vFW/config
-          Open -> VFW_SWLB_SinglePortPair_script.tc. Replace the bold items based on your setting.
+    cd <samplevnf>/VNFs/vFW/config
+    Open -> VFW_SWLB_SinglePortPair_script.tc. Replace the bold items based on your setting.
 
-           link 0 config <VNF port 0 IP eg 202.16.100.10> 8
-           link 0 up
-           link 1 down
-           link 1 config <VNF port 0 IP eg 172.16.40.10> 8
-           link 1 up
+    link 0 config <VNF port 0 IP eg 202.16.100.10> 8
+    link 0 up
+    link 1 down
+    link 1 config <VNF port 0 IP eg 172.16.40.10> 8
+    link 1 up
 
-           ; routeadd <net/host> <port #> <ipv4 nhip address in decimal> <Mask>
-           routeadd net 0 <traffic generator port 0 IP eg 202.16.100.20> 0xff000000
-           routeadd net 1 <traffic generator port 1 IP eg 172.16.40.20> 0xff000000
+    ; routeadd <net/host> <port #> <ipv4 nhip address in decimal> <Mask>
+    routeadd net 0 <traffic generator port 0 IP eg 202.16.100.20> 0xff000000
+    routeadd net 1 <traffic generator port 1 IP eg 172.16.40.20> 0xff000000
 
-           ; IPv4 static ARP; disable if dynamic arp is enabled.
-           p 1 arpadd 0 <traffic generator port 0 IP eg 202.16.100.20> <traffic generator port 0 MAC>
-           p 1 arpadd 1  <traffic generator port 1 IP eg 172.16.40.20> <traffic generator port 1 MAC>
-           p action add 0 accept
-           p action add 0 fwd 0
-           p action add 0 count
-           p action add 1 accept
-           p action add 1 fwd 1
-           p action add 1 count
-           p action add 2 drop
-           p action add 2 count
-           p action add 0 conntrack
-           p action add 1 conntrack
-           p action add 2 conntrack
-           p action add 3 conntrack
-           ; IPv4 rules
-           p vfw add 1 <traffic generator port 0 IP eg 202.16.100.20> 8 <traffic generator port 1 IP eg 172.16.40.20> 8 0 65535 67 69 0 0 2
-           p vfw add 2 <traffic generator port 0 IP eg 202.16.100.20> 8 <traffic generator port 1 IP eg 172.16.40.20> 8 0 65535 0 65535 0 0 1
-           p vfw add 2 <traffic generator port 1 IP eg 172.16.40.20> 8 <traffic generator port 0 IP eg 202.16.100.20> 8 0 65535 0 65535 0 0 0
-           p vfw applyruleset
-
+    ; IPv4 static ARP; disable if dynamic arp is enabled.
+    p 1 arpadd 0 <traffic generator port 0 IP eg 202.16.100.20> <traffic generator port 0 MAC>
+    p 1 arpadd 1  <traffic generator port 1 IP eg 172.16.40.20> <traffic generator port 1 MAC>
+    p action add 0 accept
+    p action add 0 fwd 0
+    p action add 0 count
+    p action add 1 accept
+    p action add 1 fwd 1
+    p action add 1 count
+    p action add 2 drop
+    p action add 2 count
+    p action add 0 conntrack
+    p action add 1 conntrack
+    p action add 2 conntrack
+    p action add 3 conntrack
+    ; IPv4 rules
+    p vfw add 1 <traffic generator port 0 IP eg 202.16.100.20> 8 <traffic generator port 1 IP eg 172.16.40.20> 8 0 65535 67 69 0 0 2
+    p vfw add 2 <traffic generator port 0 IP eg 202.16.100.20> 8 <traffic generator port 1 IP eg 172.16.40.20> 8 0 65535 0 65535 0 0 1
+    p vfw add 2 <traffic generator port 1 IP eg 172.16.40.20> 8 <traffic generator port 0 IP eg 202.16.100.20> 8 0 65535 0 65535 0 0 0
+    p vfw applyruleset
 
 c) Run below cmd to launch the VNF. Please make sure both hugepages and ports to be used are bind to dpdk.
 
   ::
 
-          cd <samplevnf>/VNFs/vFW/
-          ./build/vFW -p 0x3 -f ./config/VFW_SWLB_SinglePortPair_4Thread.cfg  -s ./config/VFW_SWLB_SinglePortPair_script.tc
+    cd <samplevnf>/VNFs/vFW/
+    ./build/vFW -p 0x3 -f ./config/VFW_SWLB_SinglePortPair_4Thread.cfg  -s ./config/VFW_SWLB_SinglePortPair_script.tc
 
 
 step 4: Run Test using traffic geneator
@@ -319,58 +328,58 @@ a) Bind ports to DPDK
 
   ::
 
-        For DPDK versions 17.xx
-        1) cd <samplevnf>/dpdk
-        2) ./usertools/dpdk-devbind.py --status <--- List the network device
-        3) ./usertools/dpdk-devbind.py -b igb_uio <PCI Port 0> <PCI Port 1>
-        .. _More details: http://dpdk.org/doc/guides-17.05/linux_gsg/build_dpdk.html#binding-and-unbinding-network-ports-to-from-the-kernel-modules
+    For DPDK versions 17.xx
+    1) cd <samplevnf>/dpdk
+    2) ./usertools/dpdk-devbind.py --status <--- List the network device
+    3) ./usertools/dpdk-devbind.py -b igb_uio <PCI Port 0> <PCI Port 1>
+    .. _More details: http://dpdk.org/doc/guides-17.05/linux_gsg/build_dpdk.html#binding-and-unbinding-network-ports-to-from-the-kernel-modules
 
 
 b) Prepare script to enalble VNF to route the packets
 
   ::
 
-          cd <samplevnf>/VNFs/vACL/config
-          Open -> IPv4_swlb_acl.tc. Replace the bold items based on your setting.
+    cd <samplevnf>/VNFs/vACL/config
+    Open -> IPv4_swlb_acl.tc. Replace the bold items based on your setting.
 
-           link 0 config <VNF port 0 IP eg 202.16.100.10> 8
-           link 0 up
-           link 1 down
-           link 1 config <VNF port 0 IP eg 172.16.40.10> 8
-           link 1 up
+    link 0 config <VNF port 0 IP eg 202.16.100.10> 8
+    link 0 up
+    link 1 down
+    link 1 config <VNF port 0 IP eg 172.16.40.10> 8
+    link 1 up
 
-           ; routeadd <port #> <ipv4 nhip address in decimal> <Mask>
-           routeadd net 0 <traffic generator port 0 IP eg 202.16.100.20> 0xff000000
-           routeadd net 1 <traffic generator port 1 IP eg 172.16.40.20> 0xff000000
+    ; routeadd <port #> <ipv4 nhip address in decimal> <Mask>
+    routeadd net 0 <traffic generator port 0 IP eg 202.16.100.20> 0xff000000
+    routeadd net 1 <traffic generator port 1 IP eg 172.16.40.20> 0xff000000
 
-           ; IPv4 static ARP; disable if dynamic arp is enabled.
-           p 1 arpadd 0 <traffic generator port 0 IP eg 202.16.100.20> <traffic generator port 0 MAC>
-           p 1 arpadd 1  <traffic generator port 1 IP eg 172.16.40.20> <traffic generator port 1 MAC>
-           p action add 0 accept
-           p action add 0 fwd 0
-           p action add 0 count
-           p action add 1 accept
-           p action add 1 fwd 1
-           p action add 1 count
-           p action add 2 drop
-           p action add 2 count
-           p action add 0 conntrack
-           p action add 1 conntrack
-           p action add 2 conntrack
-           p action add 3 conntrack
-           ; IPv4 rules
-           p acl add 1 <traffic generator port 0 IP eg 202.16.100.20> 8 <traffic generator port 1 IP eg 172.16.40.20> 8 0 65535 67 69 0 0 2
-           p acl add 2 <traffic generator port 0 IP eg 202.16.100.20> 8 <traffic generator port 1 IP eg 172.16.40.20> 8 0 65535 0 65535 0 0 1
-           p acl add 2 <traffic generator port 1 IP eg 172.16.40.20> 8 <traffic generator port 0 IP eg 202.16.100.20> 8 0 65535 0 65535 0 0 0
-           p acl applyruleset
+    ; IPv4 static ARP; disable if dynamic arp is enabled.
+    p 1 arpadd 0 <traffic generator port 0 IP eg 202.16.100.20> <traffic generator port 0 MAC>
+    p 1 arpadd 1  <traffic generator port 1 IP eg 172.16.40.20> <traffic generator port 1 MAC>
+    p action add 0 accept
+    p action add 0 fwd 0
+    p action add 0 count
+    p action add 1 accept
+    p action add 1 fwd 1
+    p action add 1 count
+    p action add 2 drop
+    p action add 2 count
+    p action add 0 conntrack
+    p action add 1 conntrack
+    p action add 2 conntrack
+    p action add 3 conntrack
+    ; IPv4 rules
+    p acl add 1 <traffic generator port 0 IP eg 202.16.100.20> 8 <traffic generator port 1 IP eg 172.16.40.20> 8 0 65535 67 69 0 0 2
+    p acl add 2 <traffic generator port 0 IP eg 202.16.100.20> 8 <traffic generator port 1 IP eg 172.16.40.20> 8 0 65535 0 65535 0 0 1
+    p acl add 2 <traffic generator port 1 IP eg 172.16.40.20> 8 <traffic generator port 0 IP eg 202.16.100.20> 8 0 65535 0 65535 0 0 0
+    p acl applyruleset
 
 
 c) Run below cmd to launch the VNF. Please make sure both hugepages and ports to be used are bind to dpdk.
 
   ::
 
-        cd <samplevnf>/VNFs/vFW/
-        ./build/vFW -p 0x3 -f ./config/IPv4_swlb_acl_1LB_1t.cfg  -s ./config/IPv4_swlb_acl.tc.
+    cd <samplevnf>/VNFs/vFW/
+    ./build/vFW -p 0x3 -f ./config/IPv4_swlb_acl_1LB_1t.cfg  -s ./config/IPv4_swlb_acl.tc.
 
 
 step 4: Run Test using traffic geneator
@@ -404,70 +413,72 @@ Step 3: Bind the datapath ports to DPDK
 
   ::
 
-        For DPDK versions 17.xx
-        1) cd <samplevnf>/dpdk
-        2) ./usertools/dpdk-devbind.py --status <--- List the network device
-        3) ./usertools/dpdk-devbind.py -b igb_uio <PCI Port 0> <PCI Port 1>
-        .. _More details: http://dpdk.org/doc/guides-17.05/linux_gsg/build_dpdk.html#binding-and-unbinding-network-ports-to-from-the-kernel-modules
+    For DPDK versions 17.xx
+    1) cd <samplevnf>/dpdk
+    2) ./usertools/dpdk-devbind.py --status <--- List the network device
+    3) ./usertools/dpdk-devbind.py -b igb_uio <PCI Port 0> <PCI Port 1>
+    .. _More details: http://dpdk.org/doc/guides-17.05/linux_gsg/build_dpdk.html#binding-and-unbinding-network-ports-to-from-the-kernel-modules
 
 
  b) Prepare script to enalble VNF to route the packets
 
   ::
 
-          cd <samplevnf>/VNFs/vCGNAPT/config
-          Open -> sample_swlb_2port_2WT.tc Replace the bold items based on your setting.
+    cd <samplevnf>/VNFs/vCGNAPT/config
+    Open -> sample_swlb_2port_2WT.tc Replace the bold items based on your setting.
 
-           link 0 config <VNF port 0 IP eg 202.16.100.10> 8
-           link 0 up
-           link 1 down
-           link 1 config <VNF port 0 IP eg 172.16.40.10> 8
-           link 1 up
+    link 0 config <VNF port 0 IP eg 202.16.100.10> 8
+    link 0 up
+    link 1 down
+    link 1 config <VNF port 0 IP eg 172.16.40.10> 8
+    link 1 up
 
-           ; uncomment to enable static NAPT
-           ;p <cgnapt pipeline id> entry addm <prv_ipv4/6> prvport> <pub_ip> <pub_port> <phy_port> <ttl> <no_of_entries> <end_prv_port> <end_pub_port>
-           ;p 5 entry addm 202.16.100.20 1234 152.16.40.10 1 0 500 65535 1234 65535
+    ; uncomment to enable static NAPT
+    ;p <cgnapt pipeline id> entry addm <prv_ipv4/6> prvport> <pub_ip> <pub_port> <phy_port> <ttl> <no_of_entries> <end_prv_port> <end_pub_port>
+    ;p 5 entry addm 202.16.100.20 1234 152.16.40.10 1 0 500 65535 1234 65535
 
-           ; routeadd <net/host> <port #> <ipv4 nhip address in decimal> <Mask>
-           routeadd net 0 <traffic generator port 0 IP eg 202.16.100.20> 0xff000000
-           routeadd net 1 <traffic generator port 1 IP eg 172.16.40.20> 0xff000000
+    ; routeadd <net/host> <port #> <ipv4 nhip address in decimal> <Mask>
+    routeadd net 0 <traffic generator port 0 IP eg 202.16.100.20> 0xff000000
+    routeadd net 1 <traffic generator port 1 IP eg 172.16.40.20> 0xff000000
 
-           ; IPv4 static ARP; disable if dynamic arp is enabled.
-           p 1 arpadd 0 <traffic generator port 0 IP eg 202.16.100.20> <traffic generator port 0 MAC>
-           p 1 arpadd 1  <traffic generator port 1 IP eg 172.16.40.20> <traffic generator port 1 MAC>
-       For dynamic cgnapt. Please use UDP_Replay as one of the traffic generator
-          (TG1) (port 0) --> (port 0) VNF (CGNAPT) (Port 1) --> (port0)(UDPReplay)
+    ; IPv4 static ARP; disable if dynamic arp is enabled.
+    p 1 arpadd 0 <traffic generator port 0 IP eg 202.16.100.20> <traffic generator port 0 MAC>
+    p 1 arpadd 1  <traffic generator port 1 IP eg 172.16.40.20> <traffic generator port 1 MAC>
 
+    For dynamic cgnapt. Please use UDP_Replay as one of the traffic generator
+       (TG1) (port 0) --> (port 0) VNF (CGNAPT) (Port 1) --> (port0)(UDPReplay)
 
  c) Run below cmd to launch the VNF. Please make sure both hugepages and ports to be used are bind to dpdk.
 
   ::
 
-        cd <samplevnf>/VNFs/vCGNAPT/
-        ./build/vCGNAPT -p 0x3 -f ./config/sample_swlb_2port_2WT.cfg  -s ./config/sample_swlb_2port_2WT.tc
+    cd <samplevnf>/VNFs/vCGNAPT/
+    ./build/vCGNAPT -p 0x3 -f ./config/sample_swlb_2port_2WT.cfg  -s ./config/sample_swlb_2port_2WT.tc
 
+ d) Run UDP_replay to reflect the traffic on public side.
+    cmd: ./build/UDP_Replay -c 0x7 -n 4 -w <pci> -w <pci> -- --no-hw-csum -p <portmask> --config='(port, queue, cpucore)'
+    e.g ./build/UDP_Replay -c 0x7 -n 4 -w 0000:07:00.0 -w 0000:07:00.1 -- --no-hw-csum -p 0x3 --config='(0, 0, 1)(1, 0, 2)'
 
 step 4: Run Test using traffic geneator
 
-        On traffic generator system:
+    On traffic generator system:
 
  ::
+    cd <trex eg v2.28/stl>
+    Update the bench.py to generate the traffic.
 
-        cd <trex eg v2.28/stl>
-        Update the bench.py to generate the traffic.
-
-        class STLBench(object):
-        ip_range = {}
-        ip_range['src'] = {'start': '<traffic generator port 0 IP eg 202.16.100.20>', 'end': '<traffic generator port 0 IP eg 202.16.100.20>'}
-        ip_range['dst'] = {'start': '<traffic generator port 1 IP eg 172.16.40.20>', 'end': '<public ip e.g 152.16.40.10>'}
-        cd <trex eg v2.28>
-        Run the TRex server: sudo ./t-rex-64 -i -c 7
-        In another shell run TRex console: trex-console
-        The console can be run from another computer with -s argument, --help for more info.
-        Other options for TRex client are automation or GUI
-        In the console, run "tui" command, and then send the traffic with commands like:
-        start -f stl/bench.py -m 50% --port 0 3 -t size=590,vm=var1
-        For more details refer: https://trex-tgn.cisco.com/trex/doc/trex_stateless_bench.html
+    class STLBench(object):
+    ip_range = {}
+    ip_range['src'] = {'start': '<traffic generator port 0 IP eg 202.16.100.20>', 'end': '<traffic generator port 0 IP eg 202.16.100.20>'}
+    ip_range['dst'] = {'start': '<traffic generator port 1 IP eg 172.16.40.20>', 'end': '<public ip e.g 152.16.40.10>'}
+    cd <trex eg v2.28>
+    Run the TRex server: sudo ./t-rex-64 -i -c 7
+    In another shell run TRex console: trex-console
+    The console can be run from another computer with -s argument, --help for more info.
+    Other options for TRex client are automation or GUI
+    In the console, run "tui" command, and then send the traffic with commands like:
+    start -f stl/bench.py -m 50% --port 0 3 -t size=590,vm=var1
+    For more details refer: https://trex-tgn.cisco.com/trex/doc/trex_stateless_bench.html
 
 
 UDP_Replay - How to run
@@ -479,19 +490,19 @@ Step 3: Bind the datapath ports to DPDK
 
   ::
 
-        For DPDK versions 17.xx
-        1) cd <samplevnf>/dpdk
-        2) ./usertools/dpdk-devbind.py --status <--- List the network device
-        3) ./usertools/dpdk-devbind.py -b igb_uio <PCI Port 0> <PCI Port 1>
-        .. _More details: http://dpdk.org/doc/guides-17.05/linux_gsg/build_dpdk.html#binding-and-unbinding-network-ports-to-from-the-kernel-modules
+    For DPDK versions 17.xx
+    1) cd <samplevnf>/dpdk
+    2) ./usertools/dpdk-devbind.py --status <--- List the network device
+    3) ./usertools/dpdk-devbind.py -b igb_uio <PCI Port 0> <PCI Port 1>
+    .. _More details: http://dpdk.org/doc/guides-17.05/linux_gsg/build_dpdk.html#binding-and-unbinding-network-ports-to-from-the-kernel-modules
 
  b) Run below cmd to launch the VNF. Please make sure both hugepages and ports to be used are bind to dpdk.
 
   ::
 
-          cd <samplevnf>/VNFs/UDP_Replay/
-          cmd: ./build/UDP_Replay -c 0x7 -n 4 -w <pci> -w <pci> -- --no-hw-csum -p <portmask> --config='(port, queue, cpucore)'
-          e.g ./build/UDP_Replay -c 0x7 -n 4 -w 0000:07:00.0 -w 0000:07:00.1 -- --no-hw-csum -p 0x3 --config='(0, 0, 1)(1, 0, 2)'
+    cd <samplevnf>/VNFs/UDP_Replay/
+    cmd: ./build/UDP_Replay -c 0x7 -n 4 -w <pci> -w <pci> -- --no-hw-csum -p <portmask> --config='(port, queue, cpucore)'
+    e.g ./build/UDP_Replay -c 0x7 -n 4 -w 0000:07:00.0 -w 0000:07:00.1 -- --no-hw-csum -p 0x3 --config='(0, 0, 1)(1, 0, 2)'
 
 
 step 4: Run Test using traffic geneator
@@ -592,6 +603,7 @@ application is configured using a .cfg file. The core mask and number
 of channels is derived from this config. For example, to run the
 application from the source directory execute:
 
+::
   user@target:~$ ./build/prox -f ./config/nop.cfg
 
 Provided example configurations
@@ -604,24 +616,29 @@ A quick description of these example configurations is provided below.
 Additional details are provided in the example configuration files.
 
 Basic configurations, mostly used as sanity check:
-- config/nop.cfg
-- config/nop-rings.cfg
-- gen/nop-gen.cfg
+
+::
+  - config/nop.cfg
+  - config/nop-rings.cfg
+  - gen/nop-gen.cfg
 
 Simplified BNG (Border Network Gateway) configurations, using different
 number of ports, with and without QoS, running on the host or in a VM:
-- config/bng-4ports.cfg
-- config/bng-8ports.cfg
-- config/bng-qos-4ports.cfg
-- config/bng-qos-8ports.cfg
-- config/bng-1q-4ports.cfg
-- config/bng-ovs-usv-4ports.cfg
-- config/bng-no-cpu-topology-4ports.cfg
-- gen/bng-4ports-gen.cfg
-- gen/bng-8ports-gen.cfg
-- gen/bng-ovs-usv-4ports-gen.cfg
+
+::
+  - config/bng-4ports.cfg
+  - config/bng-8ports.cfg
+  - config/bng-qos-4ports.cfg
+  - config/bng-qos-8ports.cfg
+  - config/bng-1q-4ports.cfg
+  - config/bng-ovs-usv-4ports.cfg
+  - config/bng-no-cpu-topology-4ports.cfg
+  - gen/bng-4ports-gen.cfg
+  - gen/bng-8ports-gen.cfg
+  - gen/bng-ovs-usv-4ports-gen.cfg
 
 Light-weight AFTR configurations:
-- config/lw_aftr.cfg
-- gen/lw_aftr-gen.cfg
 
+::
+  - config/lw_aftr.cfg
+  - gen/lw_aftr-gen.cfg

@@ -11,7 +11,7 @@ Abstract
 ========
 
 This chapter describes the methodology/overview of SampleVNF project from
-the perspective of a :term:`VNF` and verifying the :term:`NFVI`
+the perspective of a :term:`VNF` and :term:`NFVI` Characterization
 
 Overview
 ========
