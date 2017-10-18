@@ -126,6 +126,7 @@ Step 0: Preparing hardware connection
     Connect Traffic generator and VNF system back to back as shown in previous section
 
     ::
+
         TRex port 0 ↔ (VNF Port 0) ↔ (VNF Port 1) ↔ TRex port 1
 
 Step 1: Setting up Traffic generator (TRex)
@@ -155,6 +156,7 @@ Auto Build
 * Interactive options:
 
 ::
+
    ./tools/vnf_build.sh -i
    Follow the steps in the screen from option [1] –> [9] and select option [8] to build the vnfs.
    It will automatically download selected DPDK version and any required patches and will setup everything and build VNFs.
@@ -186,6 +188,7 @@ Auto Build
 * Non-Interactive options:
 
 ::
+
    ./tools/vnf_build.sh -s -d=<dpdk version eg 17.02>
    if system is behind the proxy
    ./tools/vnf_build.sh -s -d=<dpdk version eg 17.02> -p=<proxy>
@@ -194,45 +197,41 @@ Manual Build
 ^^^^^^^^^^^^
 
 ::
+
    1) Download DPDK supported version from dpdk.org
-      http://dpdk.org/browse/dpdk/snapshot/dpdk-$DPDK_RTE_VER.zip
-      unzip dpdk-$DPDK_RTE_VER.zip and apply dpdk patches only in case of 16.04 (Not required for other DPDK versions)
-      cd dpdk
-      make config T=x86_64-native-linuxapp-gcc O=x86_64-native-linuxapp-gcc
-      cd x86_64-native-linuxapp-gcc
-      make
+      * http://dpdk.org/browse/dpdk/snapshot/dpdk-$DPDK_RTE_VER.zip
+      * unzip dpdk-$DPDK_RTE_VER.zip and apply dpdk patches only in case of 16.04 (Not required for other DPDK versions)
+      * cd dpdk
+      * make config T=x86_64-native-linuxapp-gcc O=x86_64-native-linuxapp-gcc
+      * cd x86_64-native-linuxapp-gcc
+      * make
 
    2) Download civetweb 1.9 version from the following link
-      https://sourceforge.net/projects/civetweb/files/1.9/CivetWeb_V1.9.zip
-      unzip CivetWeb_V1.9.zip
-      mv civetweb-master civetweb
-      cd civetweb
-      make lib
+      * https://sourceforge.net/projects/civetweb/files/1.9/CivetWeb_V1.9.zip
+      * unzip CivetWeb_V1.9.zip
+      * mv civetweb-master civetweb
+      * cd civetweb
+      * make lib
 
-   3) Setup huge pages
-      For 1G/2M hugepage sizes, for example 1G pages, the size must be
-      specified explicitly and can also be optionally set as the
-      default hugepage size for the system. For example, to reserve 8G
-      of hugepage memory in the form of eight 1G pages, the following
-      options should be passed to the kernel: * default_hugepagesz=1G
-      hugepagesz=1G hugepages=8 hugepagesz=2M hugepages=2048
-   4) Add this to Go to /etc/default/grub configuration file.
-      Append “default_hugepagesz=1G hugepagesz=1G hugepages=8 hugepagesz=2M hugepages=2048”
-      to the GRUB_CMDLINE_LINUX entry.
-   5) Setup Environment Variable
-      export RTE_SDK=<samplevnf>/dpdk
-      export RTE_TARGET=x86_64-native-linuxapp-gcc
-      export VNF_CORE=<samplevnf>
-      or using ./tools/setenv.sh
-   6) Build VNFs
-      cd <samplevnf>
-      make
-      or to build individual VNFs
-        cd <samplevnf>/VNFs/
-        make clean
-        make
-        The vFW executable will be created at the following location
-        <samplevnf>/VNFs/vFW/build/vFW
+   3) Add this to Go to /etc/default/grub configuration file to setup higepages.
+      * Append “default_hugepagesz=1G hugepagesz=1G hugepages=8 hugepagesz=2M hugepages=2048” to the GRUB_CMDLINE_LINUX entry.
+      * execute update-grub
+      * Reboot after grub setup
+
+   4) Setup Environment Variable
+      * export RTE_SDK=<samplevnf>/dpdk
+      * export RTE_TARGET=x86_64-native-linuxapp-gcc
+      * export VNF_CORE=<samplevnf> or using ./tools/setenv.sh
+
+   5) Build VNFs
+      * cd <samplevnf>
+      * make
+      * or To build individual VNFs
+        * cd <samplevnf>/VNFs/
+        * make clean
+        * make
+        * The vFW executable will be created at the following location
+        * <samplevnf>/VNFs/vFW/build/vFW
 
 
 Virtual Firewall - How to run
@@ -456,14 +455,16 @@ Step 3: Bind the datapath ports to DPDK
     ./build/vCGNAPT -p 0x3 -f ./config/sample_swlb_2port_2WT.cfg  -s ./config/sample_swlb_2port_2WT.tc
 
  d) Run UDP_replay to reflect the traffic on public side.
+
+  ::
     cmd: ./build/UDP_Replay -c 0x7 -n 4 -w <pci> -w <pci> -- --no-hw-csum -p <portmask> --config='(port, queue, cpucore)'
     e.g ./build/UDP_Replay -c 0x7 -n 4 -w 0000:07:00.0 -w 0000:07:00.1 -- --no-hw-csum -p 0x3 --config='(0, 0, 1)(1, 0, 2)'
 
 step 4: Run Test using traffic geneator
 
-    On traffic generator system:
-
+ On traffic generator system:
  ::
+
     cd <trex eg v2.28/stl>
     Update the bench.py to generate the traffic.
 

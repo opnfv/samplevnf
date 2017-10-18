@@ -158,10 +158,12 @@ need to be set before launching the application(To be run from
 samplevnf directory).
 
    ::
+
      ./build/vFW (Without the -f & -s option)
 
 1. When VNF(vCGNAPT/vACL/vFW) is launched it waits for user to provide the /vnf/config REST method.
    ::
+
     e.g curl -X POST -H "Content-Type:application/json" -d '{"pci_white_list": "0000:08:00.0 0000:08:00.1"}' http://<IP>/vnf/config
 
     Note: the config is mostly implemented based on existing VNF's. if new parameters
