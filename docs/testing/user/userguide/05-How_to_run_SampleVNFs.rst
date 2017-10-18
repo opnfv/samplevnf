@@ -604,6 +604,7 @@ of channels is derived from this config. For example, to run the
 application from the source directory execute:
 
 ::
+
   user@target:~$ ./build/prox -f ./config/nop.cfg
 
 Provided example configurations
@@ -618,27 +619,28 @@ Additional details are provided in the example configuration files.
 Basic configurations, mostly used as sanity check:
 
 ::
-  - config/nop.cfg
-  - config/nop-rings.cfg
-  - gen/nop-gen.cfg
+
+  * config/nop.cfg
+  * config/nop-rings.cfg
+  * gen/nop-gen.cfg
 
 Simplified BNG (Border Network Gateway) configurations, using different
 number of ports, with and without QoS, running on the host or in a VM:
 
 ::
-  - config/bng-4ports.cfg
-  - config/bng-8ports.cfg
-  - config/bng-qos-4ports.cfg
-  - config/bng-qos-8ports.cfg
-  - config/bng-1q-4ports.cfg
-  - config/bng-ovs-usv-4ports.cfg
-  - config/bng-no-cpu-topology-4ports.cfg
-  - gen/bng-4ports-gen.cfg
-  - gen/bng-8ports-gen.cfg
-  - gen/bng-ovs-usv-4ports-gen.cfg
+  * config/bng-4ports.cfg
+  * config/bng-8ports.cfg
+  * config/bng-qos-4ports.cfg
+  * config/bng-qos-8ports.cfg
+  * config/bng-1q-4ports.cfg
+  * config/bng-ovs-usv-4ports.cfg
+  * config/bng-no-cpu-topology-4ports.cfg
+  * gen/bng-4ports-gen.cfg
+  * gen/bng-8ports-gen.cfg
+  * gen/bng-ovs-usv-4ports-gen.cfg
 
 Light-weight AFTR configurations:
 
 ::
-  - config/lw_aftr.cfg
-  - gen/lw_aftr-gen.cfg
+  * config/lw_aftr.cfg
+  * gen/lw_aftr-gen.cfg
