@@ -23,7 +23,8 @@ struct input;
 void cmd_parser_parse(const char *str, struct input *input);
 const char *cmd_parser_cmd(size_t i);
 size_t cmd_parser_n_cmd(void);
-int task_is_mode(uint32_t lcore_id, uint32_t task_id, const char *mode, const char *sub_mode);
+int task_is_mode_and_submode(uint32_t lcore_id, uint32_t task_id, const char *mode, const char *sub_mode);
+int task_is_mode(uint32_t lcore_id, uint32_t task_id, const char *mode);
 int task_is_sub_mode(uint32_t lcore_id, uint32_t task_id, const char *sub_mode);
 
 #endif /* _CMD_PARSER_H_ */
