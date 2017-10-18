@@ -156,11 +156,14 @@ Auto Build - Using script to build VNFs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
      * Interactive options:
        ::
+
          ./tools/vnf_build.sh -i
-         Follow the steps in the screen from option [1] –> [9] and
-         select option [8] to build the vnfs.
+         Follow the steps in the screen from option [1] –> [10] and
+         select option [9] to build the vnfs.
          It will automatically download selected DPDK version and any
          required patches and will setup everything and build VNFs.
+
+         Options [8], If RestAPI feature is needed install 'civetweb'
 
          Following are the options for setup:
          ----------------------------------------------------------
@@ -177,13 +180,14 @@ Auto Build - Using script to build VNFs
          [5] Download DPDK zip
          [6] Build and Install DPDK
          [7] Setup hugepages
+         [8] Download and Build civetweb
 
          ----------------------------------------------------------
          Step 3: Build VNFs
          ----------------------------------------------------------
-         [8] Build all VNFs (vACL, vCGNAPT, vFW, UDP_Replay, DPPD-PROX)
+         [9] Build all VNFs (vACL, vCGNAPT, vFW, UDP_Replay, DPPD-PROX)
 
-         [9] Exit Script
+         [10] Exit Script
 
      * non-Interactive options:
        ::
@@ -193,6 +197,7 @@ Manual Build
 ^^^^^^^^^^^^
 
    ::
+
       1. Download DPDK supported version from dpdk.org
          * http://dpdk.org/browse/dpdk/snapshot/dpdk-$DPDK_RTE_VER.zip
          * unzip dpdk-$DPDK_RTE_VER.zip and apply dpdk patches only in case of 16.04 (Not required for other DPDK versions)

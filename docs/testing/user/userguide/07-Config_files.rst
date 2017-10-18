@@ -29,6 +29,7 @@ of the VNFs.
 1. SWLB, IPv4, Single Port Pair, 1WT:
 
   ::
+
     [EAL]
     w = 05:00.0
     w = 05:00.1
@@ -100,6 +101,7 @@ of the VNFs.
 This configuration doesn't require LOADB and TXRX pipelines
 
 ::
+
   [EAL]
   w = 05:00.0
   w = 05:00.1

@@ -135,7 +135,7 @@ step_2()
 	FUNC[4]="install_dpdk"
 	TEXT[5]="Setup hugepages"
 	FUNC[5]="setup_hugepages"
-	TEXT[6]="Download civetweb"
+	TEXT[6]="Download and Build civetweb"
 	FUNC[6]="download_civetweb_zip"
 }
 get_agreement_download()
