@@ -20,13 +20,15 @@ Introduction
 L2L3 stack comprises of a set of libraries which are commonly used by all
 other VNF's.
 
+.. image:: images/l2l3-components.png
+   :width: 800px
+
 It comprises of following components.
 
   * Interface Manager
   * RTM Lock Library
   * ARP/ND & L2 adjacency Library
   * L3 stack components
-
 
 Interface Manager
 -----------------
@@ -56,7 +58,8 @@ ARP/ND & L2 adjacency Library
 
 The ARP/ND state machine is given in the following diagram.
 
-.. image:: state-machine.png
+.. image:: images/state-machine.png
+   :width: 800px
 
 This library provides api's for handling ARP/ICMPv4 & ND/ICMPV6 packets
 handling. It provides api's for creating/deleting & populating an entry.
