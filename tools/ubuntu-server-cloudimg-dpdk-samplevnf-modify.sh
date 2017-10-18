@@ -80,7 +80,7 @@ install_sample_vnf()
         git clone https://git.opnfv.org/samplevnf
         cd samplevnf
         VNF_CORE=$INSTALL_BIN_PATH/samplevnf
-        ./tools/vnf_build.sh -s -d='17.02' -p='http://10.223.166.1:911'
+        ./tools/vnf_build.sh -s -d='17.02'
         cp $VNF_CORE/VNFs/vACL/build/vACL $INSTALL_BIN_PATH
         cp $VNF_CORE/VNFs/vCGNAPT/build/vCGNAPT $INSTALL_BIN_PATH
         cp $VNF_CORE/VNFs/vFW/build/vFW $INSTALL_BIN_PATH
