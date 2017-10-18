@@ -20,6 +20,5 @@ SampleVNF User Guide
    06-How_to_use_REST_api
    07-Config_files
    08-CLI_Commands_Reference
-   09-Prox
    glossary
    references

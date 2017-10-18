@@ -3,7 +3,7 @@
 .. http://creativecommons.org/licenses/by/4.0
 .. (c) OPNFV, Intel Corporation and other.
 
-Yardstick test tesult document overview
+SampleVNF test tesult document overview
 =======================================
 
 .. _`SampleVNF user guide`: artifacts.opnfv.org/samplevnf/docs/userguide/index.html
