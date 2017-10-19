@@ -1288,6 +1288,9 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 	if (STR_EQ(str, "local ipv4")) { /* source IP address to be used for packets */
 		return parse_ip(&targ->local_ipv4, pkey);
 	}
+	if (STR_EQ(str, "remote ipv4")) { /* source IP address to be used for packets */
+		return parse_ip(&targ->remote_ipv4, pkey);
+	}
         if (STR_EQ(str, "local ipv6")) { /* source IPv6 address to be used for packets */
                 return parse_ip6(&targ->local_ipv6, pkey);
         }

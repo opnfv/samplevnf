@@ -56,7 +56,7 @@ struct qos_cfg {
 };
 
 enum task_mode {NOT_SET, MASTER, QINQ_DECAP4, QINQ_DECAP6,
-		QINQ_ENCAP4, QINQ_ENCAP6, GRE_DECAP, GRE_ENCAP,CGNAT,
+		QINQ_ENCAP4, QINQ_ENCAP6, GRE_DECAP, GRE_ENCAP,CGNAT, ESP_ENC, ESP_DEC,
 };
 
 struct task_args;
@@ -126,6 +126,7 @@ struct task_args {
 	uint32_t               gateway_ipv4;
 	uint32_t               number_gen_ip;
 	uint32_t               local_ipv4;
+	uint32_t               remote_ipv4;
 	struct ipv6_addr       local_ipv6;    /* For IPv6 Tunnel, it's the local tunnel endpoint address */
 	struct rte_ring        *rx_rings[MAX_RINGS_PER_TASK];
 	struct rte_ring        *tx_rings[MAX_RINGS_PER_TASK];
