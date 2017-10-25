@@ -24,6 +24,10 @@
 #include "stats.h"
 #include "log.h"
 #include "mbuf_utils.h"
+#include "prefetch.h"
+#include "arp.h"
+#include "tx_pkt.h"
+#include "handle_master.h"
 #include "input.h" /* Needed for callback on dump */
 
 /* _param version of the rx_pkt_hw functions are used to create two
@@ -70,56 +74,137 @@ static void next_port_pow2(struct rx_params_hw *rx_params_hw)
 	rx_params_hw->last_read_portid = (rx_params_hw->last_read_portid + 1) & rx_params_hw->rxport_mask;
 }
 
-static uint16_t rx_pkt_hw_param(struct task_base *tbase, struct rte_mbuf ***mbufs, int multi,
-				void (*next)(struct rx_params_hw *rx_param_hw))
+static inline void dump_l3(struct task_base *tbase, struct rte_mbuf *mbuf)
+{
+	if (unlikely(tbase->aux->task_rt_dump.n_print_rx)) {
+		if (tbase->aux->task_rt_dump.input->reply == NULL) {
+			plogdx_info(mbuf, "RX: ");
+		} else {
+			struct input *input = tbase->aux->task_rt_dump.input;
+			char tmp[128];
+			int strlen;
+#if RTE_VERSION >= RTE_VERSION_NUM(1,8,0,0)
+			int port_id = mbuf->port;
+#else
+			int port_id = mbuf->pkt.in_port;
+#endif
+			strlen = snprintf(tmp, sizeof(tmp), "pktdump,%d,%d\n", port_id,
+			      rte_pktmbuf_pkt_len(mbuf));
+			input->reply(input, tmp, strlen);
+			input->reply(input, rte_pktmbuf_mtod(mbuf, char *), rte_pktmbuf_pkt_len(mbuf));
+			input->reply(input, "\n", 1);
+		}
+		tbase->aux->task_rt_dump.n_print_rx --;
+		if (0 == tbase->aux->task_rt_dump.n_print_rx) {
+			task_base_del_rx_pkt_function(tbase, rx_pkt_dump);
+		}
+	}
+	if (unlikely(tbase->aux->task_rt_dump.n_trace)) {
+		plogdx_info(mbuf, "RX: ");
+		tbase->aux->task_rt_dump.n_trace--;
+	}
+}
+
+static uint16_t rx_pkt_hw_param(struct task_base *tbase, struct rte_mbuf ***mbufs_ptr, int multi,
+				void (*next)(struct rx_params_hw *rx_param_hw), int l3)
 {
 	uint8_t last_read_portid;
 	uint16_t nb_rx;
+	int skip = 0;
 
 	START_EMPTY_MEASSURE();
-	*mbufs = tbase->ws_mbuf->mbuf[0] +
+	*mbufs_ptr = tbase->ws_mbuf->mbuf[0] +
 		(RTE_ALIGN_CEIL(tbase->ws_mbuf->idx[0].prod, 2) & WS_MBUF_MASK);
 
 	last_read_portid = tbase->rx_params_hw.last_read_portid;
 	struct port_queue *pq = &tbase->rx_params_hw.rx_pq[last_read_portid];
 
-	nb_rx = rx_pkt_hw_port_queue(pq, *mbufs, multi);
+	nb_rx = rx_pkt_hw_port_queue(pq, *mbufs_ptr, multi);
 	next(&tbase->rx_params_hw);
 
+	if (l3) {
+		struct rte_mbuf **mbufs = *mbufs_ptr;
+		int i;
+		struct ether_hdr_arp *hdr[MAX_PKT_BURST];
+		for (i = 0; i < nb_rx; i++) {
+			PREFETCH0(mbufs[i]);
+		}
+		for (i = 0; i < nb_rx; i++) {
+			hdr[i] = rte_pktmbuf_mtod(mbufs[i], struct ether_hdr_arp *);
+			PREFETCH0(hdr[i]);
+		}
+		for (i = 0; i < nb_rx; i++) {
+			if (unlikely(hdr[i]->ether_hdr.ether_type == ETYPE_ARP)) {
+				dump_l3(tbase, mbufs[i]);
+				tx_ring(tbase, tbase->l3.ctrl_plane_ring, ARP_TO_CTRL, mbufs[i]);
+				skip++;
+			} else if (unlikely(skip)) {
+				mbufs[i - skip] = mbufs[i];
+			}
+		}
+	}
+
+	if (skip)
+		TASK_STATS_ADD_DROP_HANDLED(&tbase->aux->stats, skip);
 	if (likely(nb_rx > 0)) {
 		TASK_STATS_ADD_RX(&tbase->aux->stats, nb_rx);
-		return nb_rx;
+		return nb_rx - skip;
 	}
 	TASK_STATS_ADD_IDLE(&tbase->aux->stats, rte_rdtsc() - cur_tsc);
 	return 0;
 }
 
-static inline uint16_t rx_pkt_hw1_param(struct task_base *tbase, struct rte_mbuf ***mbufs, int multi)
+static inline uint16_t rx_pkt_hw1_param(struct task_base *tbase, struct rte_mbuf ***mbufs_ptr, int multi, int l3)
 {
 	uint16_t nb_rx, n;
+	int skip = 0;
 
 	START_EMPTY_MEASSURE();
-	*mbufs = tbase->ws_mbuf->mbuf[0] +
+	*mbufs_ptr = tbase->ws_mbuf->mbuf[0] +
 		(RTE_ALIGN_CEIL(tbase->ws_mbuf->idx[0].prod, 2) & WS_MBUF_MASK);
 
 	nb_rx = rte_eth_rx_burst(tbase->rx_params_hw1.rx_pq.port,
 				 tbase->rx_params_hw1.rx_pq.queue,
-				 *mbufs, MAX_PKT_BURST);
+				 *mbufs_ptr, MAX_PKT_BURST);
 
 	if (multi) {
 		n = nb_rx;
 		while ((n != 0) && (MAX_PKT_BURST - nb_rx >= MIN_PMD_RX)) {
 			n = rte_eth_rx_burst(tbase->rx_params_hw1.rx_pq.port,
 				 tbase->rx_params_hw1.rx_pq.queue,
-				 *mbufs + nb_rx, MIN_PMD_RX);
+				 *mbufs_ptr + nb_rx, MIN_PMD_RX);
 			nb_rx += n;
 			PROX_PANIC(nb_rx > 64, "Received %d packets while expecting maximum %d\n", n, MIN_PMD_RX);
 		}
 	}
 
+	if (l3) {
+		struct rte_mbuf **mbufs = *mbufs_ptr;
+		int i;
+		struct ether_hdr_arp *hdr[MAX_PKT_BURST];
+		for (i = 0; i < nb_rx; i++) {
+			PREFETCH0(mbufs[i]);
+		}
+		for (i = 0; i < nb_rx; i++) {
+			hdr[i] = rte_pktmbuf_mtod(mbufs[i], struct ether_hdr_arp *);
+			PREFETCH0(hdr[i]);
+		}
+		for (i = 0; i < nb_rx; i++) {
+			if (unlikely(hdr[i]->ether_hdr.ether_type == ETYPE_ARP)) {
+				dump_l3(tbase, mbufs[i]);
+				tx_ring(tbase, tbase->l3.ctrl_plane_ring, ARP_TO_CTRL, mbufs[i]);
+				skip++;
+			} else if (unlikely(skip)) {
+				mbufs[i - skip] = mbufs[i];
+			}
+		}
+	}
+
+	if (skip)
+		TASK_STATS_ADD_DROP_HANDLED(&tbase->aux->stats, skip);
 	if (likely(nb_rx > 0)) {
 		TASK_STATS_ADD_RX(&tbase->aux->stats, nb_rx);
-		return nb_rx;
+		return nb_rx - skip;
 	}
 	TASK_STATS_ADD_IDLE(&tbase->aux->stats, rte_rdtsc() - cur_tsc);
 	return 0;
@@ -127,36 +212,66 @@ static inline uint16_t rx_pkt_hw1_param(struct task_base *tbase, struct rte_mbuf
 
 uint16_t rx_pkt_hw(struct task_base *tbase, struct rte_mbuf ***mbufs)
 {
-	return rx_pkt_hw_param(tbase, mbufs, 0, next_port);
+	return rx_pkt_hw_param(tbase, mbufs, 0, next_port, 0);
 }
 
 uint16_t rx_pkt_hw_pow2(struct task_base *tbase, struct rte_mbuf ***mbufs)
 {
-	return rx_pkt_hw_param(tbase, mbufs, 0, next_port_pow2);
+	return rx_pkt_hw_param(tbase, mbufs, 0, next_port_pow2, 0);
 }
 
 uint16_t rx_pkt_hw1(struct task_base *tbase, struct rte_mbuf ***mbufs)
 {
-	return rx_pkt_hw1_param(tbase, mbufs, 0);
+	return rx_pkt_hw1_param(tbase, mbufs, 0, 0);
 }
 
 uint16_t rx_pkt_hw_multi(struct task_base *tbase, struct rte_mbuf ***mbufs)
 {
-	return rx_pkt_hw_param(tbase, mbufs, 1, next_port);
+	return rx_pkt_hw_param(tbase, mbufs, 1, next_port, 0);
 }
 
 uint16_t rx_pkt_hw_pow2_multi(struct task_base *tbase, struct rte_mbuf ***mbufs)
 {
-	return rx_pkt_hw_param(tbase, mbufs, 1, next_port_pow2);
+	return rx_pkt_hw_param(tbase, mbufs, 1, next_port_pow2, 0);
 }
 
 uint16_t rx_pkt_hw1_multi(struct task_base *tbase, struct rte_mbuf ***mbufs)
 {
-	return rx_pkt_hw1_param(tbase, mbufs, 1);
+	return rx_pkt_hw1_param(tbase, mbufs, 1, 0);
+}
+
+uint16_t rx_pkt_hw_l3(struct task_base *tbase, struct rte_mbuf ***mbufs)
+{
+	return rx_pkt_hw_param(tbase, mbufs, 0, next_port, 1);
+}
+
+uint16_t rx_pkt_hw_pow2_l3(struct task_base *tbase, struct rte_mbuf ***mbufs)
+{
+	return rx_pkt_hw_param(tbase, mbufs, 0, next_port_pow2, 1);
+}
+
+uint16_t rx_pkt_hw1_l3(struct task_base *tbase, struct rte_mbuf ***mbufs)
+{
+	return rx_pkt_hw1_param(tbase, mbufs, 0, 1);
+}
+
+uint16_t rx_pkt_hw_multi_l3(struct task_base *tbase, struct rte_mbuf ***mbufs)
+{
+	return rx_pkt_hw_param(tbase, mbufs, 1, next_port, 1);
+}
+
+uint16_t rx_pkt_hw_pow2_multi_l3(struct task_base *tbase, struct rte_mbuf ***mbufs)
+{
+	return rx_pkt_hw_param(tbase, mbufs, 1, next_port_pow2, 1);
+}
+
+uint16_t rx_pkt_hw1_multi_l3(struct task_base *tbase, struct rte_mbuf ***mbufs)
+{
+	return rx_pkt_hw1_param(tbase, mbufs, 1, 1);
 }
 
 /* The following functions implement ring access */
-static uint16_t ring_deq(struct rte_ring *r, struct rte_mbuf **mbufs)
+uint16_t ring_deq(struct rte_ring *r, struct rte_mbuf **mbufs)
 {
 	void **v_mbufs = (void **)mbufs;
 #ifdef BRAS_RX_BULK
@@ -299,7 +414,7 @@ uint16_t rx_pkt_dump(struct task_base *tbase, struct rte_mbuf ***mbufs)
 
 		if (tbase->aux->task_rt_dump.input->reply == NULL) {
 			for (uint32_t i = 0; i < n_dump; ++i) {
-				plogd_info((*mbufs)[i], "RX: ");
+				plogdx_info((*mbufs)[i], "RX: ");
 			}
 		}
 		else {
@@ -336,19 +451,20 @@ uint16_t rx_pkt_dump(struct task_base *tbase, struct rte_mbuf ***mbufs)
 
 uint16_t rx_pkt_trace(struct task_base *tbase, struct rte_mbuf ***mbufs)
 {
+	tbase->aux->task_rt_dump.cur_trace = 0;
 	uint16_t ret = call_prev_rx_pkt(tbase, mbufs);
 
 	if (ret) {
 		uint32_t n_trace = tbase->aux->task_rt_dump.n_trace;
 		n_trace = ret < n_trace? ret : n_trace;
-		tbase->aux->task_rt_dump.cur_trace = n_trace;
 
 		for (uint32_t i = 0; i < n_trace; ++i) {
 			uint8_t *pkt = rte_pktmbuf_mtod((*mbufs)[i], uint8_t *);
-			rte_memcpy(tbase->aux->task_rt_dump.pkt_cpy[i], pkt, sizeof(tbase->aux->task_rt_dump.pkt_cpy[i]));
-			tbase->aux->task_rt_dump.pkt_cpy_len[i] = rte_pktmbuf_pkt_len((*mbufs)[i]);
-			tbase->aux->task_rt_dump.pkt_mbuf_addr[i] = (*mbufs)[i];
+			rte_memcpy(tbase->aux->task_rt_dump.pkt_cpy[tbase->aux->task_rt_dump.cur_trace + i], pkt, sizeof(tbase->aux->task_rt_dump.pkt_cpy[i]));
+			tbase->aux->task_rt_dump.pkt_cpy_len[tbase->aux->task_rt_dump.cur_trace + i] = rte_pktmbuf_pkt_len((*mbufs)[i]);
+			tbase->aux->task_rt_dump.pkt_mbuf_addr[tbase->aux->task_rt_dump.cur_trace + i] = (*mbufs)[i];
 		}
+		tbase->aux->task_rt_dump.cur_trace += n_trace;
 
 		tbase->aux->task_rt_dump.n_trace -= n_trace;
 		/* Unset by TX when n_trace = 0 */

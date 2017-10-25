@@ -51,6 +51,7 @@
 #include "stats_latency.h"
 #include "handle_cgnat.h"
 #include "handle_impair.h"
+#include "rx_pkt.h"
 
 static int core_task_is_valid(int lcore_id, int task_id)
 {
@@ -235,6 +236,22 @@ static int parse_cmd_dump_rx(const char *str, struct input *input)
 
 	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
 		for (unsigned int i = 0; i < nb_cores; i++) {
+			if (lcores[i] > RTE_MAX_LCORE) {
+				plog_warn("core_id too high, maximum allowed is: %u\n", RTE_MAX_LCORE);
+				return -1;
+			} else if (task_id >= lcore_cfg[lcores[i]].n_tasks_all) {
+				plog_warn("task_id too high, should be in [0, %u]\n", lcore_cfg[lcores[i]].n_tasks_all - 1);
+				return -1;
+			} else {
+				struct lcore_cfg *lconf = &lcore_cfg[lcores[i]];
+				struct task_base *tbase = lconf->tasks_all[task_id];
+				int prev_count = tbase->aux->rx_prev_count;
+				if (((prev_count) && (tbase->aux->rx_pkt_prev[prev_count - 1] == rx_pkt_dummy))
+					|| (tbase->rx_pkt == rx_pkt_dummy)) {
+					plog_warn("Unable to dump_rx as rx_pkt_dummy\n");
+					return -1;
+				}
+			}
 			cmd_dump(lcores[i], task_id, nb_packets, input, 1, 0);
 		}
 	}
@@ -375,8 +392,9 @@ static int parse_cmd_set_probability(const char *str, struct input *input)
 	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
 		for (unsigned int i = 0; i < nb_cores; i++) {
 			lcore_id = lcores[i];
-			if (!task_is_mode(lcore_id, task_id, "impair", "")) {
+			if ((!task_is_mode(lcore_id, task_id, "impair", "")) && (!task_is_mode(lcore_id, task_id, "impair", "l3"))){
 				plog_err("Core %u task %u is not impairing packets\n", lcore_id, task_id);
+				return -1;
 			}
 			struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
 			task_impair_set_proba(tbase, probability);
@@ -399,8 +417,9 @@ static int parse_cmd_delay_us(const char *str, struct input *input)
 	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
 		for (unsigned int i = 0; i < nb_cores; i++) {
 			lcore_id = lcores[i];
-			if (!task_is_mode(lcore_id, task_id, "impair", "")) {
+			if ((!task_is_mode(lcore_id, task_id, "impair", "")) && (!task_is_mode(lcore_id, task_id, "impair", "l3"))){
 				plog_err("Core %u task %u is not impairing packets\n", lcore_id, task_id);
+				return -1;
 			}
 			struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
 			task_impair_set_delay_us(tbase, delay_us, 0);
@@ -423,8 +442,9 @@ static int parse_cmd_random_delay_us(const char *str, struct input *input)
 	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
 		for (unsigned int i = 0; i < nb_cores; i++) {
 			lcore_id = lcores[i];
-			if (!task_is_mode(lcore_id, task_id, "impair", "")) {
+			if ((!task_is_mode(lcore_id, task_id, "impair", "")) && (!task_is_mode(lcore_id, task_id, "impair", "l3"))){
 				plog_err("Core %u task %u is not impairing packets\n", lcore_id, task_id);
+				return -1;
 			}
 			struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
 			task_impair_set_delay_us(tbase, 0, delay_us);
@@ -832,14 +852,15 @@ static int parse_cmd_gateway_ip(const char *str, struct input *input)
 	}
 	for (i = 0; i < nb_cores; i++) {
 		lcore_id = lcores[i];
-		if ((!task_is_mode(lcore_id, task_id, "gen", "")) && (!task_is_mode(lcore_id, task_id, "gen", "l3"))) {
-			plog_err("Core %u task %u is not generating packets\n", lcore_id, task_id);
+
+		if (!task_is_sub_mode(lcore_id, task_id, "l3")) {
+			plog_err("Core %u task %u is not in l3 mode\n", lcore_id, task_id);
 		}
 		else {
 			uint32_t gateway_ip = ((ip[3] & 0xFF) << 24) | ((ip[2] & 0xFF) << 16) | ((ip[1] & 0xFF) << 8) | ((ip[0] & 0xFF) << 0);
 			struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
 			plog_info("Setting gateway ip to %s\n", str);
-			task_gen_set_gateway_ip(tbase, gateway_ip);
+			task_set_gateway_ip(tbase, gateway_ip);
 		}
 	}
 	return 0;
@@ -860,12 +881,16 @@ static int parse_cmd_local_ip(const char *str, struct input *input)
 	}
 	for (i = 0; i < nb_cores; i++) {
 		lcore_id = lcores[i];
+		struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
+		uint32_t local_ip = ((ip[3] & 0xFF) << 24) | ((ip[2] & 0xFF) << 16) | ((ip[1] & 0xFF) << 8) | ((ip[0] & 0xFF) << 0);
 		if (!task_is_mode(lcore_id, task_id, "arp", "local")) {
-			plog_err("Core %u task %u is not in arp mode\n", lcore_id, task_id);
-		}
-		else {
-			uint32_t local_ip = ((ip[3] & 0xFF) << 24) | ((ip[2] & 0xFF) << 16) | ((ip[1] & 0xFF) << 8) | ((ip[0] & 0xFF) << 0);
-			struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
+			if (!task_is_sub_mode(lcore_id, task_id, "l3")) {
+				plog_err("Core %u task %u is not in l3 mode\n", lcore_id, task_id);
+			} else {
+				plog_info("Setting local ip to %s\n", str);
+				task_set_local_ip(tbase, local_ip);
+			}
+		} else {
 			plog_info("Setting local ip to %s\n", str);
 			task_arp_set_local_ip(tbase, local_ip);
 		}

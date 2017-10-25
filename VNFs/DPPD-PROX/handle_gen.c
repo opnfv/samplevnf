@@ -22,6 +22,7 @@
 #include <rte_version.h>
 #include <rte_byteorder.h>
 #include <rte_ether.h>
+#include <rte_hash_crc.h>
 
 #include "prox_shared.h"
 #include "random.h"
@@ -45,21 +46,14 @@
 #include "local_mbuf.h"
 #include "arp.h"
 #include "tx_pkt.h"
-#include <rte_hash_crc.h>
+#include "handle_master.h"
 
 struct pkt_template {
-	uint64_t dst_mac;
-	uint32_t ip_src;
-	uint32_t ip_dst_pos;
 	uint16_t len;
 	uint16_t l2_len;
 	uint16_t l3_len;
 	uint8_t  buf[ETHER_MAX_LEN];
 };
-
-#define FLAG_DST_MAC_KNOWN	1
-#define FLAG_L3_GEN		2
-#define FLAG_RANDOM_IPS		4
 
 #define MAX_TEMPLATE_INDEX	65536
 #define TEMPLATE_INDEX_MASK	(MAX_TEMPLATE_INDEX - 1)
@@ -125,12 +119,7 @@ struct task_gen {
 	uint64_t accur[64];
 	uint64_t pkt_tsc_offset[64];
 	struct pkt_template *pkt_template_orig; /* packet templates (from inline or from pcap) */
-	struct ether_addr gw_mac;
 	struct ether_addr  src_mac;
-	struct rte_hash  *mac_hash;
-	uint64_t *dst_mac;
-	uint32_t gw_ip;
-	uint32_t src_ip;
 	uint8_t flags;
 	uint8_t cksum_offload;
 } __rte_cache_aligned;
@@ -205,22 +194,6 @@ static void task_gen_reset_token_time(struct task_gen *task)
 {
 	token_time_set_bpp(&task->token_time, task->new_rate_bps);
 	token_time_reset(&task->token_time, rte_rdtsc(), 0);
-}
-
-static void start(struct task_base *tbase)
-{
-	struct task_gen *task = (struct task_gen *)tbase;
-	task->pkt_queue_index = 0;
-
-	task_gen_reset_token_time(task);
-}
-
-static void start_pcap(struct task_base *tbase)
-{
-	struct task_gen_pcap *task = (struct task_gen_pcap *)tbase;
-	/* When we start, the first packet is sent immediately. */
-	task->last_tsc = rte_rdtsc() - task->proto_tsc[0];
-	task->pkt_idx = 0;
 }
 
 static void task_gen_take_count(struct task_gen *task, uint32_t send_bulk)
@@ -337,13 +310,7 @@ static uint32_t task_gen_calc_send_bulk(const struct task_gen *task, uint32_t *t
 	 */
 	for (uint16_t j = 0; j < max_bulk; ++j) {
 		struct pkt_template *pktpl = &task->pkt_template[pkt_idx_tmp];
-		if (unlikely((task->flags & (FLAG_L3_GEN | FLAG_DST_MAC_KNOWN)) == FLAG_L3_GEN))  {
-			// Generator is supposed to get MAC address - MAC is still unknown for this template
-			// generate ARP Request to gateway instead of the intended packet
-			pkt_size = 60;
-		} else {
-			pkt_size = pktpl->len;
-		}
+		pkt_size = pktpl->len;
 		uint32_t pkt_len = pkt_len_to_wire_size(pkt_size);
 		if (pkt_len + would_send_bytes > task->token_time.bytes_now)
 			break;
@@ -358,106 +325,6 @@ static uint32_t task_gen_calc_send_bulk(const struct task_gen *task, uint32_t *t
 		return 0;
 	*total_bytes = would_send_bytes;
 	return send_bulk;
-}
-
-static inline void create_arp(struct rte_mbuf *mbuf, uint8_t *pkt_hdr, uint64_t *src_mac, uint32_t ip_dst, uint32_t ip_src)
-{
-	uint64_t mac_bcast = 0xFFFFFFFFFFFF;
-	rte_pktmbuf_pkt_len(mbuf) = 42;
-	rte_pktmbuf_data_len(mbuf) = 42;
-	init_mbuf_seg(mbuf);
-	struct ether_hdr_arp *hdr_arp = (struct ether_hdr_arp *)pkt_hdr;
-
-	memcpy(&hdr_arp->ether_hdr.d_addr.addr_bytes, &mac_bcast, 6);
-	memcpy(&hdr_arp->ether_hdr.s_addr.addr_bytes, src_mac, 6);
-	hdr_arp->ether_hdr.ether_type = ETYPE_ARP;
-	hdr_arp->arp.htype = 0x100,
-	hdr_arp->arp.ptype = 0x0008;
-	hdr_arp->arp.hlen = 6;
-	hdr_arp->arp.plen = 4;
-	hdr_arp->arp.oper = 0x100;
-	hdr_arp->arp.data.spa = ip_src;
-	hdr_arp->arp.data.tpa = ip_dst;
-	memset(&hdr_arp->arp.data.tha, 0, sizeof(struct ether_addr));
-	memcpy(&hdr_arp->arp.data.sha, src_mac, sizeof(struct ether_addr));
-}
-
-static int task_gen_write_dst_mac(struct task_gen *task, struct rte_mbuf **mbufs, uint8_t **pkt_hdr, uint32_t count)
-{
-	uint32_t ip_dst_pos, ip_src_pos, ip_dst, ip_src;
-	uint16_t i;
-	int ret;
-
-	if (task->flags & FLAG_L3_GEN) {
-		if (task->gw_ip) {
-			if (unlikely((task->flags & FLAG_DST_MAC_KNOWN) == 0))  {
-				for (i = 0; i < count; ++i) {
-					struct pkt_template *pktpl = &task->pkt_template[mbufs[i]->udata64 & TEMPLATE_INDEX_MASK];
-					create_arp(mbufs[i], pkt_hdr[i], (uint64_t *)&pktpl->buf[6], task->gw_ip, pktpl->ip_src);
-					mbufs[i]->udata64 |= MBUF_ARP;
-				}
-			} else {
-				for (i = 0; i < count; ++i) {
-					struct ether_hdr *hdr = (struct ether_hdr *)pkt_hdr[i];
-					memcpy(&hdr->d_addr.addr_bytes, &task->gw_mac, 6);
-				}
-			}
-		} else if (unlikely((task->flags & FLAG_RANDOM_IPS) != 0) || (task->n_pkts >= 4)){
-			// Find mac in lookup table. Send ARP if not found
-			int32_t positions[MAX_PKT_BURST], idx;
-			void *keys[MAX_PKT_BURST];
-			uint32_t key[MAX_PKT_BURST];
-			for (i = 0; i < count; ++i) {
-				uint8_t *hdr = (uint8_t *)pkt_hdr[i];
-				struct pkt_template *pktpl = &task->pkt_template[mbufs[i]->udata64 & TEMPLATE_INDEX_MASK];
-				ip_dst_pos = pktpl->ip_dst_pos;
-				ip_dst = *(uint32_t *)(hdr + ip_dst_pos);
-				key[i] = ip_dst;
-				keys[i] = &key[i];
-			}
-			ret = rte_hash_lookup_bulk(task->mac_hash, (const void **)&keys, count, positions);
-			if (unlikely(ret < 0)) {
-				plogx_err("lookup_bulk failed in mac_hash\n");
-				tx_pkt_drop_all((struct task_base *)task, mbufs, count, NULL);
-				return -1;
-			}
-			for (i = 0; i < count; ++i) {
-				idx = positions[i];
-				if (unlikely(idx < 0)) {
-					// mac not found for this IP
-					struct pkt_template *pktpl = &task->pkt_template[mbufs[i]->udata64 & TEMPLATE_INDEX_MASK];
-					uint8_t *hdr = (uint8_t *)pkt_hdr[i];
-					ip_src_pos = pktpl->ip_dst_pos - 4;
-					ip_src = *(uint32_t *)(hdr + ip_src_pos);
-					create_arp(mbufs[i], pkt_hdr[i], (uint64_t *)&hdr[6], key[i], ip_src);
-					mbufs[i]->udata64 |= MBUF_ARP;
-				} else {
-					// mac found for this IP
-					struct ether_hdr_arp *hdr_arp = (struct ether_hdr_arp *)pkt_hdr[i];
-					memcpy(&hdr_arp->ether_hdr.d_addr.addr_bytes, &task->dst_mac[idx], 6);
-				}
-			}
-		} else {
-			for (i = 0; i < count; ++i) {
-				uint8_t *hdr = (uint8_t *)pkt_hdr[i];
-				struct pkt_template *pktpl = &task->pkt_template[mbufs[i]->udata64 & TEMPLATE_INDEX_MASK];
-
-				// Check if packet template already has the mac
-				if (unlikely(pktpl->dst_mac == 0)) {
-					// no random_ip, can take from from packet template but no mac (yet)
-					uint32_t ip_dst_pos = pktpl->ip_dst_pos;
-					ip_dst = *(uint32_t *)(hdr + ip_dst_pos);
-					create_arp(mbufs[i], pkt_hdr[i], (uint64_t *)&pktpl->buf[6], ip_dst, pktpl->ip_src);
-					mbufs[i]->udata64 |= MBUF_ARP;
-				} else {
-					// no random ip, mac known
-					struct ether_hdr_arp *hdr_arp = (struct ether_hdr_arp *)pkt_hdr[i];
-					memcpy(&hdr_arp->ether_hdr.d_addr.addr_bytes, &pktpl->dst_mac, 6);
-				}
-			}
-		}
-	}
-	return 0;
 }
 
 static void task_gen_apply_random_fields(struct task_gen *task, uint8_t *hdr)
@@ -690,92 +557,79 @@ static void task_gen_update_config(struct task_gen *task)
 		task_gen_reset_token_time(task);
 }
 
-static inline void handle_arp_pkts(struct task_gen *task, struct rte_mbuf **mbufs, uint16_t n_pkts)
+static inline void build_value(struct task_gen *task, uint32_t mask, int bit_pos, uint32_t val, uint32_t fixed_bits)
 {
-	int j;
-	int ret;
-	struct ether_hdr_arp *hdr;
-	uint8_t out[MAX_PKT_BURST];
-	static struct my_arp_t arp_reply = {
-		.htype = 0x100,
-		.ptype = 8,
-		.hlen = 6,
-		.plen = 4,
-		.oper = 0x200
-	};
-	static struct my_arp_t arp_request = {
-		.htype = 0x100,
-		.ptype = 8,
-		.hlen = 6,
-		.plen = 4,
-		.oper = 0x100
-	};
+	struct task_base *tbase = (struct task_base *)task;
+	if (bit_pos < 32) {
+		build_value(task, mask >> 1, bit_pos + 1, val, fixed_bits);
+		if (mask & 1) {
+			build_value(task, mask >> 1, bit_pos + 1, val | (1 << bit_pos), fixed_bits);
+		}
+	} else {
+		register_ip_to_ctrl_plane(tbase->l3.tmaster, rte_cpu_to_be_32(val | fixed_bits), tbase->l3.reachable_port_id, tbase->l3.core_id, tbase->l3.task_id);
+	}
+}
+static inline void register_all_ip_to_ctrl_plane(struct task_gen *task)
+{
+	struct task_base *tbase = (struct task_base *)task;
+	int i, len, fixed;
+	unsigned int offset;
+	uint32_t mask;
 
-	for (j = 0; j < n_pkts; ++j) {
-		PREFETCH0(mbufs[j]);
-	}
-	for (j = 0; j < n_pkts; ++j) {
-		PREFETCH0(rte_pktmbuf_mtod(mbufs[j], void *));
-	}
-	for (j = 0; j < n_pkts; ++j) {
-		hdr = rte_pktmbuf_mtod(mbufs[j], struct ether_hdr_arp *);
-		if (hdr->ether_hdr.ether_type == ETYPE_ARP) {
-			if (memcmp(&hdr->arp, &arp_reply, 8) == 0) {
-				uint32_t ip = hdr->arp.data.spa;
-				// plog_info("Received ARP Reply for IP %x\n",ip);
-				if (ip == task->gw_ip) {
-					memcpy(&task->gw_mac, &hdr->arp.data.sha, 6);;
-					task->flags |= FLAG_DST_MAC_KNOWN;
-					out[j] = OUT_HANDLED;
-					continue;
-				} else if ((task->n_pkts >= 4) || (task->flags & FLAG_RANDOM_IPS)) {
-					// Ideally, we should add the key when making the arp request,
-					// We should only store the mac address key was created.
-					// Here we are storing MAC we did not asked for...
-					ret = rte_hash_add_key(task->mac_hash, (const void *)&ip);
-					if (ret < 0) {
-						plogx_info("Unable add ip %d.%d.%d.%d in mac_hash\n", IP4(ip));
-						out[j] = OUT_DISCARD;
-					} else {
-						task->dst_mac[ret] = *(uint64_t *)&(hdr->arp.data.sha);
-						out[j] = OUT_HANDLED;
-					}
-					continue;
-				}
-				// Need to find template back...
-				// Only try this if there are few templates
-				for (unsigned int idx = 0; idx < task->n_pkts; idx++) {
-					struct pkt_template *pktpl = &task->pkt_template[idx];
-					uint32_t ip_dst_pos = pktpl->ip_dst_pos;
-					uint32_t *ip_dst = (uint32_t *)(((uint8_t *)pktpl->buf) + ip_dst_pos);
-					if (*ip_dst == ip) {
-						pktpl->dst_mac = *(uint64_t *)&(hdr->arp.data.sha);
-					}
-					out[j] = OUT_HANDLED;
-				}
-			} else if (memcmp(&hdr->arp, &arp_request, 8) == 0) {
-				struct ether_addr s_addr;
-				if (!task->src_ip) {
-					create_mac(hdr, &s_addr);
-					prepare_arp_reply(hdr, &s_addr);
-					memcpy(hdr->ether_hdr.d_addr.addr_bytes, hdr->ether_hdr.s_addr.addr_bytes, 6);
-					memcpy(hdr->ether_hdr.s_addr.addr_bytes, &s_addr, 6);
-					out[j] = 0;
-				} else if (hdr->arp.data.tpa == task->src_ip) {
-					prepare_arp_reply(hdr, &task->src_mac);
-					memcpy(hdr->ether_hdr.d_addr.addr_bytes, hdr->ether_hdr.s_addr.addr_bytes, 6);
-					memcpy(hdr->ether_hdr.s_addr.addr_bytes, &task->src_mac, 6);
-					out[j] = 0;
+	for (uint32_t i = 0; i < task->n_pkts; ++i) {
+		struct pkt_template *pktpl = &task->pkt_template[i];
+		unsigned int ip_src_pos = 0;
+		int maybe_ipv4 = 0;
+		unsigned int l2_len = sizeof(struct ether_hdr);
+
+		uint8_t *pkt = pktpl->buf;
+		struct ether_hdr *eth_hdr = (struct ether_hdr*)pkt;
+		uint16_t ether_type = eth_hdr->ether_type;
+		struct vlan_hdr *vlan_hdr;
+
+		// Unstack VLAN tags
+		while (((ether_type == ETYPE_8021ad) || (ether_type == ETYPE_VLAN)) && (l2_len + sizeof(struct vlan_hdr) < pktpl->len)) {
+			vlan_hdr = (struct vlan_hdr *)(pkt + l2_len);
+			l2_len +=4;
+			ether_type = vlan_hdr->eth_proto;
+		}
+		if ((ether_type == ETYPE_MPLSU) || (ether_type == ETYPE_MPLSM)) {
+			l2_len +=4;
+			maybe_ipv4 = 1;
+		}
+		if ((ether_type != ETYPE_IPv4) && !maybe_ipv4)
+			continue;
+
+		struct ipv4_hdr *ip = (struct ipv4_hdr *)(pkt + l2_len);
+		PROX_PANIC(ip->version_ihl >> 4 != 4, "IPv4 ether_type but IP version = %d != 4", ip->version_ihl >> 4);
+
+		// Even if IPv4 header contains options, options are after ip src and dst
+		ip_src_pos = l2_len + sizeof(struct ipv4_hdr) - 2 * sizeof(uint32_t);
+		uint32_t *ip_src = ((uint32_t *)(pktpl->buf + ip_src_pos));
+		plog_info("\tip_src_pos = %d, ip_src = %x\n", ip_src_pos, *ip_src);
+		register_ip_to_ctrl_plane(tbase->l3.tmaster, *ip_src, tbase->l3.reachable_port_id, tbase->l3.core_id, tbase->l3.task_id);
+
+		for (int j = 0; j < task->n_rands; j++) {
+			offset = task->rand[j].rand_offset;
+			len = task->rand[j].rand_len;
+			mask = task->rand[j].rand_mask;
+			fixed = task->rand[j].fixed_bits;
+			plog_info("offset = %d, len = %d, mask = %x, fixed = %x\n", offset, len, mask, fixed);
+			if ((offset < ip_src_pos + 4) && (offset + len >= ip_src_pos)) {
+				if (offset >= ip_src_pos) {
+					int32_t ip_src_mask = (1 << (4 + ip_src_pos - offset) * 8) - 1;
+					mask = mask & ip_src_mask;
+					fixed = (fixed & ip_src_mask) | (rte_be_to_cpu_32(*ip_src) & ~ip_src_mask);
+					build_value(task, mask, 0, 0, fixed);
 				} else {
-					out[j] = OUT_DISCARD;
-					plogx_dbg("Received ARP on unexpected IP %x, expecting %x\n", rte_be_to_cpu_32(hdr->arp.data.tpa), rte_be_to_cpu_32(task->src_ip));
+					int32_t bits = ((ip_src_pos + 4 - offset - len) * 8);
+					mask = mask << bits;
+					fixed = (fixed << bits) | (rte_be_to_cpu_32(*ip_src) & ((1 << bits) - 1));
+					build_value(task, mask, 0, 0, fixed);
 				}
 			}
-		} else {
-			out[j] = OUT_DISCARD;
 		}
 	}
-	ret = task->base.tx_pkt(&task->base, mbufs, n_pkts, out);
 }
 
 static int handle_gen_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts)
@@ -785,10 +639,6 @@ static int handle_gen_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 	int ret;
 
 	int i, j;
-
-	if (unlikely((task->flags & FLAG_L3_GEN) && (n_pkts != 0))) {
-		handle_arp_pkts(task, mbufs, n_pkts);
-	}
 
 	task_gen_update_config(task);
 
@@ -802,7 +652,7 @@ static int handle_gen_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 	token_time_update(&task->token_time, rte_rdtsc());
 
 	uint32_t would_send_bytes;
-	const uint32_t send_bulk = task_gen_calc_send_bulk(task, &would_send_bytes);
+	uint32_t send_bulk = task_gen_calc_send_bulk(task, &would_send_bytes);
 
 	if (send_bulk == 0)
 		return 0;
@@ -817,8 +667,6 @@ static int handle_gen_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 	task_gen_load_and_prefetch(new_pkts, pkt_hdr, send_bulk);
 	task_gen_build_packets(task, new_pkts, pkt_hdr, send_bulk);
 	task_gen_apply_all_random_fields(task, pkt_hdr, send_bulk);
-	if (task_gen_write_dst_mac(task, new_pkts, pkt_hdr, send_bulk) < 0)
-		return 0;
 	task_gen_apply_all_accur_pos(task, new_pkts, pkt_hdr, send_bulk);
 	task_gen_apply_all_sig(task, new_pkts, pkt_hdr, send_bulk);
 	task_gen_apply_all_unique_id(task, new_pkts, pkt_hdr, send_bulk);
@@ -1135,13 +983,6 @@ int task_gen_set_pkt_size(struct task_base *tbase, uint32_t pkt_size)
 	return rc;
 }
 
-void task_gen_set_gateway_ip(struct task_base *tbase, uint32_t ip)
-{
-	struct task_gen *task = (struct task_gen *)tbase;
-	task->gw_ip = ip;
-	task->flags &= ~FLAG_DST_MAC_KNOWN;
-}
-
 void task_gen_set_rate(struct task_base *tbase, uint64_t bps)
 {
 	struct task_gen *task = (struct task_gen *)tbase;
@@ -1159,7 +1000,6 @@ void task_gen_reset_randoms(struct task_base *tbase)
 		task->rand[i].rand_offset = 0;
 	}
 	task->n_rands = 0;
-	task->flags &= ~FLAG_RANDOM_IPS;
 }
 
 int task_gen_set_value(struct task_base *tbase, uint32_t value, uint32_t offset, uint32_t len)
@@ -1276,14 +1116,35 @@ int task_gen_add_rand(struct task_base *tbase, const char *rand_str, uint32_t of
 	task->rand[task->n_rands].rand_mask = mask;
 	task->rand[task->n_rands].fixed_bits = fixed;
 
-	struct pkt_template *pktpl = &task->pkt_template[0];
-	if (!((offset >= pktpl->ip_dst_pos + 4) || (offset + len < pktpl->ip_dst_pos))) {
-		plog_info("\tUsing randoms IP destinations\n");
-		task->flags |= FLAG_RANDOM_IPS;
-	}
-
 	task->n_rands++;
 	return 0;
+}
+
+static void start(struct task_base *tbase)
+{
+	struct task_gen *task = (struct task_gen *)tbase;
+	task->pkt_queue_index = 0;
+
+	task_gen_reset_token_time(task);
+	if (tbase->l3.tmaster) {
+		register_all_ip_to_ctrl_plane(task);
+	}
+	/* TODO
+	   Handle the case when two tasks transmit to the same port
+	   and one of them is stopped. In that case ARP (requests or replies)
+	   might not be sent. Master will have to keep a list of rings.
+	   stop will have to de-register IP from ctrl plane.
+	   un-registration will remove the ring. when having more than
+	   one active rings, master can always use the first one
+	*/
+}
+
+static void start_pcap(struct task_base *tbase)
+{
+	struct task_gen_pcap *task = (struct task_gen_pcap *)tbase;
+	/* When we start, the first packet is sent immediately. */
+	task->last_tsc = rte_rdtsc() - task->proto_tsc[0];
+	task->pkt_idx = 0;
 }
 
 static void init_task_gen_early(struct task_args *targ)
@@ -1353,70 +1214,6 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 		}
 	}
 	memcpy(&task->src_mac, &prox_port_cfg[task->base.tx_params_hw.tx_port_queue->port].eth_addr, sizeof(struct ether_addr));
-	if (!strcmp(targ->task_init->sub_mode_str, "l3")) {
-		// In L3 GEN, we need to receive ARP replies
-		task->flags = FLAG_L3_GEN;
-		task->gw_ip = rte_cpu_to_be_32(targ->gateway_ipv4);
-		uint32_t n_entries;
-
-		if (targ->number_gen_ip == 0)
-			n_entries = 1048576;
-		else
-			n_entries = targ->number_gen_ip;
-
-		static char hash_name[30];
-		sprintf(hash_name, "A%03d_mac_table", targ->lconf->id);
-
-		struct rte_hash_parameters hash_params = {
-			.name = hash_name,
-			.entries = n_entries,
-			.key_len = sizeof(uint32_t),
-			.hash_func = rte_hash_crc,
-			.hash_func_init_val = 0,
-		};
-		task->mac_hash = rte_hash_create(&hash_params);
-		PROX_PANIC(task->mac_hash == NULL, "Failed to set up mac hash table for %d IP\n", n_entries);
-
-		const uint32_t socket = rte_lcore_to_socket_id(targ->lconf->id);
-		task->dst_mac = (uint64_t *)prox_zmalloc(n_entries * sizeof(uint64_t), socket);
-		PROX_PANIC(task->dst_mac == NULL, "Failed to allocate mac table for %d IP\n", n_entries);
-
-		for (uint32_t i = 0; i < task->n_pkts; ++i) {
-			// For all destination IP, ARP request will need to be sent
-			// Store position of Destination IP in template
-			int ip_dst_pos = 0;
-			int maybe_ipv4 = 0;
-			int l2_len = sizeof(struct ether_hdr);
-			struct vlan_hdr *vlan_hdr;
-			uint8_t *pkt = task->pkt_template[i].buf;
-			struct ether_hdr *eth_hdr = (struct ether_hdr*)pkt;
-			struct ipv4_hdr *ip;
-			uint16_t ether_type = eth_hdr->ether_type;
-
-			// Unstack VLAN tags
-			while (((ether_type == ETYPE_8021ad) || (ether_type == ETYPE_VLAN)) && (l2_len + sizeof(struct vlan_hdr) < task->pkt_template[i].len)) {
-				vlan_hdr = (struct vlan_hdr *)(pkt + l2_len);
-				l2_len +=4;
-				ether_type = vlan_hdr->eth_proto;
-			}
-			if ((ether_type == ETYPE_MPLSU) || (ether_type == ETYPE_MPLSM)) {
-				l2_len +=4;
-				maybe_ipv4 = 1;
-			}
-			if ((ether_type == ETYPE_IPv4) || maybe_ipv4) {
-				struct ipv4_hdr *ip = (struct ipv4_hdr *)(pkt + l2_len);
-				PROX_PANIC(ip->version_ihl >> 4 != 4, "IPv4 ether_type but IP version = %d != 4", ip->version_ihl >> 4);
-				// Even if IPv4 header contains options, options are after ip src and dst
-				ip_dst_pos = l2_len + sizeof(struct ipv4_hdr) - sizeof(uint32_t);
-				uint32_t *p = ((uint32_t *)(task->pkt_template[i].buf + ip_dst_pos - sizeof(uint32_t)));
-				task->pkt_template[i].ip_dst_pos = ip_dst_pos;
-				task->pkt_template[i].ip_src = *p;
-				uint32_t *p1 = ((uint32_t *)(task->pkt_template[i].buf + ip_dst_pos));
-				plog_info("\tip_dst_pos = %d, ip_dst = %x\n", ip_dst_pos, *p1);
-			}
-		}
-		task->src_ip = rte_cpu_to_be_32(targ->local_ipv4);
-	}
 	for (uint32_t i = 0; i < targ->n_rand_str; ++i) {
 		PROX_PANIC(task_gen_add_rand(tbase, targ->rand_str[i], targ->rand_offset[i], UINT32_MAX),
 			   "Failed to add random\n");
@@ -1452,9 +1249,9 @@ static struct task_init task_init_gen_l3 = {
 #ifdef SOFT_CRC
 	// For SOFT_CRC, no offload is needed. If both NOOFFLOADS and NOMULTSEGS flags are set the
 	// vector mode is used by DPDK, resulting (theoretically) in higher performance.
-	.flag_features = TASK_FEATURE_ZERO_RX | TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS | TASK_FEATURE_TXQ_FLAGS_NOMULTSEGS|TASK_FEATURE_ZERO_RX,
+	.flag_features = TASK_FEATURE_NEVER_DISCARDS | TASK_FEATURE_NO_RX | TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS | TASK_FEATURE_TXQ_FLAGS_NOMULTSEGS,
 #else
-	.flag_features = TASK_FEATURE_ZERO_RX,
+	.flag_features = TASK_FEATURE_NEVER_DISCARDS | TASK_FEATURE_NO_RX,
 #endif
 	.size = sizeof(struct task_gen)
 };

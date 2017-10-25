@@ -28,6 +28,7 @@ void set_port_defaults(void);
 
 #define MAX_PKT_BURST   64
 #define MAX_RING_BURST	64
+#define DUMP_PKT_LEN 128
 
 #if MAX_RING_BURST < MAX_PKT_BURST
 #error MAX_RING_BURST < MAX_PKT_BURST

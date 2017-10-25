@@ -33,15 +33,7 @@ struct task_swap {
 	struct task_base base;
 	uint8_t src_dst_mac[12];
 	uint32_t runtime_flags;
-	uint32_t tmp_ip;
-	uint32_t ip;
 };
-
-static void task_update_config(struct task_swap *task)
-{
-	if (unlikely(task->ip != task->tmp_ip))
-		task->ip = task->tmp_ip;
-}
 
 static void write_src_and_dst_mac(struct task_swap *task, struct rte_mbuf *mbuf)
 {
@@ -74,16 +66,12 @@ static void write_src_and_dst_mac(struct task_swap *task, struct rte_mbuf *mbuf)
 static inline int handle_arp_request(struct task_swap *task, struct ether_hdr_arp *hdr_arp, struct ether_addr *s_addr, uint32_t ip)
 {
 	if ((hdr_arp->arp.data.tpa == ip) || (ip == 0)) {
-		prepare_arp_reply(hdr_arp, s_addr);
-		memcpy(hdr_arp->ether_hdr.d_addr.addr_bytes, hdr_arp->ether_hdr.s_addr.addr_bytes, 6);
-		memcpy(hdr_arp->ether_hdr.s_addr.addr_bytes, s_addr, 6);
+		build_arp_reply(hdr_arp, s_addr);
 		return 0;
 	} else if (task->runtime_flags & TASK_MULTIPLE_MAC) {
 		struct ether_addr tmp_s_addr;
 		create_mac(hdr_arp, &tmp_s_addr);
-		prepare_arp_reply(hdr_arp, &tmp_s_addr);
-		memcpy(hdr_arp->ether_hdr.d_addr.addr_bytes, hdr_arp->ether_hdr.s_addr.addr_bytes, 6);
-		memcpy(hdr_arp->ether_hdr.s_addr.addr_bytes, &tmp_s_addr, 6);
+		build_arp_reply(hdr_arp, &tmp_s_addr);
 		return 0;
 	} else {
 		plogx_dbg("Received ARP on unexpected IP %x, expecting %x\n", rte_be_to_cpu_32(hdr_arp->arp.data.tpa), rte_be_to_cpu_32(ip));
@@ -127,20 +115,6 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 	for (uint16_t j = 0; j < n_pkts; ++j) {
 		hdr = rte_pktmbuf_mtod(mbufs[j], struct ether_hdr *);
 		switch (hdr->ether_type) {
-		case ETYPE_ARP:
-			hdr_arp = rte_pktmbuf_mtod(mbufs[j], struct ether_hdr_arp *);
-			if (arp_is_gratuitous(hdr_arp)) {
-				plog_info("Received gratuitous packet \n");
-				out[j] = OUT_DISCARD;
-			} else if (hdr_arp->arp.oper == ARP_REQUEST) {
-				out[j] = handle_arp_request(task, hdr_arp, (struct ether_addr *)&task->src_dst_mac[6], task->ip);
-			} else if (hdr_arp->arp.oper == ARP_REPLY) {
-				out[j] = handle_arp_replies(task, hdr_arp);
-			} else {
-				plog_info("Received unexpected ARP operation %d\n", hdr_arp->arp.oper);
-				out[j] = OUT_DISCARD;
-			}
-			continue;
 		case ETYPE_MPLSU:
 			mpls = (struct mpls_hdr *)(hdr + 1);
 			while (!(mpls->bytes & 0x00010000)) {
@@ -220,7 +194,6 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 		}
 		write_src_and_dst_mac(task, mbufs[j]);
 	}
-	task_update_config(task);
 	return task->base.tx_pkt(&task->base, mbufs, n_pkts, out);
 }
 
@@ -261,8 +234,6 @@ static void init_task_swap(struct task_base *tbase, struct task_args *targ)
 		}
 	}
 	task->runtime_flags = targ->flags;
-	task->ip = rte_cpu_to_be_32(targ->local_ipv4);
-	task->tmp_ip = task->ip;
 }
 
 static struct task_init task_init_swap = {

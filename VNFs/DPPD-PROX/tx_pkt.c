@@ -25,6 +25,7 @@
 #include "prox_assert.h"
 #include "log.h"
 #include "mbuf_utils.h"
+#include "handle_master.h"
 
 static void buf_pkt_single(struct task_base *tbase, struct rte_mbuf *mbuf, const uint8_t out)
 {
@@ -49,9 +50,40 @@ static inline void buf_pkt_all(struct task_base *tbase, struct rte_mbuf **mbufs,
 }
 #define MAX_PMD_TX 32
 
+int tx_pkt_l3(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts, uint8_t *out)
+{
+	uint32_t ip_dst;
+	int first = 0, ret, ok = 0, rc;
+	const struct port_queue *port_queue = &tbase->tx_params_hw.tx_port_queue[0];
+
+	for (int j = 0; j < n_pkts; j++) {
+		if ((out) && (out[j] >= OUT_HANDLED))
+			continue;
+		if (unlikely((rc = write_dst_mac(tbase, mbufs[j], &ip_dst)) < 0)) {
+			if (j - first) {
+				ret = tbase->aux->tx_pkt_l2(tbase, mbufs + first, j - first, out);
+				ok += ret;
+			}
+			first = j + 1;
+			if (rc == -1) {
+				mbufs[j]->port = tbase->l3.reachable_port_id;
+				tx_ring_cti(tbase, tbase->l3.ctrl_plane_ring, REQ_MAC_TO_CTRL, mbufs[j], tbase->l3.core_id, tbase->l3.task_id, ip_dst);
+			} else if (rc == -2) {
+				tx_drop(mbufs[j]);
+				TASK_STATS_ADD_DROP_DISCARD(&tbase->aux->stats, 1);
+			}
+		}
+	}
+	if (n_pkts - first) {
+		ret = tbase->aux->tx_pkt_l2(tbase, mbufs + first, n_pkts - first, out);
+		ok += ret;
+	}
+	return ok;
+}
+
 /* The following help functions also report stats. Therefore we need
    to pass the task_base struct. */
-static inline int txhw_drop(const struct port_queue *port_queue, struct rte_mbuf **mbufs, uint16_t n_pkts, __attribute__((unused)) struct task_base *tbase)
+static inline int txhw_drop(const struct port_queue *port_queue, struct rte_mbuf **mbufs, uint16_t n_pkts, struct task_base *tbase)
 {
 	uint16_t ntx;
 	int ret;
@@ -63,10 +95,11 @@ static inline int txhw_drop(const struct port_queue *port_queue, struct rte_mbuf
 	} else {
 		ntx = rte_eth_tx_burst(port_queue->port, port_queue->queue, mbufs, n_pkts);
 	}
-
 	TASK_STATS_ADD_TX(&tbase->aux->stats, ntx);
+
 	ret =  n_pkts - ntx;
 	if (ntx < n_pkts) {
+		plog_dbg("Failed to send %d packets from %p\n", ret, mbufs[0]);
 		TASK_STATS_ADD_DROP_TX_FAIL(&tbase->aux->stats, n_pkts - ntx);
 		if (tbase->tx_pkt == tx_pkt_bw) {
 			uint32_t drop_bytes = 0;
@@ -85,13 +118,12 @@ static inline int txhw_drop(const struct port_queue *port_queue, struct rte_mbuf
 	return ret;
 }
 
-static inline int txhw_no_drop(const struct port_queue *port_queue, struct rte_mbuf **mbufs, uint16_t n_pkts, __attribute__((unused)) struct task_base *tbase)
+static inline int txhw_no_drop(const struct port_queue *port_queue, struct rte_mbuf **mbufs, uint16_t n_pkts, struct task_base *tbase)
 {
 	uint16_t ret;
 	uint16_t n = n_pkts;
 
 	TASK_STATS_ADD_TX(&tbase->aux->stats, n_pkts);
-
 	do {
 		ret = rte_eth_tx_burst(port_queue->port, port_queue->queue, mbufs, n_pkts);
 		mbufs += ret;
@@ -265,11 +297,11 @@ uint16_t tx_try_sw1(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n
 
 uint16_t tx_try_hw1(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts)
 {
-	const struct port_queue *port_queue = &tbase->tx_params_hw.tx_port_queue[0];
 	const int bulk_size = 64;
 	uint16_t ret = bulk_size, n_bulks, sent = 0;
 	n_bulks = n_pkts >>  __builtin_ctz(bulk_size);
 
+	const struct port_queue *port_queue = &tbase->tx_params_hw.tx_port_queue[0];
 	for (int i = 0; i < n_bulks; i++) {
 		ret = rte_eth_tx_burst(port_queue->port, port_queue->queue, mbufs, bulk_size);
 		mbufs += ret;
@@ -541,59 +573,91 @@ int tx_pkt_sw(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts,
 	return ret;
 }
 
+static inline void trace_one_rx_pkt(struct task_base *tbase, struct rte_mbuf *mbuf)
+{
+	struct rte_mbuf tmp;
+	/* For each packet being transmitted, find which
+	   buffer represent the packet as it was before
+	   processing. */
+	uint32_t j = 0;
+	uint32_t len = sizeof(tbase->aux->task_rt_dump.pkt_mbuf_addr)/sizeof(tbase->aux->task_rt_dump.pkt_mbuf_addr[0]);
+	for (;j < len; ++j) {
+		if (tbase->aux->task_rt_dump.pkt_mbuf_addr[j] == mbuf)
+			break;
+	}
+	if (j != len) {
+#if RTE_VERSION >= RTE_VERSION_NUM(1,8,0,0)
+		tmp.data_off = 0;
+#endif
+		rte_pktmbuf_data_len(&tmp) = tbase->aux->task_rt_dump.pkt_cpy_len[j];
+		rte_pktmbuf_pkt_len(&tmp) = tbase->aux->task_rt_dump.pkt_cpy_len[j];
+		tmp.buf_addr = tbase->aux->task_rt_dump.pkt_cpy[j];
+		plogdx_info(&tmp, "Trace RX: ");
+	}
+}
+
+static inline void trace_one_tx_pkt(struct task_base *tbase, struct rte_mbuf *mbuf, uint8_t *out, uint32_t i)
+{
+	if (out) {
+		switch(out[i]) {
+		case 0xFE:
+			plogdx_info(mbuf, "Handled: ");
+			break;
+		case 0xFF:
+			plogdx_info(mbuf, "Dropped: ");
+			break;
+		default:
+			plogdx_info(mbuf, "TX[%d]: ", out[i]);
+			break;
+		}
+	} else if (tbase->aux->tx_pkt_orig == tx_pkt_drop_all) {
+		plogdx_info(mbuf, "Dropped: ");
+	} else
+		plogdx_info(mbuf, "TX[0]: ");
+}
+
+static void unset_trace(struct task_base *tbase)
+{
+	if (0 == tbase->aux->task_rt_dump.n_trace) {
+		if (tbase->tx_pkt == tx_pkt_l3) {
+			tbase->aux->tx_pkt_l2 = tbase->aux->tx_pkt_orig;
+			tbase->aux->tx_pkt_orig = NULL;
+		} else {
+			tbase->tx_pkt = tbase->aux->tx_pkt_orig;
+			tbase->aux->tx_pkt_orig = NULL;
+		}
+		tbase->aux->task_rt_dump.cur_trace = 0;
+		task_base_del_rx_pkt_function(tbase, rx_pkt_trace);
+	}
+}
+
 int tx_pkt_trace(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts, uint8_t *out)
 {
 	int ret = 0;
 	if (tbase->aux->task_rt_dump.cur_trace == 0) {
 		// No packet received since dumping...
-		// So the transmitted packets should not be linked to received packets
 		tbase->aux->task_rt_dump.n_print_tx = tbase->aux->task_rt_dump.n_trace;
-		tbase->aux->task_rt_dump.n_trace = 0;
-		task_base_del_rx_pkt_function(tbase, rx_pkt_trace);
-		return tx_pkt_dump(tbase, mbufs, n_pkts, out);
+		if (tbase->aux->task_rt_dump.n_trace < n_pkts) {
+			tbase->aux->task_rt_dump.n_trace = 0;
+			tbase->aux->task_rt_dump.cur_trace = 0;
+			task_base_del_rx_pkt_function(tbase, rx_pkt_trace);
+		} else {
+			tbase->aux->task_rt_dump.n_trace -= n_pkts;
+		}
+		ret = tx_pkt_dump(tbase, mbufs, n_pkts, out);
+		tbase->aux->task_rt_dump.n_print_tx = 0;
+		return ret;
 	}
 	plog_info("Tracing %d pkts\n", tbase->aux->task_rt_dump.cur_trace);
+	uint32_t cur_trace = (n_pkts < tbase->aux->task_rt_dump.cur_trace) ? n_pkts: tbase->aux->task_rt_dump.cur_trace;
+	for (uint32_t i = 0; i < cur_trace; ++i) {
+		trace_one_rx_pkt(tbase, mbufs[i]);
+		trace_one_tx_pkt(tbase, mbufs[i], out, i);
 
-	for (uint32_t i = 0; i < tbase->aux->task_rt_dump.cur_trace; ++i) {
-		struct rte_mbuf tmp;
-		/* For each packet being transmitted, find which
-		   buffer represent the packet as it was before
-		   processing. */
-		uint32_t j = 0;
-		uint32_t len = sizeof(tbase->aux->task_rt_dump.pkt_mbuf_addr)/sizeof(tbase->aux->task_rt_dump.pkt_mbuf_addr[0]);
-		for (;j < len; ++j) {
-			if (tbase->aux->task_rt_dump.pkt_mbuf_addr[j] == mbufs[i])
-				break;
-		}
-		if (j == len) {
-			plog_info("Trace RX: missing!\n");
-		}
-		else {
-#if RTE_VERSION >= RTE_VERSION_NUM(1,8,0,0)
-			tmp.data_off = 0;
-#endif
-			rte_pktmbuf_data_len(&tmp) = tbase->aux->task_rt_dump.pkt_cpy_len[j];
-			rte_pktmbuf_pkt_len(&tmp) = tbase->aux->task_rt_dump.pkt_cpy_len[j];
-			tmp.buf_addr = tbase->aux->task_rt_dump.pkt_cpy[j];
-			plogd_info(&tmp, "Trace RX: ");
-		}
-
-		if (out) {
-			if (out[i] != 0xFF)
-				plogd_info(mbufs[i], "Trace TX[%d]: ", out[i]);
-			else
-				plogd_info(mbufs[i], "Trace Dropped: ");
-		} else
-			plogd_info(mbufs[i], "Trace TX: ");
 	}
 	ret = tbase->aux->tx_pkt_orig(tbase, mbufs, n_pkts, out);
 
-	/* Unset by TX when n_trace = 0 */
-	if (0 == tbase->aux->task_rt_dump.n_trace) {
-		tbase->tx_pkt = tbase->aux->tx_pkt_orig;
-		tbase->aux->tx_pkt_orig = NULL;
-		task_base_del_rx_pkt_function(tbase, rx_pkt_trace);
-	}
+	unset_trace(tbase);
 	return ret;
 }
 
@@ -604,18 +668,33 @@ int tx_pkt_dump(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkt
 
 	n_dump = n_pkts < n_dump? n_pkts : n_dump;
 	for (uint32_t i = 0; i < n_dump; ++i) {
-		if (out)
-			plogd_info(mbufs[i], "TX[%d]: ", out[i]);
-		else
-			plogd_info(mbufs[i], "TX: ");
+		if (out) {
+			switch (out[i]) {
+			case 0xFE:
+				plogdx_info(mbufs[i], "Handled: ");
+				break;
+			case 0xFF:
+				plogdx_info(mbufs[i], "Dropped: ");
+				break;
+			default:
+				plogdx_info(mbufs[i], "TX[%d]: ", out[i]);
+				break;
+			}
+		} else
+			plogdx_info(mbufs[i], "TX: ");
 	}
 	tbase->aux->task_rt_dump.n_print_tx -= n_dump;
 
 	ret = tbase->aux->tx_pkt_orig(tbase, mbufs, n_pkts, out);
 
 	if (0 == tbase->aux->task_rt_dump.n_print_tx) {
-		tbase->tx_pkt = tbase->aux->tx_pkt_orig;
-		tbase->aux->tx_pkt_orig = NULL;
+		if (tbase->tx_pkt == tx_pkt_l3) {
+			tbase->aux->tx_pkt_l2 = tbase->aux->tx_pkt_orig;
+			tbase->aux->tx_pkt_orig = NULL;
+		} else {
+			tbase->tx_pkt = tbase->aux->tx_pkt_orig;
+			tbase->aux->tx_pkt_orig = NULL;
+		}
 	}
 	return ret;
 }
@@ -662,4 +741,46 @@ int tx_pkt_drop_all(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n
 		}
 	}
 	return n_pkts;
+}
+
+static inline int tx_ring_all(struct task_base *tbase, struct rte_ring *ring, uint16_t command,  struct rte_mbuf *mbuf, uint8_t core_id, uint8_t task_id, uint32_t ip)
+{
+	if (tbase->aux->task_rt_dump.cur_trace) {
+		trace_one_rx_pkt(tbase, mbuf);
+	}
+	mbuf->udata64 = ((uint64_t)ip << 32) | (core_id << 16) | (task_id << 8) | command;
+	return rte_ring_enqueue(ring, mbuf);
+}
+
+void tx_ring_cti(struct task_base *tbase, struct rte_ring *ring, uint16_t command,  struct rte_mbuf *mbuf, uint8_t core_id, uint8_t task_id, uint32_t ip)
+{
+	plogx_dbg("\tSending command %s with ip %x to ring %p using mbuf %p, core %d and task %d - ring size now %d\n", actions_string[command], ip, ring, mbuf, core_id, task_id, rte_ring_free_count(ring));
+	int ret = tx_ring_all(tbase, ring, command,  mbuf, core_id, task_id, ip);
+	if (unlikely(ret != 0)) {
+		plogx_dbg("\tFail to send command %s with ip %x to ring %p using mbuf %p, core %d and task %d - ring size now %d\n", actions_string[command], ip, ring, mbuf, core_id, task_id, rte_ring_free_count(ring));
+		TASK_STATS_ADD_DROP_DISCARD(&tbase->aux->stats, 1);
+		rte_pktmbuf_free(mbuf);
+	}
+}
+
+void tx_ring_ip(struct task_base *tbase, struct rte_ring *ring, uint16_t command,  struct rte_mbuf *mbuf, uint32_t ip)
+{
+	plogx_dbg("\tSending command %s with ip %x to ring %p using mbuf %p - ring size now %d\n", actions_string[command], ip, ring, mbuf, rte_ring_free_count(ring));
+	int ret = tx_ring_all(tbase, ring, command,  mbuf, 0, 0, ip);
+	if (unlikely(ret != 0)) {
+		plogx_dbg("\tFail to send command %s with ip %x to ring %p using mbuf %p - ring size now %d\n", actions_string[command], ip, ring, mbuf, rte_ring_free_count(ring));
+		TASK_STATS_ADD_DROP_DISCARD(&tbase->aux->stats, 1);
+		rte_pktmbuf_free(mbuf);
+	}
+}
+
+void tx_ring(struct task_base *tbase, struct rte_ring *ring, uint16_t command,  struct rte_mbuf *mbuf)
+{
+	plogx_dbg("\tSending command %s to ring %p using mbuf %p - ring size now %d\n", actions_string[command], ring, mbuf, rte_ring_free_count(ring));
+	int ret = tx_ring_all(tbase, ring, command,  mbuf, 0, 0, 0);
+	if (unlikely(ret != 0)) {
+		plogx_dbg("\tFail to send command %s to ring %p using mbuf %p - ring size now %d\n", actions_string[command], ring, mbuf, rte_ring_free_count(ring));
+		TASK_STATS_ADD_DROP_DISCARD(&tbase->aux->stats, 1);
+		rte_pktmbuf_free(mbuf);
+	}
 }

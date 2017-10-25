@@ -22,7 +22,7 @@
 
 /* PROGRAM_NAME defined through Makefile */
 #define VERSION_MAJOR 0
-#define VERSION_MINOR 39
+#define VERSION_MINOR 41
 #define VERSION_REV   0
 
 #if VERSION_REV > 0

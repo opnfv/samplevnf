@@ -74,6 +74,33 @@ static int tsc_diff_to_tv(uint64_t beg, uint64_t end, struct timeval *tv)
 	return 0;
 }
 
+void input_proc(void)
+{
+	struct timeval tv;
+	fd_set in_fd;
+	int ret = 1;
+
+	tv.tv_sec = 0;
+	tv.tv_usec = 0;
+	while (ret != 0) {
+		FD_ZERO(&in_fd);
+
+		for (int i = 0; i < n_inputs; ++i) {
+			FD_SET(inputs[i]->fd, &in_fd);
+		}
+
+		ret = select(max_input_fd + 1, &in_fd, NULL, NULL, &tv);
+
+		if (ret > 0) {
+			for (int i = 0; i < n_inputs; ++i) {
+				if (FD_ISSET(inputs[i]->fd, &in_fd)) {
+					inputs[i]->proc_input(inputs[i]);
+				}
+			}
+		}
+	}
+}
+
 void input_proc_until(uint64_t deadline)
 {
 	struct timeval tv;

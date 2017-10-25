@@ -78,8 +78,12 @@ endif
 endif
 endif
 
+ifeq ($(CONFIG_RTE_BUILD_SHARED_LIB),y)
+LDLIBS += -lrte_pmd_ring -lrte_pmd_null -lrte_pmd_ixgbe -lrte_pmd_i40e  -lrte_pmd_e1000  -lrte_pmd_virtio -lrte_pmd_vmxnet3_uio
+endif
+
 LD_TINFO = $(shell pkg-config --silence-errors --libs-only-l tinfo)
-LDFLAGS += -lpcap $(LD_TINFO) $(LD_LUA)
+LDFLAGS += -lm -lpcap $(LD_TINFO) $(LD_LUA)
 LDFLAGS += -lncurses -lncursesw -ledit
 
 PROX_STATS ?= y
@@ -157,6 +161,8 @@ SRCS-y += handle_swap.c
 SRCS-y += handle_police.c
 SRCS-y += handle_acl.c
 SRCS-y += handle_gen.c
+SRCS-y += handle_master.c
+SRCS-y += packet_utils.c
 SRCS-y += handle_mirror.c
 SRCS-y += handle_genl4.c
 SRCS-y += handle_ipv6_tunnel.c

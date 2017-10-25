@@ -24,7 +24,7 @@ finer grained network functions like QoS, Routing, load-balancing...
 
 Compiling and running this application
 --------------------------------------
-This application supports DPDK 16.04, 16.11, 16.11.1, 17.02 and 17.05.
+This application supports DPDK 16.04, 16.11, 16.11.1, 17.02, 17.05 and 17.08.
 The following commands assume that the following variables have been set:
 
 export RTE_SDK=/path/to/dpdk

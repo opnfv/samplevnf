@@ -26,6 +26,7 @@
 
 #include "log.h"
 #include "display.h"
+#include "defaults.h"
 #include "etypes.h"
 #include "prox_cfg.h"
 
@@ -140,7 +141,6 @@ static const char* lvl_to_str(int lvl, int always)
 	}
 }
 
-#define DUMP_PKT_LEN 128
 static	int dump_pkt(char *dst, size_t dst_size, const struct rte_mbuf *mbuf)
 {
 	const struct ether_hdr *peth = rte_pktmbuf_mtod(mbuf, const struct ether_hdr *);

@@ -25,8 +25,9 @@
 #include "defaults.h"
 #include "prox_globals.h"
 #include "stats_task.h"
+#include "packet_utils.h"
 
-// runtime_flags 8 bits only
+// runtime_flags 16 bits only
 #define TASK_MPLS_TAGGING              0x0001
 #define TASK_ROUTING                   0x0002
 #define TASK_CLASSIFY                  0x0004
@@ -34,6 +35,7 @@
 #define TASK_MARK                      0x0020
 #define TASK_FP_HANDLE_ARP             0x0040
 #define TASK_TX_CRC                    0x0080
+#define TASK_L3                        0x0100
 
 // flag_features 64 bits
 #define TASK_FEATURE_ROUTING           0x0001
@@ -52,6 +54,7 @@
 #define TASK_FEATURE_LUT_QINQ_HASH             0x4000
 #define TASK_FEATURE_RX_ALL                    0x8000
 #define TASK_MULTIPLE_MAC                      0x10000
+#define TASK_FEATURE_L3				0x20000
 
 #define FLAG_TX_FLUSH                  0x01
 #define FLAG_NEVER_FLUSH               0x02
@@ -133,7 +136,7 @@ struct task_rt_dump {
 	uint32_t n_trace;
 	uint32_t cur_trace;
 	void     *pkt_mbuf_addr[MAX_RING_BURST]; /* To track reordering */
-	uint8_t  pkt_cpy[MAX_RING_BURST][128];
+	uint8_t  pkt_cpy[MAX_RING_BURST][DUMP_PKT_LEN];
 	uint16_t pkt_cpy_len[MAX_RING_BURST];
 };
 
@@ -164,6 +167,7 @@ struct task_base_aux {
 
 	uint32_t rx_bucket[MAX_RING_BURST + 1];
 	uint32_t tx_bucket[MAX_RING_BURST + 1];
+	int (*tx_pkt_l2)(struct task_base *tbase, struct rte_mbuf **mbufs, const uint16_t n_pkts, uint8_t *out);
 	int (*tx_pkt_orig)(struct task_base *tbase, struct rte_mbuf **mbufs, const uint16_t n_pkts, uint8_t *out);
 	int (*tx_pkt_hw)(struct task_base *tbase, struct rte_mbuf **mbufs, const uint16_t n_pkts, uint8_t *out);
 	uint16_t (*tx_pkt_try)(struct task_base *tbase, struct rte_mbuf **mbufs, const uint16_t n_pkts);
@@ -174,7 +178,7 @@ struct task_base_aux {
 };
 
 /* The task_base is accessed for _all_ task types. In case
-   no debugging is needed, it has been optimized to fit
+   no debugging or l3 is needed, it has been optimized to fit
    into a single cache line to minimize cache pollution */
 struct task_base {
 	int (*handle_bulk)(struct task_base *tbase, struct rte_mbuf **mbufs, const uint16_t n_pkts);
@@ -200,6 +204,8 @@ struct task_base {
 		struct tx_params_sw tx_params_sw;
 		struct tx_params_hw_sw tx_params_hw_sw;
 	};
+	struct l3_base l3;
+	uint32_t local_ipv4;
 } __attribute__((packed)) __rte_cache_aligned;
 
 static void task_base_add_rx_pkt_function(struct task_base *tbase, rx_pkt_func to_add)

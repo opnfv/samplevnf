@@ -124,12 +124,12 @@ struct task_args {
 	uint8_t                nb_rxports;
 	uint32_t               byte_offset;
 	uint32_t               gateway_ipv4;
-	uint32_t               number_gen_ip;
 	uint32_t               local_ipv4;
 	uint32_t               remote_ipv4;
 	struct ipv6_addr       local_ipv6;    /* For IPv6 Tunnel, it's the local tunnel endpoint address */
 	struct rte_ring        *rx_rings[MAX_RINGS_PER_TASK];
 	struct rte_ring        *tx_rings[MAX_RINGS_PER_TASK];
+	struct rte_ring        *ctrl_plane_ring;
 	uint32_t               tot_n_txrings_inited;
 	struct ether_addr      edaddr;
 	struct ether_addr      esaddr;
@@ -223,6 +223,10 @@ struct task_args {
 	struct rte_hash              *private_ip_port_hash;
 	struct rte_hash              *private_ip_hash;
 	struct private_ip_info       *private_ip_info;
+	struct rte_ring			**ctrl_rx_rings;
+	struct rte_ring			**ctrl_tx_rings;
+	int				n_ctrl_rings;
+	struct task_base *tmaster;
 };
 
 /* Return the first port that is reachable through the task. If the
@@ -234,6 +238,7 @@ struct prox_port_cfg *find_reachable_port(struct task_args *from);
 struct task_base *init_task_struct(struct task_args *targ);
 struct task_init *to_task_init(const char *mode_str, const char *sub_mode_str);
 void tasks_list(void);
+int task_is_master(struct task_args *targ);
 
 void reg_task(struct task_init* t);
 

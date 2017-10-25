@@ -37,6 +37,7 @@
 #include "input.h"
 #include "input_curses.h"
 #include "input_conn.h"
+#include "handle_master.h"
 
 static int needs_refresh;
 static uint64_t update_interval;
@@ -127,7 +128,10 @@ static void busy_wait_until(uint64_t deadline)
 
 static void multiplexed_input_stats(uint64_t deadline)
 {
-	input_proc_until(deadline);
+	if (deadline)
+		input_proc_until(deadline);
+	else
+		input_proc();
 
 	if (needs_refresh) {
 		needs_refresh = 0;
@@ -164,6 +168,7 @@ void __attribute__((noreturn)) run(uint32_t flags)
 	uint64_t cur_tsc;
 	uint64_t next_update;
 	uint64_t stop_tsc = 0;
+	int ret = 0;
 	const uint64_t update_interval_threshold = usec_to_tsc(1);
 
 	if (flags & DSF_LISTEN_TCP)
@@ -209,20 +214,43 @@ void __attribute__((noreturn)) run(uint32_t flags)
 	cmd_rx_tx_info();
 	print_warnings();
 
-	while (stop_prox == 0) {
+	struct task_master *task = (struct task_master *)lcore_cfg[prox_cfg.master].tasks_all[0];
+	if (handle_ctrl_plane) {
+		while (stop_prox == 0) {
+			ret = 1;
+			// Run ctrl plane for max 10 msec to let screen and keyboard updates
+			if (prox_cfg.flags & DSF_CTRL_PLANE_ENABLED) {
+				uint64_t ctrl_plane_update = rte_rdtsc() + msec_to_tsc(10);
+				while ((ret) && (rte_rdtsc() < ctrl_plane_update))
+					ret = handle_ctrl_plane(lcore_cfg[prox_cfg.master].tasks_all[0], NULL, 0);
+			}
+			multiplexed_input_stats(0);
+			if (rte_rdtsc() < next_update)
+				continue;
+			next_update += update_interval;
+			stats_update(stats_cons_flags);
+			stats_cons_notify();
 
-		if (update_interval < update_interval_threshold)
-			busy_wait_until(next_update);
-		else
-			multiplexed_input_stats(next_update);
+			if (stop_tsc && rte_rdtsc() >= stop_tsc) {
+				stop_prox = 1;
+			}
+		}
+	} else {
+		while (stop_prox == 0) {
 
-		next_update += update_interval;
+			if (update_interval < update_interval_threshold)
+				busy_wait_until(next_update);
+			else
+				multiplexed_input_stats(next_update);
 
-		stats_update(stats_cons_flags);
-		stats_cons_notify();
+			next_update += update_interval;
 
-		if (stop_tsc && rte_rdtsc() >= stop_tsc) {
-			stop_prox = 1;
+			stats_update(stats_cons_flags);
+			stats_cons_notify();
+
+			if (stop_tsc && rte_rdtsc() >= stop_tsc) {
+				stop_prox = 1;
+			}
 		}
 	}
 

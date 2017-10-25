@@ -14,23 +14,30 @@
 // limitations under the License.
 */
 
-#ifndef _INPUT_H_
-#define _INPUT_H_
+#include "task_base.h"
+#include "task_init.h"
 
-#include <inttypes.h>
-
-struct input {
-	int fd;
-	/* Function to be called when data is available on the fd */
-	void (*proc_input)(struct input *input);
-	void (*reply)(struct input *input, const char *buf, size_t len);
-	void (*history)(struct input *input);
+enum arp_actions {
+	UPDATE_FROM_CTRL,
+	ARP_REQ_FROM_CTRL,
+	ARP_REPLY_FROM_CTRL,
+	ARP_TO_CTRL,
+	REQ_MAC_TO_CTRL,
+	MAX_ACTIONS
 };
 
-int reg_input(struct input *in);
-void unreg_input(struct input *in);
+#define HANDLE_RANDOM_IP_FLAG	1
+#define RANDOM_IP		0xffffffff
 
-void input_proc_until(uint64_t deadline);
-void input_proc(void);
+const char *actions_string[MAX_ACTIONS];
 
-#endif /* _INPUT_H_ */
+void init_ctrl_plane(struct task_base *tbase);
+
+int (*handle_ctrl_plane)(struct task_base *tbase, struct rte_mbuf **mbuf, uint16_t n_pkts);
+
+static inline void tx_drop(struct rte_mbuf *mbuf)
+{
+	rte_pktmbuf_free(mbuf);
+}
+
+void register_ip_to_ctrl_plane(struct task_base *task, uint32_t ip, uint8_t port_id, uint8_t core_id, uint8_t task_id);

@@ -223,10 +223,17 @@ int lconf_do_flags(struct lcore_cfg *lconf)
 			if (lconf->msg.type == LCONF_MSG_DUMP ||
 			    lconf->msg.type == LCONF_MSG_DUMP_TX) {
 				t->aux->task_rt_dump.n_print_tx = lconf->msg.val;
-				if (t->aux->tx_pkt_orig)
-					t->tx_pkt = t->aux->tx_pkt_orig;
-				t->aux->tx_pkt_orig = t->tx_pkt;
-				t->tx_pkt = tx_pkt_dump;
+				if (t->tx_pkt == tx_pkt_l3) {
+					if (t->aux->tx_pkt_orig)
+						t->aux->tx_pkt_l2 = t->aux->tx_pkt_orig;
+					t->aux->tx_pkt_orig = t->aux->tx_pkt_l2;
+					t->aux->tx_pkt_l2 = tx_pkt_dump;
+				} else {
+					if (t->aux->tx_pkt_orig)
+						t->tx_pkt = t->aux->tx_pkt_orig;
+					t->aux->tx_pkt_orig = t->tx_pkt;
+					t->tx_pkt = tx_pkt_dump;
+				}
 			}
 		}
 		break;
@@ -238,16 +245,30 @@ int lconf_do_flags(struct lcore_cfg *lconf)
 
 			if (task_base_get_original_rx_pkt_function(t) != rx_pkt_dummy) {
 				task_base_add_rx_pkt_function(t, rx_pkt_trace);
-				if (t->aux->tx_pkt_orig)
-					t->tx_pkt = t->aux->tx_pkt_orig;
-				t->aux->tx_pkt_orig = t->tx_pkt;
-				t->tx_pkt = tx_pkt_trace;
+				if (t->tx_pkt == tx_pkt_l3) {
+					if (t->aux->tx_pkt_orig)
+						t->aux->tx_pkt_l2 = t->aux->tx_pkt_orig;
+					t->aux->tx_pkt_orig = t->aux->tx_pkt_l2;
+					t->aux->tx_pkt_l2 = tx_pkt_trace;
+				} else {
+					if (t->aux->tx_pkt_orig)
+						t->tx_pkt = t->aux->tx_pkt_orig;
+					t->aux->tx_pkt_orig = t->tx_pkt;
+					t->tx_pkt = tx_pkt_trace;
+				}
 			} else {
 				t->aux->task_rt_dump.n_print_tx = lconf->msg.val;
-				if (t->aux->tx_pkt_orig)
-					t->tx_pkt = t->aux->tx_pkt_orig;
-				t->aux->tx_pkt_orig = t->tx_pkt;
-				t->tx_pkt = tx_pkt_dump;
+				if (t->tx_pkt == tx_pkt_l3) {
+					if (t->aux->tx_pkt_orig)
+						t->aux->tx_pkt_l2 = t->aux->tx_pkt_orig;
+					t->aux->tx_pkt_orig = t->aux->tx_pkt_l2;
+					t->aux->tx_pkt_l2 = tx_pkt_dump;
+				} else {
+					if (t->aux->tx_pkt_orig)
+						t->tx_pkt = t->aux->tx_pkt_orig;
+					t->aux->tx_pkt_orig = t->tx_pkt;
+					t->tx_pkt = tx_pkt_dump;
+				}
 			}
 		}
 		break;
@@ -263,8 +284,13 @@ int lconf_do_flags(struct lcore_cfg *lconf)
 		for (uint8_t task_id = 0; task_id < lconf->n_tasks_all; ++task_id) {
 			t = lconf->tasks_all[task_id];
 
-			t->aux->tx_pkt_orig = t->tx_pkt;
-			t->tx_pkt = tx_pkt_distr;
+			if (t->tx_pkt == tx_pkt_l3) {
+				t->aux->tx_pkt_orig = t->aux->tx_pkt_l2;
+				t->aux->tx_pkt_l2 = tx_pkt_distr;
+			} else {
+				t->aux->tx_pkt_orig = t->tx_pkt;
+				t->tx_pkt = tx_pkt_distr;
+			}
 			memset(t->aux->tx_bucket, 0, sizeof(t->aux->tx_bucket));
 			lconf->flags |= LCONF_FLAG_TX_DISTR_ACTIVE;
 		}
@@ -280,8 +306,13 @@ int lconf_do_flags(struct lcore_cfg *lconf)
 		for (uint8_t task_id = 0; task_id < lconf->n_tasks_all; ++task_id) {
 			t = lconf->tasks_all[task_id];
 			if (t->aux->tx_pkt_orig) {
-				t->tx_pkt = t->aux->tx_pkt_orig;
-				t->aux->tx_pkt_orig = NULL;
+				if (t->tx_pkt == tx_pkt_l3) {
+					t->tx_pkt = t->aux->tx_pkt_orig;
+					t->aux->tx_pkt_orig = NULL;
+				} else {
+					t->aux->tx_pkt_l2 = t->aux->tx_pkt_orig;
+					t->aux->tx_pkt_orig = NULL;
+				}
 				lconf->flags &= ~LCONF_FLAG_TX_DISTR_ACTIVE;
 			}
 		}
@@ -318,8 +349,13 @@ int lconf_do_flags(struct lcore_cfg *lconf)
 		for (uint8_t task_id = 0; task_id < lconf->n_tasks_all; ++task_id) {
 			t = lconf->tasks_all[task_id];
 
-			t->aux->tx_pkt_orig = t->tx_pkt;
-			t->tx_pkt = tx_pkt_bw;
+			if (t->tx_pkt == tx_pkt_l3) {
+				t->aux->tx_pkt_orig = t->aux->tx_pkt_l2;
+				t->aux->tx_pkt_l2 = tx_pkt_bw;
+			} else {
+				t->aux->tx_pkt_orig = t->tx_pkt;
+				t->tx_pkt = tx_pkt_bw;
+			}
 			lconf->flags |= LCONF_FLAG_TX_BW_ACTIVE;
 		}
 		break;
@@ -327,8 +363,13 @@ int lconf_do_flags(struct lcore_cfg *lconf)
 		for (uint8_t task_id = 0; task_id < lconf->n_tasks_all; ++task_id) {
 			t = lconf->tasks_all[task_id];
 			if (t->aux->tx_pkt_orig) {
-				t->tx_pkt = t->aux->tx_pkt_orig;
-				t->aux->tx_pkt_orig = NULL;
+				if (t->tx_pkt == tx_pkt_l3) {
+					t->aux->tx_pkt_l2 = t->aux->tx_pkt_orig;
+					t->aux->tx_pkt_orig = NULL;
+				} else {
+					t->tx_pkt = t->aux->tx_pkt_orig;
+					t->aux->tx_pkt_orig = NULL;
+				}
 				lconf->flags &= ~LCONF_FLAG_TX_BW_ACTIVE;
 			}
 		}

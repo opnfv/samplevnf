@@ -1,0 +1,348 @@
+/*
+// Copyright (c) 2010-2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+*/
+
+#include <rte_hash.h>
+#include <rte_hash_crc.h>
+#include "prox_cfg.h"
+
+#include "prox_globals.h"
+#include "rx_pkt.h"
+#include "arp.h"
+#include "handle_master.h"
+#include "log.h"
+#include "mbuf_utils.h"
+#include "etypes.h"
+#include "defaults.h"
+#include "prox_cfg.h"
+#include "prox_malloc.h"
+#include "quit.h"
+#include "task_init.h"
+#include "prox_port_cfg.h"
+#include "main.h"
+#include "lconf.h"
+#include "input.h"
+#include "tx_pkt.h"
+
+#define IP4(x) x & 0xff, (x >> 8) & 0xff, (x >> 16) & 0xff, x >> 24
+
+const char *actions_string[] = {"UPDATE_FROM_CTRL", "SEND_ARP_REQUEST_FROM_CTRL", "SEND_ARP_REPLY_FROM_CTRL", "HANDLE_ARP_TO_CTRL", "REQ_MAC_TO_CTRL"};
+
+static struct my_arp_t arp_reply = {
+	.htype = 0x100,
+	.ptype = 8,
+	.hlen = 6,
+	.plen = 4,
+	.oper = 0x200
+};
+static struct my_arp_t arp_request = {
+	.htype = 0x100,
+	.ptype = 8,
+	.hlen = 6,
+	.plen = 4,
+	.oper = 0x100
+};
+
+struct ip_table {
+	struct ether_addr 	mac;
+	struct rte_ring 	*ring;
+};
+
+struct port_table {
+	struct ether_addr 	mac;
+	struct rte_ring 	*ring;
+	uint32_t 		ip;
+	uint8_t			port;
+	uint8_t 		flags;
+};
+
+struct task_master {
+        struct task_base base;
+	struct rte_ring *ctrl_rx_ring;
+	struct rte_ring **ctrl_tx_rings;
+	struct ip_table *internal_ip_table;
+	struct ip_table *external_ip_table;
+	struct rte_hash  *external_ip_hash;
+	struct rte_hash  *internal_ip_hash;
+	struct port_table internal_port_table[PROX_MAX_PORTS];
+};
+
+struct ip_port {
+	uint32_t ip;
+	uint8_t port;
+} __attribute__((packed));
+
+static inline uint8_t get_command(struct rte_mbuf *mbuf)
+{
+	return mbuf->udata64 & 0xFF;
+}
+static inline uint8_t get_task(struct rte_mbuf *mbuf)
+{
+	return (mbuf->udata64 >> 8) & 0xFF;
+}
+static inline uint8_t get_core(struct rte_mbuf *mbuf)
+{
+	return (mbuf->udata64 >> 16) & 0xFF;
+}
+static inline uint8_t get_port(struct rte_mbuf *mbuf)
+{
+	return mbuf->port;
+}
+static inline uint32_t get_ip(struct rte_mbuf *mbuf)
+{
+	return (mbuf->udata64 >> 32) & 0xFFFFFFFF;
+}
+
+void register_ip_to_ctrl_plane(struct task_base *tbase, uint32_t ip, uint8_t port_id, uint8_t core_id, uint8_t task_id)
+{
+	struct task_master *task = (struct task_master *)tbase;
+	struct ip_port key;
+	plogx_dbg("\tregistering IP %x.%x.%x.%x with port %d core %d and task %d\n", IP4(ip), port_id, core_id, task_id);
+
+	if (port_id >= PROX_MAX_PORTS) {
+		plog_err("Unable to register ip %x, port %d\n", ip, port_id);
+		return;
+	}
+
+	/* TODO - stoe multiple rings if multiple cores able to handle IP
+	   Remove them when such cores are stopped and de-register IP
+	*/
+	task->internal_port_table[port_id].ring = task->ctrl_tx_rings[core_id * MAX_TASKS_PER_CORE + task_id];
+	memcpy(&task->internal_port_table[port_id].mac, &prox_port_cfg[port_id].eth_addr, 6);
+	task->internal_port_table[port_id].ip = ip;
+
+	if (ip == RANDOM_IP) {
+		task->internal_port_table[port_id].flags |= HANDLE_RANDOM_IP_FLAG;
+		return;
+	}
+
+	key.ip = ip;
+	key.port = port_id;
+	int ret = rte_hash_add_key(task->internal_ip_hash, (const void *)&key);
+	if (unlikely(ret < 0)) {
+		plog_err("Unable to register ip %x\n", ip);
+		return;
+	}
+	memcpy(&task->internal_ip_table[ret].mac, &prox_port_cfg[port_id].eth_addr, 6);
+	task->internal_ip_table[ret].ring = task->ctrl_tx_rings[core_id * MAX_TASKS_PER_CORE + task_id];
+
+}
+
+static inline void handle_arp_reply(struct task_base *tbase, struct rte_mbuf *mbuf)
+{
+	struct task_master *task = (struct task_master *)tbase;
+	struct ether_hdr_arp *hdr_arp = rte_pktmbuf_mtod(mbuf, struct ether_hdr_arp *);
+	int i, ret;
+	uint32_t key = hdr_arp->arp.data.spa;
+	plogx_dbg("\tMaster handling ARP reply for ip %x\n", key);
+
+	ret = rte_hash_lookup(task->external_ip_hash, (const void *)&key);
+	if (unlikely(ret < 0)) {
+		// entry not found for this IP: we did not ask a request, delete the reply
+		tx_drop(mbuf);
+	} else {
+		// entry found for this IP
+		struct rte_ring *ring = task->external_ip_table[ret].ring;
+		memcpy(&hdr_arp->ether_hdr.d_addr.addr_bytes, &task->external_ip_table[ret].mac, 6);
+		tx_ring_ip(tbase, ring, UPDATE_FROM_CTRL, mbuf, key);
+	}
+}
+
+static inline void handle_arp_request(struct task_base *tbase, struct rte_mbuf *mbuf)
+{
+	struct task_master *task = (struct task_master *)tbase;
+	struct ether_hdr_arp *hdr_arp = rte_pktmbuf_mtod(mbuf, struct ether_hdr_arp *);
+	int i, ret;
+	uint8_t port = get_port(mbuf);
+
+	struct ip_port key;
+	key.ip = hdr_arp->arp.data.tpa;
+	key.port = port;
+	if (task->internal_port_table[port].flags & HANDLE_RANDOM_IP_FLAG) {
+		struct ether_addr mac;
+		plogx_dbg("\tMaster handling ARP request for ip %x on port %d which supports random ip\n", key.ip, key.port);
+		struct rte_ring *ring = task->internal_port_table[port].ring;
+		create_mac(hdr_arp, &mac);
+		mbuf->ol_flags &= ~(PKT_TX_IP_CKSUM|PKT_TX_UDP_CKSUM);
+		build_arp_reply(hdr_arp, &mac);
+		tx_ring(tbase, ring, ARP_REPLY_FROM_CTRL, mbuf);
+		return;
+	}
+
+	plogx_dbg("\tMaster handling ARP request for ip %x\n", key.ip);
+
+	ret = rte_hash_lookup(task->internal_ip_hash, (const void *)&key);
+	if (unlikely(ret < 0)) {
+		// entry not found for this IP.
+		plogx_dbg("Master ignoring ARP REQUEST received on un-registered IP %d.%d.%d.%d on port %d\n", IP4(hdr_arp->arp.data.tpa), port);
+		tx_drop(mbuf);
+	} else {
+		struct rte_ring *ring = task->internal_ip_table[ret].ring;
+		mbuf->ol_flags &= ~(PKT_TX_IP_CKSUM|PKT_TX_UDP_CKSUM);
+		build_arp_reply(hdr_arp, &task->internal_ip_table[ret].mac);
+		tx_ring(tbase, ring, ARP_REPLY_FROM_CTRL, mbuf);
+	}
+}
+
+static inline void handle_unknown_ip(struct task_base *tbase, struct rte_mbuf *mbuf)
+{
+	struct task_master *task = (struct task_master *)tbase;
+	struct ether_hdr_arp *hdr_arp = rte_pktmbuf_mtod(mbuf, struct ether_hdr_arp *);
+	uint8_t port = get_port(mbuf);
+	uint32_t ip_dst = get_ip(mbuf);
+	int ret1, ret2;
+
+	plogx_dbg("\tMaster handling unknown ip %x for port %d\n", ip_dst, port);
+	if (unlikely(port >= PROX_MAX_PORTS)) {
+		plogx_dbg("Port %d not found", port);
+		tx_drop(mbuf);
+		return;
+	}
+	uint32_t ip_src = task->internal_port_table[port].ip;
+	struct rte_ring *ring = task->ctrl_tx_rings[get_core(mbuf) * MAX_TASKS_PER_CORE + get_task(mbuf)];
+
+	if (ring == NULL) {
+		plogx_dbg("Port %d not registered", port);
+		tx_drop(mbuf);
+		return;
+	}
+
+	ret2 = rte_hash_add_key(task->external_ip_hash, (const void *)&ip_dst);
+	if (unlikely(ret2 < 0)) {
+		// entry not found for this IP: delete the reply
+		plogx_dbg("Unable to add IP %x in external_ip_hash\n", rte_be_to_cpu_32(hdr_arp->arp.data.tpa));
+		tx_drop(mbuf);
+		return;
+	}
+	task->external_ip_table[ret2].ring = ring;
+	memcpy(&task->external_ip_table[ret2].mac, &task->internal_port_table[port].mac, 6);
+
+	mbuf->ol_flags &= ~(PKT_TX_IP_CKSUM|PKT_TX_UDP_CKSUM);
+	build_arp_request(mbuf, &task->internal_port_table[port].mac, ip_dst, ip_src);
+	tx_ring(tbase, ring, ARP_REQ_FROM_CTRL, mbuf);
+}
+
+static inline void handle_message(struct task_base *tbase, struct rte_mbuf *mbuf, int ring_id)
+{
+	struct ether_hdr_arp *hdr_arp = rte_pktmbuf_mtod(mbuf, struct ether_hdr_arp *);
+	int command = get_command(mbuf);
+	uint32_t ip;
+	plogx_dbg("\tMaster received %s (%x) from mbuf %p\n", actions_string[command], command, mbuf);
+
+	switch(command) {
+	case ARP_TO_CTRL:
+		if (hdr_arp->ether_hdr.ether_type != ETYPE_ARP) {
+			tx_drop(mbuf);
+			plog_err("\tUnexpected message received: ARP_TO_CTRL with ether_type %x\n", hdr_arp->ether_hdr.ether_type);
+			return;
+		} else if (arp_is_gratuitous(hdr_arp)) {
+			plog_info("\tReceived gratuitous packet \n");
+			tx_drop(mbuf);
+			return;
+		} else if (memcmp(&hdr_arp->arp, &arp_reply, 8) == 0) {
+			uint32_t ip = hdr_arp->arp.data.spa;
+			handle_arp_reply(tbase, mbuf);
+		} else if (memcmp(&hdr_arp->arp, &arp_request, 8) == 0) {
+			handle_arp_request(tbase, mbuf);
+		} else {
+			plog_info("\tReceived unexpected ARP operation %d\n", hdr_arp->arp.oper);
+			tx_drop(mbuf);
+			return;
+		}
+		break;
+	case REQ_MAC_TO_CTRL:
+		handle_unknown_ip(tbase, mbuf);
+		break;
+	default:
+		plogx_dbg("\tMaster received unexpected message\n");
+		tx_drop(mbuf);
+		break;
+	}
+}
+
+void init_ctrl_plane(struct task_base *tbase)
+{
+	prox_cfg.flags |= DSF_CTRL_PLANE_ENABLED;
+	struct task_master *task = (struct task_master *)tbase;
+	int socket = rte_lcore_to_socket_id(prox_cfg.master);
+	uint32_t n_entries = MAX_ARP_ENTRIES * 4;
+	static char hash_name[30];
+	sprintf(hash_name, "A%03d_hash_arp_table", prox_cfg.master);
+	struct rte_hash_parameters hash_params = {
+		.name = hash_name,
+		.entries = n_entries,
+		.key_len = sizeof(uint32_t),
+		.hash_func = rte_hash_crc,
+		.hash_func_init_val = 0,
+	};
+	task->external_ip_hash = rte_hash_create(&hash_params);
+	PROX_PANIC(task->external_ip_hash == NULL, "Failed to set up external ip hash\n");
+	plog_info("\texternal ip hash table allocated, with %d entries of size %d\n", hash_params.entries, hash_params.key_len);
+	task->external_ip_table = (struct ip_table *)prox_zmalloc(n_entries * sizeof(struct ip_table), socket);
+	PROX_PANIC(task->external_ip_table == NULL, "Failed to allocate memory for %u entries in external ip table\n", n_entries);
+	plog_info("\texternal ip table, with %d entries of size %ld\n", n_entries, sizeof(struct ip_table));
+
+	hash_name[0]++;
+	hash_params.key_len = sizeof(struct ip_port);
+	task->internal_ip_hash = rte_hash_create(&hash_params);
+	PROX_PANIC(task->internal_ip_hash == NULL, "Failed to set up internal ip hash\n");
+	plog_info("\tinternal ip hash table allocated, with %d entries of size %d\n", hash_params.entries, hash_params.key_len);
+	task->internal_ip_table = (struct ip_table *)prox_zmalloc(n_entries * sizeof(struct ip_table), socket);
+	PROX_PANIC(task->internal_ip_table == NULL, "Failed to allocate memory for %u entries in internal ip table\n", n_entries);
+	plog_info("\tinternal ip table, with %d entries of size %ld\n", n_entries, sizeof(struct ip_table));
+}
+
+static int handle_ctrl_plane_f(struct task_base *tbase, __attribute__((unused)) struct rte_mbuf **mbuf, uint16_t n_pkts)
+{
+	int ring_id, j, ret = 0;
+	struct rte_mbuf *mbufs[MAX_RING_BURST];
+	struct task_master *task = (struct task_master *)tbase;
+
+	/* 	Handle_master works differently than other handle functions
+		It is not handled by a DPDK dataplane core
+		It is no thread_generic based, hence do not receive packets the same way
+	*/
+
+	ret = ring_deq(task->ctrl_rx_ring, mbufs);
+	for (j = 0; j < ret; j++) {
+		handle_message(tbase, mbufs[j], ring_id);
+	}
+	return ret;
+}
+
+static void init_task_master(struct task_base *tbase, struct task_args *targs)
+{
+	if (prox_cfg.flags & DSF_CTRL_PLANE_ENABLED) {
+		struct task_master *task = (struct task_master *)tbase;
+
+		task->ctrl_rx_ring = targs->lconf->ctrl_rings_p[0];
+		task->ctrl_tx_rings = ctrl_rings;
+		init_ctrl_plane(tbase);
+		handle_ctrl_plane = handle_ctrl_plane_f;
+	}
+}
+
+static struct task_init task_init_master = {
+        .mode_str = "master",
+        .init = init_task_master,
+        .handle = NULL,
+        .flag_features = TASK_FEATURE_NEVER_DISCARDS,
+	.size = sizeof(struct task_master)
+};
+
+__attribute__((constructor)) static void reg_task_gen(void)
+{
+        reg_task(&task_init_master);
+}

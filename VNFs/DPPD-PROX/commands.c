@@ -101,10 +101,22 @@ static inline int wait_command_handled(struct lcore_cfg *lconf)
 	}
 	return 0;
 }
+
+static inline void start_l3(struct task_args *targ)
+{
+	if (!task_is_master(targ)) {
+		if ((targ->nb_txrings != 0) || (targ->nb_txports != 0)) {
+			if (targ->task_init->flag_features & TASK_FEATURE_L3)
+				task_start_l3(targ->tbase, targ);
+		}
+	}
+}
+
 void start_cores(uint32_t *cores, int count, int task_id)
 {
 	int n_started_cores = 0;
 	uint32_t started_cores[RTE_MAX_LCORE];
+	struct task_args *targ;
 
 	warn_inactive_cores(cores, count, "Can't start core");
 
@@ -112,7 +124,15 @@ void start_cores(uint32_t *cores, int count, int task_id)
 		struct lcore_cfg *lconf = &lcore_cfg[cores[i]];
 
 		if (lconf->n_tasks_run != lconf->n_tasks_all) {
-
+			if (task_id == -1) {
+				for (uint8_t tid = 0; tid < lconf->n_tasks_all; ++tid) {
+					targ = &lconf->targs[tid];
+					start_l3(targ);
+				}
+			} else {
+				targ = &lconf->targs[task_id];
+				start_l3(targ);
+			}
 			lconf->msg.type = LCONF_MSG_START;
 			lconf->msg.task_id = task_id;
 			lconf_set_req(lconf);

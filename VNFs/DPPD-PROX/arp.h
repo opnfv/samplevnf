@@ -18,6 +18,8 @@
 #define _ARP_H_
 
 #include <rte_ether.h>
+#include "etypes.h"
+#include "mbuf_utils.h"
 
 #define ARP_REQUEST	0x100
 #define ARP_REPLY	0x200
@@ -49,15 +51,40 @@ static int arp_is_gratuitous(struct ether_hdr_arp *hdr)
 	return hdr->arp.data.spa == hdr->arp.data.tpa;
 }
 
-static inline void prepare_arp_reply(struct ether_hdr_arp *hdr_arp, struct ether_addr *s_addr)
+static inline void build_arp_reply(struct ether_hdr_arp *hdr_arp, struct ether_addr *s_addr)
 {
 	uint32_t ip_source = hdr_arp->arp.data.spa;
+
+	memcpy(hdr_arp->ether_hdr.d_addr.addr_bytes, hdr_arp->ether_hdr.s_addr.addr_bytes, sizeof(struct ether_addr));
+	memcpy(hdr_arp->ether_hdr.s_addr.addr_bytes, s_addr, sizeof(struct ether_addr));
 
 	hdr_arp->arp.data.spa = hdr_arp->arp.data.tpa;
 	hdr_arp->arp.data.tpa = ip_source;
 	hdr_arp->arp.oper = 0x200;
 	memcpy(&hdr_arp->arp.data.tha, &hdr_arp->arp.data.sha, sizeof(struct ether_addr));
 	memcpy(&hdr_arp->arp.data.sha, s_addr, sizeof(struct ether_addr));
+}
+
+static inline void build_arp_request(struct rte_mbuf *mbuf, struct ether_addr *src_mac, uint32_t ip_dst, uint32_t ip_src)
+{
+	struct ether_hdr_arp *hdr_arp = rte_pktmbuf_mtod(mbuf, struct ether_hdr_arp *);
+	uint64_t mac_bcast = 0xFFFFFFFFFFFF;
+	rte_pktmbuf_pkt_len(mbuf) = 42;
+	rte_pktmbuf_data_len(mbuf) = 42;
+	init_mbuf_seg(mbuf);
+
+	memcpy(&hdr_arp->ether_hdr.d_addr.addr_bytes, &mac_bcast, 6);
+	memcpy(&hdr_arp->ether_hdr.s_addr.addr_bytes, src_mac, 6);
+	hdr_arp->ether_hdr.ether_type = ETYPE_ARP;
+	hdr_arp->arp.htype = 0x100,
+	hdr_arp->arp.ptype = 0x0008;
+	hdr_arp->arp.hlen = 6;
+	hdr_arp->arp.plen = 4;
+	hdr_arp->arp.oper = 0x100;
+	hdr_arp->arp.data.spa = ip_src;
+	hdr_arp->arp.data.tpa = ip_dst;
+	memset(&hdr_arp->arp.data.tha, 0, sizeof(struct ether_addr));
+	memcpy(&hdr_arp->arp.data.sha, src_mac, sizeof(struct ether_addr));
 }
 
 static void create_mac(struct ether_hdr_arp *hdr, struct ether_addr *addr)

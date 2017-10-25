@@ -39,6 +39,7 @@ struct irq_bucket {
 struct task_irq {
 	struct task_base base;
 	uint64_t start_tsc;
+	uint64_t first_tsc;
 	uint64_t tsc;
 	uint64_t max_irq;
 	uint8_t  lcore_id;
@@ -99,9 +100,12 @@ static void irq_stop(struct task_base *tbase)
 	struct task_irq *task = (struct task_irq *)tbase;
 	uint32_t i;
 	uint32_t lcore_id = rte_lcore_id();
+	uint64_t lat, max_lat = 0, tot_lat = 0;
 	int bucket_id;
+	int n_lat = 0;
 
 	plog_info("Stopping core %u\n", lcore_id);
+	sleep(2);	// Make sure all cores are stopped before starting to write
 	plog_info("Core ID; Interrupt (nanosec); Time (msec)\n");
 	for (int j = 0; j < 2; j++) {
 		// Start dumping the oldest bucket first
@@ -112,14 +116,19 @@ static void irq_stop(struct task_base *tbase)
 		struct irq_bucket *bucket = &task->buffer[bucket_id];
 		for (i=0; i< bucket->index;i++) {
 			if (bucket->info[i].lat != 0) {
-				plog_info("%d; %ld; %ld\n",
-					  lcore_id,
-					  bucket->info[i].lat * 1000000000 / rte_get_tsc_hz(),
+				lat = bucket->info[i].lat * 1000000000 / rte_get_tsc_hz();
+				if (max_lat < lat)
+					max_lat = lat;
+				n_lat++;
+				tot_lat += lat;
+				plog_info("%d; %ld; %ld\n", lcore_id, lat,
 					  (bucket->info[i].tsc - task->start_tsc) * 1000 / rte_get_tsc_hz());
 			}
 		}
 	}
-	plog_info("Core %u stopped\n", lcore_id);
+	if (n_lat)
+		tot_lat = tot_lat / n_lat;
+	plog_info("Core %u stopped. max lat is %ld and average is %ld\n", lcore_id, max_lat, tot_lat);
 }
 
 static inline int handle_irq_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts)
@@ -133,7 +142,7 @@ static inline int handle_irq_bulk(struct task_base *tbase, struct rte_mbuf **mbu
 	struct irq_bucket *bucket = &task->buffer[task->task_use_lt];
 
 	tsc1 = rte_rdtsc();
-	if ((task->tsc != 0) && ((tsc1 - task->tsc) > task->max_irq) && (bucket->index < MAX_INDEX)) {
+	if ((tsc1 > task->first_tsc) && (task->tsc != 0) && ((tsc1 - task->tsc) > task->max_irq) && (bucket->index < MAX_INDEX)) {
 		bucket->info[bucket->index].tsc = tsc1;
 		bucket->info[bucket->index++].lat = tsc1 - task->tsc;
 	}
@@ -148,6 +157,7 @@ static void init_task_irq(struct task_base *tbase,
 	// max_irq expressed in cycles
 	task->max_irq = rte_get_tsc_hz() / MAX_INTERRUPT_LENGTH;
 	task->start_tsc = rte_rdtsc();
+	task->first_tsc = task->start_tsc + 2 * rte_get_tsc_hz();
 	task->lcore_id = targ->lconf->id;
 	plog_info("\tusing irq mode with max irq set to %ld cycles\n", task->max_irq);
 }

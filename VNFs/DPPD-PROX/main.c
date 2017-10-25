@@ -46,6 +46,7 @@
 #include "thread_generic.h"
 #include "thread_pipeline.h"
 #include "cqm.h"
+#include "handle_master.h"
 
 #if RTE_VERSION < RTE_VERSION_NUM(1,8,0,0)
 #define RTE_CACHE_LINE_SIZE CACHE_LINE_SIZE
@@ -111,10 +112,25 @@ static void check_mixed_normal_pipeline(void)
 	}
 }
 
-static void check_missing_rx(void)
+static void check_zero_rx(void)
 {
 	struct lcore_cfg *lconf = NULL;
 	struct task_args *targ;
+
+	while (core_targ_next(&lconf, &targ, 0) == 0) {
+		if (targ->nb_rxports != 0) {
+			PROX_PANIC(task_init_flag_set(targ->task_init, TASK_FEATURE_NO_RX),
+			   "\tCore %u task %u: rx_ports configured while mode %s does not use it\n", lconf->id, targ->id, targ->task_init->mode_str);
+		}
+	}
+}
+
+static void check_missing_rx(void)
+{
+	struct lcore_cfg *lconf = NULL, *rx_lconf = NULL;
+	struct task_args *targ, *rx_targ = NULL;
+	struct prox_port_cfg *port;
+	uint8_t port_id, rx_port_id, ok;
 
 	while (core_targ_next(&lconf, &targ, 0) == 0) {
 		PROX_PANIC((targ->flags & TASK_ARG_RX_RING) && targ->rx_rings[0] == 0 && !targ->tx_opt_ring_task,
@@ -124,11 +140,39 @@ static void check_missing_rx(void)
 				   "\tCore %u task %u: no rx_ports and no rx_rings configured while required by mode %s\n", lconf->id, targ->id, targ->task_init->mode_str);
 		}
 	}
+
+	lconf = NULL;
+	while (core_targ_next(&lconf, &targ, 0) == 0) {
+		if (strcmp(targ->task_init->sub_mode_str, "l3") != 0)
+			continue;
+		port = find_reachable_port(targ);
+		if (port == NULL)
+			continue;
+               	port_id = port - prox_port_cfg;
+		rx_lconf = NULL;
+		ok = 0;
+		plog_info("\tCore %d task %d transmitting to port %d in L3 mode\n", lconf->id, targ->id, port_id);
+		while (core_targ_next(&rx_lconf, &rx_targ, 0) == 0) {
+			for (uint8_t i = 0; i < rx_targ->nb_rxports; ++i) {
+				rx_port_id = rx_targ->rx_port_queue[i].port;
+				if ((rx_port_id == port_id) && (rx_targ->task_init->flag_features & TASK_FEATURE_L3)){
+					ok = 1;
+					break;
+				}
+			}
+			if (ok == 1) {
+				plog_info("\tCore %d task %d has found core %d task %d receiving from port %d\n", lconf->id, targ->id, rx_lconf->id, rx_targ->id, port_id);
+				break;
+			}
+		}
+		PROX_PANIC(ok == 0, "L3 sub mode for port %d on core %d task %d, but no core/task receiving on that port\n", port_id, lconf->id, targ->id);
+	}
 }
 
 static void check_cfg_consistent(void)
 {
 	check_missing_rx();
+	check_zero_rx();
 	check_mixed_normal_pipeline();
 }
 
@@ -280,11 +324,6 @@ static const char *gen_ring_name(void)
 	return retval;
 }
 
-static int task_is_master(struct task_args *targ)
-{
-	return !targ->lconf;
-}
-
 struct ring_init_stats {
 	uint32_t n_pkt_rings;
 	uint32_t n_ctrl_rings;
@@ -332,7 +371,7 @@ static struct rte_ring *get_existing_ring(uint32_t lcore_id, uint32_t task_id)
 	return lconf->targs[task_id].rx_rings[0];
 }
 
-static void init_ring_between_tasks(struct lcore_cfg *lconf, struct task_args *starg,
+static struct rte_ring *init_ring_between_tasks(struct lcore_cfg *lconf, struct task_args *starg,
 				    const struct core_task ct, uint8_t ring_idx, int idx,
 				    struct ring_init_stats *ris)
 {
@@ -377,13 +416,15 @@ static void init_ring_between_tasks(struct lcore_cfg *lconf, struct task_args *s
 		*dring = ring;
 		if (lconf->id == prox_cfg.master) {
 			ctrl_rings[ct.core*MAX_TASKS_PER_CORE + ct.task] = ring;
+		} else if (ct.core == prox_cfg.master) {
+			starg->ctrl_plane_ring = ring;
 		}
 
 		plog_info("\t\tCore %u task %u to -> core %u task %u ctrl_ring %s %p %s\n",
 			  lconf->id, starg->id, ct.core, ct.task, ct.type == CTRL_TYPE_PKT?
 			  "pkt" : "msg", ring, ring->name);
 		ris->n_ctrl_rings++;
-		return;
+		return ring;
 	}
 
 	dtarg = &lworker->targs[ct.task];
@@ -393,7 +434,7 @@ static void init_ring_between_tasks(struct lcore_cfg *lconf, struct task_args *s
 
 	/* If all the following conditions are met, the ring can be
 	   optimized away. */
-	if (!task_is_master(starg) && starg->lconf->id == dtarg->lconf->id &&
+	if (!task_is_master(starg) && !task_is_master(dtarg) && starg->lconf->id == dtarg->lconf->id &&
 	    starg->nb_txrings == 1 && idx == 0 && dtarg->task &&
 	    dtarg->tot_rxrings == 1 && starg->task == dtarg->task - 1) {
 		plog_info("\t\tOptimizing away ring on core %u from task %u to task %u\n",
@@ -405,7 +446,7 @@ static void init_ring_between_tasks(struct lcore_cfg *lconf, struct task_args *s
 		dtarg->tx_opt_ring_task = starg;
 		ris->n_opt_rings++;
 		++dtarg->nb_rxrings;
-		return;
+		return NULL;
 	}
 
 	int ring_created = 1;
@@ -447,6 +488,7 @@ static void init_ring_between_tasks(struct lcore_cfg *lconf, struct task_args *s
 		  lconf->id, starg->id, ring_idx, ct.core, ct.task, dtarg->nb_rxrings, ring, ring->name,
 		  dtarg->nb_slave_threads);
 	++ris->n_pkt_rings;
+	return ring;
 }
 
 static void init_rings(void)
@@ -476,6 +518,22 @@ static void init_rings(void)
 		  ris.n_pkt_rings,
 		  ris.n_ctrl_rings,
 		  ris.n_opt_rings);
+
+	lconf = NULL;
+	struct prox_port_cfg *port;
+	while (core_targ_next(&lconf, &starg, 1) == 0) {
+		if ((starg->task_init) && (starg->task_init->flag_features & TASK_FEATURE_L3)) {
+			struct core_task ct;
+			ct.core = prox_cfg.master;
+			ct.task = 0;
+			ct.type = CTRL_TYPE_PKT;
+			struct rte_ring *rx_ring = init_ring_between_tasks(lconf, starg, ct, 0, 0, &ris);
+
+			ct.core = lconf->id;
+			ct.task = starg->id;;
+			struct rte_ring *tx_ring = init_ring_between_tasks(lcore_cfg, lcore_cfg[prox_cfg.master].targs, ct, 0, 0, &ris);
+		}
+	}
 }
 
 static void shuffle_mempool(struct rte_mempool* mempool, uint32_t nb_mbuf)
@@ -691,7 +749,7 @@ static void set_task_lconf(void)
 	struct lcore_cfg *lconf;
 	uint32_t lcore_id = -1;
 
-	while(prox_core_next(&lcore_id, 0) == 0) {
+	while(prox_core_next(&lcore_id, 1) == 0) {
 		lconf = &lcore_cfg[lcore_id];
 		for (uint8_t task_id = 0; task_id < lconf->n_tasks_all; ++task_id) {
 			lconf->targs[task_id].lconf = lconf;
@@ -733,11 +791,30 @@ static void setup_all_task_structs(void)
 {
 	struct lcore_cfg *lconf;
 	uint32_t lcore_id = -1;
+	struct task_base *tmaster = NULL;
 
-	while(prox_core_next(&lcore_id, 0) == 0) {
+	while(prox_core_next(&lcore_id, 1) == 0) {
 		lconf = &lcore_cfg[lcore_id];
 		for (uint8_t task_id = 0; task_id < lconf->n_tasks_all; ++task_id) {
-			lconf->tasks_all[task_id] = init_task_struct(&lconf->targs[task_id]);
+			if (task_is_master(&lconf->targs[task_id])) {
+				plog_info("\tInitializing MASTER struct for core %d task %d\n", lcore_id, task_id);
+				lconf->tasks_all[task_id] = init_task_struct(&lconf->targs[task_id]);
+				tmaster = lconf->tasks_all[task_id];
+			}
+		}
+	}
+	PROX_PANIC(tmaster == NULL, "Can't initialize master task\n");
+	lcore_id = -1;
+
+	while(prox_core_next(&lcore_id, 1) == 0) {
+		lconf = &lcore_cfg[lcore_id];
+		plog_info("\tInitializing struct for core %d with %d task\n", lcore_id, lconf->n_tasks_all);
+		for (uint8_t task_id = 0; task_id < lconf->n_tasks_all; ++task_id) {
+			if (!task_is_master(&lconf->targs[task_id])) {
+				plog_info("\tInitializing struct for core %d task %d\n", lcore_id, task_id);
+				lconf->targs[task_id].tmaster = tmaster;
+				lconf->tasks_all[task_id] = init_task_struct(&lconf->targs[task_id]);
+			}
 		}
 	}
 }

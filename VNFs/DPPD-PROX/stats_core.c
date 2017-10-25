@@ -262,7 +262,7 @@ void stats_lcore_post_proc(void)
 			ls->cmt_bytes = ls->cmt_data * scm->rdt_features.upscaling_factor;
 			lss->mbm_tot_bytes = ls->mbm_tot * scm->rdt_features.upscaling_factor;
 			lss->mbm_loc_bytes = ls->mbm_loc * scm->rdt_features.upscaling_factor;
-			plogx_dbg("cache[core %d] = %ld\n", ls->lcore_id, ls->cmt_bytes);
+			//plogx_dbg("cache[core %d] = %ld\n", ls->lcore_id, ls->cmt_bytes);
 		}
 	}
 	for (uint8_t i = 0; i < scm->n_lcore_stats; ++i) {

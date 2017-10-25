@@ -26,6 +26,7 @@
 #include "prox_port_cfg.h"
 #include "etypes.h"
 #include "toeplitz.h"
+#include "handle_master.h"
 
 #define TEN_GIGABIT     1250000000
 #define QUEUE_SIZES     128
@@ -116,6 +117,7 @@ void set_global_defaults(__attribute__((unused)) struct prox_cfg *prox_cfg)
 void set_task_defaults(struct prox_cfg* prox_cfg, struct lcore_cfg* lcore_cfg_init)
 {
 	prox_cfg->master = RTE_MAX_LCORE;
+	handle_ctrl_plane = NULL;
 
 	for (uint32_t i = 0; i < RTE_DIM(prox_cfg->cpe_table_ports); ++i) {
 		prox_cfg->cpe_table_ports[i] = -1;

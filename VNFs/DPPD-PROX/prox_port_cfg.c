@@ -55,15 +55,26 @@ int prox_last_port_active(void)
 	return ret;
 }
 
+#if RTE_VERSION >= RTE_VERSION_NUM(17,8,0,1)
+static int lsc_cb(__attribute__((unused)) uint8_t port_id, enum rte_eth_event_type type, __attribute__((unused)) void *param,
+	__attribute__((unused)) void *ret_param)
+#else
 static void lsc_cb(__attribute__((unused)) uint8_t port_id, enum rte_eth_event_type type, __attribute__((unused)) void *param)
+#endif
 {
-	struct rte_eth_link link;
-
 	if (RTE_ETH_EVENT_INTR_LSC != type) {
+#if RTE_VERSION >= RTE_VERSION_NUM(17,8,0,1)
+		return -1;
+#else
 		return;
+#endif
 	}
 
 	rte_atomic32_inc(&lsc);
+
+#if RTE_VERSION >= RTE_VERSION_NUM(17,8,0,1)
+	return 0;
+#endif
 }
 
 struct prox_pktmbuf_reinit_args {
