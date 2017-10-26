@@ -377,6 +377,8 @@ static int handle_ipv6_encap_bulk(struct task_base* tbase, struct rte_mbuf** mbu
 static inline uint8_t handle_ipv6_decap(struct task_ipv6_decap* ptask, struct rte_mbuf* rx_mbuf, __attribute__((unused)) struct ipv6_tun_dest* tun_dest)
 {
 	struct ether_hdr* peth = rte_pktmbuf_mtod(rx_mbuf, struct ether_hdr *);
+	struct task_ipv6_tun_base* tun_base = (struct task_ipv6_tun_base*)ptask;
+	struct ipv4_hdr* pip4 = NULL;
 
 	if (unlikely(peth->ether_type != ETYPE_IPv6)) {
 		plog_warn("Received non IPv6 packet on ipv6 tunnel port\n");
@@ -400,11 +402,19 @@ static inline uint8_t handle_ipv6_decap(struct task_ipv6_decap* ptask, struct rt
         // Discard IPv6 encapsulation
         rte_pktmbuf_adj(rx_mbuf, ipv6_hdr_len);
         peth = rte_pktmbuf_mtod(rx_mbuf, struct ether_hdr *);
+	pip4 = (struct ipv4_hdr *)(peth + 1);
 
         // Restore Ethernet header
         ether_addr_copy(&ptask->base.src_mac, &peth->s_addr);
         ether_addr_copy(&ptask->dst_mac, &peth->d_addr);
         peth->ether_type = ETYPE_IPv4;
+
+#ifdef GEN_DECAP_IPV6_TO_IPV4_CKSUM
+        // generate an IP checksum for ipv4 packet
+        if (tun_base->runtime_flags & TASK_TX_CRC) {
+                prox_ip_cksum(rx_mbuf, pip4, sizeof(struct ether_hdr), sizeof(struct ipv4_hdr), ptask->base.offload_crc);
+        }
+#endif
 
 	return 0;
 }
