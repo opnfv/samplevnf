@@ -109,6 +109,11 @@ else
 CFLAGS += -DPROX_MAX_LOG_LVL=$(log)
 endif
 
+# When ipv4 packet is de-encalpusled from ipv6 packet, genaerate IP checksum.
+ifeq ($(GEN_DECAP_IPV6_TO_IPV4_CKSUM),y)
+CFLAGS += -DGEN_DECAP_IPV6_TO_IPV4_CKSUM
+endif
+
 # override any use-case/enviroment specific choices regarding crc and
 # always use the sw implementation
 ifeq ($(crc),soft)
