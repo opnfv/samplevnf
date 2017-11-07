@@ -172,7 +172,9 @@ SRCS-y += handle_mirror.c
 SRCS-y += handle_genl4.c
 SRCS-y += handle_ipv6_tunnel.c
 SRCS-y += handle_read.c
+ifeq ($(call rte_ver_LT,17,8,0,0),y)
 SRCS-$(call rte_ver_GE,17,2,0,16) += handle_esp.c
+endif
 SRCS-y += handle_cgnat.c
 SRCS-y += handle_nat.c
 SRCS-y += handle_dump.c
