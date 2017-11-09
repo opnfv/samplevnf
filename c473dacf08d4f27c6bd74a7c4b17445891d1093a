@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9a3d3df0_8c5f2be5",
+        "filename": "VNFs/DPPD-PROX/main.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 148,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-09T19:19:09Z",
+      "side": 1,
+      "message": "Here, the check for missing peer RX is only performed for those TX tasks where L3 behavior is explicitly registered by means of task_init (namely, gen and swap modes).\nIs this intended, or should this check be extended to all TX L3 tasks, including those only enabled from config file with \"sub mode\u003dl3\"?\nIn the latter case, this line should read:\nif (strcmp(targ-\u003esub_mode_str, \"l3\") !\u003d 0)",
+      "revId": "c473dacf08d4f27c6bd74a7c4b17445891d1093a",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
