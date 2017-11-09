@@ -94,13 +94,15 @@ static void check_mixed_normal_pipeline(void)
 		int all_thread_nop = 1;
 		int generic = 0;
 		int pipeline = 0;
+		int l3 = 0;
 		for (uint8_t task_id = 0; task_id < lconf->n_tasks_all; ++task_id) {
 			struct task_args *targ = &lconf->targs[task_id];
-			all_thread_nop = all_thread_nop &&
+			l3 = !strcmp("l3", targ->sub_mode_str);
+			all_thread_nop = all_thread_nop && !l3 &&
 				targ->task_init->thread_x == thread_nop;
 
 			pipeline = pipeline || targ->task_init->thread_x == thread_pipeline;
-			generic = generic || targ->task_init->thread_x == thread_generic;
+			generic = generic || targ->task_init->thread_x == thread_generic || l3;
 		}
 		PROX_PANIC(generic && pipeline, "Can't run both pipeline and normal thread on same core\n");
 
@@ -127,8 +129,8 @@ static void check_zero_rx(void)
 
 static void check_missing_rx(void)
 {
-	struct lcore_cfg *lconf = NULL, *rx_lconf = NULL;
-	struct task_args *targ, *rx_targ = NULL;
+	struct lcore_cfg *lconf = NULL, *rx_lconf = NULL, *tx_lconf = NULL;
+	struct task_args *targ, *rx_targ = NULL, *tx_targ = NULL;
 	struct prox_port_cfg *port;
 	uint8_t port_id, rx_port_id, ok;
 
@@ -145,6 +147,28 @@ static void check_missing_rx(void)
 	while (core_targ_next(&lconf, &targ, 0) == 0) {
 		if (strcmp(targ->task_init->sub_mode_str, "l3") != 0)
 			continue;
+
+		// If the L3 sub_mode receives from a port, check that there is at least one core/task
+		// transmitting to this port in L3 sub_mode
+		for (uint8_t i = 0; i < targ->nb_rxports; ++i) {
+			rx_port_id = targ->rx_port_queue[i].port;
+			ok = 0;
+			tx_lconf = NULL;
+			while (core_targ_next(&tx_lconf, &tx_targ, 0) == 0) {
+				port = find_reachable_port(tx_targ);
+				if (port == NULL)
+					continue;
+               			port_id = port - prox_port_cfg;
+				if ((rx_port_id == port_id) && (tx_targ->task_init->flag_features & TASK_FEATURE_L3)){
+					ok = 1;
+					break;
+				}
+			}
+			PROX_PANIC(ok == 0, "RX L3 sub mode for port %d on core %d task %d, but no core/task receiving on that port\n", rx_port_id, lconf->id, targ->id);
+		}
+
+		// If the L3 sub_mode transmits to a port, check that there is at least one core/task
+		// receiving from that port in L3 sub_mode.
 		port = find_reachable_port(targ);
 		if (port == NULL)
 			continue;

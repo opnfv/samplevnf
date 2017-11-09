@@ -1253,7 +1253,9 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 		if (strcmp(sub_mode_str, "l3") == 0) {
 			prox_cfg.flags |= DSF_CTRL_PLANE_ENABLED;
 			targ->task_init->flag_features |= TASK_FEATURE_L3;
-			strcpy(targ->task_init->sub_mode_str, "l3");
+			strcpy(targ->sub_mode_str, "l3");
+		} else {
+			strcpy(targ->sub_mode_str, targ->task_init->sub_mode_str);
 		}
 		return 0;
 	}
