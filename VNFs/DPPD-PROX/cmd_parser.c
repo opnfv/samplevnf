@@ -327,9 +327,9 @@ static int parse_cmd_rate(const char *str, struct input *input)
 
 int task_is_mode_and_submode(uint32_t lcore_id, uint32_t task_id, const char *mode, const char *sub_mode)
 {
-	struct task_init *t = lcore_cfg[lcore_id].targs[task_id].task_init;
+	struct task_args *targs = &lcore_cfg[lcore_id].targs[task_id];
 
-	return !strcmp(t->mode_str, mode) && !strcmp(t->sub_mode_str, sub_mode);
+	return !strcmp(targs->task_init->mode_str, mode) && !strcmp(targs->sub_mode_str, sub_mode);
 }
 
 int task_is_mode(uint32_t lcore_id, uint32_t task_id, const char *mode)
@@ -341,9 +341,9 @@ int task_is_mode(uint32_t lcore_id, uint32_t task_id, const char *mode)
 
 int task_is_sub_mode(uint32_t lcore_id, uint32_t task_id, const char *sub_mode)
 {
-	struct task_init *t = lcore_cfg[lcore_id].targs[task_id].task_init;
+	struct task_args *targs = &lcore_cfg[lcore_id].targs[task_id];
 
-	return !strcmp(t->sub_mode_str, sub_mode);
+	return !strcmp(targs->sub_mode_str, sub_mode);
 }
 
 static void log_pkt_count(uint32_t count, uint32_t lcore_id, uint32_t task_id)

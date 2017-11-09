@@ -94,13 +94,15 @@ static void check_mixed_normal_pipeline(void)
 		int all_thread_nop = 1;
 		int generic = 0;
 		int pipeline = 0;
+		int l3 = 0;
 		for (uint8_t task_id = 0; task_id < lconf->n_tasks_all; ++task_id) {
 			struct task_args *targ = &lconf->targs[task_id];
-			all_thread_nop = all_thread_nop &&
+			l3 = !strcmp("l3", targ->sub_mode_str);
+			all_thread_nop = all_thread_nop && !l3 &&
 				targ->task_init->thread_x == thread_nop;
 
 			pipeline = pipeline || targ->task_init->thread_x == thread_pipeline;
-			generic = generic || targ->task_init->thread_x == thread_generic;
+			generic = generic || targ->task_init->thread_x == thread_generic || l3;
 		}
 		PROX_PANIC(generic && pipeline, "Can't run both pipeline and normal thread on same core\n");
 
