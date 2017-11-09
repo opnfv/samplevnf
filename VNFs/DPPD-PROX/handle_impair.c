@@ -193,6 +193,7 @@ static int handle_bulk_random_drop(struct task_base *tbase, struct rte_mbuf **mb
 	struct task_impair *task = (struct task_impair *)tbase;
 	uint8_t out[MAX_PKT_BURST];
 	struct ether_hdr * hdr[MAX_PKT_BURST];
+	int ret = 0;
 	for (uint16_t i = 0; i < n_pkts; ++i) {
 		PREFETCH0(mbufs[i]);
 	}
@@ -210,8 +211,9 @@ static int handle_bulk_random_drop(struct task_base *tbase, struct rte_mbuf **mb
 			out[i] = rand_r(&task->seed) <= task->tresh? 0 : OUT_DISCARD;
 		}
 	}
-	return task->base.tx_pkt(&task->base, mbufs, n_pkts, out);
+	ret = task->base.tx_pkt(&task->base, mbufs, n_pkts, out);
 	task_impair_update(tbase);
+	return ret;
 }
 
 static int handle_bulk_impair(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts)
