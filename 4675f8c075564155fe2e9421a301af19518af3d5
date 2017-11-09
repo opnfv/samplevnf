@@ -1,0 +1,55 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9a3d3df0_7103a00d",
+        "filename": "VNFs/DPPD-PROX/cmd_parser.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1679,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-09T11:24:21Z",
+      "side": 1,
+      "message": "Why not the following line here:\nif (!task_is_mode(lcore_id, task_id, \"irq\")) {\nsimilar to lines 1627 above and 1727 below?\n\"lat\" and \"irq\" modes both don\u0027t have any submode defined.",
+      "revId": "4675f8c075564155fe2e9421a301af19518af3d5",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_7151e00d",
+        "filename": "VNFs/DPPD-PROX/cmd_parser.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1749,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-09T11:24:21Z",
+      "side": 1,
+      "message": "Same here:\nif (!task_is_mode(lcore_id, task_id, \"cgnat\")) {\nsince \"cgnat\" mode doesn\u0027t have any submode defined.",
+      "revId": "4675f8c075564155fe2e9421a301af19518af3d5",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_d158ac34",
+        "filename": "VNFs/DPPD-PROX/cmd_parser.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1773,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-09T11:24:21Z",
+      "side": 1,
+      "message": "Again:\nif (!task_is_mode(lcore_id, task_id, \"cgnat\")) {",
+      "revId": "4675f8c075564155fe2e9421a301af19518af3d5",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
