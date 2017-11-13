@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9a3d3df0_162685ce",
+        "filename": "VNFs/DPPD-PROX/main.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 148,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-13T11:50:13Z",
+      "side": 1,
+      "message": "So, we only perform these RX/TX checks below for gen and swap modes?\nTo also check for modes with configuration-time L3 sub-mode, remove \"task_init-\u003e\" or test on \"flag_features \u0026 TASK_FEATURE_L3\".",
+      "range": {
+        "startLine": 148,
+        "startChar": 19,
+        "endLine": 148,
+        "endChar": 28
+      },
+      "revId": "f4cdd6ed6fc5615f58867b70557f2f2adfaabc70",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_56300d01",
+        "filename": "VNFs/DPPD-PROX/main.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 167,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-13T11:50:13Z",
+      "side": 1,
+      "message": "transmitting to",
+      "range": {
+        "startLine": 167,
+        "startChar": 88,
+        "endLine": 167,
+        "endChar": 100
+      },
+      "revId": "f4cdd6ed6fc5615f58867b70557f2f2adfaabc70",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
