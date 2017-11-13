@@ -60,7 +60,6 @@ CFLAGS += -I$(VNF_CORE)/common/VIL/gateway
 
 # all source are stored in SRCS-y
 SRCS-y := main.c
-SRCS-y += parse_obj_list.c
 SRCS-y += config_parse.c
 SRCS-y += config_parse_tm.c
 SRCS-y += config_check.c

@@ -83,8 +83,6 @@ performance of the solution should be sufficient for testing the UDP NAT perform
 #include <rte_errno.h>
 #include <rte_cfgfile.h>
 
-#include "parse_obj_list.h"
-
 #include <lib_arp.h>
 #include "l2_proto.h"
 #include "interface.h"
