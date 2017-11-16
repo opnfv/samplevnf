@@ -173,7 +173,12 @@ SRCS-y += handle_genl4.c
 SRCS-y += handle_ipv6_tunnel.c
 SRCS-y += handle_read.c
 ifeq ($(call rte_ver_LT,17,8,0,0),y)
-SRCS-$(call rte_ver_GE,17,2,0,16) += handle_esp.c
+ifeq ($(call rte_ver_GE,17,2,0,16),y)
+SRCS-$(CONFIG_RTE_LIBRTE_PMD_AESNI_MB) += handle_esp.c
+ifeq ($(CONFIG_RTE_LIBRTE_PMD_AESNI_MB),n)
+$(warning "Building w/o IPSEC support")
+endif
+endif
 endif
 SRCS-y += handle_cgnat.c
 SRCS-y += handle_nat.c
