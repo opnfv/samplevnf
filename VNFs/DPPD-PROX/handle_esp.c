@@ -34,6 +34,7 @@
 #include <rte_ip.h>
 #include <rte_cryptodev.h>
 #include <rte_cryptodev_pmd.h>
+#include "prox_port_cfg.h"
 
 typedef unsigned int u32;
 typedef unsigned char u8;
@@ -47,7 +48,7 @@ typedef unsigned char u8;
 
 static inline void *get_sym_cop(struct rte_crypto_op *cop)
 {
-        //return (cop + 1);//makes no sense on dpdk_17.05.2
+        //return (cop + 1);//makes no sense on dpdk_17.05.2; TODO: doublecheck
         return cop->sym;
 }
 
@@ -56,6 +57,7 @@ struct task_esp_enc {
         int crypto_dev_id;
         u8 iv[16];
         uint32_t                local_ipv4;
+        struct ether_addr       local_mac;
         uint32_t                remote_ipv4;
         u8 key[16];
         uint32_t  ipaddr;
@@ -70,6 +72,7 @@ struct task_esp_dec {
         int crypto_dev_id;
         u8 iv[16];
         uint32_t                local_ipv4;
+        struct ether_addr       local_mac;
         u8 key[16];
         uint32_t  ipaddr;
         struct rte_cryptodev_sym_session *sess;
@@ -93,18 +96,47 @@ static uint8_t hmac_sha1_key[] = {
         0xF8, 0x2A, 0xC7, 0x54, 0xDB, 0x96, 0x18, 0xAA,
         0xC3, 0xA1, 0x53, 0xF6, 0x1F, 0x17, 0x60, 0xBD,
         0xDE, 0xF4, 0xDE, 0xAD };
+
 static uint8_t aes_cbc_key[] = {
         0xE4, 0x23, 0x33, 0x8A, 0x35, 0x64, 0x61, 0xE2,
         0x49, 0x03, 0xDD, 0xC6, 0xB8, 0xCA, 0x55, 0x7A,
         0xE4, 0x23, 0x33, 0x8A, 0x35, 0x64, 0x61, 0xE2,
         0x49, 0x03, 0xDD, 0xC6, 0xB8, 0xCA, 0x55, 0x7A };
 
+static uint8_t aes_cbc_iv[] = {
+        0xE4, 0x23, 0x33, 0x8A, 0x35, 0x64, 0x61, 0xE2,
+        0x49, 0x03, 0xDD, 0xC6, 0xB8, 0xCA, 0x55, 0x7A };
+
+static void init_task_esp_common(void)
+{
+        static int vdev_initialized = 0;
+        struct crypto_testsuite_params *ts_params = &testsuite_params;
+
+        if (!vdev_initialized) {
+                rte_vdev_init(RTE_STR(CRYPTODEV_NAME_AESNI_MB_PMD), NULL);
+                int nb_devs = rte_cryptodev_count_devtype(RTE_CRYPTODEV_AESNI_MB_PMD);
+                PROX_PANIC(nb_devs < 1, "No crypto devices found?\n");
+                vdev_initialized = 1;
+        }
+        ts_params->conf.nb_queue_pairs = 2;
+        ts_params->conf.socket_id = SOCKET_ID_ANY;
+        ts_params->conf.session_mp.nb_objs = 2048;
+        ts_params->qp_conf.nb_descriptors = 4096;
+
+        /*Now reconfigure queues to size we actually want to use in this testsuite.*/
+        ts_params->qp_conf.nb_descriptors = 128;
+        rte_cryptodev_configure(0, &ts_params->conf);
+		//rte_cryptodev_start(task->crypto_dev_id);
+}
+
 static void init_task_esp_enc(struct task_base *tbase, struct task_args *targ)
 {
         int i, nb_devs, valid_dev_id = 0;
-        struct crypto_testsuite_params *ts_params = &testsuite_params;
+        uint16_t qp_id;
         struct rte_cryptodev_info info;
+        struct crypto_testsuite_params *ts_params = &testsuite_params;
 
+        init_task_esp_common();
         tbase->flags |= FLAG_NEVER_FLUSH;
 
         ts_params->mbuf_ol_pool_enc = rte_crypto_op_pool_create("crypto_op_pool_enc",
@@ -113,20 +145,7 @@ static void init_task_esp_enc(struct task_base *tbase, struct task_args *targ)
         PROX_PANIC(ts_params->mbuf_ol_pool_enc == NULL, "Can't create ENC CRYPTO_OP_POOL\n");
 
         struct task_esp_enc *task = (struct task_esp_enc *)tbase;
-        task->crypto_dev_id = rte_vdev_init(RTE_STR(CRYPTODEV_NAME_AESNI_MB_PMD), NULL);
-        nb_devs = rte_cryptodev_count_devtype(RTE_CRYPTODEV_AESNI_MB_PMD);
-        PROX_PANIC(nb_devs < 1, "No crypto devices found?\n");
-
-        /* Search for the first valid */
-        for (i = 0; i < nb_devs; i++) {
-                rte_cryptodev_info_get(i, &info);
-                if (info.dev_type == gbl_cryptodev_preftest_devtype) {
-                        task->crypto_dev_id = i;
-                        valid_dev_id = 1;
-                        break;
-                }
-        }
-        PROX_PANIC(!valid_dev_id, "invalid crypto devices found?\n");
+        task->crypto_dev_id = 0;
 
         /*
          * Since we can't free and re-allocate queue memory always set the queues
@@ -134,17 +153,8 @@ static void init_task_esp_enc(struct task_base *tbase, struct task_args *targ)
          * any later re-configures needed by other tests
          */
 
-        ts_params->conf.nb_queue_pairs = 2;
-        ts_params->conf.socket_id = SOCKET_ID_ANY;
-        ts_params->conf.session_mp.nb_objs = 2048;
-        ts_params->qp_conf.nb_descriptors = 4096;
-
-        /*Now reconfigure queues to size we actually want to use in this testsuite.*/
-        ts_params->qp_conf.nb_descriptors = 128;
-        rte_cryptodev_configure(task->crypto_dev_id, &ts_params->conf);
         rte_cryptodev_queue_pair_setup(task->crypto_dev_id, 0,
                                 &ts_params->qp_conf, rte_cryptodev_socket_id(task->crypto_dev_id));
-        rte_cryptodev_configure(task->crypto_dev_id, &ts_params->conf);
 
         struct rte_cryptodev *dev;
         dev = rte_cryptodev_pmd_get_dev(task->crypto_dev_id);
@@ -168,17 +178,26 @@ static void init_task_esp_enc(struct task_base *tbase, struct task_args *targ)
         task->auth_xform.auth.key.data = hmac_sha1_key;
         task->auth_xform.auth.digest_length = DIGEST_BYTE_LENGTH_SHA1;
 
-        /* Create Crypto session*/
         task->sess = rte_cryptodev_sym_session_create(task->crypto_dev_id, &task->cipher_xform);
         PROX_PANIC(task->sess == NULL, "Failed to create ENC session\n");
 
+        //TODO: doublecheck task->ops_burst lifecycle!
+        if (rte_crypto_op_bulk_alloc(ts_params->mbuf_ol_pool_enc,
+                     RTE_CRYPTO_OP_TYPE_SYMMETRIC,
+                     task->ops_burst, MAX_PKT_BURST) != MAX_PKT_BURST) {
+                PROX_PANIC(1, "Failed to allocate ENC crypto operations\n");
+        }
+        //to clean up after rte_crypto_op_bulk_alloc:
+        //for (j = 0; j < MAX_PKT_BURST; j++) {
+        //   rte_crypto_op_free(task->ops_burst[j]);
+        //}
+
         // Read config file with SAs
-        task->local_ipv4 = rte_be_to_cpu_32(targ->local_ipv4);
-        task->remote_ipv4 = rte_be_to_cpu_32(targ->remote_ipv4);
-        //TODO:
-        //#include "prox_port_cfg.h"
-        //struct prox_port_cfg *port = find_reachable_port(targ);
+        task->local_ipv4 = rte_cpu_to_be_32(targ->local_ipv4);
+        task->remote_ipv4 = rte_cpu_to_be_32(targ->remote_ipv4);
         //memcpy(&task->src_mac, &prox_port_cfg[task->base.tx_params_hw.tx_port_queue->port].eth_addr, sizeof(struct ether_addr));
+        struct prox_port_cfg *port = find_reachable_port(targ);
+        memcpy(&task->local_mac, &port->eth_addr, sizeof(struct ether_addr));
 
         for (i = 0; i < 16; i++) task->key[i] = i+2;
         for (i = 0; i < 16; i++) task->iv[i] = i;
@@ -186,19 +205,21 @@ static void init_task_esp_enc(struct task_base *tbase, struct task_args *targ)
 
 static void init_task_esp_dec(struct task_base *tbase, struct task_args *targ)
 {
-        int i;
+        int i, nb_devs;
         struct crypto_testsuite_params *ts_params = &testsuite_params;
+        init_task_esp_common();
 
         tbase->flags |= FLAG_NEVER_FLUSH;
-
         ts_params->mbuf_ol_pool_dec = rte_crypto_op_pool_create("crypto_op_pool_dec",
                         RTE_CRYPTO_OP_TYPE_SYMMETRIC, (2*1024*1024), 128, 0,
                         rte_socket_id());
         PROX_PANIC(ts_params->mbuf_ol_pool_dec == NULL, "Can't create DEC CRYPTO_OP_POOL\n");
 
-        // Read config file with SAs
         struct task_esp_dec *task = (struct task_esp_dec *)tbase;
-        task->local_ipv4 = rte_be_to_cpu_32(targ->local_ipv4);
+
+        static struct rte_cryptodev_session *sess_dec = NULL;
+        // Read config file with SAs
+        task->local_ipv4 = rte_cpu_to_be_32(targ->local_ipv4);
 
         task->cipher_xform.type = RTE_CRYPTO_SYM_XFORM_CIPHER;
         task->cipher_xform.next = NULL;
@@ -224,22 +245,26 @@ static void init_task_esp_dec(struct task_base *tbase, struct task_args *targ)
 
         ts_params->qp_conf.nb_descriptors = 128;
 
-        rte_cryptodev_stats_reset(task->crypto_dev_id);
-
         task->sess = rte_cryptodev_sym_session_create(task->crypto_dev_id, &task->auth_xform);
         PROX_PANIC(task->sess == NULL, "Failed to create DEC session\n");
 
-        rte_cryptodev_stats_reset(task->crypto_dev_id);
-        rte_cryptodev_start(task->crypto_dev_id);
+        if (rte_crypto_op_bulk_alloc(ts_params->mbuf_ol_pool_dec,
+                     RTE_CRYPTO_OP_TYPE_SYMMETRIC,
+                     task->ops_burst, MAX_PKT_BURST) != MAX_PKT_BURST) {
+                PROX_PANIC(1, "Failed to allocate DEC crypto operations\n");
+        }
+        //to clean up after rte_crypto_op_bulk_alloc:
+        //for (int j = 0; j < MAX_PKT_BURST; j++) {
+        //    rte_crypto_op_free(task->ops_burst[j]);
+        //}
+
+        struct prox_port_cfg *port = find_reachable_port(targ);
+        memcpy(&task->local_mac, &port->eth_addr, sizeof(struct ether_addr));
 
 // FIXME debug data
         for (i = 0; i < 16; i++) task->key[i] = i+2;
         for (i = 0; i < 16; i++) task->iv[i] = i;
 }
-
-static uint8_t aes_cbc_iv[] = {
-        0xE4, 0x23, 0x33, 0x8A, 0x35, 0x64, 0x61, 0xE2,
-        0x49, 0x03, 0xDD, 0xC6, 0xB8, 0xCA, 0x55, 0x7A };
 
 static inline uint8_t handle_esp_ah_enc(struct task_esp_enc *task, struct rte_mbuf *mbuf, struct rte_crypto_op *cop)
 {
@@ -293,12 +318,12 @@ static inline uint8_t handle_esp_ah_enc(struct task_esp_enc *task, struct rte_mb
         l1 = rte_pktmbuf_pkt_len(mbuf);
         peth->ether_type = ETYPE_IPv4;
 #if 0
-        //send it back for now
-        ether_addr_copy(&dst_mac, &peth->s_addr);//IS-srcmac-should get from if
-        ether_addr_copy(&src_mac, &peth->d_addr);//IS-dstmac-will be rewritten by arp
+        //send it back
+        ether_addr_copy(&dst_mac, &peth->s_addr);
+        ether_addr_copy(&src_mac, &peth->d_addr);
 #else
-        ether_addr_copy(&dst_mac, &peth->d_addr);
-        ether_addr_copy(&src_mac, &peth->s_addr);
+        ether_addr_copy(&task->local_mac, &peth->s_addr);
+        ether_addr_copy(&dst_mac, &peth->d_addr);//IS: dstmac should be rewritten by arp
 #endif
 
         pip4 = (struct ipv4_hdr *)(peth + 1);
@@ -313,7 +338,7 @@ static inline uint8_t handle_esp_ah_enc(struct task_esp_enc *task, struct rte_mb
         pip4->time_to_live = 64;
         prox_ip_cksum_sw(pip4);
 
-//      find the SA when there will be more than one
+        //find the SA when there will be more than one
         if (task->ipaddr == pip4->src_addr)
         {
         }
@@ -321,11 +346,11 @@ static inline uint8_t handle_esp_ah_enc(struct task_esp_enc *task, struct rte_mb
         *((u32*) data) = 0x2016; // FIXME SPI
         *((u32*) data + 1) = 0x2; // FIXME SN
         u8 *padl = (u8*)data + (8 + encrypt_len - 2 + CIPHER_IV_LENGTH_AES_CBC); // No ESN yet. (-2 means NH is crypted)
-//      padl += CIPHER_IV_LENGTH_AES_CBC;
+        //padl += CIPHER_IV_LENGTH_AES_CBC;
         *padl = padding;
         *(padl + 1) = 4; // ipv4 in 4
 
-//              one key for them all for now
+        //one key for them all for now
         rte_crypto_op_attach_sym_session(cop, task->sess);
 
         sym_cop->auth.digest.data = data + 8 + CIPHER_IV_LENGTH_AES_CBC + encrypt_len;
@@ -343,11 +368,6 @@ static inline uint8_t handle_esp_ah_enc(struct task_esp_enc *task, struct rte_mb
 
         sym_cop->auth.data.offset = sizeof (struct ether_hdr) + sizeof(struct ipv4_hdr);
         sym_cop->auth.data.length = 4 + 4 + CIPHER_IV_LENGTH_AES_CBC + encrypt_len ;// + 4;// FIXME
-#if 0
-        u8* m = rte_pktmbuf_mtod(mbuf, u8*);
-        //u32 *pdigest;
-        plog_info("enc: auth.digest.data:%d cipher.iv.data:%d cipher.data.offset:%d auth.data.offset:%d\n", (u8*)sym_cop->auth.digest.data-m, (u8*)sym_cop->cipher.iv.data-m, sym_cop->cipher.data.offset, sym_cop->auth.data.offset);
-#endif
 
         sym_cop->m_src = mbuf;
         //cop->type = RTE_CRYPTO_OP_TYPE_SYMMETRIC;
@@ -363,7 +383,7 @@ static inline uint8_t handle_esp_ah_dec(struct task_esp_dec *task, struct rte_mb
         struct ipv4_hdr* pip4 = (struct ipv4_hdr *)(peth + 1);
         uint16_t ipv4_length = rte_be_to_cpu_16(pip4->total_length);
         u8 *data = (u8*)(pip4 + 1);
-//              find the SA
+        //find the SA
         if (pip4->next_proto_id != IPPROTO_ESP)
         {
                 plog_info("Received non ESP packet on esp dec\n");
@@ -390,11 +410,6 @@ static inline uint8_t handle_esp_ah_dec(struct task_esp_dec *task, struct rte_mb
         sym_cop->cipher.data.offset = sizeof (struct ether_hdr) + sizeof(struct ipv4_hdr) + 4 + 4 + CIPHER_IV_LENGTH_AES_CBC;
         sym_cop->cipher.data.length = ipv4_length - sizeof(struct ipv4_hdr) - CIPHER_IV_LENGTH_AES_CBC - 28; // FIXME
 
-#if 0
-        u8* m = rte_pktmbuf_mtod(mbuf, u8*);
-        plog_info("dec: auth.digest.data:%d cipher.iv.data:%d cipher.data.offset:%d auth.data.offset:%d\n", (u8*)sym_cop->auth.digest.data-m, (u8*)sym_cop->cipher.iv.data-m, sym_cop->cipher.data.offset, sym_cop->auth.data.offset);
-
-#endif
         sym_cop->m_src = mbuf;
         return 0;
 }
@@ -410,11 +425,11 @@ static inline void do_ipv4_swap(struct task_esp_dec *task, struct rte_mbuf *mbuf
         src_ip = pip4->src_addr;
         dst_ip = pip4->dst_addr;
 
-        //memcpy(&peth->s_addr, &prox_port_cfg[task->base.tx_params_hw.tx_port_queue->port].eth_addr, sizeof(struct ether_addr));
-        //peth->s_addr, dst_mac;
+        //peth->s_addr = dst_mac;
         peth->d_addr = src_mac;//should be replaced by arp
-        pip4->src_addr = dst_ip;
+        //pip4->src_addr = dst_ip;
         pip4->dst_addr = src_ip;
+        ether_addr_copy(&task->local_mac, &peth->s_addr);
 }
 
 static inline uint8_t handle_esp_ah_dec_finish(struct task_esp_dec *task, struct rte_mbuf *mbuf)
@@ -446,7 +461,7 @@ static inline uint8_t handle_esp_ah_dec_finish(struct task_esp_dec *task, struct
         prox_ip_cksum_sw(pip4);
         peth = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
 
-#if 0
+#if 1
         do_ipv4_swap(task, mbuf);
 #endif
 //              one key for them all for now
@@ -467,20 +482,15 @@ static int handle_esp_enc_bulk(struct task_base *tbase, struct rte_mbuf **mbufs,
         struct task_esp_enc *task = (struct task_esp_enc *)tbase;
         struct crypto_testsuite_params *ts_params = &testsuite_params;
         uint8_t out[MAX_PKT_BURST];
-        uint16_t i = 0, nb_rx = 0, j = 0;
-
-        if (rte_crypto_op_bulk_alloc( ts_params->mbuf_ol_pool_enc,
-                     RTE_CRYPTO_OP_TYPE_SYMMETRIC,
-                     task->ops_burst, n_pkts) != n_pkts) {
-                // FIXME AK
-                PROX_PANIC(1, "Failed to allocate ENC crypto operations\n");
-        }
+        uint16_t i = 0, nb_rx = 0, nb_enc=0, j = 0;
 
         for (uint16_t j = 0; j < n_pkts; ++j) {
-                out[j] = handle_esp_ah_enc(task, mbufs[j], task->ops_burst[j]);
+                out[j] = handle_esp_ah_enc(task, mbufs[j], task->ops_burst[nb_enc]);
+                if (out[j] != OUT_DISCARD)
+                        ++nb_enc;
         }
 
-        if (rte_cryptodev_enqueue_burst(task->crypto_dev_id, 0, task->ops_burst, n_pkts) != n_pkts) {
+        if (rte_cryptodev_enqueue_burst(task->crypto_dev_id, 0, task->ops_burst, nb_enc) != nb_enc) {
                 plog_info("Error enc enqueue_burst\n");
                 return -1;
         }
@@ -490,22 +500,9 @@ static int handle_esp_enc_bulk(struct task_base *tbase, struct rte_mbuf **mbufs,
         do {
                 nb_rx = rte_cryptodev_dequeue_burst(
                                    task->crypto_dev_id, 0,// FIXME AK
-                                   task->ops_burst+i, n_pkts-i);
+                                   task->ops_burst+i, nb_enc-i);
                 i += nb_rx;
-        } while (i < n_pkts);
-
-#if 0
-        for (j = 0; j < n_pkts; j++) {
-                char s_out[1024];
-                u8* m = rte_pktmbuf_mtod(mbufs[j], u8*);
-                //u32 l = rte_pktmbuf_pkt_len(mbuf);
-                bin2hexstr(s_out, (const char*)m+106, DIGEST_BYTE_LENGTH_SHA1);
-                plog_info("%d status:%d digest:%s\n", j, task->ops_burst[j]->status, s_out);
-        }
-#endif
-        for (j = 0; j < n_pkts; j++) {
-           rte_crypto_op_free(task->ops_burst[j]);
-        }
+        } while (i < nb_enc);
 
         return task->base.tx_pkt(&task->base, mbufs, n_pkts, out);
 }
@@ -516,15 +513,6 @@ static int handle_esp_dec_bulk(struct task_base *tbase, struct rte_mbuf **mbufs,
         struct crypto_testsuite_params *ts_params = &testsuite_params;
         uint8_t out[MAX_PKT_BURST];
         uint16_t j, nb_dec=0, nb_rx=0;
-
-        if (rte_crypto_op_bulk_alloc(
-                     ts_params->mbuf_ol_pool_dec,
-                     RTE_CRYPTO_OP_TYPE_SYMMETRIC,
-                     task->ops_burst, n_pkts) !=
-                                  n_pkts) {
-                // FIXME AK
-                PROX_PANIC(1, "Failed to allocate DEC crypto operations\n");
-        }
 
         for (j = 0; j < n_pkts; ++j) {
                 out[j] = handle_esp_ah_dec(task, mbufs[j], task->ops_burst[nb_dec]);
@@ -543,9 +531,8 @@ static int handle_esp_dec_bulk(struct task_base *tbase, struct rte_mbuf **mbufs,
                                    task->ops_burst+j, nb_dec-j);
                 j += nb_rx;
         } while (j < nb_dec);
-        //plog_info("==dequeue n_pkts=%d\n", n_pkts);
+
         for (j = 0; j < nb_dec; ++j) {
-                //if (out[j]) continue;//was not queued
                 if (task->ops_burst[j]->status != RTE_CRYPTO_OP_STATUS_SUCCESS){
                         plog_info("err: task->ops_burst[%d].status=%d\n", j, task->ops_burst[j]->status);
                         //!!!TODO!!! find mbuf and discard it!!!
@@ -555,13 +542,7 @@ static int handle_esp_dec_bulk(struct task_base *tbase, struct rte_mbuf **mbufs,
                 if (task->ops_burst[j]->status == RTE_CRYPTO_OP_STATUS_SUCCESS) {
                         struct rte_mbuf *mbuf = task->ops_burst[j]->sym->m_src;
                         handle_esp_ah_dec_finish(task, mbuf);//TODO set out[j] properly
-                        //plog_info("%d ", j);
                 }
-        }
-        //plog_info("====\n");
-
-        for (j = 0; j < n_pkts; j++) {
-            rte_crypto_op_free(task->ops_burst[j]);
         }
 
         return task->base.tx_pkt(&task->base, mbufs, n_pkts, out);
