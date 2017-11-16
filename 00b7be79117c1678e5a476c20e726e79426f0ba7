@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9a3d3df0_2fe1a7d0",
+        "filename": "VNFs/DPPD-PROX/Makefile",
+        "patchSetId": 1
+      },
+      "lineNbr": 178,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-16T17:40:12Z",
+      "side": 1,
+      "message": "I would have checked if !\u003dy, instead of \u003d\u003dn\nNo big deal here, since this is a DPDK config option properly set to n when disabled, but other boolean values are y for true and empty for false, so for consistency, it\u0027s cleaner to always test if \u003d\u003dy or !\u003dy",
+      "revId": "00b7be79117c1678e5a476c20e726e79426f0ba7",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
