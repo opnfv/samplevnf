@@ -1,0 +1,226 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9a3d3df0_58ce6fb5",
+        "filename": "VNFs/DPPD-PROX/handle_esp.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 120,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-17T20:46:29Z",
+      "side": 1,
+      "message": "Do the lines below need to be executed for each task?\nOr could they also be grouped under vdev_initialized run-once guard?",
+      "revId": "4f23e76a7ee3dacf69a0162734a50915bb6ee56f",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_78425311",
+        "filename": "VNFs/DPPD-PROX/handle_esp.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 134,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-17T20:46:29Z",
+      "side": 1,
+      "message": "Now unused local variables",
+      "range": {
+        "startLine": 134,
+        "startChar": 15,
+        "endLine": 134,
+        "endChar": 40
+      },
+      "revId": "4f23e76a7ee3dacf69a0162734a50915bb6ee56f",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_78cb73a5",
+        "filename": "VNFs/DPPD-PROX/handle_esp.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 135,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-17T20:46:29Z",
+      "side": 1,
+      "message": "New unused local variable",
+      "revId": "4f23e76a7ee3dacf69a0162734a50915bb6ee56f",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_5845cf15",
+        "filename": "VNFs/DPPD-PROX/handle_esp.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 136,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-17T20:46:29Z",
+      "side": 1,
+      "message": "Now unused local variable",
+      "revId": "4f23e76a7ee3dacf69a0162734a50915bb6ee56f",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_b84b3b2a",
+        "filename": "VNFs/DPPD-PROX/handle_esp.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 208,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-17T20:46:29Z",
+      "side": 1,
+      "message": "New unused local variable",
+      "range": {
+        "startLine": 208,
+        "startChar": 15,
+        "endLine": 208,
+        "endChar": 22
+      },
+      "revId": "4f23e76a7ee3dacf69a0162734a50915bb6ee56f",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_186227ad",
+        "filename": "VNFs/DPPD-PROX/handle_esp.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 220,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-17T20:46:29Z",
+      "side": 1,
+      "message": "New unused local variable",
+      "revId": "4f23e76a7ee3dacf69a0162734a50915bb6ee56f",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_f86ca39e",
+        "filename": "VNFs/DPPD-PROX/handle_esp.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 240,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-17T20:46:29Z",
+      "side": 1,
+      "message": "Using uninitialized field. Please assign it below line 218.",
+      "range": {
+        "startLine": 240,
+        "startChar": 39,
+        "endLine": 240,
+        "endChar": 58
+      },
+      "revId": "4f23e76a7ee3dacf69a0162734a50915bb6ee56f",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_d8671fb6",
+        "filename": "VNFs/DPPD-PROX/handle_esp.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 246,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-17T20:46:29Z",
+      "side": 1,
+      "message": "Already assigned on line 127.",
+      "revId": "4f23e76a7ee3dacf69a0162734a50915bb6ee56f",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_98f477d0",
+        "filename": "VNFs/DPPD-PROX/handle_esp.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 430,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-17T20:46:29Z",
+      "side": 1,
+      "message": "So we are not swapping IP addresses anymore, and we only set destination IP.\nThen the checksum MUST be computed after this partial-swap.",
+      "revId": "4f23e76a7ee3dacf69a0162734a50915bb6ee56f",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_f80303b6",
+        "filename": "VNFs/DPPD-PROX/handle_esp.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 461,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-17T20:46:29Z",
+      "side": 1,
+      "message": "As stated on line 430, please move this below line 466.",
+      "revId": "4f23e76a7ee3dacf69a0162734a50915bb6ee56f",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_f25044d6",
+        "filename": "VNFs/DPPD-PROX/handle_esp.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 495,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-17T20:46:29Z",
+      "side": 1,
+      "message": "Returning -1 is not the proper way to deal with this error case and will create mbuf memory leak.\nYou can either PROX_PANIC, possibly too drastic, or check how many packets have been enqueued (new value for nb_enc), then mark un-enqueued packets as OUT_DISCARD in out[], skipping packets already marked as OUT_DISCARD in the loop.",
+      "revId": "4f23e76a7ee3dacf69a0162734a50915bb6ee56f",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_525f70e5",
+        "filename": "VNFs/DPPD-PROX/handle_esp.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 525,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-17T20:46:29Z",
+      "side": 1,
+      "message": "Returning -1 is not the proper way to deal with this error case and will create mbuf memory leak.\nYou can either PROX_PANIC, possibly too drastic, or check how many packets have been enqueued (new value for nb_dec), then mark un-enqueued packets as OUT_DISCARD in out[], skipping packets already marked as OUT_DISCARD in the loop.",
+      "revId": "4f23e76a7ee3dacf69a0162734a50915bb6ee56f",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
