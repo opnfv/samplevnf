@@ -1,0 +1,313 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9a3d3df0_cfdbdbeb",
+        "filename": "VNFs/DPPD-PROX/handle_esp.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 176,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-17T01:57:40Z",
+      "side": 1,
+      "message": "Strictly speaking, this should be rte_cpu_to_be_32, because result is later assigned to pip4-\u003esrc_addr in the packet.\nResult just happens to be the same with rte_be_to_cpu_32.\nSame for lines 177 and 201.",
+      "range": {
+        "startLine": 176,
+        "startChar": 27,
+        "endLine": 176,
+        "endChar": 43
+      },
+      "revId": "b1100ae1c5a917a0d29dbb7071fb37f43004156c",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_afd657c1",
+        "filename": "VNFs/DPPD-PROX/handle_esp.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 201,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-17T01:57:40Z",
+      "side": 1,
+      "message": "In fact, this is never used in the decryption mode...",
+      "range": {
+        "startLine": 201,
+        "startChar": 8,
+        "endLine": 201,
+        "endChar": 24
+      },
+      "revId": "b1100ae1c5a917a0d29dbb7071fb37f43004156c",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_2f1c0777",
+        "filename": "VNFs/DPPD-PROX/handle_esp.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 291,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-17T01:57:40Z",
+      "side": 1,
+      "message": "Not sure we need these 4 bytes appended. They are not counted in pip4-\u003etotal_length on line 310, and not assigned anyway.\nPossibly some interrupted WIP, as shown by the commented out \"+4\" on line 345.\nPossibly also related to the \"+2\" that you removed on lines 331-332.",
+      "range": {
+        "startLine": 291,
+        "startChar": 80,
+        "endLine": 291,
+        "endChar": 83
+      },
+      "revId": "b1100ae1c5a917a0d29dbb7071fb37f43004156c",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_9221f8a1",
+        "filename": "VNFs/DPPD-PROX/handle_esp.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 293,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-17T01:57:40Z",
+      "side": 1,
+      "message": "Useless assignment: l1 is not used afterwards.",
+      "revId": "b1100ae1c5a917a0d29dbb7071fb37f43004156c",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_6fec4f90",
+        "filename": "VNFs/DPPD-PROX/handle_esp.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 313,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-17T01:57:40Z",
+      "side": 1,
+      "message": "time_to_live already assigned on line 307, using packet ttl obtained on line 287, previously decremented on line 258.\nIf we want to restart at 64 for outer IPv4 header, then lines 287 and 307 can be deleted.",
+      "revId": "b1100ae1c5a917a0d29dbb7071fb37f43004156c",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_d268a0bc",
+        "filename": "VNFs/DPPD-PROX/handle_esp.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 314,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-17T01:57:40Z",
+      "side": 1,
+      "message": "Good to compute checksum for outer IPv4 packet.\nShouldn\u0027t it also be updated for inner IPv4 packet, since its TTL was decremented?",
+      "revId": "b1100ae1c5a917a0d29dbb7071fb37f43004156c",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_4f64eb21",
+        "filename": "VNFs/DPPD-PROX/handle_esp.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 323,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-17T01:57:40Z",
+      "side": 1,
+      "message": "Useless pointer casting",
+      "range": {
+        "startLine": 323,
+        "startChar": 19,
+        "endLine": 323,
+        "endChar": 24
+      },
+      "revId": "b1100ae1c5a917a0d29dbb7071fb37f43004156c",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_6fa3af4f",
+        "filename": "VNFs/DPPD-PROX/handle_esp.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 379,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-17T01:57:40Z",
+      "side": 1,
+      "message": "Useless outer pointer casting",
+      "range": {
+        "startLine": 379,
+        "startChar": 36,
+        "endLine": 379,
+        "endChar": 53
+      },
+      "revId": "b1100ae1c5a917a0d29dbb7071fb37f43004156c",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_4fbd0b68",
+        "filename": "VNFs/DPPD-PROX/handle_esp.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 380,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-17T01:57:40Z",
+      "side": 1,
+      "message": "Shouldn\u0027t that be: ipv4_length - DIGEST_BYTE_LENGTH_SHA1\nin order to point to the last 20 bytes of outer IPv4 packet",
+      "range": {
+        "startLine": 380,
+        "startChar": 102,
+        "endLine": 380,
+        "endChar": 133
+      },
+      "revId": "b1100ae1c5a917a0d29dbb7071fb37f43004156c",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_2f67e726",
+        "filename": "VNFs/DPPD-PROX/handle_esp.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 383,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-17T01:57:40Z",
+      "side": 1,
+      "message": "Useless pointer casting",
+      "range": {
+        "startLine": 383,
+        "startChar": 34,
+        "endLine": 383,
+        "endChar": 45
+      },
+      "revId": "b1100ae1c5a917a0d29dbb7071fb37f43004156c",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_ef2a1f8f",
+        "filename": "VNFs/DPPD-PROX/handle_esp.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 388,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-17T01:57:40Z",
+      "side": 1,
+      "message": "Shouldn\u0027t that be: DIGEST_BYTE_LENGTH_SHA1\nIt happens to work here, because:\n(IV length + 4) \u003d 20 \u003d SHA1 length",
+      "range": {
+        "startLine": 388,
+        "startChar": 76,
+        "endLine": 388,
+        "endChar": 104
+      },
+      "revId": "b1100ae1c5a917a0d29dbb7071fb37f43004156c",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_4f198b87",
+        "filename": "VNFs/DPPD-PROX/handle_esp.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 391,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-17T01:57:40Z",
+      "side": 1,
+      "message": "28 here is (4 + 4 + DIGEST_BYTE_LENGTH_SHA1)",
+      "range": {
+        "startLine": 391,
+        "startChar": 105,
+        "endLine": 391,
+        "endChar": 107
+      },
+      "revId": "b1100ae1c5a917a0d29dbb7071fb37f43004156c",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_32ed8c26",
+        "filename": "VNFs/DPPD-PROX/handle_esp.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 423,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-17T01:57:40Z",
+      "side": 1,
+      "message": "In order to decapsulate the inner packet, instead of calling rte_memcpy() on lines 423 and 440, it would be much more efficient to only copy ETH header to its new location, then to call rte_pktmbuf_adj() to skip the (sizeof(struct ipv4_hdr) + 4 + 4 + CIPHER_IV_LENGTH_AES_CBC) heading bytes.\nTrailing bytes are properly removed using rte_pktmbuf_trim() on line 445.",
+      "revId": "b1100ae1c5a917a0d29dbb7071fb37f43004156c",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_d2dd4072",
+        "filename": "VNFs/DPPD-PROX/handle_esp.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 446,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-17T01:57:40Z",
+      "side": 1,
+      "message": "Good to compute checksum for inner IPv4 packet.\nAlthough swapping IP addresses would not affect checksum, it would be nicer to compute it after line 450, which you enabled on next commit.",
+      "revId": "b1100ae1c5a917a0d29dbb7071fb37f43004156c",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_b23cfcc0",
+        "filename": "VNFs/DPPD-PROX/handle_esp.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 447,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-11-17T01:57:40Z",
+      "side": 1,
+      "message": "Useless assignment: peth not used afterwards.",
+      "revId": "b1100ae1c5a917a0d29dbb7071fb37f43004156c",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
