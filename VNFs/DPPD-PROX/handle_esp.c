@@ -193,8 +193,8 @@ static void init_task_esp_enc(struct task_base *tbase, struct task_args *targ)
         //}
 
         // Read config file with SAs
-        task->local_ipv4 = rte_be_to_cpu_32(targ->local_ipv4);
-        task->remote_ipv4 = rte_be_to_cpu_32(targ->remote_ipv4);
+        task->local_ipv4 = rte_cpu_to_be_32(targ->local_ipv4);
+        task->remote_ipv4 = rte_cpu_to_be_32(targ->remote_ipv4);
         //memcpy(&task->src_mac, &prox_port_cfg[task->base.tx_params_hw.tx_port_queue->port].eth_addr, sizeof(struct ether_addr));
         struct prox_port_cfg *port = find_reachable_port(targ);
         memcpy(&task->local_mac, &port->eth_addr, sizeof(struct ether_addr));
@@ -219,7 +219,7 @@ static void init_task_esp_dec(struct task_base *tbase, struct task_args *targ)
 
         static struct rte_cryptodev_session *sess_dec = NULL;
         // Read config file with SAs
-        task->local_ipv4 = rte_be_to_cpu_32(targ->local_ipv4);
+        task->local_ipv4 = rte_cpu_to_be_32(targ->local_ipv4);
 
         task->cipher_xform.type = RTE_CRYPTO_SYM_XFORM_CIPHER;
         task->cipher_xform.next = NULL;
@@ -553,7 +553,8 @@ struct task_init task_init_esp_enc = {
         .mode_str = "esp_enc",
         .init = init_task_esp_enc,
         .handle = handle_esp_enc_bulk,
-        .size = sizeof(struct task_esp_enc)
+        .size = sizeof(struct task_esp_enc),
+        .mbuf_size = 2048 + sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM
 };
 
 struct task_init task_init_esp_dec = {
@@ -561,7 +562,8 @@ struct task_init task_init_esp_dec = {
         .mode_str = "esp_dec",
         .init = init_task_esp_dec,
         .handle = handle_esp_dec_bulk,
-        .size = sizeof(struct task_esp_dec)
+        .size = sizeof(struct task_esp_dec),
+        .mbuf_size = 2048 + sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM
 };
 
 __attribute__((constructor)) static void reg_task_esp_enc(void)
