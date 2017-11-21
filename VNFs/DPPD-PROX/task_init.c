@@ -174,7 +174,7 @@ static size_t init_rx_tx_rings_ports(struct task_args *targ, struct task_base *t
 	}
 	else {
 		if (targ->nb_rxports == 1) {
-			if (targ->task_init->flag_features & TASK_FEATURE_L3)
+			if (targ->flags & TASK_ARG_L3)
 				tbase->rx_pkt = (targ->task_init->flag_features & TASK_FEATURE_MULTI_RX)? rx_pkt_hw1_multi_l3 : rx_pkt_hw1_l3;
 			else
 				tbase->rx_pkt = (targ->task_init->flag_features & TASK_FEATURE_MULTI_RX)? rx_pkt_hw1_multi : rx_pkt_hw1;
@@ -183,7 +183,7 @@ static size_t init_rx_tx_rings_ports(struct task_args *targ, struct task_base *t
 		}
 		else {
 			PROX_ASSERT((targ->nb_rxports != 0) || (targ->task_init->flag_features & TASK_FEATURE_NO_RX));
-			if (targ->task_init->flag_features & TASK_FEATURE_L3)
+			if (targ->flags & TASK_ARG_L3)
 				tbase->rx_pkt = (targ->task_init->flag_features & TASK_FEATURE_MULTI_RX)? rx_pkt_hw_multi_l3 : rx_pkt_hw_l3;
 			else
 				tbase->rx_pkt = (targ->task_init->flag_features & TASK_FEATURE_MULTI_RX)? rx_pkt_hw_multi : rx_pkt_hw;
@@ -196,7 +196,7 @@ static size_t init_rx_tx_rings_ports(struct task_args *targ, struct task_base *t
 			}
 
 			if (rte_is_power_of_2(targ->nb_rxports)) {
-				if (targ->task_init->flag_features & TASK_FEATURE_L3)
+				if (targ->flags & TASK_ARG_L3)
 					tbase->rx_pkt = (targ->task_init->flag_features & TASK_FEATURE_MULTI_RX)? rx_pkt_hw_pow2_multi_l3 : rx_pkt_hw_pow2_l3;
 				else
 					tbase->rx_pkt = (targ->task_init->flag_features & TASK_FEATURE_MULTI_RX)? rx_pkt_hw_pow2_multi : rx_pkt_hw_pow2;
@@ -351,7 +351,7 @@ struct task_base *init_task_struct(struct task_args *targ)
 	tbase->aux = (struct task_base_aux *)(((uint8_t *)tbase) + offset);
 
 	if ((targ->nb_txrings != 0) || (targ->nb_txports != 0)) {
-		if (targ->task_init->flag_features & TASK_FEATURE_L3) {
+		if (targ->flags & TASK_ARG_L3) {
 			tbase->aux->tx_pkt_l2 = tbase->tx_pkt;
 			tbase->tx_pkt = tx_pkt_l3;
 		}
@@ -369,12 +369,12 @@ struct task_base *init_task_struct(struct task_args *targ)
 
 	tbase->handle_bulk = t->handle;
 
-	if (targ->task_init->flag_features & TASK_FEATURE_L3) {
+	if (targ->flags & TASK_ARG_L3) {
 		plog_info("\tTask configured in L3 mode\n");
 		tbase->l3.ctrl_plane_ring = targ->ctrl_plane_ring;
 	}
 	if ((targ->nb_txrings != 0) || (targ->nb_txports != 0)) {
-		if (targ->task_init->flag_features & TASK_FEATURE_L3)
+		if (targ->flags & TASK_ARG_L3)
 			task_init_l3(tbase, targ);
 	}
 

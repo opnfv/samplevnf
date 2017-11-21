@@ -46,6 +46,9 @@ struct lcore_cfg;
 #define	TASK_ARG_DO_NOT_SET_SRC_MAC 0x200
 #define	TASK_ARG_DO_NOT_SET_DST_MAC 0x400
 #define	TASK_ARG_HW_SRC_MAC 	0x800
+#define TASK_ARG_L3		0x1000
+
+#define PROX_MODE_LEN	32
 
 enum protocols {IPV4, ARP, IPV6};
 
@@ -63,8 +66,8 @@ struct task_args;
 
 struct task_init {
 	enum task_mode mode;
-	char mode_str[32];
-	char sub_mode_str[32];
+	char mode_str[PROX_MODE_LEN];
+	char sub_mode_str[PROX_MODE_LEN];
 	void (*early_init)(struct task_args *targ);
 	void (*init)(struct task_base *tbase, struct task_args *targ);
 	int (*handle)(struct task_base *tbase, struct rte_mbuf **mbufs, const uint16_t n_pkts);
@@ -227,6 +230,7 @@ struct task_args {
 	struct rte_ring			**ctrl_tx_rings;
 	int				n_ctrl_rings;
 	struct task_base *tmaster;
+	char sub_mode_str[PROX_MODE_LEN];
 };
 
 /* Return the first port that is reachable through the task. If the
