@@ -107,7 +107,7 @@ static inline int handle_qos_bulk(struct task_base *tbase, struct rte_mbuf **mbu
 		}
 		int16_t ret = rte_sched_port_enqueue(task->sched_port, mbufs, n_pkts);
 		task->nb_buffered_pkts += ret;
-		TASK_STATS_ADD_IDLE(&task->base.aux->stats, n_pkts - ret);
+		TASK_STATS_ADD_DROP_DISCARD(&task->base.aux->stats, n_pkts - ret);
 	}
 
 	if (task->nb_buffered_pkts) {
