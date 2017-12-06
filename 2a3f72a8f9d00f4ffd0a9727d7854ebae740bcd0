@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9a3d3df0_2e9b4968",
+        "filename": "VNFs/DPPD-PROX/handle_gen.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 930,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-12-06T17:16:51Z",
+      "side": 1,
+      "message": "In fact, it\u0027s for inline packet here.",
+      "range": {
+        "startLine": 930,
+        "startChar": 51,
+        "endLine": 930,
+        "endChar": 64
+      },
+      "revId": "2a3f72a8f9d00f4ffd0a9727d7854ebae740bcd0",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
