@@ -790,31 +790,45 @@ static int check_all_pkt_size(struct task_gen *task, int do_panic)
 	return 0;
 }
 
-static void check_fields_in_bounds(struct task_gen *task)
+static int check_fields_in_bounds(struct task_gen *task, uint32_t pkt_size, int do_panic)
 {
-	const uint32_t pkt_size = task->pkt_template[0].len;
-
 	if (task->lat_enabled) {
 		uint32_t pos_beg = task->lat_pos;
 		uint32_t pos_end = task->lat_pos + 3U;
 
-		PROX_PANIC(pkt_size <= pos_end, "Writing latency at %u-%u, but packet size is %u bytes\n",
+		if (do_panic)
+			PROX_PANIC(pkt_size <= pos_end, "Writing latency at %u-%u, but packet size is %u bytes\n",
 			   pos_beg, pos_end, pkt_size);
+		else if (pkt_size <= pos_end) {
+			plog_err("Writing latency at %u-%u, but packet size is %u bytes\n", pos_beg, pos_end, pkt_size);
+			return -1;
+		}
 	}
 	if (task->packet_id_pos) {
 		uint32_t pos_beg = task->packet_id_pos;
 		uint32_t pos_end = task->packet_id_pos + 4U;
 
-		PROX_PANIC(pkt_size <= pos_end, "Writing packet at %u-%u, but packet size is %u bytes\n",
+		if (do_panic)
+			PROX_PANIC(pkt_size <= pos_end, "Writing packet at %u-%u, but packet size is %u bytes\n",
 			   pos_beg, pos_end, pkt_size);
+		else if (pkt_size <= pos_end) {
+			plog_err("Writing packet at %u-%u, but packet size is %u bytes\n", pos_beg, pos_end, pkt_size);
+			return -1;
+		}
 	}
 	if (task->accur_pos) {
 		uint32_t pos_beg = task->accur_pos;
 		uint32_t pos_end = task->accur_pos + 3U;
 
-		PROX_PANIC(pkt_size <= pos_end, "Writing accuracy at %u%-u, but packet size is %u bytes\n",
+		if (do_panic)
+			PROX_PANIC(pkt_size <= pos_end, "Writing accuracy at %u%-u, but packet size is %u bytes\n",
 			   pos_beg, pos_end, pkt_size);
+		else if (pkt_size <= pos_end) {
+			plog_err("Writing accuracy at %u%-u, but packet size is %u bytes\n", pos_beg, pos_end, pkt_size);
+			return -1;
+		}
 	}
+	return 0;
 }
 
 static void task_gen_pkt_template_recalc_metadata(struct task_gen *task)
@@ -919,7 +933,7 @@ static void task_init_gen_load_pkt_inline(struct task_gen *task, struct task_arg
 	task->pkt_template_orig[0].len = targ->pkt_size;
 	task_gen_reset_pkt_templates(task);
 	check_all_pkt_size(task, 1);
-	check_fields_in_bounds(task);
+	check_fields_in_bounds(task, task->pkt_template[0].len, 1);
 }
 
 static void task_init_gen_load_pcap(struct task_gen *task, struct task_args *targ)
@@ -976,10 +990,11 @@ int task_gen_set_pkt_size(struct task_base *tbase, uint32_t pkt_size)
 	struct task_gen *task = (struct task_gen *)tbase;
 	int rc;
 
-	task->pkt_template[0].len = pkt_size;
-	if ((rc = check_all_pkt_size(task, 0)) != 0)
+	if ((rc = check_pkt_size(task, pkt_size, 0)) != 0)
 		return rc;
-	check_fields_in_bounds(task);
+	if ((rc = check_fields_in_bounds(task, pkt_size, 0)) != 0)
+		return rc;
+	task->pkt_template[0].len = pkt_size;
 	return rc;
 }
 
