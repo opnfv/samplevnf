@@ -401,10 +401,10 @@ static int parse_cmd_set_probability(const char *str, struct input *input)
 			lcore_id = lcores[i];
 			if ((!task_is_mode_and_submode(lcore_id, task_id, "impair", "")) && (!task_is_mode_and_submode(lcore_id, task_id, "impair", "l3"))){
 				plog_err("Core %u task %u is not impairing packets\n", lcore_id, task_id);
-				return -1;
+			} else {
+				struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
+				task_impair_set_proba(tbase, probability);
 			}
-			struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
-			task_impair_set_proba(tbase, probability);
 		}
 	}
 	return 0;
@@ -426,10 +426,10 @@ static int parse_cmd_delay_us(const char *str, struct input *input)
 			lcore_id = lcores[i];
 			if ((!task_is_mode_and_submode(lcore_id, task_id, "impair", "")) && (!task_is_mode_and_submode(lcore_id, task_id, "impair", "l3"))){
 				plog_err("Core %u task %u is not impairing packets\n", lcore_id, task_id);
-				return -1;
+			} else {
+				struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
+				task_impair_set_delay_us(tbase, delay_us, 0);
 			}
-			struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
-			task_impair_set_delay_us(tbase, delay_us, 0);
 		}
 	}
 	return 0;
@@ -451,10 +451,10 @@ static int parse_cmd_random_delay_us(const char *str, struct input *input)
 			lcore_id = lcores[i];
 			if ((!task_is_mode_and_submode(lcore_id, task_id, "impair", "")) && (!task_is_mode_and_submode(lcore_id, task_id, "impair", "l3"))){
 				plog_err("Core %u task %u is not impairing packets\n", lcore_id, task_id);
-				return -1;
+			} else {
+				struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
+				task_impair_set_delay_us(tbase, 0, delay_us);
 			}
-			struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
-			task_impair_set_delay_us(tbase, 0, delay_us);
 		}
 	}
 	return 0;
@@ -513,11 +513,10 @@ static int parse_cmd_pkt_size(const char *str, struct input *input)
 			lcore_id = lcores[i];
 			if ((!task_is_mode_and_submode(lcore_id, task_id, "gen", "")) && (!task_is_mode_and_submode(lcore_id, task_id, "gen", "l3"))) {
 				plog_err("Core %u task %u is not generating packets\n", lcore_id, task_id);
+			} else {
+				struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
+				task_gen_set_pkt_size(tbase, pkt_size); /* error printed within function */
 			}
-			struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
-
-			if (task_gen_set_pkt_size(tbase, pkt_size) != 0)
-				return -1;
 		}
 	}
 	return 0;
