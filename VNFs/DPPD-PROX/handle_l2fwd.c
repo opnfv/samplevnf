@@ -77,6 +77,7 @@ static void init_task_l2fwd(struct task_base *tbase, struct task_args *targ)
 	 * Source MAC can come from
 	 *    - pre-configured mac in case 'src mac=xx:xx:xx:xx:xx:xx' in config file
 	 *    - dst mac from the packet in case 'src mac=packet' in config file
+	 *    - port mac address in case of src mac=hw
 	 *    - not written in case 'src mac=no' in config file
 	 *    - (default - no 'src mac') if (tx_port) port mac
 	 *    - (default - no 'src mac') if (no tx_port) dst mac from the packet
@@ -92,7 +93,8 @@ static void init_task_l2fwd(struct task_base *tbase, struct task_args *targ)
 		memcpy(&task->src_dst_mac[6], src_addr, sizeof(*dst_addr));
 		plog_info("\t\tCore %d: src mac set from config file\n", targ->lconf->id);
 	} else if ((targ->flags & TASK_ARG_DO_NOT_SET_SRC_MAC) == 0) {
-		if (targ->nb_txports) {
+		if (targ->flags & TASK_ARG_HW_SRC_MAC) {
+			PROX_PANIC(targ->nb_txports == 0, "src mac set to hw but no tx port\n");
 			src_addr = &prox_port_cfg[task->base.tx_params_hw.tx_port_queue[0].port].eth_addr;
 			targ->flags |= TASK_ARG_SRC_MAC_SET;
 			plog_info("\t\tCore %d: src mac set from port\n", targ->lconf->id);

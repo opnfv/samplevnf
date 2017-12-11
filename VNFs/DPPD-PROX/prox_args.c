@@ -1292,7 +1292,7 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 			}
 			else if (STR_EQ(pkey, "packet"))
 				return 0;
-			else if (STR_EQ(pkey, "packet")) {
+			else if (STR_EQ(pkey, "hw")) {
 				targ->flags |= TASK_ARG_HW_SRC_MAC;
 				return 0;
 			} else {

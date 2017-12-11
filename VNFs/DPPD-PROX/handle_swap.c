@@ -225,13 +225,12 @@ static void init_task_swap(struct task_base *tbase, struct task_args *targ)
 		src_addr =  &targ->esaddr;
 		memcpy(&task->src_dst_mac[6], src_addr, sizeof(*dst_addr));
 		plog_info("\t\tCore %d: src mac set from config file\n", targ->lconf->id);
-	} else if (targ->nb_txports) {
+	} else if (targ->flags & TASK_ARG_HW_SRC_MAC){
+		PROX_PANIC(targ->nb_txports == 0, "src mac set to hw but no tx port\n");
 		src_addr = &prox_port_cfg[task->base.tx_params_hw.tx_port_queue[0].port].eth_addr;
 		memcpy(&task->src_dst_mac[6], src_addr, sizeof(*dst_addr));
-		if (targ->flags & TASK_ARG_HW_SRC_MAC){
-			targ->flags |= TASK_ARG_SRC_MAC_SET;
-			plog_info("\t\tCore %d: src mac set from port\n", targ->lconf->id);
-		}
+		targ->flags |= TASK_ARG_SRC_MAC_SET;
+		plog_info("\t\tCore %d: src mac set from port\n", targ->lconf->id);
 	}
 	task->runtime_flags = targ->flags;
 }
