@@ -1,0 +1,95 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9a3d3df0_872193fd",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 23,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-12-12T12:16:43Z",
+      "side": 1,
+      "message": "Indeed, that\u0027s now the default behavior of the code.\nBut the comments above the code still state:\n- (default - no \u0027src mac\u0027) if (tx_port) port mac\n- (default - no \u0027src mac\u0027) if (no tx_port) dst mac from the packet\n\nSince the code and the comments have more visibility than this commit message, please fix either the code or the comments, and also the commit message if you fix the code.",
+      "range": {
+        "startLine": 21,
+        "startChar": 0,
+        "endLine": 23,
+        "endChar": 52
+      },
+      "revId": "dd4d09009559bc55bda976409f6df339b5d2200f",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_47dcabe4",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 25,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-12-12T12:16:43Z",
+      "side": 1,
+      "message": "Indeed, it is not supported, i.e. meaningless and not implemented. But no error/warning is displayed in case it would be specified in the config file.",
+      "revId": "dd4d09009559bc55bda976409f6df339b5d2200f",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_e7021f6e",
+        "filename": "VNFs/DPPD-PROX/handle_l2fwd.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 82,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-12-12T12:16:43Z",
+      "side": 1,
+      "message": "This is not a default case anymore.\nIf we want it back, line 96 should check for (TASK_ARG_HW_SRC_MAC flag set) OR (nb_txports !\u003d 0).",
+      "revId": "dd4d09009559bc55bda976409f6df339b5d2200f",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_87f3539d",
+        "filename": "VNFs/DPPD-PROX/handle_swap.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 214,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-12-12T12:16:43Z",
+      "side": 1,
+      "message": "Commit message states that this is not supported for swap mode. Not easy to detect in prox_args.c, so we should panic here if TASK_ARG_DO_NOT_SET_SRC_MAC flag is set.",
+      "revId": "dd4d09009559bc55bda976409f6df339b5d2200f",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_67ee0fb6",
+        "filename": "VNFs/DPPD-PROX/handle_swap.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 215,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-12-12T12:16:43Z",
+      "side": 1,
+      "message": "This is not a default case anymore.\nIf we want it back, line 228 should check for (TASK_ARG_HW_SRC_MAC flag set) OR (nb_txports !\u003d 0).",
+      "revId": "dd4d09009559bc55bda976409f6df339b5d2200f",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
