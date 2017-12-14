@@ -43,7 +43,7 @@ Version History
 | *Date*         | *Version*          | *Comment*                       |
 |                |                    |                                 |
 +----------------+--------------------+---------------------------------+
-| "Oct 20 2017"  |  5.0               | SampleVNF for Euphrates release |
+| "Oct 20 2017"  |  5.1               | SampleVNF for Euphrates release |
 |                |                    |                                 |
 +----------------+--------------------+---------------------------------+
 
@@ -127,10 +127,10 @@ Release Data
 | **Project**                          | SampleVNF                            |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
-| **Repo/tag**                         | samplevnf/Euphrates.5.0              |
+| **Repo/tag**                         | samplevnf/Euphrates.5.1              |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
-| **SampleVNF Docker image tag**       | Euphrates.5.0                        |
+| **SampleVNF Docker image tag**       | Euphrates.5.1                        |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
 | **Release designation**              | Euphrates                            |
@@ -139,7 +139,7 @@ Release Data
 | **Release date**                     | "October 20 2017"                    |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
-| **Purpose of the delivery**          | OPNFV Euphrates release 5.0          |
+| **Purpose of the delivery**          | OPNFV Euphrates release 5.1          |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
 
@@ -211,7 +211,7 @@ Known Issues/Faults
 Corrected Faults
 ----------------
 
-Euphrates.5.0:
+Euphrates.5.1:
 
 +----------------------------+------------------------------------------------+
 | **JIRA REFERENCE**         | **DESCRIPTION**                                |
