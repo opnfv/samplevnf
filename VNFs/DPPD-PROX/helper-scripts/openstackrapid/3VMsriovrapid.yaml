@@ -51,18 +51,24 @@ parameters:
     type: string
     description: The Availability Zone to launch the instance.
     default: nova
+  vm1_sriov_port:
+    type: string
+    description: The sriov port to be used by VM1
+    default: Port1
+  vm2_sriov_port:
+    type: string
+    description: The sriov port to be used by VM2
+    default: Port2
+  vm3_sriov_port:
+    type: string
+    description: The sriov port to be used by VM3
+    default: Port3
 
 resources:
   vm1_admin_port:
      type: OS::Neutron::Port
      properties:
        network: {get_param: internal_network}
-       security_groups:
-         - default
-  vm1_dataplane_port:
-     type: OS::Neutron::Port
-     properties:
-       network: {get_param: dataplane_network}
        security_groups:
          - default
   vm1_floating_ip:
@@ -81,17 +87,11 @@ resources:
       flavor: { get_param: flavor }
       networks:
         - port: {get_resource: vm1_admin_port}
-        - port: {get_resource: vm1_dataplane_port}
+        - port: {get_param: vm1_sriov_port}
   vm2_admin_port:
      type: OS::Neutron::Port
      properties:
        network: {get_param: internal_network}
-       security_groups:
-         - default
-  vm2_dataplane_port:
-     type: OS::Neutron::Port
-     properties:
-       network: {get_param: dataplane_network}
        security_groups:
          - default
   vm2_floating_ip:
@@ -110,74 +110,68 @@ resources:
       flavor: { get_param: flavor }
       networks:
         - port: {get_resource: vm2_admin_port}
-        - port: {get_resource: vm2_dataplane_port}
-#  vm3_admin_port:
-#     type: OS::Neutron::Port
-#     properties:
-#       network: {get_param: internal_network}
-#       security_groups:
-#         - default
-#  vm3_dataplane_port:
-#     type: OS::Neutron::Port
-#     properties:
-#       network: {get_param: dataplane_network}
-#       security_groups:
-#         - default
-#  vm3_floating_ip:
-#     type: OS::Neutron::FloatingIP
-#     properties:
-#       floating_network: {get_param: floating_network}
-#       port_id: {get_resource: vm3_admin_port}
-#  vm3:
-#    type: OS::Nova::Server
-#    properties:
-#      availability_zone: { get_param: availability_zone }
-#      user_data:
-#        get_file: prox_user_data.sh
-#      key_name: { get_param: key }
-#      image: { get_param: image }
-#      flavor: { get_param: flavor }
-#      networks:
-#        - port: {get_resource: vm3_admin_port}
-#        - port: {get_resource: vm3_dataplane_port}
+        - port: {get_param: vm2_sriov_port}
+  vm3_admin_port:
+     type: OS::Neutron::Port
+     properties:
+       network: {get_param: internal_network}
+       security_groups:
+         - default
+  vm3_floating_ip:
+     type: OS::Neutron::FloatingIP
+     properties:
+       floating_network: {get_param: floating_network}
+       port_id: {get_resource: vm3_admin_port}
+  vm3:
+    type: OS::Nova::Server
+    properties:
+      availability_zone: { get_param: availability_zone }
+      user_data:
+        get_file: prox_user_data.sh
+      key_name: { get_param: key }
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      networks:
+        - port: {get_resource: vm3_admin_port}
+        - port: {get_param: vm3_sriov_port}
 
 outputs:
   total_number_of_VMs:
     description: Number of VMs created by this stack
-    value: 2
+    value: 3
   vm1_private_ip:
-    description: IP address ofVM1 admin port
+    description: IP address of VM1 admin port
     value: { get_attr: [vm1_admin_port, fixed_ips, 0, ip_address] }
   vm1_public_ip:
     description: Floating IP address of VM1 in public network
     value: { get_attr: [ vm1_floating_ip, floating_ip_address ] }
   vm1_dataplane_ip:
     description: IP address of VM1 dataplane port
-    value: { get_attr: [vm1_dataplane_port, fixed_ips, 0, ip_address] }
+    value: { get_attr: [vm1, networks,{get_param: dataplane_network},0] }
   vm1_dataplane_mac:
     description: The MAC address of VM1 dataplane port
-    value: { get_attr: [vm1_dataplane_port, mac_address] }
+    value: { get_attr: [vm1, addresses, {get_param: dataplane_network}] }
   vm2_private_ip:
-    description: IP address of the VM2 admin port
+    description: IP address of VM2 admin port
     value: { get_attr: [vm2_admin_port, fixed_ips, 0, ip_address] }
   vm2_public_ip:
     description: Floating IP address of VM2 in public network
     value: { get_attr: [ vm2_floating_ip, floating_ip_address ] }
   vm2_dataplane_ip:
     description: IP address of VM2 dataplane port
-    value: { get_attr: [vm2_dataplane_port, fixed_ips, 0, ip_address] }
+    value: { get_attr: [vm2, networks,{get_param: dataplane_network},0] }
   vm2_dataplane_mac:
     description: The MAC address of VM2 dataplane port
-    value: { get_attr: [vm2_dataplane_port, mac_address] }
-#  vm3_private_ip:
-#    description: IP address of the VM3 admin port
-#    value: { get_attr: [vm3_admin_port, fixed_ips, 0, ip_address] }
-#  vm3_public_ip:
-#    description: Floating IP address of VM3 in public network
-#    value: { get_attr: [ vm3_floating_ip, floating_ip_address ] }
-#  vm3_dataplane_ip:
-#    description: IP address of VM3 dataplane port
-#    value: { get_attr: [vm3_dataplane_port, fixed_ips, 0, ip_address] }
-#  vm3_dataplane_mac:
-#    description: The MAC address of VM3 dataplane port
-#    value: { get_attr: [vm3_dataplane_port, mac_address] }
+    value: { get_attr: [vm2, addresses, {get_param: dataplane_network}]}
+  vm3_private_ip:
+    description: IP address of VM3 admin port
+    value: { get_attr: [vm3_admin_port, fixed_ips, 0, ip_address] }
+  vm3_public_ip:
+    description: Floating IP address of VM32 in public network
+    value: { get_attr: [ vm3_floating_ip, floating_ip_address ] }
+  vm3_dataplane_ip:
+    description: IP address of VM3 dataplane port
+    value: { get_attr: [vm3, networks,{get_param: dataplane_network},0] }
+  vm3_dataplane_mac:
+    description: The MAC address of VM3 dataplane port
+    value: { get_attr: [vm3, addresses, {get_param: dataplane_network}]}

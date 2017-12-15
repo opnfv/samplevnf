@@ -31,8 +31,8 @@ from logging import handlers
 from prox_ctrl import prox_ctrl
 import ConfigParser
 
-version="17.09.03"
-stack = "rapidTestEnv" #Default string for stack
+version="17.12.15"
+stack = "rapid" #Default string for stack
 yaml = "rapid.yaml" #Default string for yaml file
 key = "prox" # This is also the default in the yaml file....
 flavor = "prox_flavor" # This is also the default in the yaml file....
@@ -41,12 +41,13 @@ image_file = "rapidVM.qcow2"
 dataplane_network = "dataplane-network" # This is also the default in the yaml file....
 subnet = "dpdk-subnet" #Hardcoded at this moment
 subnet_cidr="10.10.10.0/24" # cidr for dataplane
-admin_network="admin_internal_net"
+internal_network="admin_internal_net"
+floating_network="admin_floating_net"
 loglevel="DEBUG" # sets log level for writing to file
 runtime=10 # time in seconds for 1 test run
 
 def usage():
-	print("usage: rapid       [--version] [-v]")
+	print("usage: createrapid [--version] [-v]")
 	print("                   [--stack STACK_NAME]")
 	print("                   [--yaml YAML_FILE]")
 	print("                   [--key KEY_NAME]")
@@ -54,31 +55,37 @@ def usage():
 	print("                   [--image IMAGE_NAME]")
 	print("                   [--image_file IMAGE_FILE]")
 	print("                   [--dataplane_network DP_NETWORK]")
-	print("                   [--admin_network ADMIN_NETWORK]")
+	print("                   [--subnet DP_SUBNET]")
+	print("                   [--subnet_cidr SUBNET_CIDR]")
+	print("                   [--internal_network ADMIN_NETWORK]")
+	print("                   [--floating_network ADMIN_NETWORK]")
 	print("                   [--log DEBUG|INFO|WARNING|ERROR|CRITICAL")
 	print("                   [-h] [--help]")
 	print("")
-	print("Command-line interface to RAPID")
+	print("Command-line interface to createrapid")
 	print("")
 	print("optional arguments:")
 	print("  -v,  --version           	Show program's version number and exit")
-	print("  --stack STACK_NAME       	Specify a name for the heat stack. Default is rapidTestEnv.")
-	print("  --yaml YAML_FILE         	Specify the yaml file to be used. Default is rapid.yaml.")
-	print("  --key KEY_NAME           	Specify the key to be used. Default is prox.")
-	print("  --flavor FLAVOR_NAME     	Specify the flavor to be used. Default is prox_flavor.")
-	print("  --image IMAGE_NAME       	Specify the image to be used. Default is rapidVM.")
-	print("  --image_file IMAGE_FILE  	Specify the image qcow2 file to be used. Default is rapidVM.qcow2.")
-	print("  --dataplane_network NETWORK 	Specify the network name to be used for the dataplane. Default is dataplane-network.")
-	print("  --admin_network NETWORK 	Specify the network name to be used for the control plane. Default is admin-network.")
+	print("  --stack STACK_NAME       	Specify a name for the heat stack. Default is %s."%stack)
+	print("  --yaml YAML_FILE         	Specify the yaml file to be used. Default is %s."%yaml)
+	print("  --key KEY_NAME           	Specify the key to be used. Default is %s."%key)
+	print("  --flavor FLAVOR_NAME     	Specify the flavor to be used. Default is %s."%flavor)
+	print("  --image IMAGE_NAME       	Specify the image to be used. Default is %s."%image)
+	print("  --image_file IMAGE_FILE  	Specify the image qcow2 file to be used. Default is %s."%image_file)
+	print("  --dataplane_network NETWORK 	Specify the network name to be used for the dataplane. Default is %s."%dataplane_network)
+	print("  --subnet DP_SUBNET	 	Specify the subnet name to be used for the dataplane. Default is %s."%subnet)
+	print("  --subnet_cidr SUBNET_CIDR  	Specify the subnet CIDR to be used for the dataplane. Default is %s."%subnet_cidr)
+	print("  --internal_network NETWORK 	Specify the network name to be used for the control plane. Default is %s."%internal_network)
+	print("  --floating_network NETWORK 	Specify the external floating ip network name. Default is %s."%floating_network)
 	print("  --log				Specify logging level for log file output, screen output level is hard coded")
 	print("  -h, --help               	Show help message and exit.")
 	print("")
 	print("To delete the rapid stack, type the following command")
-	print("   openstack stack delete --yes --wait rapidTestEnv")
-	print("Note that rapidTestEnv is the default stack name. Replace with STACK_NAME if needed")
+	print("   openstack stack delete --yes --wait %s"%stack)
+	print("Note that %s is the default stack name. Replace with STACK_NAME if needed"%stack)
 
 try:
-	opts, args = getopt.getopt(sys.argv[1:], "vh", ["version","help", "yaml=","stack=","key=","flavor=","image=","dataplane_network=","admin_network=","log="])
+	opts, args = getopt.getopt(sys.argv[1:], "vh", ["version","help", "yaml=","stack=","key=","flavor=","image=","image_file=","dataplane_network=","subnet=","subnet_cidr=","internal_network=","floating_network=","log="])
 except getopt.GetoptError as err:
 	print("===========================================")
 	print(str(err))
@@ -116,9 +123,18 @@ for opt, arg in opts:
 	elif opt in ("--dataplane_network"):
 		dataplane_network = arg
 		print ("Using dataplane network: "+ dataplane_network)
-	elif opt in ("--admin_network"):
-		admin_network = arg
-		print ("Using controle plane network: "+ admin_network)
+	elif opt in ("--subnet"):
+		subnet = arg
+		print ("Using dataplane subnet: "+ subnet)
+	elif opt in ("--subnet_cidr"):
+		subnet_cidr = arg
+		print ("Using dataplane subnet: "+ subnet_cidr)
+	elif opt in ("--internal_network"):
+		internal_network = arg
+		print ("Using controle plane network: "+ internal_network)
+	elif opt in ("--floating_network"):
+		floating_network = arg
+		print ("Using floating ip network: "+ floating_network)
 	elif opt in ("--log"):
 		loglevel = arg
 		print ("Log level: "+ loglevel)
@@ -140,8 +156,8 @@ log.setLevel(numeric_level)
 log.propagate = 0
 
 # create a console handler
-# and set its log level to the command-line option
-#
+# and set its log level to the command-line option 
+# 
 console_handler = logging.StreamHandler(sys.stdout)
 console_handler.setLevel(logging.INFO)
 console_handler.setFormatter(screen_formatter)
@@ -165,7 +181,7 @@ needRoll = os.path.isfile(log_file)
 
 
 # This is a stale log, so roll it
-if needRoll:
+if needRoll:    
     # Add timestamp
     log.debug('\n---------\nLog closed on %s.\n---------\n' % time.asctime())
 
@@ -177,16 +193,28 @@ log.debug('\n---------\nLog started on %s.\n---------\n' % time.asctime())
 
 log.debug("createrapid.py version: "+version)
 # Checking if the control network already exists, if not, stop the script
-log.debug("Checking control plane network: "+admin_network)
-cmd = 'openstack network show '+admin_network
+log.debug("Checking control plane network: "+internal_network)
+cmd = 'openstack network show '+internal_network
 log.debug (cmd)
 cmd = cmd + ' |grep "status " | tr -s " " | cut -d" " -f 4'
 NetworkExist = subprocess.check_output(cmd , shell=True).strip()
 if NetworkExist == 'ACTIVE':
-	log.info("Control plane network ("+admin_network+")  already active")
+	log.info("Control plane network ("+internal_network+")  already active")
 else:
-	log.exception("Control plane network " + admin_network + " not existing")
-	raise Exception("Control plane network " + admin_network + " not existing")
+	log.exception("Control plane network " + internal_network + " not existing")
+	raise Exception("Control plane network " + internal_network + " not existing")
+
+# Checking if the floating ip network already exists, if not, stop the script
+log.debug("Checking floating ip network: "+floating_network)
+cmd = 'openstack network show '+floating_network
+log.debug (cmd)
+cmd = cmd + ' |grep "status " | tr -s " " | cut -d" " -f 4'
+NetworkExist = subprocess.check_output(cmd , shell=True).strip()
+if NetworkExist == 'ACTIVE':
+	log.info("Floating ip network ("+floating_network+")  already active")
+else:
+	log.exception("Floating ip network " + floating_network + " not existing")
+	raise Exception("Floating ip network " + floating_network + " not existing")
 
 # Checking if the image already exists, if not create it
 log.debug("Checking image: "+image)
@@ -306,7 +334,7 @@ cmd = cmd+' |grep "stack_status " | tr -s " " | cut -d"|" -f 3'
 StackRunning = subprocess.check_output(cmd , shell=True).strip()
 if StackRunning == '':
 	log.info('Creating Stack ...')
-	cmd = 'openstack stack create -t '+ yaml +  ' --parameter flavor="'+flavor  +'" --parameter key="'+ key + '" --parameter image="'+image  + '" --parameter dataplane_network="'+dataplane_network+ '" --parameter admin_network="'+admin_network+'" --wait '+stack
+	cmd = 'openstack stack create -t '+ yaml +  ' --parameter flavor="'+flavor  +'" --parameter key="'+ key + '" --parameter image="'+image  + '" --parameter dataplane_network="'+dataplane_network+ '" --parameter internal_network="'+internal_network+'" --parameter floating_network="'+floating_network+'" --wait '+stack 
 	log.debug(cmd)
 	cmd = cmd + ' |grep "stack_status " | tr -s " " | cut -d"|" -f 3'
 	StackRunning = subprocess.check_output(cmd , shell=True).strip()
@@ -319,29 +347,27 @@ log.info("Stack ("+stack+") running")
 cmd='openstack stack show -f yaml -c outputs ' + stack
 log.debug(cmd)
 output = subprocess.check_output(cmd , shell=True).strip()
-matchObj = re.search('.*gen_dataplane_ip.*?([0-9]*\.[0-9]*\.[0-9]*\.[0-9]*)', output, re.DOTALL)
-genDPIP = matchObj.group(1)
-matchObj = re.search('.*gen_public_ip.*?([0-9]*\.[0-9]*\.[0-9]*\.[0-9]*)', output, re.DOTALL)
-genAdminIP = matchObj.group(1)
-matchObj = re.search('.*gen_dataplane_mac.*?([a-fA-F0-9:]{17})', output, re.DOTALL)
-genDPmac = matchObj.group(1)
-matchObj = re.search('.*sut_dataplane_ip.*?([0-9]*\.[0-9]*\.[0-9]*\.[0-9]*)', output, re.DOTALL)
-sutDPIP = matchObj.group(1)
-matchObj = re.search('.*sut_public_ip.*?([0-9]*\.[0-9]*\.[0-9]*\.[0-9]*)', output, re.DOTALL)
-sutAdminIP = matchObj.group(1)
-matchObj = re.search('.*sut_dataplane_mac.*?([a-fA-F0-9:]{17})', output, re.DOTALL)
-sutDPmac = matchObj.group(1)
-log.info('Generator: (admin IP: '+ genAdminIP + '), (dataplane IP: ' + genDPIP+'), (dataplane MAC: ' +genDPmac+')')
-log.info('SUT:       (admin IP: '+ sutAdminIP + '), (dataplane IP: ' + sutDPIP+'), (dataplane MAC: ' +sutDPmac+')')
+matchObj = re.search('.*total_number_of_VMs.*?([0-9])', output, re.DOTALL)
+total_number_of_VMs = matchObj.group(1)
+vmDPIP =[]
+vmAdminIP =[]
+vmDPmac =[]
 config = ConfigParser.RawConfigParser()
-config.add_section('Generator')
-config.set('Generator', 'admin_ip', genAdminIP)
-config.set('Generator', 'dp_ip', genDPIP)
-config.set('Generator', 'dp_mac', genDPmac)
-config.add_section('SUT')
-config.set('SUT', 'admin_ip', sutAdminIP)
-config.set('SUT', 'dp_ip', sutDPIP)
-config.set('SUT', 'dp_mac', sutDPmac)
+for vm in range(1, int(total_number_of_VMs)+1):
+	searchString = '.*vm%d_dataplane_ip.*?([0-9]*\.[0-9]*\.[0-9]*\.[0-9]*)' % vm
+	matchObj = re.search(searchString, output, re.DOTALL)
+	vmDPIP.append(matchObj.group(1))
+	searchString = '.*vm%d_public_ip.*?([0-9]*\.[0-9]*\.[0-9]*\.[0-9]*)' % vm
+	matchObj = re.search(searchString, output, re.DOTALL)
+	vmAdminIP.append(matchObj.group(1))
+	searchString = '.*vm%d_dataplane_mac.*?([a-fA-F0-9:]{17})' % vm
+	matchObj = re.search(searchString, output, re.DOTALL)
+	vmDPmac.append(matchObj.group(1))
+	log.info('VM%d: (admin IP: %s), (dataplane IP: %s), (dataplane MAC: %s)' % (vm,vmAdminIP[-1],vmDPIP[-1],vmDPmac[-1]))
+	config.add_section('VM%d'%vm)
+	config.set('VM%d'%vm, 'admin_ip', vmAdminIP[-1])
+	config.set('VM%d'%vm, 'dp_ip', vmDPIP[-1])
+	config.set('VM%d'%vm, 'dp_mac', vmDPmac[-1])
 config.add_section('OpenStack')
 config.set('OpenStack', 'stack', stack)
 config.set('OpenStack', 'yaml', yaml)
@@ -352,12 +378,14 @@ config.set('OpenStack', 'image_file', image_file)
 config.set('OpenStack', 'dataplane_network', dataplane_network)
 config.set('OpenStack', 'subnet', subnet)
 config.set('OpenStack', 'subnet_cidr', subnet_cidr)
-config.set('OpenStack', 'admin_network', admin_network)
+config.set('OpenStack', 'internal_network', internal_network)
+config.set('OpenStack', 'floating_network', floating_network)
 config.add_section('rapid')
 config.set('rapid', 'loglevel', loglevel)
 config.set('rapid', 'version', version)
+config.set('rapid', 'total_number_of_VMs', total_number_of_VMs)
 config.set('DEFAULT', 'admin_ip', 'none')
-# Writing our configuration file
-with open(stack+'.cfg', 'wb') as configfile:
-    config.write(configfile)
+# Writing the environment file
+with open(stack+'.env', 'wb') as envfile:
+    config.write(envfile)
 
