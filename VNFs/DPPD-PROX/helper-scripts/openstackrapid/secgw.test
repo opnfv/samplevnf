@@ -1,0 +1,31 @@
+[DEFAULT]
+name = GWTesting
+number_of_tests = 2
+total_number_of_vms = 3
+init_code=init_test()
+dest_vm = not_used
+gw_vm = not_used
+script_control = false
+
+
+[VM1]
+name = Generator
+config_file = gen_gw.cfg
+dest_vm = 3
+gw_vm = 2
+script_control = true
+
+[VM2]
+name = GW1
+config_file = secgw1.cfg
+dest_vm = 3
+
+[VM3]
+name = GW2
+config_file = secgw2.cfg
+
+[test1]
+cmd=run_speedtest(sock[0],'none',sutstatcores,genstatcores,gencontrolcores)
+
+[test2]
+cmd=run_sizetest(sock[0],'none',sutstatcores,genstatcores,gencontrolcores)

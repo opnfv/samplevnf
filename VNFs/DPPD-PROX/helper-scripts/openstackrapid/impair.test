@@ -1,0 +1,26 @@
+[DEFAULT]
+name = impairTesting
+number_of_tests = 1
+total_number_of_vms = 3
+init_code=init_test()
+dest_vm = not_used
+gw_vm = not_used
+script_control = false
+
+[VM1]
+name = Generator
+config_file = gen_gw.cfg
+gw_vm = 2
+dest_vm = 3
+script_control = true
+
+[VM2]
+name = ImpairGW
+config_file = impair.cfg
+
+[VM3]
+name = Swap
+config_file = swap.cfg
+
+[test1]
+cmd=run_speedtest(sock[0],'none',sutstatcores,genstatcores,gencontrolcores)

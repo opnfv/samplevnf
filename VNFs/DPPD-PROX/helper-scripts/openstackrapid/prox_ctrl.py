@@ -183,6 +183,16 @@ class prox_sock(object):
     def reset_stats(self):
         self._send('reset stats')
 
+    def lat_stats(self, cores, task=0):
+        min_lat = max_lat = avg_lat = 0
+        self._send('lat stats %s %s' % (','.join(map(str, cores)), task))
+        for core in cores:
+            stats = self._recv().split(',')
+            min_lat += int(stats[0])
+            max_lat += int(stats[1])
+            avg_lat += int(stats[2])
+        return min_lat, max_lat, avg_lat
+
     def core_stats(self, cores, task=0):
         rx = tx = drop = tsc = hz = 0
         self._send('core stats %s %s' % (','.join(map(str, cores)), task))
