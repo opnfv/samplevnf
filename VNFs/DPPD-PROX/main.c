@@ -148,6 +148,7 @@ static void check_missing_rx(void)
 		if (strcmp(targ->sub_mode_str, "l3") != 0)
 			continue;
 
+		PROX_PANIC((targ->nb_rxports == 0) && (targ->nb_txports == 0), "L3 task must have a RX or a TX port\n");
 		// If the L3 sub_mode receives from a port, check that there is at least one core/task
 		// transmitting to this port in L3 sub_mode
 		for (uint8_t i = 0; i < targ->nb_rxports; ++i) {
@@ -155,10 +156,8 @@ static void check_missing_rx(void)
 			ok = 0;
 			tx_lconf = NULL;
 			while (core_targ_next(&tx_lconf, &tx_targ, 0) == 0) {
-				port = find_reachable_port(tx_targ);
-				if (port == NULL)
+				if ((port_id = tx_targ->tx_port_queue[0].port) == OUT_DISCARD)
 					continue;
-               			port_id = port - prox_port_cfg;
 				if ((rx_port_id == port_id) && (tx_targ->flags & TASK_ARG_L3)){
 					ok = 1;
 					break;
@@ -169,10 +168,8 @@ static void check_missing_rx(void)
 
 		// If the L3 sub_mode transmits to a port, check that there is at least one core/task
 		// receiving from that port in L3 sub_mode.
-		port = find_reachable_port(targ);
-		if (port == NULL)
+		if ((port_id = targ->tx_port_queue[0].port) == OUT_DISCARD)
 			continue;
-               	port_id = port - prox_port_cfg;
 		rx_lconf = NULL;
 		ok = 0;
 		plog_info("\tCore %d task %d transmitting to port %d in L3 mode\n", lconf->id, targ->id, port_id);
