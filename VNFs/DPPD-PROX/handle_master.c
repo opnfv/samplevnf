@@ -37,6 +37,7 @@
 #include "tx_pkt.h"
 
 #define IP4(x) x & 0xff, (x >> 8) & 0xff, (x >> 16) & 0xff, x >> 24
+#define PROX_MAX_ARP_REQUESTS	32	// Maximum number of tasks requesting the same MAC address
 
 const char *actions_string[] = {"UPDATE_FROM_CTRL", "SEND_ARP_REQUEST_FROM_CTRL", "SEND_ARP_REPLY_FROM_CTRL", "HANDLE_ARP_TO_CTRL", "REQ_MAC_TO_CTRL"};
 
@@ -60,6 +61,12 @@ struct ip_table {
 	struct rte_ring 	*ring;
 };
 
+struct external_ip_table {
+	struct ether_addr 	mac;
+	struct rte_ring 	*rings[PROX_MAX_ARP_REQUESTS];
+	uint16_t 		nb_requests;
+};
+
 struct port_table {
 	struct ether_addr 	mac;
 	struct rte_ring 	*ring;
@@ -73,7 +80,7 @@ struct task_master {
 	struct rte_ring *ctrl_rx_ring;
 	struct rte_ring **ctrl_tx_rings;
 	struct ip_table *internal_ip_table;
-	struct ip_table *external_ip_table;
+	struct external_ip_table *external_ip_table;
 	struct rte_hash  *external_ip_hash;
 	struct rte_hash  *internal_ip_hash;
 	struct port_table internal_port_table[PROX_MAX_PORTS];
@@ -154,9 +161,17 @@ static inline void handle_arp_reply(struct task_base *tbase, struct rte_mbuf *mb
 		tx_drop(mbuf);
 	} else {
 		// entry found for this IP
-		struct rte_ring *ring = task->external_ip_table[ret].ring;
+		uint16_t nb_requests = task->external_ip_table[ret].nb_requests;
 		memcpy(&hdr_arp->ether_hdr.d_addr.addr_bytes, &task->external_ip_table[ret].mac, 6);
-		tx_ring_ip(tbase, ring, UPDATE_FROM_CTRL, mbuf, key);
+		// If we receive a request from multiple task for the same IP, then we update all tasks
+		if (task->external_ip_table[ret].nb_requests) {
+			rte_mbuf_refcnt_set(mbuf, nb_requests);
+			for (int i = 0; i < nb_requests; i++) {
+				struct rte_ring *ring = task->external_ip_table[ret].rings[i];
+				tx_ring_ip(tbase, ring, UPDATE_FROM_CTRL, mbuf, key);
+			}
+			task->external_ip_table[ret].nb_requests = 0;
+		}
 	}
 }
 
@@ -226,9 +241,11 @@ static inline void handle_unknown_ip(struct task_base *tbase, struct rte_mbuf *m
 		tx_drop(mbuf);
 		return;
 	}
-	task->external_ip_table[ret2].ring = ring;
+	task->external_ip_table[ret2].rings[task->external_ip_table[ret2].nb_requests] = ring;
+	task->external_ip_table[ret2].nb_requests++;
 	memcpy(&task->external_ip_table[ret2].mac, &task->internal_port_table[port].mac, 6);
 
+	// We send an ARP request even if one was just sent (and not yet answered) by another task
 	mbuf->ol_flags &= ~(PKT_TX_IP_CKSUM|PKT_TX_UDP_CKSUM);
 	build_arp_request(mbuf, &task->internal_port_table[port].mac, ip_dst, ip_src);
 	tx_ring(tbase, ring, ARP_REQ_FROM_CTRL, mbuf);
@@ -290,9 +307,9 @@ void init_ctrl_plane(struct task_base *tbase)
 	task->external_ip_hash = rte_hash_create(&hash_params);
 	PROX_PANIC(task->external_ip_hash == NULL, "Failed to set up external ip hash\n");
 	plog_info("\texternal ip hash table allocated, with %d entries of size %d\n", hash_params.entries, hash_params.key_len);
-	task->external_ip_table = (struct ip_table *)prox_zmalloc(n_entries * sizeof(struct ip_table), socket);
+	task->external_ip_table = (struct external_ip_table *)prox_zmalloc(n_entries * sizeof(struct external_ip_table), socket);
 	PROX_PANIC(task->external_ip_table == NULL, "Failed to allocate memory for %u entries in external ip table\n", n_entries);
-	plog_info("\texternal ip table, with %d entries of size %ld\n", n_entries, sizeof(struct ip_table));
+	plog_info("\texternal ip table, with %d entries of size %ld\n", n_entries, sizeof(struct external_ip_table));
 
 	hash_name[0]++;
 	hash_params.key_len = sizeof(struct ip_port);
