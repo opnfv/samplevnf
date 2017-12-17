@@ -350,7 +350,7 @@ struct task_base *init_task_struct(struct task_args *targ)
 	offset = init_rx_tx_rings_ports(targ, tbase, offset);
 	tbase->aux = (struct task_base_aux *)(((uint8_t *)tbase) + offset);
 
-	if ((targ->nb_txrings != 0) || (targ->nb_txports != 0)) {
+	if (targ->nb_txports != 0) {
 		if (targ->flags & TASK_ARG_L3) {
 			tbase->aux->tx_pkt_l2 = tbase->tx_pkt;
 			tbase->tx_pkt = tx_pkt_l3;
