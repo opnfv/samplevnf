@@ -309,7 +309,6 @@ static inline uint8_t handle_esp_ah_enc(struct task_esp_enc *task, struct rte_mb
         struct ether_addr dst_mac  = peth->d_addr;
         uint32_t          src_addr = pip4->src_addr;
         uint32_t          dst_addr = pip4->dst_addr;
-        uint8_t           ttl      = pip4->time_to_live;
         uint8_t           version_ihl = pip4->version_ihl;
 
         peth = (struct ether_hdr *)rte_pktmbuf_prepend(mbuf, extra_space); // encap + prefix
@@ -329,13 +328,14 @@ static inline uint8_t handle_esp_ah_enc(struct task_esp_enc *task, struct rte_mb
         pip4 = (struct ipv4_hdr *)(peth + 1);
         pip4->src_addr = task->local_ipv4;
         pip4->dst_addr = task->remote_ipv4;
-        pip4->time_to_live = ttl;
         pip4->next_proto_id = IPPROTO_ESP; // 50 for ESP, ip in ip next proto trailer
         pip4->version_ihl = version_ihl; // 20 bytes, ipv4
         pip4->total_length = rte_cpu_to_be_16(ipv4_length + sizeof(struct ipv4_hdr) + 4 + 4 + CIPHER_IV_LENGTH_AES_CBC + padding + 1 + 1 + DIGEST_BYTE_LENGTH_SHA1); // iphdr+SPI+SN+IV+payload+padding+padlen+next header + crc + auth
         pip4->packet_id = 0x0101;
         pip4->type_of_service = 0;
         pip4->time_to_live = 64;
+        pip4->fragment_offset = rte_cpu_to_be_16(0x4000);
+	pip4->hdr_checksum = 0;
         prox_ip_cksum_sw(pip4);
 
         //find the SA when there will be more than one
@@ -458,12 +458,11 @@ static inline uint8_t handle_esp_ah_dec_finish(struct task_esp_dec *task, struct
 
         int len = rte_pktmbuf_pkt_len(mbuf);
         rte_pktmbuf_trim(mbuf, len - sizeof (struct ether_hdr) - ipv4_length);
-        prox_ip_cksum_sw(pip4);
-        peth = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
-
 #if 1
         do_ipv4_swap(task, mbuf);
 #endif
+        pip4->hdr_checksum = 0;
+        prox_ip_cksum_sw(pip4);
 //              one key for them all for now
 //              set key
 //      struct crypto_aes_ctx ctx;
