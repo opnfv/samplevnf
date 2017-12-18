@@ -22,6 +22,30 @@
       "revId": "ef3e2c19d99f394d0fd8cb024cca2dba65704816",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_2e017238",
+        "filename": "VNFs/DPPD-PROX/task_init.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 379,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2017-12-18T18:03:07Z",
+      "side": 1,
+      "message": "First part (setting up ctrl_plane_ring) is needed for RX ports. Second part is not needed anymore - the goal is to have L3 supported for tasks with RX ports or TX ports, and not for tasks with only rings \u003d\u003e I\u0027ve also updated the checks in main.c (see next patch set). If we find any use case where supporting L3 in ring-only tasks is necessary, then this support will have to be added.",
+      "parentUuid": "9a3d3df0_4e4dd63d",
+      "range": {
+        "startLine": 372,
+        "startChar": 0,
+        "endLine": 379,
+        "endChar": 2
+      },
+      "revId": "ef3e2c19d99f394d0fd8cb024cca2dba65704816",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
     }
   ]
 }
