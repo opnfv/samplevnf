@@ -1,0 +1,337 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9a3d3df0_eea2ea49",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/openstackrapid/3VMrapid.yaml",
+        "patchSetId": 2
+      },
+      "lineNbr": 149,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-12-18T20:16:49Z",
+      "side": 1,
+      "message": "of the VM1",
+      "range": {
+        "startLine": 149,
+        "startChar": 28,
+        "endLine": 149,
+        "endChar": 33
+      },
+      "revId": "c10781eecde9452a477d7c9fa1f1fc0c63df559e",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_6e537a39",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/openstackrapid/3VMsriovrapid.yaml",
+        "patchSetId": 2
+      },
+      "lineNbr": 170,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-12-18T20:16:49Z",
+      "side": 1,
+      "message": "VM3",
+      "range": {
+        "startLine": 170,
+        "startChar": 40,
+        "endLine": 170,
+        "endChar": 44
+      },
+      "revId": "c10781eecde9452a477d7c9fa1f1fc0c63df559e",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_0e3aaee6",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/openstackrapid/README",
+        "patchSetId": 2
+      },
+      "lineNbr": 54,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-12-18T20:16:49Z",
+      "side": 1,
+      "message": "described",
+      "range": {
+        "startLine": 54,
+        "startChar": 35,
+        "endLine": 54,
+        "endChar": 43
+      },
+      "revId": "c10781eecde9452a477d7c9fa1f1fc0c63df559e",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_4e0e763c",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/openstackrapid/createrapid.py",
+        "patchSetId": 2
+      },
+      "lineNbr": 42,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-12-18T20:16:49Z",
+      "side": 1,
+      "message": "Not anymore ;-)",
+      "range": {
+        "startLine": 42,
+        "startChar": 24,
+        "endLine": 42,
+        "endChar": 48
+      },
+      "revId": "c10781eecde9452a477d7c9fa1f1fc0c63df559e",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_8e04fe18",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/openstackrapid/createrapid.py",
+        "patchSetId": 2
+      },
+      "lineNbr": 134,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-12-18T20:16:49Z",
+      "side": 1,
+      "message": "control",
+      "range": {
+        "startLine": 134,
+        "startChar": 16,
+        "endLine": 134,
+        "endChar": 24
+      },
+      "revId": "c10781eecde9452a477d7c9fa1f1fc0c63df559e",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_b106831b",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/openstackrapid/prox_ctrl.py",
+        "patchSetId": 2
+      },
+      "lineNbr": 193,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-12-18T20:16:49Z",
+      "side": 1,
+      "message": "Does it make sense to add min,max,avg latencies?\nShouldn\u0027t we extract the min and max, and recompute the avg instead?",
+      "range": {
+        "startLine": 191,
+        "startChar": 0,
+        "endLine": 193,
+        "endChar": 36
+      },
+      "revId": "c10781eecde9452a477d7c9fa1f1fc0c63df559e",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_d1018706",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/openstackrapid/rapid.yaml",
+        "patchSetId": 2
+      },
+      "lineNbr": 149,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-12-18T20:16:49Z",
+      "side": 1,
+      "message": "of the VM1",
+      "range": {
+        "startLine": 149,
+        "startChar": 28,
+        "endLine": 149,
+        "endChar": 33
+      },
+      "revId": "c10781eecde9452a477d7c9fa1f1fc0c63df559e",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_11080f27",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/openstackrapid/runrapid.py",
+        "patchSetId": 2
+      },
+      "lineNbr": 36,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-12-18T20:16:49Z",
+      "side": 1,
+      "message": "test name",
+      "range": {
+        "startLine": 36,
+        "startChar": 40,
+        "endLine": 36,
+        "endChar": 45
+      },
+      "revId": "c10781eecde9452a477d7c9fa1f1fc0c63df559e",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_f10c8b3d",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/openstackrapid/runrapid.py",
+        "patchSetId": 2
+      },
+      "lineNbr": 184,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-12-18T20:16:49Z",
+      "side": 1,
+      "message": "Does this need to be hardcoded?",
+      "range": {
+        "startLine": 184,
+        "startChar": 47,
+        "endLine": 184,
+        "endChar": 50
+      },
+      "revId": "c10781eecde9452a477d7c9fa1f1fc0c63df559e",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_5115773e",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/openstackrapid/runrapid.py",
+        "patchSetId": 2
+      },
+      "lineNbr": 225,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-12-18T20:16:49Z",
+      "side": 1,
+      "message": "Is this supposed to return a float or an int?\nLooks like it returns an int.\nIf you want a float, then divide by 100.0 instead of 100.",
+      "revId": "c10781eecde9452a477d7c9fa1f1fc0c63df559e",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_31127357",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/openstackrapid/runrapid.py",
+        "patchSetId": 2
+      },
+      "lineNbr": 234,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-12-18T20:16:49Z",
+      "side": 1,
+      "message": "If speed is an int, then this should probably be: 100.0",
+      "range": {
+        "startLine": 234,
+        "startChar": 22,
+        "endLine": 234,
+        "endChar": 25
+      },
+      "revId": "c10781eecde9452a477d7c9fa1f1fc0c63df559e",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_911b7f72",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/openstackrapid/runrapid.py",
+        "patchSetId": 2
+      },
+      "lineNbr": 234,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-12-18T20:16:49Z",
+      "side": 1,
+      "message": "If speed is a float, then this could simply be: 100",
+      "range": {
+        "startLine": 234,
+        "startChar": 59,
+        "endLine": 234,
+        "endChar": 64
+      },
+      "revId": "c10781eecde9452a477d7c9fa1f1fc0c63df559e",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_b154c3ff",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/openstackrapid/runrapid.py",
+        "patchSetId": 2
+      },
+      "lineNbr": 313,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-12-18T20:16:49Z",
+      "side": 1,
+      "message": "PROX will change packet size, but won\u0027t randomize IPs for this test.",
+      "revId": "c10781eecde9452a477d7c9fa1f1fc0c63df559e",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_91609fd0",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/openstackrapid/runrapid.py",
+        "patchSetId": 2
+      },
+      "lineNbr": 359,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-12-18T20:16:49Z",
+      "side": 1,
+      "message": "Shouldn\u0027t that be: sutstatcores",
+      "range": {
+        "startLine": 359,
+        "startChar": 15,
+        "endLine": 359,
+        "endChar": 18
+      },
+      "revId": "c10781eecde9452a477d7c9fa1f1fc0c63df559e",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_f1a80bdd",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/openstackrapid/sriovrapid.yaml",
+        "patchSetId": 2
+      },
+      "lineNbr": 170,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-12-18T20:16:49Z",
+      "side": 1,
+      "message": "VM3",
+      "range": {
+        "startLine": 170,
+        "startChar": 41,
+        "endLine": 170,
+        "endChar": 45
+      },
+      "revId": "c10781eecde9452a477d7c9fa1f1fc0c63df559e",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
