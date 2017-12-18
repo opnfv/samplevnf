@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9a3d3df0_ce62863d",
+        "filename": "VNFs/DPPD-PROX/handle_master.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 310,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-12-18T18:08:57Z",
+      "side": 1,
+      "message": "This MUST be: external_ip_table",
+      "range": {
+        "startLine": 310,
+        "startChar": 94,
+        "endLine": 310,
+        "endChar": 102
+      },
+      "revId": "687b93cb4668840609ea0afe5cb88d4707b4af1d",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_cec9e627",
+        "filename": "VNFs/DPPD-PROX/handle_master.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 312,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2017-12-18T18:08:57Z",
+      "side": 1,
+      "message": "This should be: external_ip_table",
+      "range": {
+        "startLine": 312,
+        "startChar": 90,
+        "endLine": 312,
+        "endChar": 98
+      },
+      "revId": "687b93cb4668840609ea0afe5cb88d4707b4af1d",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
