@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9a3d3df0_1b34ae48",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/openstackrapid/README",
+        "patchSetId": 1
+      },
+      "lineNbr": 30,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2017-12-18T09:21:45Z",
+      "side": 1,
+      "message": "Should it be mounted, or should the directory just exist, and the script will mount the hugepages to this moint point?",
+      "range": {
+        "startLine": 30,
+        "startChar": 2,
+        "endLine": 30,
+        "endChar": 29
+      },
+      "revId": "00489134859e82a23b97e2ceca0a009a01c901ad",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a3d3df0_fb38ea3e",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/openstackrapid/README",
+        "patchSetId": 1
+      },
+      "lineNbr": 72,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2017-12-18T09:21:45Z",
+      "side": 1,
+      "message": "being",
+      "range": {
+        "startLine": 72,
+        "startChar": 4,
+        "endLine": 72,
+        "endChar": 9
+      },
+      "revId": "00489134859e82a23b97e2ceca0a009a01c901ad",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
