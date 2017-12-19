@@ -1,0 +1,26 @@
+[DEFAULT]
+name = BasicSwapTesting
+number_of_tests = 3
+total_number_of_vms = 2
+init_code=init_test()
+dest_vm = not_used
+gw_vm = not_used
+script_control = false
+
+
+[VM1]
+name = Generator
+config_file = gen.cfg
+dest_vm = 2
+
+[VM2]
+name = Swap
+config_file = swap.cfg
+
+[test1]
+cmd=run_speedtest(sock[0],sock[1],sutstatcores,genstatcores,gencontrolcores)
+[test2]
+cmd=run_sizetest(sock[0],sock[1],sutstatcores,genstatcores,gencontrolcores)
+[test3]
+cmd=run_flowtest(sock[0],sock[1],sutstatcores,genstatcores,gencontrolcores)
+
