@@ -32,7 +32,7 @@ struct rte_table_hash;
 #endif
 
 /* Wrap crc32 hash function to match that required for rte_table */
-uint64_t hash_crc32(void* key, uint32_t key_size, uint64_t seed);
+uint64_t hash_crc32(void* key, void *key_mask, uint32_t key_size, uint64_t seed);
 
 void print_hash_table_size(const struct rte_table_hash *h);
 void print_hash_table(const struct rte_table_hash *h);

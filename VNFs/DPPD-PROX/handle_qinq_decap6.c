@@ -37,6 +37,7 @@
 #include "log.h"
 #include "quit.h"
 #include "prox_shared.h"
+#include "prox_compat.h"
 
 /* Packets must all be IPv6, always store QinQ tags for lookup (not configurable) */
 struct task_qinq_decap6 {
@@ -116,8 +117,7 @@ static inline uint8_t handle_qinq_decap6(struct task_qinq_decap6 *task, struct r
 
 	int key_found = 0;
 	void* entry_in_hash = NULL;
-	int ret = rte_table_hash_ext_dosig_ops.
-		f_add(task->cpe_table, pip6->src_addr, &entry, &key_found, &entry_in_hash);
+	int ret = prox_rte_table_add(task->cpe_table, pip6->src_addr, &entry, &key_found, &entry_in_hash);
 
 	if (unlikely(ret)) {
 		plogx_err("Failed to add key " IPv6_BYTES_FMT "\n", IPv6_BYTES(pip6->src_addr));
@@ -170,7 +170,7 @@ void update_arp_entries6(void* data)
 		if (entries[i]->tsc < cur_tsc) {
 			int key_found = 0;
 			void* entry = 0;
-			rte_table_hash_ext_dosig_ops.f_delete(task->cpe_table, key[i], &key_found, entry);
+			prox_rte_table_delete(task->cpe_table, key[i], &key_found, entry);
 		}
 	}
 

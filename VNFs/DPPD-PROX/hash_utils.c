@@ -42,11 +42,15 @@ struct rte_table_hash_key8 {
 #endif
 	/* Input parameters */
 	uint32_t n_buckets;
+#if RTE_VERSION < RTE_VERSION_NUM(17,11,0,0)
 	uint32_t n_entries_per_bucket;
+#endif
 	uint32_t key_size;
 	uint32_t entry_size;
 	uint32_t bucket_size;
+#if RTE_VERSION < RTE_VERSION_NUM(17,11,0,0)
 	uint32_t signature_offset;
+#endif
 	uint32_t key_offset;
 #if RTE_VERSION >= RTE_VERSION_NUM(2,2,0,0)
 	uint64_t key_mask;
@@ -178,7 +182,7 @@ uint64_t get_bucket_key8(void* table, uint32_t bucket_idx, void** key, void** en
 	return f->n_buckets;
 }
 
-uint64_t hash_crc32(void* key, uint32_t key_size, uint64_t seed)
+uint64_t hash_crc32(void* key, __attribute__((unused))void *key_mask, uint32_t key_size, uint64_t seed)
 {
 	return rte_hash_crc(key, key_size, seed);
 }

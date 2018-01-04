@@ -37,6 +37,7 @@
 #include "hash_utils.h"
 #include "quit.h"
 #include "flow_iter.h"
+#include "prox_compat.h"
 
 #if RTE_VERSION < RTE_VERSION_NUM(1,8,0,0)
 #define RTE_CACHE_LINE_SIZE CACHE_LINE_SIZE
@@ -87,18 +88,29 @@ static struct rte_table_hash *setup_gre_to_wt_lookup(struct task_args *targ, uin
 		}
 	}
 
-	struct rte_table_hash_ext_params table_hash_params = {
+	static char hash_name[30];
+	sprintf(hash_name, "lb_hash_table_%03d", targ->lconf->id);
+
+	// The key offset in the real packets might depend of the packet type; hence we need to extract the
+	// keys and copy them.
+	// The packets will be parsed runtime and keys will be created and stored in the metadata of fake mbufs.
+	// Then hash functions will be used on the fake mbufs.
+	// Keys are stored in (metadata of) fake mbufs to reduce the memory/cache usage: in this way we use only
+	// 64  cache lines for all keys (we always use the same fake mbufs). If using metadata of real packets/mbufs,
+	// we would use as many cache lines as there are mbufs, which might be very high in if QoS is supported for instance.
+	//
+	struct prox_rte_table_params table_hash_params = {
+		.name = hash_name,
 		.key_size = 4,
 		.n_keys = count,
 		.n_buckets = count,
-		.n_buckets_ext = count >> 1,
-		.f_hash = hash_crc32,
+		.f_hash = (rte_table_hash_op_hash)hash_crc32,
 		.seed = 0,
-		.signature_offset = HASH_METADATA_OFFSET(0),
 		.key_offset = HASH_METADATA_OFFSET(0),
+		.key_mask = NULL
 	};
 
-	ret = rte_table_hash_ext_dosig_ops.f_create(&table_hash_params, socket_id, sizeof(uint8_t));
+	ret = prox_rte_table_create(&table_hash_params, socket_id, sizeof(uint8_t));
 
 	for (int i = 0; i < n_workers; ++i) {
 		struct core_task ct = targ->core_task_set[0].core_task[i];
@@ -113,7 +125,7 @@ static struct rte_table_hash *setup_gre_to_wt_lookup(struct task_args *targ, uin
 			uint32_t gre_id = it->get_gre_id(it, t);
 			uint8_t dst = i;
 
-			r = rte_table_hash_ext_dosig_ops.f_add(ret, &gre_id, &dst, &key_found, &entry_in_hash);
+			r = prox_rte_table_add(ret, &gre_id, &dst, &key_found, &entry_in_hash);
 			if (r) {
 				plog_err("Failed to add gre_id = %x, dest worker = %u\n", gre_id, i);
 			}
@@ -274,7 +286,7 @@ static int handle_lb_net_lut_bulk(struct task_base *tbase, struct rte_mbuf **mbu
 	}
 #endif
 	// keys have been extracted for all packets, now do the lookup
-	rte_table_hash_ext_dosig_ops.f_lookup(task->worker_hash_table, task->fake_packets, pkts_mask, &lookup_hit_mask, (void**)wt);
+	prox_rte_table_lookup(task->worker_hash_table, task->fake_packets, pkts_mask, &lookup_hit_mask, (void**)wt);
 	/* mbufs now contains the packets that have not been dropped */
 	if (likely(lookup_hit_mask == RTE_LEN2MASK(n_pkts, uint64_t))) {
 		for (j = 0; j < n_pkts; ++j) {
@@ -398,7 +410,7 @@ static inline int extract_gre_key(struct task_lb_net_lut *task, uint32_t *key, s
 		}
 	}
 	else {
-		plog_warn("Invalid protocol: GRE xas expected, got 0x%x\n", ip->next_proto_id);
+		plog_warn("Invalid protocol: GRE was expected, got 0x%x\n", ip->next_proto_id);
 		return 1;
 	}
 	return 0;

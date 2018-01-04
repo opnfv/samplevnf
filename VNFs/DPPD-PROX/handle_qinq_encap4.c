@@ -15,6 +15,7 @@
 */
 
 #include <rte_table_hash.h>
+#include <rte_hash_crc.h>
 #include <rte_cycles.h>
 
 #include "mbuf_utils.h"
@@ -40,6 +41,7 @@
 #include "cfgfile.h"
 #include "toeplitz.h"
 #include "prox_shared.h"
+#include "prox_compat.h"
 
 static struct cpe_table_data *read_cpe_table_config(const char *name, uint8_t socket)
 {
@@ -106,7 +108,7 @@ static void fill_table(struct task_args *targ, struct rte_table_hash *table)
 
 		int key_found;
 		void* entry_in_hash;
-		rte_table_hash_key8_ext_dosig_ops.f_add(table, &key, &data, &key_found, &entry_in_hash);
+		prox_rte_table_key8_add(table, &key, &data, &key_found, &entry_in_hash);
 	}
 }
 
@@ -186,7 +188,7 @@ static inline void add_key(struct task_args *targ, struct qinq_gre_map *qinq_gre
 
 	int key_found = 0;
 	void* entry_in_hash = NULL;
-	rte_table_hash_key8_ext_dosig_ops.f_add(qinq_gre_table, &qinq2, &entry, &key_found, &entry_in_hash);
+	prox_rte_table_key8_add(qinq_gre_table, &qinq2, &entry, &key_found, &entry_in_hash);
 
 	plog_dbg("Core %u adding user %u (tag %x svlan %x cvlan %x), rss=%x\n",
 		 targ->lconf->id, qinq_gre_map->entries[i].user, qinq2.svlan.eth_proto,
@@ -199,7 +201,7 @@ static inline void add_key(struct task_args *targ, struct qinq_gre_map *qinq_gre
 		rte_bswap16(qinq_gre_map->entries[i].cvlan);
 	int key_found = 0;
 	void* entry_in_hash = NULL;
-	rte_table_hash_key8_ext_dosig_ops.f_add(qinq_gre_table, &ip, &entry, &key_found, &entry_in_hash);
+	prox_rte_table_key8_add(qinq_gre_table, &ip, &entry, &key_found, &entry_in_hash);
 
 	plog_dbg("Core %u hash table add: key = %016"PRIx64"\n",
 		 targ->lconf->id, ip);
@@ -219,18 +221,21 @@ void init_qinq_gre_table(struct task_args *targ, struct qinq_gre_map *qinq_gre_m
 		table_part = 1;
 
 	uint32_t n_entries = MAX_GRE / table_part;
+	static char hash_name[30];
+	sprintf(hash_name, "qinq_gre_hash_table_%03d", targ->lconf->id);
 
-	struct rte_table_hash_key8_ext_params table_hash_params = {
-		.n_entries = n_entries,
-		.n_entries_ext = n_entries >> 1,
-		.f_hash = hash_crc32,
+	struct prox_rte_table_params table_hash_params = {
+		.name = hash_name,
+		.key_size = 8,
+		.n_keys = n_entries,
+		.n_buckets = n_entries,
+		.f_hash = (rte_table_hash_op_hash)hash_crc32,
 		.seed = 0,
-		.signature_offset = HASH_METADATA_OFFSET(8),
 		.key_offset = HASH_METADATA_OFFSET(0),
+		.key_mask = NULL
 	};
 
-	qinq_gre_table = rte_table_hash_key8_ext_dosig_ops.
-		f_create(&table_hash_params, rte_lcore_to_socket_id(targ->lconf->id), sizeof(struct qinq_gre_data));
+	qinq_gre_table = prox_rte_table_create(&table_hash_params, rte_lcore_to_socket_id(targ->lconf->id), sizeof(struct qinq_gre_data));
 
 	// LB configuration known from Network Load Balancer
 	// Find LB network Load balancer, i.e. ENCAP friend.
@@ -288,7 +293,7 @@ void init_qinq_gre_table(struct task_args *targ, struct qinq_gre_map *qinq_gre_m
 			uint64_t cvlan = rte_bswap16(qinq_gre_map->entries[i].cvlan & 0xFF0F);
 			uint64_t svlan = rte_bswap16((qinq_gre_map->entries[i].svlan & 0xFF0F));
 			uint64_t qinq = rte_bswap64((svlan << 32) | cvlan);
-			uint8_t queue = hash_crc32(&qinq, 8, 0) % targ->nb_slave_threads;
+			uint8_t queue = rte_hash_crc(&qinq, 8, 0) % targ->nb_slave_threads;
 			if (queue == targ->worker_thread_id) {
 				add_key(targ, qinq_gre_map, qinq_gre_table, i, &count);
 			}
@@ -325,21 +330,26 @@ void init_cpe4_table(struct task_args *targ)
 		table_part = 1;
 
 	uint32_t n_entries = MAX_GRE / table_part;
-	struct rte_table_hash_key8_ext_params table_hash_params = {
-		.n_entries = n_entries,
-		.n_entries_ext = n_entries >> 1,
-		.f_hash = hash_crc32,
+
+	static char hash_name[30];
+	sprintf(hash_name, "cpe4_table_%03d", targ->lconf->id);
+
+	struct prox_rte_table_params table_hash_params = {
+		.name = hash_name,
+		.key_size = 8,
+		.n_keys = n_entries,
+		.n_buckets = n_entries >> 1,
+		.f_hash = (rte_table_hash_op_hash)hash_crc32,
 		.seed = 0,
-		.signature_offset = HASH_METADATA_OFFSET(8),
 		.key_offset = HASH_METADATA_OFFSET(0),
+		.key_mask = NULL
 	};
 	size_t entry_size = sizeof(struct cpe_data);
 	if (!rte_is_power_of_2(entry_size)) {
 		entry_size = rte_align32pow2(entry_size);
 	}
 
-	struct rte_table_hash* phash = rte_table_hash_key8_ext_dosig_ops.
-		f_create(&table_hash_params, rte_lcore_to_socket_id(targ->lconf->id), entry_size);
+	struct rte_table_hash* phash = prox_rte_table_create(&table_hash_params, rte_lcore_to_socket_id(targ->lconf->id), entry_size);
 	PROX_PANIC(NULL == phash, "Unable to allocate memory for IPv4 hash table on core %u\n", targ->lconf->id);
 
 	/* for locality, copy the pointer to the port structure where it is needed at packet handling time */
@@ -433,7 +443,7 @@ static int handle_qinq_encap4_bulk_pe(struct task_base *tbase, struct rte_mbuf *
 		struct ipv4_hdr* ip = (struct ipv4_hdr *)(rte_pktmbuf_mtod(mbufs[j], struct ether_hdr *) + 1);
 		task->keys[j] = (uint64_t)ip->dst_addr;
 	}
-	rte_table_hash_key8_ext_dosig_ops.f_lookup(task->cpe_table, task->fake_packets, pkts_mask, &lookup_hit_mask, (void**)entries);
+	prox_rte_table_key8_lookup(task->cpe_table, task->fake_packets, pkts_mask, &lookup_hit_mask, (void**)entries);
 
 	if (likely(lookup_hit_mask == pkts_mask)) {
 		for (uint16_t j = 0; j < n_pkts; ++j) {
@@ -477,7 +487,7 @@ int handle_qinq_encap4_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 
 	// From GRE ID and IP address, retrieve QinQ and MAC addresses
 	extract_key_bulk(task, mbufs, n_pkts);
-	rte_table_hash_key8_ext_dosig_ops.f_lookup(task->cpe_table, task->fake_packets, pkts_mask, &lookup_hit_mask, (void**)entries);
+	prox_rte_table_key8_lookup(task->cpe_table, task->fake_packets, pkts_mask, &lookup_hit_mask, (void**)entries);
 
 	if (likely(lookup_hit_mask == pkts_mask)) {
 		for (uint16_t j = 0; j < n_pkts; ++j) {
@@ -570,7 +580,7 @@ static void flow_iter_next(struct flow_iter *iter, struct task_args *targ)
 			uint64_t cvlan = rte_bswap16(get_qinq_gre_map(targ)->entries[iter->idx].cvlan & 0xFF0F);
 			uint64_t svlan = rte_bswap16(get_qinq_gre_map(targ)->entries[iter->idx].svlan & 0xFF0F);
 			uint64_t qinq = rte_bswap64((svlan << 32) | cvlan);
-			uint8_t queue = hash_crc32(&qinq, 8, 0) % targ->nb_slave_threads;
+			uint8_t queue = rte_hash_crc(&qinq, 8, 0) % targ->nb_slave_threads;
 			if (queue == targ->worker_thread_id)
 				break;
 		} else if (flag_features & TASK_FEATURE_GRE_ID) {

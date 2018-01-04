@@ -20,6 +20,7 @@
 #include <rte_ip.h>
 #include <rte_byteorder.h>
 #include <rte_version.h>
+#include <rte_hash_crc.h>
 
 #include "prox_malloc.h"
 #include "task_base.h"
@@ -279,10 +280,10 @@ static inline uint8_t get_worker(struct task_lb_qinq *task, struct cpe_packet *p
 		uint64_t qinq_net = packet->qd.qinq;
 		qinq_net = qinq_net & 0xFF0F0000FF0F0000;	// Mask Proto and QoS bits
 		if (task->bit_mask != 0xff) {
-			worker = hash_crc32(&qinq_net,8,0) & task->bit_mask;
+			worker = rte_hash_crc(&qinq_net,8,0) & task->bit_mask;
 		}
 		else {
-			worker = hash_crc32(&qinq_net,8,0) % task->nb_worker_threads;
+			worker = rte_hash_crc(&qinq_net,8,0) % task->nb_worker_threads;
 		}
 		plogx_dbg("Sending packet svlan=%x, cvlan=%x, pseudo_qinq=%lx to worker %d\n", rte_bswap16(0xFF0F & packet->qp.qinq_hdr.svlan.vlan_tci), rte_bswap16(0xFF0F & packet->qp.qinq_hdr.cvlan.vlan_tci), qinq_net, worker);
 	} else if (((struct task_base *)task)->flags & BASE_FLAG_LUT_QINQ_RSS){
