@@ -307,10 +307,10 @@ int lconf_do_flags(struct lcore_cfg *lconf)
 			t = lconf->tasks_all[task_id];
 			if (t->aux->tx_pkt_orig) {
 				if (t->tx_pkt == tx_pkt_l3) {
-					t->tx_pkt = t->aux->tx_pkt_orig;
+					t->aux->tx_pkt_l2 = t->aux->tx_pkt_orig;
 					t->aux->tx_pkt_orig = NULL;
 				} else {
-					t->aux->tx_pkt_l2 = t->aux->tx_pkt_orig;
+					t->tx_pkt = t->aux->tx_pkt_orig;
 					t->aux->tx_pkt_orig = NULL;
 				}
 				lconf->flags &= ~LCONF_FLAG_TX_DISTR_ACTIVE;
