@@ -545,8 +545,8 @@ static int parse_cmd_speed(const char *str, struct input *input)
 		if ((!task_is_mode_and_submode(lcore_id, task_id, "gen", "")) && (!task_is_mode_and_submode(lcore_id, task_id, "gen", "l3"))) {
 			plog_err("Core %u task %u is not generating packets\n", lcore_id, task_id);
 		}
-		else if (speed > 400.0f || speed < 0.0f) {
-			plog_err("Speed out of range (must be betweeen 0%% and 100%%)\n");
+		else if (speed > 1000.0f || speed < 0.0f) {	// Up to 100 Gbps
+			plog_err("Speed out of range (must be betweeen 0%% and 1000%%)\n");
 		}
 		else {
 			struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
@@ -579,8 +579,8 @@ static int parse_cmd_speed_byte(const char *str, struct input *input)
 			if ((!task_is_mode_and_submode(lcore_id, task_id, "gen", "")) && (!task_is_mode_and_submode(lcore_id, task_id, "gen", "l3"))) {
 				plog_err("Core %u task %u is not generating packets\n", lcore_id, task_id);
 			}
-			else if (bps > 1250000000) {
-				plog_err("Speed out of range (must be <= 1250000000)\n");
+			else if (bps > 12500000000) {	// Up to 100Gbps
+				plog_err("Speed out of range (must be <= 12500000000)\n");
 			}
 			else {
 				struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];

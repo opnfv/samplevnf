@@ -32,6 +32,7 @@
 #include "quit.h"
 #include "eld.h"
 #include "prox_shared.h"
+#include "prox_port_cfg.h"
 
 #define DEFAULT_BUCKET_SIZE	10
 
@@ -105,8 +106,10 @@ struct task_lat {
 	uint32_t generator_count;
 	struct early_loss_detect *eld;
 	struct rx_pkt_meta_data *rx_pkt_meta;
+	uint64_t link_speed;
 	FILE *fp_rx;
 	FILE *fp_tx;
+	struct prox_port_cfg *port;
 };
 
 static uint32_t abs_diff(uint32_t a, uint32_t b)
@@ -375,9 +378,9 @@ static uint32_t task_lat_early_loss_detect(struct task_lat *task, struct unique_
 	return early_loss_detect_add(eld, packet_index);
 }
 
-static uint64_t tsc_extrapolate_backward(uint64_t tsc_from, uint64_t bytes, uint64_t tsc_minimum)
+static uint64_t tsc_extrapolate_backward(uint64_t link_speed, uint64_t tsc_from, uint64_t bytes, uint64_t tsc_minimum)
 {
-	uint64_t tsc = tsc_from - rte_get_tsc_hz()*bytes/1250000000;
+	uint64_t tsc = tsc_from - (rte_get_tsc_hz()*bytes)/link_speed;
 	if (likely(tsc > tsc_minimum))
 		return tsc;
 	else
@@ -495,7 +498,7 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 		bytes_total_in_bulk += mbuf_wire_size(mbufs[flipped]);
 	}
 
-	pkt_rx_time = tsc_extrapolate_backward(rx_tsc, task->rx_pkt_meta[0].bytes_after_in_bulk, task->last_pkts_tsc) >> LATENCY_ACCURACY;
+	pkt_rx_time = tsc_extrapolate_backward(task->link_speed, rx_tsc, task->rx_pkt_meta[0].bytes_after_in_bulk, task->last_pkts_tsc) >> LATENCY_ACCURACY;
 	if ((uint32_t)((task->begin >> LATENCY_ACCURACY)) > pkt_rx_time) {
 		// Extrapolation went up to BEFORE begin => packets were stuck in the NIC but we were not seeing them
 		rx_time_err = pkt_rx_time - (uint32_t)(task->last_pkts_tsc >> LATENCY_ACCURACY);
@@ -510,7 +513,7 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 		struct rx_pkt_meta_data *rx_pkt_meta = &task->rx_pkt_meta[j];
 		uint8_t *hdr = rx_pkt_meta->hdr;
 
-		pkt_rx_time = tsc_extrapolate_backward(rx_tsc, rx_pkt_meta->bytes_after_in_bulk, task->last_pkts_tsc) >> LATENCY_ACCURACY;
+		pkt_rx_time = tsc_extrapolate_backward(task->link_speed, rx_tsc, rx_pkt_meta->bytes_after_in_bulk, task->last_pkts_tsc) >> LATENCY_ACCURACY;
 		pkt_tx_time = rx_pkt_meta->pkt_tx_time;
 
 		if (task->unique_id_pos) {
@@ -604,6 +607,18 @@ void task_lat_set_accuracy_limit(struct task_lat *task, uint32_t accuracy_limit_
 	task->limit = nsec_to_tsc(accuracy_limit_nsec);
 }
 
+static void lat_start(struct task_base *tbase)
+{
+	struct task_lat *task = (struct task_lat *)tbase;
+
+	if (task->port) {
+		// task->port->link->speed reports the link speed in Mbps e.g. 40k for a 40 Gbps NIC
+		// task->link_speed reported link speed in Bytes per sec.
+		task->link_speed = task->port->link_speed * 125000L;
+		plog_info("\tReceiving at %ld Mbps\n", 8 * task->link_speed / 1000000);
+	}
+}
+
 static void init_task_lat(struct task_base *tbase, struct task_args *targ)
 {
 	struct task_lat *task = (struct task_lat *)tbase;
@@ -636,12 +651,21 @@ static void init_task_lat(struct task_base *tbase, struct task_args *targ)
 	task_lat_set_accuracy_limit(task, targ->accuracy_limit_nsec);
 	task->rx_pkt_meta = prox_zmalloc(MAX_RX_PKT_ALL * sizeof(*task->rx_pkt_meta), socket_id);
 	PROX_PANIC(task->rx_pkt_meta == NULL, "unable to allocate memory to store RX packet meta data");
+
+	task->link_speed = UINT64_MAX;
+	if (targ->nb_rxports) {
+		// task->port structure is only used while starting handle_lat to get the link_speed.
+		// link_speed can not be quiried at init as the port has not been initialized yet.
+		struct prox_port_cfg *port = &prox_port_cfg[targ->rx_port_queue[0].port];
+		task->port = port;
+	}
 }
 
 static struct task_init task_init_lat = {
 	.mode_str = "lat",
 	.init = init_task_lat,
 	.handle = handle_lat_bulk,
+	.start = lat_start,
 	.stop = lat_stop,
 	.flag_features = TASK_FEATURE_TSC_RX | TASK_FEATURE_RX_ALL | TASK_FEATURE_ZERO_RX | TASK_FEATURE_NEVER_DISCARDS,
 	.size = sizeof(struct task_lat)
