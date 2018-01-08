@@ -122,6 +122,7 @@ struct task_gen {
 	struct ether_addr  src_mac;
 	uint8_t flags;
 	uint8_t cksum_offload;
+	struct prox_port_cfg *port;
 } __rte_cache_aligned;
 
 static inline uint8_t ipv4_get_hdr_len(struct ipv4_hdr *ip)
@@ -1144,6 +1145,12 @@ static void start(struct task_base *tbase)
 	if (tbase->l3.tmaster) {
 		register_all_ip_to_ctrl_plane(task);
 	}
+	if (task->port) {
+		// task->port->link->speed reports the link speed in Mbps e.g. 40k for a 40 Gbps NIC
+		// task->link_speed reported link speed in Bytes per sec.
+		task->link_speed = task->port->link_speed * 125000L;
+		plog_info("\tGenerating at %ld Mbps\n", 8 * task->link_speed / 1000000);
+	}
 	/* TODO
 	   Handle the case when two tasks transmit to the same port
 	   and one of them is stopped. In that case ARP (requests or replies)
@@ -1190,7 +1197,7 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 	task->sig = targ->sig;
 	task->new_rate_bps = targ->rate_bps;
 
-	struct token_time_cfg tt_cfg = token_time_cfg_create(1250000000, rte_get_tsc_hz(), -1);
+	struct token_time_cfg tt_cfg = token_time_cfg_create(task->link_speed, rte_get_tsc_hz(), -1);
 
 	token_time_init(&task->token_time, &tt_cfg);
 	init_task_gen_seeds(task);
@@ -1211,8 +1218,6 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 
 	task->generator_id = targ->generator_id;
 	task->link_speed = UINT64_MAX;
-	if (targ->nb_txrings == 0 && targ->nb_txports == 1)
-		task->link_speed = 1250000000;
 
 	if (!strcmp(targ->pcap_file, "")) {
 		plog_info("\tUsing inline definition of a packet\n");
@@ -1237,6 +1242,7 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 	struct prox_port_cfg *port = find_reachable_port(targ);
 	if (port) {
 		task->cksum_offload = port->capabilities.tx_offload_cksum;
+		task->port = port;
 	}
 }
 
