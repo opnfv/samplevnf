@@ -476,7 +476,10 @@ uint16_t rx_pkt_distr(struct task_base *tbase, struct rte_mbuf ***mbufs)
 {
 	uint16_t ret = call_prev_rx_pkt(tbase, mbufs);
 
-	tbase->aux->rx_bucket[ret]++;
+	if (likely(ret < RX_BUCKET_SIZE))
+		tbase->aux->rx_bucket[ret]++;
+	else
+		tbase->aux->rx_bucket[RX_BUCKET_SIZE - 1]++;
 	return ret;
 }
 
