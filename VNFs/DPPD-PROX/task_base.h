@@ -143,6 +143,9 @@ struct task_base;
 
 #define MAX_RX_PKT_ALL 16384
 
+#define RX_BUCKET_SIZE (2 * MAX_RING_BURST + 1) /* Limit RX bucket size */
+#define TX_BUCKET_SIZE	(MAX_RING_BURST +1)
+
 #define MAX_STACKED_RX_FUCTIONS 16
 
 typedef uint16_t (*rx_pkt_func) (struct task_base *tbase, struct rte_mbuf ***mbufs);
@@ -164,7 +167,7 @@ struct task_base_aux {
 	int      rx_prev_idx;
 	uint16_t (*rx_pkt_prev[MAX_STACKED_RX_FUCTIONS])(struct task_base *tbase, struct rte_mbuf ***mbufs);
 
-	uint32_t rx_bucket[MAX_RING_BURST + 1];
+	uint32_t rx_bucket[RX_BUCKET_SIZE];
 	uint32_t tx_bucket[MAX_RING_BURST + 1];
 	int (*tx_pkt_l2)(struct task_base *tbase, struct rte_mbuf **mbufs, const uint16_t n_pkts, uint8_t *out);
 	int (*tx_pkt_orig)(struct task_base *tbase, struct rte_mbuf **mbufs, const uint16_t n_pkts, uint8_t *out);
