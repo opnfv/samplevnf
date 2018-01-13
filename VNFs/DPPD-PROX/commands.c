@@ -84,9 +84,14 @@ static void warn_inactive_cores(uint32_t *cores, int count, const char *prefix)
 static inline int wait_command_handled(struct lcore_cfg *lconf)
 {
 	uint64_t t1 = rte_rdtsc(), t2;
+	int max_time = 5;
+
+	if (lconf->msg.type == LCONF_MSG_STOP)
+		max_time = 30;
+
 	while (lconf_is_req(lconf)) {
 		t2 = rte_rdtsc();
-		if (t2 - t1 > 5 * rte_get_tsc_hz()) {
+		if (t2 - t1 > max_time * rte_get_tsc_hz()) {
 			// Failed to handle command ...
 			for (uint8_t task_id = 0; task_id < lconf->n_tasks_all; ++task_id) {
 				struct task_args *targs = &lconf->targs[task_id];
