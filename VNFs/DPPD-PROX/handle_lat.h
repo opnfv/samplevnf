@@ -24,7 +24,6 @@
 #include "task_base.h"
 #include "clock.h"
 
-#define MAX_PACKETS_FOR_LATENCY 64
 #define LATENCY_ACCURACY	1
 
 struct lat_test {

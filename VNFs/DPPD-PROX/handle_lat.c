@@ -35,10 +35,11 @@
 #include "prox_port_cfg.h"
 
 #define DEFAULT_BUCKET_SIZE	10
+#define ACCURACY_BUFFER_SIZE	64
 
 struct lat_info {
 	uint32_t rx_packet_index;
-	uint32_t tx_packet_index;
+	uint64_t tx_packet_index;
 	uint32_t tx_err;
 	uint32_t rx_err;
 	uint64_t rx_time;
@@ -54,28 +55,29 @@ struct lat_info {
 };
 
 struct delayed_latency_entry {
-	uint32_t rx_packet_idx;
+	uint32_t rx_packet_id;
+	uint32_t tx_packet_id;
+	uint32_t packet_id;
+	uint8_t generator_id;
 	uint64_t pkt_rx_time;
 	uint64_t pkt_tx_time;
 	uint64_t rx_time_err;
 };
 
-struct delayed_latency {
-	struct delayed_latency_entry entries[64];
-};
-
-static struct delayed_latency_entry *delayed_latency_get(struct delayed_latency *delayed_latency, uint32_t rx_packet_idx)
+static struct delayed_latency_entry *delayed_latency_get(struct delayed_latency_entry **delayed_latency_entries, uint8_t generator_id, uint32_t packet_id)
 {
-	if (delayed_latency->entries[rx_packet_idx % 64].rx_packet_idx == rx_packet_idx)
-		return &delayed_latency->entries[rx_packet_idx % 64];
+	struct delayed_latency_entry *delayed_latency_entry = &delayed_latency_entries[generator_id][packet_id % ACCURACY_BUFFER_SIZE];
+	if (delayed_latency_entry->packet_id == packet_id)
+		return delayed_latency_entry;
 	else
 		return NULL;
 }
 
-static struct delayed_latency_entry *delayed_latency_create(struct delayed_latency *delayed_latency, uint32_t rx_packet_idx)
+static struct delayed_latency_entry *delayed_latency_create(struct delayed_latency_entry **delayed_latency_entries, uint8_t generator_id, uint32_t packet_id)
 {
-	delayed_latency->entries[rx_packet_idx % 64].rx_packet_idx = rx_packet_idx;
-	return &delayed_latency->entries[rx_packet_idx % 64];
+	struct delayed_latency_entry *delayed_latency_entry = &delayed_latency_entries[generator_id][packet_id % ACCURACY_BUFFER_SIZE];
+	delayed_latency_entry->packet_id = packet_id;
+	return delayed_latency_entry;
 }
 
 struct rx_pkt_meta_data {
@@ -89,7 +91,7 @@ struct task_lat {
 	uint64_t limit;
 	uint64_t rx_packet_index;
 	uint64_t last_pkts_tsc;
-	struct delayed_latency delayed_latency;
+	struct delayed_latency_entry **delayed_latency_entries;
 	struct lat_info *latency_buffer;
 	uint32_t latency_buffer_idx;
 	uint32_t latency_buffer_size;
@@ -107,14 +109,16 @@ struct task_lat {
 	struct early_loss_detect *eld;
 	struct rx_pkt_meta_data *rx_pkt_meta;
 	uint64_t link_speed;
+	// Following fields are only used when starting or stopping, not in general runtime
+	uint64_t *prev_tx_packet_index;
 	FILE *fp_rx;
 	FILE *fp_tx;
 	struct prox_port_cfg *port;
 };
 
-static uint32_t abs_diff(uint32_t a, uint32_t b)
+static uint32_t diff_or_zero(uint32_t a, uint32_t b)
 {
-       return a < b? UINT32_MAX - (b - a - 1) : a - b;
+       return a < b? 0 : a - b;
 }
 
 struct lat_test *task_lat_get_latency_meassurement(struct task_lat *task)
@@ -143,34 +147,81 @@ static int compare_tx_time(const void *val1, const void *val2)
 	const struct lat_info *ptr1 = val1;
 	const struct lat_info *ptr2 = val2;
 
-	return ptr1->tx_time - ptr2->tx_time;
+	return ptr1->tx_time > ptr2->tx_time ? 1 : -1;
 }
 
-static int compare_queue_id(const void *val1, const void *val2)
+static int compare_tx_packet_index(const void *val1, const void *val2)
 {
-	return compare_tx_time(val1, val2);
+	const struct lat_info *ptr1 = val1;
+	const struct lat_info *ptr2 = val2;
+
+	return ptr1->tx_packet_index > ptr2->tx_packet_index ? 1 : -1;
+}
+
+static void fix_latency_buffer_tx_packet_index(struct lat_info *lat, uint32_t count)
+{
+	uint32_t tx_packet_index, old_tx_packet_index = lat->tx_packet_index, n_overflow = 0;
+	uint32_t small = UINT32_MAX >> 1;
+
+	lat++;
+
+	/* Buffer is sorted so far by RX time.
+	 * We might have packets being reordered by SUT.
+	 *     => consider small differences as re-order and big ones as overflow of tx_packet_index.
+	 * Note that:
+	 *	- overflow only happens if receiving and storing 4 billions packets...
+	 *	- a absolute difference of less than 2 billion packets is not considered as an overflow
+	 */
+	for (uint32_t i = 1; i < count; i++) {
+		tx_packet_index = lat->tx_packet_index;
+		if (tx_packet_index > old_tx_packet_index) {
+			if (tx_packet_index - old_tx_packet_index < small) {
+				// The diff is small => increasing index count
+			} else {
+				// The diff is big => it is more likely that the previous packet was overflow
+				n_overflow--;
+			}
+		} else {
+			if (old_tx_packet_index - tx_packet_index < small) {
+				// The diff is small => packet reorder
+			} else {
+				// The diff is big => it is more likely that this is an overflow
+				n_overflow++;
+			}
+		}
+		lat->tx_packet_index += ((uint64_t)UINT32_MAX + 1) * n_overflow;
+		old_tx_packet_index = tx_packet_index;
+		lat++;
+	}
 }
 
 static void fix_latency_buffer_tx_time(struct lat_info *lat, uint32_t count)
 {
-	uint32_t id, time, old_id = 0, old_time = 0, n_overflow = 0;
+	uint32_t tx_time, old_tx_time = lat->tx_time, n_overflow = 0;
+	uint32_t small = UINT32_MAX >> 1;
+	lat++;
 
-	for (uint32_t i = 0; i < count; i++) {
-		id = lat->port_queue_id;
-		time = lat->tx_time;
-		if (id == old_id) {
-			// Same queue id as previous entry; time should always increase
-			if (time < old_time) {
+	/*
+	 * Same algorithm as above, but with time.
+	 * Note that:
+	 *	- overflow happens after 4 billions "cycles" (shifted by LATENCY_ACCURACY) = ~4sec
+	 *	- a absolute difference up to 2 billion (shifted) cycles (~=2sec) is not considered as an overflow
+	 *		=> algorithm does not work if receiving less than 1 packet every 2 seconds
+	 */
+	for (uint32_t i = 1; i < count; i++) {
+		tx_time = lat->tx_time;
+		if (tx_time > old_tx_time) {
+			if (tx_time - old_tx_time > small) {
+				n_overflow--;
+			}
+		} else {
+			if (old_tx_time - tx_time > small) {
 				n_overflow++;
 			}
-			lat->tx_time += UINT32_MAX * n_overflow;
-			old_time = time;
-		} else {
-			// Different queue_id, time starts again at 0
-			old_id = id;
-			old_time = 0;
-			n_overflow = 0;
 		}
+		lat->tx_time += ((uint64_t)UINT32_MAX + 1) * n_overflow;
+		old_tx_time = tx_time;
+		lat++;
 	}
 }
 
@@ -206,7 +257,7 @@ static uint64_t lat_latency_buffer_get_min_tsc(struct task_lat *task)
 
 static uint64_t lat_info_get_lat_tsc(struct lat_info *lat_info)
 {
-	uint64_t lat = abs_diff(lat_info->rx_time, lat_info->tx_time);
+	uint64_t lat = diff_or_zero(lat_info->rx_time, lat_info->tx_time);
 
 	return lat << LATENCY_ACCURACY;
 }
@@ -223,18 +274,18 @@ static uint64_t lat_info_get_rx_err_tsc(const struct lat_info *lat_info)
 
 static uint64_t lat_info_get_rx_tsc(const struct lat_info *lat_info)
 {
-	return ((uint64_t)lat_info) << LATENCY_ACCURACY;
+	return ((uint64_t)lat_info->rx_time) << LATENCY_ACCURACY;
 }
 
 static uint64_t lat_info_get_tx_tsc(const struct lat_info *lat_info)
 {
-	return ((uint64_t)lat_info) << LATENCY_ACCURACY;
+	return ((uint64_t)lat_info->tx_time) << LATENCY_ACCURACY;
 }
 
 static void lat_write_latency_to_file(struct task_lat *task)
 {
 	uint64_t min_tsc;
-	uint32_t n_loss;
+	uint64_t n_loss;
 
 	min_tsc = lat_latency_buffer_get_min_tsc(task);
 
@@ -247,7 +298,7 @@ static void lat_write_latency_to_file(struct task_lat *task)
 		uint64_t rx_tsc = lat_info_get_rx_tsc(lat_info);
 		uint64_t tx_tsc = lat_info_get_tx_tsc(lat_info);
 
-		fprintf(task->fp_rx, "%u%d;%d;%ld;%lu;%lu\n",
+		fprintf(task->fp_rx, "%u;%u;%lu;%lu;%lu;%lu\n",
 			lat_info->rx_packet_index,
 			lat_info->port_queue_id,
 			lat_info->tx_packet_index,
@@ -257,19 +308,27 @@ static void lat_write_latency_to_file(struct task_lat *task)
 	}
 
 	// To detect dropped packets, we need to sort them based on TX
-	plogx_info("Sorting packets based on queue_id\n");
-	qsort (task->latency_buffer, task->latency_buffer_idx, sizeof(struct lat_info), compare_queue_id);
-	plogx_info("Adapting tx_time\n");
-	fix_latency_buffer_tx_time(task->latency_buffer, task->latency_buffer_idx);
-	plogx_info("Sorting packets based on tx_time\n");
-	qsort (task->latency_buffer, task->latency_buffer_idx, sizeof(struct lat_info), compare_tx_time);
-	plogx_info("Sorted packets based on tx_time\n");
+	if (task->unique_id_pos) {
+		plogx_info("Adapting tx_packet_index\n");
+		fix_latency_buffer_tx_packet_index(task->latency_buffer, task->latency_buffer_idx);
+		plogx_info("Sorting packets based on tx_packet_index\n");
+		qsort (task->latency_buffer, task->latency_buffer_idx, sizeof(struct lat_info), compare_tx_packet_index);
+		plogx_info("Sorted packets based on packet_index\n");
+	} else {
+		plogx_info("Adapting tx_time\n");
+		fix_latency_buffer_tx_time(task->latency_buffer, task->latency_buffer_idx);
+		plogx_info("Sorting packets based on tx_time\n");
+		qsort (task->latency_buffer, task->latency_buffer_idx, sizeof(struct lat_info), compare_tx_time);
+		plogx_info("Sorted packets based on packet_time\n");
+	}
 
 	// A packet is marked as dropped if 2 packets received from the same queue are not consecutive
 	fprintf(task->fp_tx, "Latency stats for %u packets, sorted by tx time\n", task->latency_buffer_idx);
 	fprintf(task->fp_tx, "queue;tx index; rx index; lat (nsec);tx time; rx time; tx_err;rx_err\n");
 
-	uint32_t prev_tx_packet_index = -1;
+	for (uint32_t i = 0; i < task->generator_count;i++)
+		task->prev_tx_packet_index[i] = -1;
+
 	for (uint32_t i = 0; i < task->latency_buffer_idx; i++) {
 		struct lat_info *lat_info = &task->latency_buffer[i];
 		uint64_t lat_tsc = lat_info_get_lat_tsc(lat_info);
@@ -278,19 +337,25 @@ static void lat_write_latency_to_file(struct task_lat *task)
 		uint64_t rx_tsc = lat_info_get_rx_tsc(lat_info);
 		uint64_t tx_tsc = lat_info_get_tx_tsc(lat_info);
 
-		/* Packet n + 64 delivers the TX error for packet n,
-		   hence the last 64 packets do no have TX error. */
-		if (i + 64 >= task->latency_buffer_idx) {
+		/* Packet n + ACCURACY_BUFFER_SIZE delivers the TX error for packet n,
+		   hence the last ACCURACY_BUFFER_SIZE packets do no have TX error. */
+		if (i + ACCURACY_BUFFER_SIZE >= task->latency_buffer_idx) {
 			tx_err_tsc = 0;
 		}
+
+		if (lat_info->port_queue_id >= task->generator_count) {
+			plog_err("Unexpected generator id %u for packet %lu - skipping packet\n",
+				lat_info->port_queue_id, lat_info->tx_packet_index);
+			continue;
+		}
 		// Log dropped packet
-		n_loss = lat_info->tx_packet_index - prev_tx_packet_index - 1;
+		n_loss = lat_info->tx_packet_index - task->prev_tx_packet_index[lat_info->port_queue_id] - 1;
 		if (n_loss)
-			fprintf(task->fp_tx, "===> %d;%d;0;0;0;0; lost %d packets <===\n",
+			fprintf(task->fp_tx, "===> %u;%lu;0;0;0;0;0;0 lost %lu packets <===\n",
 				lat_info->port_queue_id,
 				lat_info->tx_packet_index - n_loss, n_loss);
 		// Log next packet
-		fprintf(task->fp_tx, "%d;%d;%u;%lu;%lu;%lu;%lu;%lu\n",
+		fprintf(task->fp_tx, "%u;%lu;%u;%lu;%lu;%lu;%lu;%lu",
 			lat_info->port_queue_id,
 			lat_info->tx_packet_index,
 			lat_info->rx_packet_index,
@@ -300,7 +365,7 @@ static void lat_write_latency_to_file(struct task_lat *task)
 			tsc_to_nsec(tx_err_tsc),
 			tsc_to_nsec(rx_err_tsc));
 #ifdef LAT_DEBUG
-		fprintf(task->fp_tx, ";%d from %d;%lu;%lu;%lu",
+		fprintf(task->fp_tx, ";%u from %u;%lu;%lu;%lu",
 			lat_info->id_in_bulk,
 			lat_info->bulk_size,
 			tsc_to_nsec(lat_info->begin - min_tsc),
@@ -308,7 +373,7 @@ static void lat_write_latency_to_file(struct task_lat *task)
 			tsc_to_nsec(lat_info->after - min_tsc));
 #endif
 		fprintf(task->fp_tx, "\n");
-		prev_tx_packet_index = lat_info->tx_packet_index;
+		task->prev_tx_packet_index[lat_info->port_queue_id] = lat_info->tx_packet_index;
 	}
 	fflush(task->fp_rx);
 	fflush(task->fp_tx);
@@ -340,21 +405,16 @@ static void task_lat_store_lat_debug(struct task_lat *task, uint32_t rx_packet_i
 }
 #endif
 
-static void task_lat_store_lat_buf(struct task_lat *task, uint64_t rx_packet_index, struct unique_id *unique_id, uint64_t rx_time, uint64_t tx_time, uint64_t rx_err, uint64_t tx_err)
+static void task_lat_store_lat_buf(struct task_lat *task, uint64_t rx_packet_index, uint64_t rx_time, uint64_t tx_time, uint64_t rx_err, uint64_t tx_err, uint32_t packet_id, uint8_t generator_id)
 {
 	struct lat_info *lat_info;
-	uint8_t generator_id = 0;
-	uint32_t packet_index = 0;
-
-	if (unique_id)
-		unique_id_get(unique_id, &generator_id, &packet_index);
 
 	/* If unique_id_pos is specified then latency is stored per
 	   packet being sent. Lost packets are detected runtime, and
 	   latency stored for those packets will be 0 */
 	lat_info = &task->latency_buffer[task->latency_buffer_idx++];
-	lat_info->rx_packet_index = task->latency_buffer_idx - 1;
-	lat_info->tx_packet_index = packet_index;
+	lat_info->rx_packet_index = rx_packet_index;
+	lat_info->tx_packet_index = packet_id;
 	lat_info->port_queue_id = generator_id;
 	lat_info->rx_time = rx_time;
 	lat_info->tx_time = tx_time;
@@ -403,8 +463,6 @@ static void lat_test_add_lost(struct lat_test *lat_test, uint64_t lost_packets)
 
 static void lat_test_add_latency(struct lat_test *lat_test, uint64_t lat_tsc, uint64_t error)
 {
-	lat_test->tot_all_pkts++;
-
 	if (error > lat_test->accuracy_limit_tsc)
 		return;
 	lat_test->tot_pkts++;
@@ -436,16 +494,16 @@ static int task_lat_can_store_latency(struct task_lat *task)
 	return task->latency_buffer_idx < task->latency_buffer_size;
 }
 
-static void task_lat_store_lat(struct task_lat *task, uint64_t rx_packet_index, uint64_t rx_time, uint64_t tx_time, uint64_t rx_error, uint64_t tx_error, struct unique_id *unique_id)
+static void task_lat_store_lat(struct task_lat *task, uint64_t rx_packet_index, uint64_t rx_time, uint64_t tx_time, uint64_t rx_error, uint64_t tx_error, uint32_t packet_id, uint8_t generator_id)
 {
 	if (tx_time == 0)
 		return;
-	uint32_t lat_tsc = abs_diff(rx_time, tx_time) << LATENCY_ACCURACY;
+	uint32_t lat_tsc = diff_or_zero(rx_time, tx_time) << LATENCY_ACCURACY;
 
 	lat_test_add_latency(task->lat_test, lat_tsc, rx_error + tx_error);
 
 	if (task_lat_can_store_latency(task)) {
-		task_lat_store_lat_buf(task, rx_packet_index, unique_id, rx_time, tx_time, rx_error, tx_error);
+		task_lat_store_lat_buf(task, rx_packet_index, rx_time, tx_time, rx_error, tx_error, packet_id, generator_id);
 	}
 }
 
@@ -472,8 +530,6 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 	for (uint16_t j = 0; j < n_pkts; ++j) {
 		struct rte_mbuf *mbuf = mbufs[j];
 		task->rx_pkt_meta[j].hdr = rte_pktmbuf_mtod(mbuf, uint8_t *);
-	}
-	for (uint16_t j = 0; j < n_pkts; ++j) {
 	}
 
 	if (task->sig) {
@@ -508,6 +564,7 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 
 	struct unique_id *unique_id = NULL;
 	struct delayed_latency_entry *delayed_latency_entry;
+	uint32_t packet_id, generator_id;
 
 	for (uint16_t j = 0; j < n_pkts; ++j) {
 		struct rx_pkt_meta_data *rx_pkt_meta = &task->rx_pkt_meta[j];
@@ -520,41 +577,45 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 			unique_id = (struct unique_id *)(hdr + task->unique_id_pos);
 
 			uint32_t n_loss = task_lat_early_loss_detect(task, unique_id);
+			packet_id = unique_id->packet_id;
+			generator_id = unique_id->generator_id;
 			lat_test_add_lost(task->lat_test, n_loss);
+		} else {
+			packet_id = task->rx_packet_index;
+			generator_id = 0;
 		}
+		task->lat_test->tot_all_pkts++;
 
 		/* If accuracy is enabled, latency is reported with a
-		   delay of 64 packets since the generator puts the
-		   accuracy for packet N into packet N + 64. The delay
+		   delay of ACCURACY_BUFFER_SIZE packets since the generator puts the
+		   accuracy for packet N into packet N + ACCURACY_BUFFER_SIZE. The delay
 		   ensures that all reported latencies have both rx
 		   and tx error. */
 		if (task->accur_pos) {
 			tx_time_err = *(uint32_t *)(hdr + task->accur_pos);
 
-			delayed_latency_entry = delayed_latency_get(&task->delayed_latency, task->rx_packet_index - 64);
+			delayed_latency_entry = delayed_latency_get(task->delayed_latency_entries, generator_id, packet_id - ACCURACY_BUFFER_SIZE);
 
 			if (delayed_latency_entry) {
 				task_lat_store_lat(task,
-						   task->rx_packet_index,
+						   delayed_latency_entry->rx_packet_id,
 						   delayed_latency_entry->pkt_rx_time,
 						   delayed_latency_entry->pkt_tx_time,
 						   delayed_latency_entry->rx_time_err,
 						   tx_time_err,
-						   unique_id);
+						   delayed_latency_entry->tx_packet_id,
+						   delayed_latency_entry->generator_id);
 			}
 
-			delayed_latency_entry = delayed_latency_create(&task->delayed_latency, task->rx_packet_index);
+			delayed_latency_entry = delayed_latency_create(task->delayed_latency_entries, generator_id, packet_id);
 			delayed_latency_entry->pkt_rx_time = pkt_rx_time;
 			delayed_latency_entry->pkt_tx_time = pkt_tx_time;
 			delayed_latency_entry->rx_time_err = rx_time_err;
+			delayed_latency_entry->rx_packet_id = task->rx_packet_index;
+			delayed_latency_entry->tx_packet_id = packet_id;
+			delayed_latency_entry->generator_id = generator_id;
 		} else {
-			task_lat_store_lat(task,
-					   task->rx_packet_index,
-					   pkt_rx_time,
-					   pkt_tx_time,
-					   0,
-					   0,
-					   unique_id);
+			task_lat_store_lat(task, task->rx_packet_index, pkt_rx_time, pkt_tx_time, 0, 0, packet_id, generator_id);
 		}
 		task->rx_packet_index++;
 	}
@@ -577,29 +638,39 @@ static void init_task_lat_latency_buffer(struct task_lat *task, uint32_t core_id
 	latency_buffer_mem_size = sizeof(struct lat_info) * task->latency_buffer_size;
 
 	task->latency_buffer = prox_zmalloc(latency_buffer_mem_size, socket_id);
-	PROX_PANIC(task->latency_buffer == NULL, "Failed to allocate %ld kbytes for %s\n", latency_buffer_mem_size / 1024, name);
+	PROX_PANIC(task->latency_buffer == NULL, "Failed to allocate %zu kbytes for latency_buffer\n", latency_buffer_mem_size / 1024);
 
-	sprintf(name, "latency.rx_%d.txt", core_id);
+	sprintf(name, "latency.rx_%u.txt", core_id);
 	task->fp_rx = fopen(name, "w+");
 	PROX_PANIC(task->fp_rx == NULL, "Failed to open %s\n", name);
 
-	sprintf(name, "latency.tx_%d.txt", core_id);
+	sprintf(name, "latency.tx_%u.txt", core_id);
 	task->fp_tx = fopen(name, "w+");
 	PROX_PANIC(task->fp_tx == NULL, "Failed to open %s\n", name);
+
+	task->prev_tx_packet_index = prox_zmalloc(sizeof(task->prev_tx_packet_index[0]) * task->generator_count, socket_id);
+	PROX_PANIC(task->prev_tx_packet_index == NULL, "Failed to allocated prev_tx_packet_index\n");
+}
+
+static void task_init_generator_count(struct task_lat *task)
+{
+	uint8_t *generator_count = prox_sh_find_system("generator_count");
+
+	if (generator_count == NULL) {
+		task->generator_count = 1;
+		plog_info("\tNo generators found, hard-coding to %u generators\n", task->generator_count);
+	} else
+		task->generator_count = *generator_count;
+	plog_info("\tLatency using %u generators\n", task->generator_count);
 }
 
 static void task_lat_init_eld(struct task_lat *task, uint8_t socket_id)
 {
-	uint8_t *generator_count = prox_sh_find_system("generator_count");
 	size_t eld_mem_size;
-
-	if (generator_count == NULL)
-		task->generator_count = 0;
-	else
-		task->generator_count = *generator_count;
 
 	eld_mem_size = sizeof(task->eld[0]) * task->generator_count;
 	task->eld = prox_zmalloc(eld_mem_size, socket_id);
+	PROX_PANIC(task->eld == NULL, "Failed to allocate eld\n");
 }
 
 void task_lat_set_accuracy_limit(struct task_lat *task, uint32_t accuracy_limit_nsec)
@@ -615,7 +686,7 @@ static void lat_start(struct task_base *tbase)
 		// task->port->link->speed reports the link speed in Mbps e.g. 40k for a 40 Gbps NIC
 		// task->link_speed reported link speed in Bytes per sec.
 		task->link_speed = task->port->link_speed * 125000L;
-		plog_info("\tReceiving at %ld Mbps\n", 8 * task->link_speed / 1000000);
+		plog_info("\tReceiving at %lu Mbps\n", 8 * task->link_speed / 1000000);
 	}
 }
 
@@ -632,12 +703,32 @@ static void init_task_lat(struct task_base *tbase, struct task_args *targ)
 	task->unique_id_pos = targ->packet_id_pos;
 	task->latency_buffer_size = targ->latency_buffer_size;
 
+	task_init_generator_count(task);
+
 	if (task->latency_buffer_size) {
 		init_task_lat_latency_buffer(task, targ->lconf->id);
 	}
 
-	if (targ->bucket_size < LATENCY_ACCURACY) {
+	if (targ->bucket_size < DEFAULT_BUCKET_SIZE) {
 		targ->bucket_size = DEFAULT_BUCKET_SIZE;
+	}
+
+	if (task->accur_pos) {
+		task->delayed_latency_entries = prox_zmalloc(sizeof(*task->delayed_latency_entries) * task->generator_count , socket_id);
+		PROX_PANIC(task->delayed_latency_entries == NULL, "Failed to allocate array for storing delayed latency entries\n");
+		for (uint i = 0; i < task->generator_count; i++) {
+			task->delayed_latency_entries[i] = prox_zmalloc(sizeof(**task->delayed_latency_entries) * ACCURACY_BUFFER_SIZE, socket_id);
+			PROX_PANIC(task->delayed_latency_entries[i] == NULL, "Failed to allocate array for storing delayed latency entries\n");
+		}
+		if (task->unique_id_pos == 0) {
+			/* When using accuracy feature, the accuracy from TX is written ACCURACY_BUFFER_SIZE packets later
+			* We can only retrieve the good packet if a packet id is written to it.
+			* Otherwise we will use the packet RECEIVED ACCURACY_BUFFER_SIZE packets ago which is OK if
+			* packets are not re-ordered. If packets are re-ordered, then the matching between
+			* the tx accuracy znd the latency is wrong.
+			*/
+			plog_warn("\tWhen accuracy feature is used, a unique id should ideally also be used\n");
+		}
 	}
 
 	task->lt[0].bucket_size = targ->bucket_size - LATENCY_ACCURACY;
