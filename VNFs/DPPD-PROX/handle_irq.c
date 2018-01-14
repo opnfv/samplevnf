@@ -20,36 +20,13 @@
 #include "task_base.h"
 #include "task_init.h"
 #include "handle_irq.h"
+#include "stats_irq.h"
 #include "log.h"
 #include "unistd.h"
 #include "input.h"
 
-#define MAX_INDEX	65535 * 16
-
-struct irq_info {
-	uint64_t tsc;
-	uint64_t lat;
-};
-
-struct irq_bucket {
-	uint64_t index;
-	struct irq_info info[MAX_INDEX];
-};
-
-struct task_irq {
-	struct task_base base;
-	uint64_t start_tsc;
-	uint64_t first_tsc;
-	uint64_t tsc;
-	uint64_t max_irq;
-	uint8_t  lcore_id;
-	volatile uint16_t stats_use_lt; /* which lt to use, */
-	volatile uint16_t task_use_lt; /* 0 or 1 depending on which of the 2 result records are used */
-	struct irq_bucket buffer[2];
-};
-
 #define MAX_INTERRUPT_LENGTH	500000	/* Maximum length of an interrupt is (1 / MAX_INTERRUPT_LENGTH) seconds */
-
+uint64_t irq_bucket_maxtime_micro[] = {1,5,10,50,100,500,1000,5000,10000,50000,100000,500000,UINT64_MAX};
 /*
  *	This module is not handling any packets.
  *	It loops on rdtsc() and checks whether it has been interrupted
@@ -57,6 +34,18 @@ struct task_irq {
  *	This is a debugging only task, useful to check if the system h
  *		as been properly configured.
 */
+
+static void update_irq_stats(struct task_irq *task, uint64_t irq)
+{
+	if (irq > task->stats.max_irq)
+		task->stats.max_irq = irq;
+	for (uint i = 0; i < IRQ_BUCKETS_COUNT; ++i) {
+		if (irq < irq_bucket_maxtime_cycles[i]) {
+			task->stats.irq[i]++;
+			break;
+		}
+	}
+}
 
 void task_irq_show_stats(struct task_irq *task_irq, struct input *input)
 {
@@ -104,31 +93,33 @@ static void irq_stop(struct task_base *tbase)
 	int bucket_id;
 	int n_lat = 0;
 
-	plog_info("Stopping core %u\n", lcore_id);
-	sleep(2);	// Make sure all cores are stopped before starting to write
-	plog_info("Core ID; Interrupt (nanosec); Time (msec)\n");
-	for (int j = 0; j < 2; j++) {
-		// Start dumping the oldest bucket first
-		if (task->buffer[0].info[0].tsc < task->buffer[1].info[0].tsc)
-			bucket_id = j;
-		else
-			bucket_id = !j;
-		struct irq_bucket *bucket = &task->buffer[bucket_id];
-		for (i=0; i< bucket->index;i++) {
-			if (bucket->info[i].lat != 0) {
-				lat = bucket->info[i].lat * 1000000000 / rte_get_tsc_hz();
-				if (max_lat < lat)
-					max_lat = lat;
-				n_lat++;
-				tot_lat += lat;
-				plog_info("%d; %ld; %ld\n", lcore_id, lat,
-					  (bucket->info[i].tsc - task->start_tsc) * 1000 / rte_get_tsc_hz());
+	if (task->irq_debug) {
+		plog_info("Stopping core %u\n", lcore_id);
+		sleep(2);	// Make sure all cores are stopped before starting to write
+		plog_info("Core ID; Interrupt (nanosec); Time (msec)\n");
+		for (int j = 0; j < 2; j++) {
+			// Start dumping the oldest bucket first
+			if (task->buffer[0].info[0].tsc < task->buffer[1].info[0].tsc)
+				bucket_id = j;
+			else
+				bucket_id = !j;
+			struct irq_bucket *bucket = &task->buffer[bucket_id];
+			for (i=0; i< bucket->index;i++) {
+				if (bucket->info[i].lat != 0) {
+					lat = bucket->info[i].lat * 1000000000 / rte_get_tsc_hz();
+					if (max_lat < lat)
+						max_lat = lat;
+					n_lat++;
+					tot_lat += lat;
+					plog_info("%d; %ld; %ld\n", lcore_id, lat,
+					  	(bucket->info[i].tsc - task->start_tsc) * 1000 / rte_get_tsc_hz());
+				}
 			}
 		}
+		if (n_lat)
+			tot_lat = tot_lat / n_lat;
+		plog_info("Core %u stopped. max lat is %ld and average is %ld\n", lcore_id, max_lat, tot_lat);
 	}
-	if (n_lat)
-		tot_lat = tot_lat / n_lat;
-	plog_info("Core %u stopped. max lat is %ld and average is %ld\n", lcore_id, max_lat, tot_lat);
 }
 
 static inline int handle_irq_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts)
@@ -142,9 +133,12 @@ static inline int handle_irq_bulk(struct task_base *tbase, struct rte_mbuf **mbu
 	struct irq_bucket *bucket = &task->buffer[task->task_use_lt];
 
 	tsc1 = rte_rdtsc();
-	if ((tsc1 > task->first_tsc) && (task->tsc != 0) && ((tsc1 - task->tsc) > task->max_irq) && (bucket->index < MAX_INDEX)) {
-		bucket->info[bucket->index].tsc = tsc1;
-		bucket->info[bucket->index++].lat = tsc1 - task->tsc;
+	if ((tsc1 > task->first_tsc) && (task->tsc != 0)) {
+		update_irq_stats(task, tsc1 - task->tsc);
+		if (((tsc1 - task->tsc) > task->max_irq) && (bucket->index < MAX_INDEX)) {
+			bucket->info[bucket->index].tsc = tsc1;
+			bucket->info[bucket->index++].lat = tsc1 - task->tsc;
+		}
 	}
 	task->tsc = tsc1;
 	return 0;
@@ -154,12 +148,17 @@ static void init_task_irq(struct task_base *tbase,
 			  __attribute__((unused)) struct task_args *targ)
 {
 	struct task_irq *task = (struct task_irq *)tbase;
-	// max_irq expressed in cycles
-	task->max_irq = rte_get_tsc_hz() / MAX_INTERRUPT_LENGTH;
 	task->start_tsc = rte_rdtsc();
 	task->first_tsc = task->start_tsc + 2 * rte_get_tsc_hz();
 	task->lcore_id = targ->lconf->id;
+	task->irq_debug = targ->irq_debug;
+	// max_irq expressed in cycles
+	task->max_irq = rte_get_tsc_hz() / MAX_INTERRUPT_LENGTH;
 	plog_info("\tusing irq mode with max irq set to %ld cycles\n", task->max_irq);
+
+	for (uint bucket_id = 0; bucket_id < IRQ_BUCKETS_COUNT - 1; bucket_id++)
+		irq_bucket_maxtime_cycles[bucket_id] = rte_get_tsc_hz() * irq_bucket_maxtime_micro[bucket_id] / 1000000;
+	irq_bucket_maxtime_cycles[IRQ_BUCKETS_COUNT - 1] = UINT64_MAX;
 }
 
 static struct task_init task_init_irq = {

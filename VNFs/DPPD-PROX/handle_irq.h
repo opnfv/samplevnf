@@ -17,7 +17,35 @@
 #ifndef _HANDLE_IRQ_H_
 #define _HANDLE_IRQ_H_
 
-struct task_irq;
+#include "task_base.h"
+#include "stats_irq.h"
+
+#define MAX_INDEX	65535 * 16
+
+struct irq_info {
+	uint64_t tsc;
+	uint64_t lat;
+};
+
+struct irq_bucket {
+	uint64_t index;
+	struct irq_info info[MAX_INDEX];
+};
+
+struct task_irq {
+	struct task_base base;
+	uint64_t start_tsc;
+	uint64_t first_tsc;
+	uint64_t tsc;
+	uint64_t max_irq;
+	uint8_t  lcore_id;
+	uint8_t  irq_debug;
+	volatile uint16_t stats_use_lt; /* which lt to use, */
+	volatile uint16_t task_use_lt; /* 0 or 1 depending on which of the 2 result records are used */
+	struct irq_bucket buffer[2];
+	struct irq_rt_stats stats;
+};
+
 struct input;
 
 void task_irq_show_stats(struct task_irq *task_irq, struct input *input);

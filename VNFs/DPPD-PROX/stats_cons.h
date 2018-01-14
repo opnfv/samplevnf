@@ -26,7 +26,8 @@
 #define STATS_CONS_F_L4GEN      0x40
 #define STATS_CONS_F_GLOBAL     0x80
 #define STATS_CONS_F_PRIO_TASKS 0x100
-#define STATS_CONS_F_ALL        0x1ff
+#define STATS_CONS_F_IRQ        0x200
+#define STATS_CONS_F_ALL        0x3ff
 
 struct stats_cons {
 	void (*init)(void);

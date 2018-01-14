@@ -30,6 +30,7 @@
 #include "stats_latency.h"
 #include "stats_global.h"
 #include "stats_prio_task.h"
+#include "stats_irq.h"
 
 struct stats_path_str {
 	const char *str;
@@ -106,6 +107,26 @@ static uint64_t sp_task_rx_prio(int argc, const char *argv[])
 	if (args_to_core_task(argv[0], argv[1], &c, &t))
 		return -1;
 	return stats_get_prio_task_stats_sample_by_core_task(c, t, 1)->rx_prio[atoi(argv[2])];
+}
+
+static uint64_t sp_task_max_irq(int argc, const char *argv[])
+{
+	struct task_stats_sample *last;
+	uint32_t c, t;
+
+	if (args_to_core_task(argv[0], argv[1], &c, &t))
+		return -1;
+	return get_max_irq_stats_by_core_task(c, t);
+}
+
+static uint64_t sp_task_irq(int argc, const char *argv[])
+{
+	struct task_stats_sample *last;
+	uint32_t c, t;
+
+	if (args_to_core_task(argv[0], argv[1], &c, &t))
+		return -1;
+	return get_irq_stats_by_core_task(c, t, atoi(argv[2]));
 }
 
 static uint64_t sp_task_drop_discard(int argc, const char *argv[])
@@ -767,6 +788,8 @@ struct stats_path_str stats_paths[] = {
 	{"task.core(#).task(#).tsc", sp_task_tsc},
 	{"task.core(#).task(#).drop.tx_fail_prio(#)", sp_task_drop_tx_fail_prio},
 	{"task.core(#).task(#).rx_prio(#)", sp_task_rx_prio},
+	{"task.core(#).task(#).max_irq", sp_task_max_irq},
+	{"task.core(#).task(#).irq(#)", sp_task_irq},
 
 	{"port(#).no_mbufs", sp_port_no_mbufs},
 	{"port(#).ierrors", sp_port_ierrors},

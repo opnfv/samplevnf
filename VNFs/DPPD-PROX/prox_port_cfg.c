@@ -39,6 +39,7 @@
 #include "toeplitz.h"
 #include "defines.h"
 #include "prox_cksum.h"
+#include "stats_irq.h"
 
 struct prox_port_cfg prox_port_cfg[PROX_MAX_PORTS];
 rte_atomic32_t lsc;
@@ -54,7 +55,7 @@ int prox_nb_active_ports(void)
 
 int prox_last_port_active(void)
 {
-	int ret = 0;
+	int ret = -1;
 	for (uint32_t i = 0; i < PROX_MAX_PORTS; ++i) {
 		if (prox_port_cfg[i].active) {
 			ret = i;
@@ -125,7 +126,8 @@ void prox_pktmbuf_reinit(void *arg, void *start, __attribute__((unused)) void *e
 /* initialize rte devices and check the number of available ports */
 void init_rte_dev(int use_dummy_devices)
 {
-	uint8_t nb_ports, port_id_max, port_id_last;
+	uint8_t nb_ports, port_id_max;
+	int port_id_last;
 	struct rte_eth_dev_info dev_info;
 
 	nb_ports = rte_eth_dev_count();
@@ -150,7 +152,7 @@ void init_rte_dev(int use_dummy_devices)
 	PROX_PANIC(use_dummy_devices, "Can't use dummy devices\n");
 #endif
 	}
-	else {
+	else if (prox_last_port_active() != -1) {
 		PROX_PANIC(nb_ports == 0, "\tError: DPDK could not find any port\n");
 		plog_info("\tDPDK has found %u ports\n", nb_ports);
 	}
