@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9a3d3df0_fc555250",
+        "filename": "VNFs/DPPD-PROX/prox_args.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1294,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-01-16T14:11:29Z",
+      "side": 1,
+      "message": "We don\u0027t set any flag for \"src mac\u003dpacket\", so there is no way to distinguish from no \"src mac\" in config file.\nWhich ends up equivalent to \"src mac\u003dhw\" in case the task has a txport attached.",
+      "revId": "35bf01ebc2139ad51caa77c22f5e67f8709e699f",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
