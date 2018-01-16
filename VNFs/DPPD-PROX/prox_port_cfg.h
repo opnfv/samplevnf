@@ -20,6 +20,11 @@
 #include <rte_pci.h>
 #include <rte_ether.h>
 #include <rte_ethdev.h>
+#include <rte_version.h>
+#if RTE_VERSION >= RTE_VERSION_NUM(17,11,0,0)
+#include <rte_bus_pci.h>
+#endif
+#include <rte_pci.h>
 
 #include "prox_globals.h"
 

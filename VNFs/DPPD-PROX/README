@@ -24,11 +24,18 @@ finer grained network functions like QoS, Routing, load-balancing...
 
 Compiling and running this application
 --------------------------------------
-This application supports DPDK 16.04, 16.11, 16.11.1, 17.02, 17.05 and 17.08.
+This application supports DPDK 16.04, 16.11, 16.11.1, 17.02, 17.05 17.08 and 17.11.
 The following commands assume that the following variables have been set:
 
 export RTE_SDK=/path/to/dpdk
 export RTE_TARGET=x86_64-native-linuxapp-gcc
+
+IPSec is only supported in PROX with DPDK 17.02 and DPDK 17.05
+It will only be compiled if CONFIG_RTE_LIBRTE_PMD_AESNI_MB is
+set in DPDK .config. This also requires AESNI_MULTI_BUFFER_LIB_PATH to point to
+the multi-buffer library which can be downloaded from 
+<https://github.com/01org/intel-ipsec-mb>. 
+See doc/guides/cryptodevs/aesni_mb.rst within dpdk for more details
 
 Example: DPDK 17.05 installation
 --------------------------------

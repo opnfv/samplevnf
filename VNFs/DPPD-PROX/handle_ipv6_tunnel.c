@@ -41,6 +41,7 @@
 #include "parse_utils.h"
 #include "cfgfile.h"
 #include "prox_shared.h"
+#include "prox_compat.h"
 
 #if RTE_VERSION < RTE_VERSION_NUM(1,8,0,0)
 #define IPPROTO_IPIP IPPROTO_IPV4
@@ -106,17 +107,21 @@ static void init_lookup_table(struct task_ipv6_tun_base* ptask, struct task_args
 		int ret = lua_to_ip6_tun_binding(prox_lua(), GLOBAL, targ->tun_bindings, socket_id, &table);
 		PROX_PANIC(ret, "Failed to read tun_bindings config:\n %s\n", get_lua_to_errors());
 
-		struct rte_table_hash_key8_ext_params table_hash_params = {
-			.n_entries = (table->num_binding_entries * 4),
-			.n_entries_ext = (table->num_binding_entries * 2) >> 1,
-			.f_hash = hash_crc32,
+		static char hash_name[30];
+		sprintf(hash_name, "ipv6_tunnel_hash_table_%03d", targ->lconf->id);
+
+		struct prox_rte_table_params table_hash_params = {
+			.name = hash_name,
+			.key_size = 8,
+			.n_keys = (table->num_binding_entries * 4),
+			.n_buckets = (table->num_binding_entries * 2) >> 1,
+			.f_hash = (rte_table_hash_op_hash)hash_crc32,
 			.seed = 0,
-			.signature_offset = HASH_METADATA_OFFSET(8),  // Ignored for dosig tables
 			.key_offset = HASH_METADATA_OFFSET(0),
+			.key_mask = NULL
 		};
                 plogx_info("IPv6 Tunnel allocating lookup table on socket %d\n", socket_id);
-		ptask->lookup_table = rte_table_hash_key8_ext_dosig_ops.
-				f_create(&table_hash_params, socket_id, sizeof(struct ipv6_tun_dest));
+		ptask->lookup_table = prox_rte_table_create(&table_hash_params, socket_id, sizeof(struct ipv6_tun_dest));
 		PROX_PANIC(ptask->lookup_table == NULL, "Error creating IPv6 Tunnel lookup table");
 
 		for (unsigned idx = 0; idx < table->num_binding_entries; idx++) {
@@ -128,7 +133,7 @@ static void init_lookup_table(struct task_ipv6_tun_base* ptask, struct task_args
 			rte_memcpy(&data.dst_addr, &entry->endpoint_addr, sizeof(struct ipv6_addr));
 			rte_memcpy(&data.dst_mac, &entry->next_hop_mac, sizeof(struct ether_addr));
 
-			int ret = rte_table_hash_key8_ext_dosig_ops.f_add(ptask->lookup_table, &key, &data, &key_found, &entry_in_hash);
+			int ret = prox_rte_table_key8_add(ptask->lookup_table, &key, &data, &key_found, &entry_in_hash);
 			PROX_PANIC(ret, "Error adding entry (%d) to binding lookup table", idx);
 			PROX_PANIC(key_found, "key_found!!! for idx=%d\n", idx);
 
@@ -320,7 +325,7 @@ static int handle_ipv6_decap_bulk(struct task_base* tbase, struct rte_mbuf** mbu
 
         // Lookup to verify packets are valid for their respective tunnels (their sending lwB4)
         extract_key_decap_bulk(&task->base, mbufs, n_pkts);
-        rte_table_hash_key8_ext_dosig_ops.f_lookup(task->base.lookup_table, task->base.fake_packets, pkts_mask, &lookup_hit_mask, (void**)entries);
+        prox_rte_table_key8_lookup(task->base.lookup_table, task->base.fake_packets, pkts_mask, &lookup_hit_mask, (void**)entries);
 
         if (likely(lookup_hit_mask == pkts_mask)) {
                 for (uint16_t j = 0; j < n_pkts; ++j) {
@@ -353,7 +358,7 @@ static int handle_ipv6_encap_bulk(struct task_base* tbase, struct rte_mbuf** mbu
 	prefetch_first(mbufs, n_pkts);
 
         extract_key_encap_bulk(&task->base, mbufs, n_pkts);
-        rte_table_hash_key8_ext_dosig_ops.f_lookup(task->base.lookup_table, task->base.fake_packets, pkts_mask, &lookup_hit_mask, (void**)entries);
+        prox_rte_table_key8_lookup(task->base.lookup_table, task->base.fake_packets, pkts_mask, &lookup_hit_mask, (void**)entries);
 
         if (likely(lookup_hit_mask == pkts_mask)) {
                 for (uint16_t j = 0; j < n_pkts; ++j) {

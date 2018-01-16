@@ -35,6 +35,7 @@
 #include "defaults.h"
 #include "prox_lua.h"
 #include "cqm.h"
+#include "prox_compat.h"
 
 #define MAX_RTE_ARGV 64
 #define MAX_ARG_LEN  64
@@ -1955,7 +1956,7 @@ int prox_setup_rte(const char *prog_name)
 	}
 
 	if (rte_cfg.no_output) {
-		rte_set_log_level(0);
+		rte_log_set_global_level(0);
 	}
 	/* init EAL */
 	plog_info("\tEAL command line:");

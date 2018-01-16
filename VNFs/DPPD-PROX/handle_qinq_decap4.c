@@ -43,6 +43,7 @@
 #include "lconf.h"
 #include "prox_cfg.h"
 #include "prox_shared.h"
+#include "prox_compat.h"
 
 struct task_qinq_decap4 {
 	struct task_base        base;
@@ -204,8 +205,7 @@ static int add_cpe_entry(struct rte_table_hash *hash, struct cpe_key *key, struc
 	void* entry_in_hash;
 	int ret, key_found = 0;
 
-	ret = rte_table_hash_key8_ext_dosig_ops.
-		f_add(hash, key, data, &key_found, &entry_in_hash);
+	ret = prox_rte_table_key8_add(hash, key, data, &key_found, &entry_in_hash);
 	if (unlikely(ret)) {
 		plogx_err("Failed to add key: ip %x, gre %x\n", key->ip, key->gre_id);
 		return 1;
@@ -283,8 +283,7 @@ void arp_update_from_msg(struct rte_table_hash * cpe_table, struct arp_msg **msg
 
 	for (uint16_t i = 0; i < n_msgs; ++i) {
 		msgs[i]->data.tsc = rte_rdtsc() + cpe_timeout;
-		ret = rte_table_hash_key8_ext_dosig_ops.
-			f_add(cpe_table, &msgs[i]->key, &msgs[i]->data, &key_found, &entry_in_hash);
+		ret = prox_rte_table_key8_add(cpe_table, &msgs[i]->key, &msgs[i]->data, &key_found, &entry_in_hash);
 		if (unlikely(ret)) {
 			plogx_err("Failed to add key %x, gre %x\n", msgs[i]->key.ip, msgs[i]->key.gre_id);
 		}
@@ -309,7 +308,7 @@ static void arp_update(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_
 	uint64_t pkts_mask = RTE_LEN2MASK(n_pkts, uint64_t);
 	uint64_t lookup_hit_mask = 0;
 	struct qinq_gre_data* entries[64];
-	rte_table_hash_key8_ext_dosig_ops.f_lookup(task->qinq_gre_table, task->fake_packets, pkts_mask, &lookup_hit_mask, (void**)entries);
+	prox_rte_table_key8_lookup(task->qinq_gre_table, task->fake_packets, pkts_mask, &lookup_hit_mask, (void**)entries);
 
 	TASK_STATS_ADD_RX(&task->base.aux->stats, n_pkts);
 	for (uint16_t j = 0; j < n_pkts; ++j) {
@@ -327,8 +326,7 @@ static void arp_update(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_
 		void* entry_in_hash;
 		int ret, key_found = 0;
 
-		ret = rte_table_hash_key8_ext_dosig_ops.
-			f_add(task->cpe_table, &key, &data, &key_found, &entry_in_hash);
+		ret = prox_rte_table_key8_add(task->cpe_table, &key, &data, &key_found, &entry_in_hash);
 
 		if (unlikely(ret)) {
 			plogx_err("Failed to add key %x, gre %x\n", key.ip, key.gre_id);
@@ -356,7 +354,7 @@ static int handle_qinq_decap4_bulk(struct task_base *tbase, struct rte_mbuf **mb
 	}
 
 	extract_key_bulk(mbufs, n_pkts, task);
-	rte_table_hash_key8_ext_dosig_ops.f_lookup(task->qinq_gre_table, task->fake_packets, pkts_mask, &lookup_hit_mask, (void**)entries);
+	prox_rte_table_key8_lookup(task->qinq_gre_table, task->fake_packets, pkts_mask, &lookup_hit_mask, (void**)entries);
 
 	if (likely(lookup_hit_mask == pkts_mask)) {
 		for (uint16_t j = 0; j < n_pkts; ++j) {

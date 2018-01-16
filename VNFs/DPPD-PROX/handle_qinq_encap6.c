@@ -29,6 +29,7 @@
 #include "mpls.h"
 #include "hash_utils.h"
 #include "quit.h"
+#include "prox_compat.h"
 
 struct task_qinq_encap6 {
 	struct task_base                    base;
@@ -67,7 +68,7 @@ static inline uint8_t handle_qinq_encap6(struct rte_mbuf *mbuf, struct task_qinq
 	uint64_t pkts_mask = RTE_LEN2MASK(1, uint64_t);
 	uint64_t lookup_hit_mask;
 	struct cpe_data* entries[64]; // TODO: use bulk size
-	rte_table_hash_ext_dosig_ops.f_lookup(task->cpe_table, &mbuf, pkts_mask, &lookup_hit_mask, (void**)entries);
+	prox_rte_table_lookup(task->cpe_table, &mbuf, pkts_mask, &lookup_hit_mask, (void**)entries);
 
 	if (lookup_hit_mask == 0x1) {
 		/* will also overwrite part of the destination addr */
@@ -101,15 +102,17 @@ void init_cpe6_table(struct task_args *targ)
 	}
 
 	uint32_t n_entries = MAX_GRE / table_part;
-	struct rte_table_hash_ext_params table_hash_params = {
+	static char hash_name[30];
+	sprintf(hash_name, "cpe6_table_%03d", targ->lconf->id);
+	struct prox_rte_table_params table_hash_params = {
+		.name = hash_name,
 		.key_size = sizeof(struct ipv6_addr),
 		.n_keys = n_entries,
 		.n_buckets = n_entries >> 2,
-		.n_buckets_ext = n_entries >> 3,
-		.f_hash = hash_crc32,
+		.f_hash = (rte_table_hash_op_hash)hash_crc32,
 		.seed = 0,
-		.signature_offset = HASH_METADATA_OFFSET(0),
 		.key_offset = HASH_METADATA_OFFSET(0),
+		.key_mask = NULL
 	};
 
 	size_t entry_size = sizeof(struct cpe_data);
@@ -117,8 +120,7 @@ void init_cpe6_table(struct task_args *targ)
 		entry_size = rte_align32pow2(entry_size);
 	}
 
-	struct rte_table_hash* phash = rte_table_hash_ext_dosig_ops.
-		f_create(&table_hash_params, rte_lcore_to_socket_id(targ->lconf->id), entry_size);
+	struct rte_table_hash* phash = prox_rte_table_create(&table_hash_params, rte_lcore_to_socket_id(targ->lconf->id), entry_size);
 	PROX_PANIC(phash == NULL, "Unable to allocate memory for IPv6 hash table on core %u\n", targ->lconf->id);
 
 	for (uint8_t task_id = 0; task_id < targ->lconf->n_tasks_all; ++task_id) {

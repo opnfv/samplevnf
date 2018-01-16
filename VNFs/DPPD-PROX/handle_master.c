@@ -323,7 +323,7 @@ void init_ctrl_plane(struct task_base *tbase)
 
 static int handle_ctrl_plane_f(struct task_base *tbase, __attribute__((unused)) struct rte_mbuf **mbuf, uint16_t n_pkts)
 {
-	int ring_id, j, ret = 0;
+	int ring_id = 0, j, ret = 0;
 	struct rte_mbuf *mbufs[MAX_RING_BURST];
 	struct task_master *task = (struct task_master *)tbase;
 

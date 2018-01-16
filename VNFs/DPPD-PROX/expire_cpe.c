@@ -19,6 +19,7 @@
 #include "hash_entry_types.h"
 #include "hash_utils.h"
 #include "expire_cpe.h"
+#include "prox_compat.h"
 
 #define MAX_TSC	       __UINT64_C(0xFFFFFFFFFFFFFFFF)
 
@@ -34,7 +35,7 @@ void check_expire_cpe(void* data)
 		if (entries[i]->tsc < cur_tsc) {
 			int key_found = 0;
 			void* entry = 0;
-			rte_table_hash_key8_ext_dosig_ops.f_delete(um->cpe_table, key[i], &key_found, entry);
+			prox_rte_table_key8_delete(um->cpe_table, key[i], &key_found, entry);
 		}
 	}
 
