@@ -203,17 +203,18 @@ static void init_task_swap(struct task_base *tbase, struct task_args *targ)
 	struct ether_addr *src_addr, *dst_addr;
 
 	/*
-	 * Destination MAC can come from
-	 *    - pre-configured mac in case 'dst mac=xx:xx:xx:xx:xx:xx' in config file
-	 *    - src mac from the packet in case 'dst mac=packet' in config file
-	 *    - not written in case 'dst mac=no' in config file
-	 *    - (default - no 'dst mac') src mac from the packet
-	 * Source MAC can come from
-	 *    - pre-configured mac in case 'src mac=xx:xx:xx:xx:xx:xx' in config file
-	 *    - dst mac from the packet in case 'src mac=packet' in config file
-	 *    - not written in case 'src mac=no' in config file
-	 *    - (default - no 'src mac') if (tx_port) port mac
-	 *    - (default - no 'src mac') if (no tx_port) dst mac from the packet
+	 * The destination MAC of the outgoing packet is based on the config file:
+	 *    - 'dst mac=xx:xx:xx:xx:xx:xx' => the pre-configured mac will be used as dst mac
+	 *    - 'dst mac=packet'            => the src mac of the incoming packet is used as dst mac
+	 *    - (default - no 'dst mac')    => the src mac from the incoming packet is used as dst mac
+	 *
+	 * The source MAC of the outgoing packet is based on the config file:
+	 *    - 'src mac=xx:xx:xx:xx:xx:xx' => the pre-configured mac will be used as src mac
+	 *    - 'src mac=packet'            => the dst mac of the incoming packet is used as src mac
+	 *    - 'src mac=hw'                => the mac address of the tx port is used as src mac
+	 *                                     An error is returned if there are no physical tx ports
+	 *    - (default - no 'src mac')    => if there is physical tx port, the mac of that port is used as src mac
+	 *    - (default - no 'src mac')       if there are no physical tx ports the dst mac of the incoming packet
 	 */
 
 	if (targ->flags & TASK_ARG_DST_MAC_SET) {
@@ -221,14 +222,19 @@ static void init_task_swap(struct task_base *tbase, struct task_args *targ)
 		memcpy(&task->src_dst_mac[0], dst_addr, sizeof(*src_addr));
 	}
 
+	PROX_PANIC(targ->flags & TASK_ARG_DO_NOT_SET_SRC_MAC, "src mac must be set in swap mode, by definition => src mac=no is not supported\n");
+	PROX_PANIC(targ->flags & TASK_ARG_DO_NOT_SET_DST_MAC, "dst mac must be set in swap mode, by definition => dst mac=no is not supported\n");
+
 	if (targ->flags & TASK_ARG_SRC_MAC_SET) {
 		src_addr =  &targ->esaddr;
 		memcpy(&task->src_dst_mac[6], src_addr, sizeof(*dst_addr));
 		plog_info("\t\tCore %d: src mac set from config file\n", targ->lconf->id);
-	} else if (targ->nb_txports) {
-		src_addr = &prox_port_cfg[task->base.tx_params_hw.tx_port_queue[0].port].eth_addr;
-		memcpy(&task->src_dst_mac[6], src_addr, sizeof(*dst_addr));
-		if (targ->flags & TASK_ARG_HW_SRC_MAC){
+	} else {
+		if (targ->flags & TASK_ARG_HW_SRC_MAC)
+			PROX_PANIC(targ->nb_txports == 0, "src mac set to hw but no tx port\n");
+		if (targ->nb_txports) {
+			src_addr = &prox_port_cfg[task->base.tx_params_hw.tx_port_queue[0].port].eth_addr;
+			memcpy(&task->src_dst_mac[6], src_addr, sizeof(*dst_addr));
 			targ->flags |= TASK_ARG_SRC_MAC_SET;
 			plog_info("\t\tCore %d: src mac set from port\n", targ->lconf->id);
 		}
