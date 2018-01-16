@@ -388,13 +388,9 @@ static uint16_t call_prev_rx_pkt(struct task_base *tbase, struct rte_mbuf ***mbu
 {
 	uint16_t ret;
 
-	if (tbase->aux->rx_prev_idx + 1 == tbase->aux->rx_prev_count) {
-		ret = tbase->aux->rx_pkt_prev[tbase->aux->rx_prev_idx](tbase, mbufs);
-	} else {
-		tbase->aux->rx_prev_idx++;
-		ret = tbase->aux->rx_pkt_prev[tbase->aux->rx_prev_idx](tbase, mbufs);
-		tbase->aux->rx_prev_idx--;
-	}
+	tbase->aux->rx_prev_idx++;
+	ret = tbase->aux->rx_pkt_prev[tbase->aux->rx_prev_idx - 1](tbase, mbufs);
+	tbase->aux->rx_prev_idx--;
 
 	return ret;
 }

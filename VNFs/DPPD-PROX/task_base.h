@@ -213,8 +213,8 @@ static void task_base_add_rx_pkt_function(struct task_base *tbase, rx_pkt_func t
 		return;
 	}
 
-	for (int16_t i = tbase->aux->rx_prev_count; i >= 0; --i) {
-		tbase->aux->rx_pkt_prev[i + 1] = tbase->aux->rx_pkt_prev[i];
+	for (int16_t i = tbase->aux->rx_prev_count; i > 0; --i) {
+		tbase->aux->rx_pkt_prev[i] = tbase->aux->rx_pkt_prev[i - 1];
 	}
 	tbase->aux->rx_pkt_prev[0] = tbase->rx_pkt;
 	tbase->rx_pkt = to_add;
@@ -226,8 +226,13 @@ static void task_base_del_rx_pkt_function(struct task_base *tbase, rx_pkt_func t
 	int cur = 0;
 	int found = 0;
 
-	if (tbase->aux->rx_prev_count == 1) {
+	if (unlikely(tbase->aux->rx_prev_count == 0)) {
+		return;
+	} else if (tbase->rx_pkt == to_del) {
 		tbase->rx_pkt = tbase->aux->rx_pkt_prev[0];
+		for (int16_t i = 0; i < tbase->aux->rx_prev_count - 1; ++i) {
+			tbase->aux->rx_pkt_prev[i] = tbase->aux->rx_pkt_prev[i + 1];
+		}
 		found = 1;
 	} else {
 		for (int16_t i = 0; i < tbase->aux->rx_prev_count; ++i) {
