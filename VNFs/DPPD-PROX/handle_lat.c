@@ -611,6 +611,9 @@ static void init_task_lat(struct task_base *tbase, struct task_args *targ)
 
 	task->lat_pos = targ->lat_pos;
 	task->accur_pos = targ->accur_pos;
+	task->sig_pos = targ->sig_pos;
+	task->sig = targ->sig;
+
 	task->unique_id_pos = targ->packet_id_pos;
 	task->latency_buffer_size = targ->latency_buffer_size;
 
