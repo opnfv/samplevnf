@@ -26,10 +26,13 @@
 #include "display_mempools.h"
 #include "display_ports.h"
 #include "display_priority.h"
+#include "display_irq.h"
 #include "display_rings.h"
 #include "display_pkt_len.h"
 #include "display_l4gen.h"
 #include "display_tasks.h"
+#include "stats_irq.h"
+#include "stats_prio_task.h"
 
 #include "cqm.h"
 #include "msr.h"
@@ -292,7 +295,10 @@ static void display_init_screens(void)
 	display_add_screen(display_rings());
 	display_add_screen(display_l4gen());
 	display_add_screen(display_pkt_len());
-	display_add_screen(display_priority());
+	if (stats_get_n_prio_tasks_tot())
+		display_add_screen(display_priority());
+	if (stats_get_n_irq_tasks())
+		display_add_screen(display_irq());
 }
 
 void display_init(void)

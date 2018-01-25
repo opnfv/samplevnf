@@ -1520,6 +1520,11 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
                 return 0;
         }
 
+	if (STR_EQ(str, "irq debug")) {
+		parse_int(&targ->irq_debug, pkey);
+		return 0;
+	}
+
 	set_errf("Option '%s' is not known", str);
 	/* fail on unknown keys */
 	return -1;

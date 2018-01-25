@@ -229,6 +229,7 @@ struct task_args {
 	struct rte_ring			**ctrl_rx_rings;
 	struct rte_ring			**ctrl_tx_rings;
 	int				n_ctrl_rings;
+	uint				irq_debug;
 	struct task_base *tmaster;
 	char sub_mode_str[PROX_MODE_LEN];
 };

@@ -29,6 +29,7 @@
 #include "stats_task.h"
 #include "stats_prio_task.h"
 #include "stats_latency.h"
+#include "stats_irq.h"
 
 /* Stores all readed values from the cores, displaying is done afterwards because
    displaying introduces overhead. If displaying was done right after the values
@@ -41,6 +42,7 @@ void stats_reset(void)
 	stats_prio_task_reset();
 	stats_port_reset();
 	stats_latency_reset();
+	stats_irq_reset();
 	stats_global_reset();
 }
 
@@ -49,6 +51,7 @@ void stats_init(unsigned avg_start, unsigned duration)
 	stats_lcore_init();
 	stats_task_init();
 	stats_prio_task_init();
+	stats_irq_init();
 	stats_port_init();
 	stats_mempool_init();
 	stats_latency_init();
@@ -86,6 +89,9 @@ void stats_update(uint16_t flag_cons)
 	if (flag_cons & STATS_CONS_F_RINGS)
 		stats_ring_update();
 
+	if (flag_cons & STATS_CONS_F_IRQ)
+		stats_irq_update();
+
 	if (flag_cons & STATS_CONS_F_LCORE)
 		stats_lcore_post_proc();
 
@@ -97,4 +103,7 @@ void stats_update(uint16_t flag_cons)
 
 	if (flag_cons & STATS_CONS_F_GLOBAL)
 		stats_global_post_proc();
+
+	if (flag_cons & STATS_CONS_F_IRQ)
+		stats_irq_post_proc();
 }

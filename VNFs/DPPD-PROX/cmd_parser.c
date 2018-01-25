@@ -1664,6 +1664,28 @@ static int parse_cmd_lat_stats(const char *str, struct input *input)
 	return 0;
 }
 
+static int parse_cmd_show_irq_buckets(const char *str, struct input *input)
+{
+	char buf[4096] = {0};
+	unsigned int i, c;
+	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
+
+	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+		return -1;
+
+	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
+		for (c = 0; c < nb_cores; c++) {
+			lcore_id = lcores[c];
+			get_irq_buckets_by_core_task(buf, lcore_id, task_id);
+			plog_info("%s", buf);
+			if (input->reply)
+				input->reply(input, buf, strlen(buf));
+			buf[0] = 0;
+		}
+	}
+	return 0;
+}
+
 static int parse_cmd_irq(const char *str, struct input *input)
 {
 	unsigned int i, c;
@@ -1906,6 +1928,7 @@ static struct cmd_str cmd_strings[] = {
 	{"tot imissed tot", "", "Print total number of imissed since reset", parse_cmd_tot_imissed_tot},
 	{"lat stats", "<core id> <task id>", "Print min,max,avg latency as measured during last sampling interval", parse_cmd_lat_stats},
 	{"irq stats", "<core id> <task id>", "Print irq related infos", parse_cmd_irq},
+	{"show irq buckets", "<core id> <task id>", "Print irq buckets", parse_cmd_show_irq_buckets},
 	{"lat packets", "<core id> <task id>", "Print the latency for each of the last set of packets", parse_cmd_lat_packets},
 	{"accuracy limit", "<core id> <task id> <nsec>", "Only consider latency of packets that were measured with an error no more than <nsec>", parse_cmd_accuracy},
 	{"core stats", "<core id> <task id>", "Print rx/tx/drop for task <task id> running on core <core id>", parse_cmd_core_stats},
@@ -1928,7 +1951,7 @@ static struct cmd_str cmd_strings[] = {
 	{"port down", "<port id>", "Set the port down", parse_cmd_port_down},
 	{"port link state", "<port id>", "Get link state (up or down) for port", parse_cmd_port_link_state},
 	{"port xstats", "<port id>", "Get extra statistics for the port", parse_cmd_xstats},
-	{"stats", "<stats_path>", "Get stats as sepcified by <stats_path>. A comma-separated list of <stats_path> can be supplied", parse_cmd_stats},
+	{"stats", "<stats_path>", "Get stats as specified by <stats_path>. A comma-separated list of <stats_path> can be supplied", parse_cmd_stats},
 	{"cgnat dump public hash", "<core id> <task id>", "Dump cgnat public hash table", parse_cmd_cgnat_public_hash},
 	{"cgnat dump private hash", "<core id> <task id>", "Dump cgnat private hash table", parse_cmd_cgnat_private_hash},
 	{"delay_us", "<core_id> <task_id> <delay_us>", "Set the delay in usec for the impair mode to <delay_us>", parse_cmd_delay_us},

@@ -199,12 +199,12 @@ SRCS-y += prox_args.c prox_cfg.c prox_cksum.c prox_port_cfg.c
 
 SRCS-y += cfgfile.c clock.c commands.c cqm.c msr.c defaults.c
 SRCS-y += display.c display_latency.c display_mempools.c
-SRCS-y += display_ports.c display_rings.c display_priority.c display_pkt_len.c display_l4gen.c display_tasks.c
+SRCS-y += display_ports.c display_rings.c display_priority.c display_pkt_len.c display_l4gen.c display_tasks.c display_irq.c
 SRCS-y += log.c hash_utils.c main.c parse_utils.c file_utils.c
 SRCS-y += run.c input_conn.c input_curses.c
 SRCS-y += rx_pkt.c lconf.c tx_pkt.c expire_cpe.c ip_subnet.c
 SRCS-y += stats_port.c stats_mempool.c stats_ring.c stats_l4gen.c
-SRCS-y += stats_latency.c stats_global.c stats_core.c stats_task.c stats_prio.c
+SRCS-y += stats_latency.c stats_global.c stats_core.c stats_task.c stats_prio.c stats_irq.c
 SRCS-y += cmd_parser.c input.c prox_shared.c prox_lua_types.c
 SRCS-y += genl4_bundle.c heap.c genl4_stream_tcp.c genl4_stream_udp.c cdf.c
 SRCS-y += stats.c stats_cons_log.c stats_cons_cli.c stats_parser.c hash_set.c prox_lua.c prox_malloc.c
