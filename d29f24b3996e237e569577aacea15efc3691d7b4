@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9a3d3df0_64febb6c",
+        "filename": "VNFs/DPPD-PROX/task_base.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 171,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-01-25T16:29:56Z",
+      "side": 1,
+      "message": "That should now be: TX_BUCKET_SIZE\nEven if it currently results in the same value.",
+      "range": {
+        "startLine": 171,
+        "startChar": 20,
+        "endLine": 171,
+        "endChar": 38
+      },
+      "revId": "d29f24b3996e237e569577aacea15efc3691d7b4",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
