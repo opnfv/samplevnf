@@ -30,10 +30,11 @@ from logging.handlers import RotatingFileHandler
 from logging import handlers
 from prox_ctrl import prox_ctrl
 import ConfigParser
+import ast
 
 version="17.12.15"
 stack = "rapid" #Default string for stack
-test = "basicrapid" #Default string for stack
+test = "basicrapid" #Default string for test
 loglevel="DEBUG" # sets log level for writing to file
 runtime=10 # time in seconds for 1 test run
 
@@ -80,10 +81,10 @@ for opt, arg in opts:
 	if opt in ("--test"):
 		test = arg
 		print ("Using '"+test+".test' for test case definition")
-	elif opt in ("--runtime"):
+	if opt in ("--runtime"):
 		runtime = arg
 		print ("Runtime: "+ runtime)
-	elif opt in ("--log"):
+	if opt in ("--log"):
 		loglevel = arg
 		print ("Log level: "+ loglevel)
 
@@ -174,21 +175,21 @@ def connect_client(client):
 			log.debug("Trying to connect to VM which was just launched on %s, attempt: %d" % (client.ip(), attempts))
 	log.info("Connected to VM on %s" % client.ip())
 
-def run_iteration(gensock,sutsock,sutstatcores,genstatcores,gencontrolcores):
-	gensock.start(gencontrolcores)
+def run_iteration(gensock,sutsock):
+	gensock.start(gencores)
 	time.sleep(1)
 	if sutsock!='none':
 		old_sut_rx, old_sut_tx, old_sut_drop, old_sut_tsc, sut_tsc_hz = sutsock.core_stats(sutstatcores)
 	old_rx, old_tx, old_drop, old_tsc, tsc_hz = gensock.core_stats(genstatcores)
 	time.sleep(float(runtime))
-	lat_min, lat_max, lat_avg = gensock.lat_stats([2])
+	lat_min, lat_max, lat_avg = gensock.lat_stats(latcores)
 	# Get statistics after some execution time
 	new_rx, new_tx, new_drop, new_tsc, tsc_hz = gensock.core_stats(genstatcores)
 	if sutsock!='none':
 		new_sut_rx, new_sut_tx, new_sut_drop, new_sut_tsc, sut_tsc_hz = sutsock.core_stats(sutstatcores)
 	time.sleep(1)
 	#Stop generating
-	gensock.stop(gencontrolcores)
+	gensock.stop(gencores)
 	drop = new_drop-old_drop # drop is all packets dropped by all tasks. This includes packets dropped at the generator task + packets dropped by the nop task. In steady state, this equals to the number of packets received by this VM
 	rx = new_rx - old_rx     # rx is all packets received by the nop task = all packets received in the gen VM
 	tx = new_tx - old_tx     # tx is all generated packets actually accepted by the interface
@@ -222,7 +223,7 @@ def new_speed(speed,drop_rate):
 	p=1
 	q=.99
 	ratio = min((q-y0)/p*drop_rate+y0,(q-y100)/(p-100)*drop_rate+q-p*(q-y100)/(p-100))
-	return (int(speed*ratio*100)+0.5)/100
+	return (int(speed*ratio*100)+0.5)/100.0
 
 def get_drop_rate(speed,pps_rx,size):
 	# pps_rx are all the packets that are received by the generator. That is substracted
@@ -231,9 +232,10 @@ def get_drop_rate(speed,pps_rx,size):
 	# that the speed variable is already expressed in % so we only take 100 and not 10000)
 	# divided by the number of bits in 1 packet. That is 8 bits in a byte times the size of
 	# a frame (=our size + 24 bytes overhead).
-	return (100*(speed * 100 / (8*(size+24)) - pps_rx)/(speed*100.0/(8*(size+24))))
+	tried_to_send = speed * 100.0 / (8*(size+24))
+	return (100.0*(tried_to_send - pps_rx)/tried_to_send)
 
-def run_speedtest(gensock,sutsock,sutstatcores,genstatcores,gencores):
+def run_speedtest(gensock,sutsock):
         log.info("+----------------------------------------------------------------------------------------------------------------------------+")
         log.info("| Generator is sending UDP (1 flow) packets (64 bytes) to SUT. SUT sends packets back                                        |")
         log.info("+--------+-----------------+----------------+----------------+----------------+----------------+----------------+------------+")
@@ -250,7 +252,7 @@ def run_speedtest(gensock,sutsock,sutstatcores,genstatcores,gencores):
                 gensock.speed(speed, gencores)
                 time.sleep(1)
                 # Get statistics now that the generation is stable and NO ARP messages any more
-		pps_req_tx,pps_tx,pps_sut_tx_str,pps_rx,lat_avg = run_iteration(gensock,sutsock,sutstatcores,genstatcores,gencores)
+		pps_req_tx,pps_tx,pps_sut_tx_str,pps_rx,lat_avg = run_iteration(gensock,sutsock)
 		drop_rate = get_drop_rate(speed,pps_rx,size)
 	        if ((drop_rate) < 1):
 	                # This will stop the test when number of dropped packets is below a certain percentage
@@ -263,10 +265,7 @@ def run_speedtest(gensock,sutsock,sutstatcores,genstatcores,gencores):
 		speed = new_speed(speed,drop_rate)
         time.sleep(2)
 
-
-#	print("")
-
-def run_flowtest(gensock,sutsock,sutstatcores,genstatcores,gencores):
+def run_flowtest(gensock,sutsock):
 	log.info("+---------------------------------------------------------------------------------------------------------------+")
 	log.info("| UDP, 64 bytes, different number of flows by randomizing SRC & DST UDP port                                    |")
 	log.info("+--------+-----------------+----------------+----------------+----------------+----------------+----------------+")
@@ -292,25 +291,24 @@ def run_flowtest(gensock,sutsock,sutstatcores,genstatcores,gencores):
 			gensock.speed(speed, gencores)
 			time.sleep(1)
 			# Get statistics now that the generation is stable and NO ARP messages any more
-			pps_req_tx,pps_tx,pps_sut_tx_str,pps_rx,lat_avg = run_iteration(gensock,sutsock,sutstatcores,genstatcores,gencores)
+			pps_req_tx,pps_tx,pps_sut_tx_str,pps_rx,lat_avg = run_iteration(gensock,sutsock)
 			drop_rate = get_drop_rate(speed,pps_rx,size)
 			if ((drop_rate) < 1):
 				# This will stop the test when number of dropped packets is below a certain percentage
-				log.info('|{:>7}'.format(str(flow_number))+" | "+ '{:>14}'.format(str(round(speed,2))) + '% | '+ '{:>9}'.format(str(pps_req_tx))+' Mpps | '+ '{:>9}'.format(str(pps_tx)) +' Mpps | ' + '{:>9}'.format(pps_sut_tx_str) +' Mpps | '+ '{:>9}'.format(str(pps_rx))+" Mpps |"+ '{:>9}'.format(str(lat_avg))+" us   |")
+				log.info('|{:>7}'.format(str(flow_number))+" | "+ '{:>14}'.format(str(round(speed,2))) + '% | '+ '{:>9}'.format(str(pps_req_tx))+' Mpps | '+ '{:>9}'.format(str(pps_tx)) +' Mpps | ' + '{:>9}'.format(pps_sut_tx_str) +' Mpps | '+ '{:>9}'.format(str(pps_rx))+" Mpps |"+ '{:>10}'.format(str(lat_avg))+" us   |")
 				log.info("+--------+-----------------+----------------+----------------+----------------+----------------+----------------+")
 				break
 			speed = new_speed(speed,drop_rate)
 	time.sleep(2)
-#	print("")
 
-def run_sizetest(gensock,sutsock,sutstatcores,genstatcores,gencores):
+def run_sizetest(gensock,sutsock):
 	log.info("+---------------------------------------------------------------------------------------------------------------+")
 	log.info("| UDP, 1 flow, different packet sizes                                                                           |")
 	log.info("+--------+-----------------+----------------+----------------+----------------+----------------+----------------+")
 	log.info("| Pktsize| Speed requested | Sent to NIC    |  Sent by Gen   | Forward by SUT |  Rec. by Gen   |  Avg. Latency  |")
 	log.info("+--------+-----------------+----------------+----------------+----------------+----------------+----------------+")
 	speed = 100
-	# To generate a desired number of flows, PROX will randomize the bits in source and destination ports, as specified by the bit masks in the flows variable. 
+	# PROX will use different packet sizes as defined in sizes[]
 	sizes=[1400,1024,512,256,128,64]
 	for size in sizes:
 		#speed = 100 Commented out: Not starting from 100% since we are trying smaller packets, so speed will not be higher than the speed achieved in previous loop
@@ -328,7 +326,7 @@ def run_sizetest(gensock,sutsock,sutstatcores,genstatcores,gencores):
 			gensock.speed(speed, gencores)
 			time.sleep(1)
 			# Get statistics now that the generation is stable and NO ARP messages any more
-			pps_req_tx,pps_tx,pps_sut_tx_str,pps_rx,lat_avg = run_iteration(gensock,sutsock,sutstatcores,genstatcores,gencores)
+			pps_req_tx,pps_tx,pps_sut_tx_str,pps_rx,lat_avg = run_iteration(gensock,sutsock)
 			drop_rate = get_drop_rate(speed,pps_rx,size)
 			if ((drop_rate) < 1):
 				# This will stop the test when number of dropped packets is below a certain percentage
@@ -337,27 +335,54 @@ def run_sizetest(gensock,sutsock,sutstatcores,genstatcores,gencores):
 				break
 			speed = new_speed(speed,drop_rate)
 	time.sleep(2)
-#========================================================================
+
+def run_irqtest(sock):
+        log.info("+----------------------------------------------------------------------------------------------------------------------------")
+        log.info("| Measuring time probably spent dealing with an interrupt. Interrupting DPDK cores for more than 50us might be problematic   ")
+        log.info("| and result in packet loss. The first row shows the interrupted time buckets: first number is the bucket between 0us and    ")
+	log.info("| that number expressed in us and so on. The numbers in the other rows show how many times per second, the program was       ")
+        log.info("| interrupted for a time as specified by its bucket.                                                                                           ")
+        log.info("+----------------------------------------------------------------------------------------------------------------------------")
+        sys.stdout.flush()
+	buckets=sock.show_irq_buckets(1)
+        print('Measurement ongoing ... ',end='\r')
+	sock.stop(irqcores)
+	old_irq = [[0 for x in range(len(buckets)+1)] for y in range(len(irqcores)+1)] 
+	new_irq = [[0 for x in range(len(buckets)+1)] for y in range(len(irqcores)+1)] 
+	irq = [[0 for x in range(len(buckets)+1)] for y in range(len(irqcores)+1)]
+	irq[0][0] = 'bucket us' 
+	for j,bucket in enumerate(buckets,start=1):
+		irq[0][j] = '<'+ bucket
+	irq[0][-1] = '>'+ buckets [-2]
+	for j,bucket in enumerate(buckets,start=1):
+		for i,irqcore in enumerate(irqcores,start=1):
+			old_irq[i][j] = sock.irq_stats(irqcore,j-1)
+	sock.start(irqcores)
+	time.sleep(float(runtime))
+	sock.stop(irqcores)
+	for i,irqcore in enumerate(irqcores,start=1):
+		irq[i][0]='core %s'%irqcore
+		for j,bucket in enumerate(buckets,start=1):
+			new_irq[i][j] = sock.irq_stats(irqcore,j-1)
+			irq[i][j] = (new_irq[i][j] - old_irq[i][j])/float(runtime)
+	log.info('\n'.join([''.join(['{:>10}'.format(item) for item in row]) for row in irq]))
+
 
 def init_test():
-	global sutstatcores
-	global genstatcores
-	global genrxcores
-	global gencontrolcores
-	sutstatcores = [1]
-	genstatcores = [1,2]
-	genrxcores = [2]
-	gencontrolcores = [1]
 # Running at low speed to make sure the ARP messages can get through.
 # If not doing this, the ARP message could be dropped by a switch in overload and then the test will not give proper results
 # Note hoever that if we would run the test steps during a very long time, the ARP would expire in the switch.
 # PROX will send a new ARP request every seconds so chances are very low that they will all fail to get through
-	sock[0].speed(0.01, gencontrolcores)
+	sock[0].speed(0.01, gencores)
 	sock[0].start(genstatcores)
 	time.sleep(2)
-	sock[0].stop(gencontrolcores)
-	sock[1].start([1])
+	sock[0].stop(gencores)
 
+global sutstatcores
+global genstatcores
+global latcores
+global gencores
+global irqcores
 vmDPIP =[]
 vmAdminIP =[]
 vmDPmac =[]
@@ -384,6 +409,15 @@ for vm in range(1, int(total_number_of_VMs)+1):
 for vm in range(1, int(required_number_of_VMs)+1):
 	config_file.append(testconfig.get('VM%d'%vm, 'config_file'))
 	script_control.append(testconfig.get('VM%d'%vm, 'script_control'))
+        group1cores=testconfig.get('VM%d'%vm, 'group1cores')
+	if group1cores <> 'not_used':
+		group1cores=ast.literal_eval(group1cores)
+        group2cores=testconfig.get('VM%d'%vm, 'group2cores')
+	if group2cores <> 'not_used':
+		group2cores=ast.literal_eval(group2cores)
+        group3cores=testconfig.get('VM%d'%vm, 'group3cores')
+	if group3cores <> 'not_used':
+		group3cores=ast.literal_eval(group3cores)
 	with open("parameters%d.lua"%vm, "w") as f:
 		f.write('name="%s"\n'% testconfig.get('VM%d'%vm, 'name'))
 		f.write('local_ip="%s"\n'% vmDPIP[vm-1])
@@ -398,6 +432,26 @@ for vm in range(1, int(required_number_of_VMs)+1):
 			destVMindex = int(destVM)-1
 			f.write('dest_ip="%s"\n'% vmDPIP[destVMindex])
 			f.write('dest_hex_ip="%s"\n'% hexDPIP[destVMindex])
+                if group1cores <> 'not_used':
+                        f.write('group1="%s"\n'% ','.join(map(str, group1cores)))
+                if group2cores <> 'not_used':
+                        f.write('group2="%s"\n'% ','.join(map(str, group2cores)))
+                if group3cores <> 'not_used':
+                        f.write('group3="%s"\n'% ','.join(map(str, group3cores)))
+	if config_file[-1] == 'gen.cfg':
+		gencores = group1cores
+		latcores = group2cores
+		genstatcores = group3cores
+	elif config_file[-1] == 'gen_gw.cfg':
+		gencores = group1cores
+		latcores = group2cores
+		genstatcores = group3cores
+	elif config_file[-1] == 'swap.cfg':
+		sutstatcores = group1cores
+	elif config_file[-1] == 'secgw2.cfg':
+		sutstatcores = group1cores
+	elif config_file[-1] == 'irq.cfg':
+		irqcores = group1cores
 	f.close
 #####################################################################################
 client =[]
@@ -429,7 +483,8 @@ for vm in range(0, int(required_number_of_VMs)):
 	sock.append(connect_socket(client[-1]))
 
 init_code = testconfig.get('DEFAULT', 'init_code')
-eval(init_code)
+if init_code <> 'not_used':
+	eval(init_code)
 ####################################################
 # Run test cases
 # Best to run the flow test at the end since otherwise the tests coming after thatmight be influenced by the big number of entries in the switch flow tables

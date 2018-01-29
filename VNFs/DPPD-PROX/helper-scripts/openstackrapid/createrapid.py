@@ -39,7 +39,7 @@ flavor = "prox_flavor" # This is also the default in the yaml file....
 image = "rapidVM" # This is also the default in the yaml file....
 image_file = "rapidVM.qcow2"
 dataplane_network = "dataplane-network" # This is also the default in the yaml file....
-subnet = "dpdk-subnet" #Hardcoded at this moment
+subnet = "dpdk-subnet" #subnet for dataplane
 subnet_cidr="10.10.10.0/24" # cidr for dataplane
 internal_network="admin_internal_net"
 floating_network="admin_floating_net"
@@ -131,7 +131,7 @@ for opt, arg in opts:
 		print ("Using dataplane subnet: "+ subnet_cidr)
 	elif opt in ("--internal_network"):
 		internal_network = arg
-		print ("Using controle plane network: "+ internal_network)
+		print ("Using control plane network: "+ internal_network)
 	elif opt in ("--floating_network"):
 		floating_network = arg
 		print ("Using floating ip network: "+ floating_network)

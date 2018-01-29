@@ -167,7 +167,7 @@ outputs:
     description: IP address of VM3 admin port
     value: { get_attr: [vm3_admin_port, fixed_ips, 0, ip_address] }
   vm3_public_ip:
-    description: Floating IP address of VM32 in public network
+    description: Floating IP address of VM3 in public network
     value: { get_attr: [ vm3_floating_ip, floating_ip_address ] }
   vm3_dataplane_ip:
     description: IP address of VM3 dataplane port

@@ -146,7 +146,7 @@ outputs:
     description: Number of VMs created by this stack
     value: 2
   vm1_private_ip:
-    description: IP address ofVM1 admin port
+    description: IP address of VM1 admin port
     value: { get_attr: [vm1_admin_port, fixed_ips, 0, ip_address] }
   vm1_public_ip:
     description: Floating IP address of VM1 in public network
