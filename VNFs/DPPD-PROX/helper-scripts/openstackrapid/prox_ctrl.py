@@ -184,14 +184,28 @@ class prox_sock(object):
         self._send('reset stats')
 
     def lat_stats(self, cores, task=0):
-        min_lat = max_lat = avg_lat = 0
+        min_lat = 999999999
+	max_lat = avg_lat = 0
         self._send('lat stats %s %s' % (','.join(map(str, cores)), task))
         for core in cores:
             stats = self._recv().split(',')
-            min_lat += int(stats[0])
-            max_lat += int(stats[1])
+            min_lat = min(int(stats[0]),min_lat)
+            max_lat = max(int(stats[1]),max_lat)
             avg_lat += int(stats[2])
+        avg_lat = avg_lat/len(cores)
         return min_lat, max_lat, avg_lat
+
+    def irq_stats(self, core, bucket, task=0):
+        self._send('stats task.core(%s).task(%s).irq(%s)' % (core, task, bucket))
+        stats = self._recv().split(',')
+        return int(stats[0])
+
+    def show_irq_buckets(self, core, task=0):
+        rx = tx = drop = tsc = hz = 0
+        self._send('show irq buckets %s %s' % (core,task))
+        buckets = self._recv().split(';')
+	buckets = buckets[:-1]
+        return buckets
 
     def core_stats(self, cores, task=0):
         rx = tx = drop = tsc = hz = 0
