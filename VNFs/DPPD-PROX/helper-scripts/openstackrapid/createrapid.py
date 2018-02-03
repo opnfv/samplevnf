@@ -31,7 +31,7 @@ from logging import handlers
 from prox_ctrl import prox_ctrl
 import ConfigParser
 
-version="17.12.15"
+version="18.2.3"
 stack = "rapid" #Default string for stack
 yaml = "rapid.yaml" #Default string for yaml file
 key = "prox" # This is also the default in the yaml file....
@@ -76,7 +76,7 @@ def usage():
 	print("  --subnet DP_SUBNET	 	Specify the subnet name to be used for the dataplane. Default is %s."%subnet)
 	print("  --subnet_cidr SUBNET_CIDR  	Specify the subnet CIDR to be used for the dataplane. Default is %s."%subnet_cidr)
 	print("  --internal_network NETWORK 	Specify the network name to be used for the control plane. Default is %s."%internal_network)
-	print("  --floating_network NETWORK 	Specify the external floating ip network name. Default is %s."%floating_network)
+	print("  --floating_network NETWORK 	Specify the external floating ip network name. Default is %s. NO if no floating ip used."%floating_network)
 	print("  --log				Specify logging level for log file output, screen output level is hard coded")
 	print("  -h, --help               	Show help message and exit.")
 	print("")
@@ -205,16 +205,17 @@ else:
 	raise Exception("Control plane network " + internal_network + " not existing")
 
 # Checking if the floating ip network already exists, if not, stop the script
-log.debug("Checking floating ip network: "+floating_network)
-cmd = 'openstack network show '+floating_network
-log.debug (cmd)
-cmd = cmd + ' |grep "status " | tr -s " " | cut -d" " -f 4'
-NetworkExist = subprocess.check_output(cmd , shell=True).strip()
-if NetworkExist == 'ACTIVE':
-	log.info("Floating ip network ("+floating_network+")  already active")
-else:
-	log.exception("Floating ip network " + floating_network + " not existing")
-	raise Exception("Floating ip network " + floating_network + " not existing")
+if floating_network <>'NO':
+	log.debug("Checking floating ip network: "+floating_network)
+	cmd = 'openstack network show '+floating_network
+	log.debug (cmd)
+	cmd = cmd + ' |grep "status " | tr -s " " | cut -d" " -f 4'
+	NetworkExist = subprocess.check_output(cmd , shell=True).strip()
+	if NetworkExist == 'ACTIVE':
+		log.info("Floating ip network ("+floating_network+")  already active")
+	else:
+		log.exception("Floating ip network " + floating_network + " not existing")
+		raise Exception("Floating ip network " + floating_network + " not existing")
 
 # Checking if the image already exists, if not create it
 log.debug("Checking image: "+image)
@@ -357,9 +358,14 @@ for vm in range(1, int(total_number_of_VMs)+1):
 	searchString = '.*vm%d_dataplane_ip.*?([0-9]*\.[0-9]*\.[0-9]*\.[0-9]*)' % vm
 	matchObj = re.search(searchString, output, re.DOTALL)
 	vmDPIP.append(matchObj.group(1))
-	searchString = '.*vm%d_public_ip.*?([0-9]*\.[0-9]*\.[0-9]*\.[0-9]*)' % vm
-	matchObj = re.search(searchString, output, re.DOTALL)
-	vmAdminIP.append(matchObj.group(1))
+	if floating_network <> 'NO':
+		searchString = '.*vm%d_public_ip.*?([0-9]*\.[0-9]*\.[0-9]*\.[0-9]*)' % vm
+		matchObj = re.search(searchString, output, re.DOTALL)
+		vmAdminIP.append(matchObj.group(1))
+	else:
+		searchString = '.*vm%d_private_ip.*?([0-9]*\.[0-9]*\.[0-9]*\.[0-9]*)' % vm
+		matchObj = re.search(searchString, output, re.DOTALL)
+		vmAdminIP.append(matchObj.group(1))
 	searchString = '.*vm%d_dataplane_mac.*?([a-fA-F0-9:]{17})' % vm
 	matchObj = re.search(searchString, output, re.DOTALL)
 	vmDPmac.append(matchObj.group(1))
