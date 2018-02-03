@@ -1,0 +1,52 @@
+##
+## Copyright (c) 2010-2018 Intel Corporation
+##
+## Licensed under the Apache License, Version 2.0 (the "License");
+## you may not use this file except in compliance with the License.
+## You may obtain a copy of the License at
+##
+##     http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+
+[DEFAULT]
+name = BasicSwapTesting
+number_of_tests = 1
+total_number_of_vms = 1
+init_code= not_used
+dest_vm = not_used
+gw_vm = not_used
+script_control = false
+group1cores = not_used
+group2cores = not_used
+group3cores = not_used
+
+
+[VM1]
+name = InterruptTesting
+config_file = irq.cfg
+group1cores = [1,2,3]
+
+[VM2]
+name = InterruptTesting
+config_file = irq.cfg
+group1cores = [1,2,3]
+
+[VM3]
+name = InterruptTesting
+config_file = irq.cfg
+group1cores = [1,2,3]
+
+
+[test1]
+cmd=run_irqtest(sock[0])
+[test2]
+cmd=run_irqtest(sock[1])
+[test3]
+cmd=run_irqtest(sock[2])
+

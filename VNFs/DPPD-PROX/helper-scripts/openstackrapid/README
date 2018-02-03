@@ -41,13 +41,15 @@ createrapid.py will use the OpenStack CLI to create the flavor, key-pair, networ
 stack, ...
 It will create a <STACK>.env file containing all info that will be used by runrapid.py
 to actually run the tests. Logging can be found in the CREATE<STACK>.log file
+You can use floating IP addresses by specifying the floating IP network
+--floating_network NETWORK
+or directly connect throught the INTERNAL_NETWORK by using the following parameter:
+--floating_network NO
 
 Now you can run the runrapid.py file. Use help for more info on the usage:
   # ./runrapid.py --help
 The script will connect to all VMs that have been instantiated and it will launch
-PROX in all VMs.
-This will be done through the floating IP assigned to the VMs. You need to make sure
-that floating IPs are working on your OpenStack deployment.
+PROX in all VMs. This will be done through the admin IP assigned to the VMs.
 Once that is done it will connect to the PROX tcp socket and start sending
 commands to run the actual test.
 It will print test results on the screen while running.
@@ -61,8 +63,8 @@ Notes about prox_user_data.sh script:
 - huge pages are allocated for DPDK on node 0 (hard-coded) in the VM.
 
 Note on using SRIOV ports:
-Before running createrapid, it is best to already create the network, subnet and ports
-manually by entering the following commands (change the parameters to your needs):
+Before running createrapid, make sure the network, subnet and ports are already created
+This can be done as follows (change the parameters to your needs):
 openstack network create --share --external --provider-network-type flat --provider-physical-network physnet2 fast-network
 openstack subnet create --network  fast-network  --subnet-range 20.20.20.0/24 --gateway none fast-subnet
 openstack port create --network fast-network --vnic-type direct --fixed-ip subnet=fast-subnet Port1
