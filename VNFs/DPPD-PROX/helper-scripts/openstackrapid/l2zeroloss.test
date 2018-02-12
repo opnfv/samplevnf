@@ -15,7 +15,7 @@
 ##
 
 [DEFAULT]
-name = BasicSwapTesting
+name = L2BasicSwapTesting
 number_of_tests = 3
 total_number_of_vms = 2
 init_code=init_test()
@@ -25,13 +25,12 @@ script_control = false
 group1cores = not_used
 group2cores = not_used
 group3cores = not_used
-drop_rate_treshold = 1
+drop_rate_treshold = 0
 accuracy = 0.01
-
 
 [VM1]
 name = Generator
-config_file = gen.cfg
+config_file = l2gen.cfg
 dest_vm = 2
 script_control = true
 group1cores = [1]
@@ -40,7 +39,7 @@ group3cores = [1,3]
 
 [VM2]
 name = Swap
-config_file = swap.cfg
+config_file = l2swap.cfg
 group1cores = [1]
 
 [test1]

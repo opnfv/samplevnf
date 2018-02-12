@@ -16,8 +16,8 @@
 
 [DEFAULT]
 name = BasicSwapTesting
-number_of_tests = 1
-total_number_of_vms = 1
+number_of_tests = 2
+total_number_of_vms = 2
 init_code= not_used
 dest_vm = not_used
 gw_vm = not_used
@@ -25,7 +25,8 @@ script_control = false
 group1cores = not_used
 group2cores = not_used
 group3cores = not_used
-
+drop_rate_treshold = 1
+accuracy = 0.01
 
 [VM1]
 name = InterruptTesting

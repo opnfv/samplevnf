@@ -51,6 +51,10 @@ parameters:
     type: string
     description: The Availability Zone to launch the instance.
     default: nova
+  vm1_availability_zone:
+    type: string
+    description: The Availability Zone to launch the instance.
+    default: nova
 
 resources:
   vm1_admin_port:
@@ -73,7 +77,7 @@ resources:
   vm1:
     type: OS::Nova::Server
     properties:
-      availability_zone: { get_param: availability_zone }
+      availability_zone: { get_param: vm1_availability_zone }
       user_data:
         get_file: prox_user_data.sh
       key_name: { get_param: key }
