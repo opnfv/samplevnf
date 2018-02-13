@@ -1,0 +1,227 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5a3f45e8_464a6884",
+        "filename": "VNFs/DPPD-PROX/handle_lat.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 121,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-02-13T15:38:00Z",
+      "side": 1,
+      "message": "Probably does not work as expected nor as name suggests.\nThis line is a very complex way of writing: return a - b;\nWhile I guess the goal was to write:\nreturn a \u003c b ? b-a : a-b;",
+      "revId": "5c0665c9527f6b2618b97d9aac80bfdff1307900",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5a3f45e8_66032474",
+        "filename": "VNFs/DPPD-PROX/handle_lat.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 150,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-02-13T15:38:00Z",
+      "side": 1,
+      "message": "This is provided as the compare callback to qsort, so it must return an int. This expression is a diff of unsigned and would not yield the expected result, e.g. in the 8bit range for the sake of simplicity: 253 \u003e 5, so we should return something \u003e0. But the diff would result in 248, considered as -8 by qsort.\nThis should be rewritten as:\nreturn ptr1-\u003etx_time \u003e ptr2-\u003etx_time ? 1 : -1;\nIf we can have identical tx_time, is there another field to sort upon? Otherwise we should be fine never returning 0.",
+      "revId": "5c0665c9527f6b2618b97d9aac80bfdff1307900",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5a3f45e8_069340fb",
+        "filename": "VNFs/DPPD-PROX/handle_lat.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 158,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-02-13T15:38:00Z",
+      "side": 1,
+      "message": "Similar to line 150. This should be rewritten as:\nreturn ptr1-\u003etx_packet_index \u003e ptr2-\u003etx_packet_index ? 1 : -1;\nWe should never have identical indexes, so no need to return 0.",
+      "revId": "5c0665c9527f6b2618b97d9aac80bfdff1307900",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5a3f45e8_06db401c",
+        "filename": "VNFs/DPPD-PROX/handle_lat.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 170,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-02-13T15:38:00Z",
+      "side": 1,
+      "message": "We should start at 1, and initialize old_tx_packet_index above using first lat-\u003etx_packet_index value, then lat++ before the for loop.",
+      "range": {
+        "startLine": 170,
+        "startChar": 19,
+        "endLine": 170,
+        "endChar": 20
+      },
+      "revId": "5c0665c9527f6b2618b97d9aac80bfdff1307900",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5a3f45e8_86fe306a",
+        "filename": "VNFs/DPPD-PROX/handle_lat.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 173,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-02-13T15:38:00Z",
+      "side": 1,
+      "message": "Not sure that this properly detects index overflow. Not sure either that such detection is feasible, especially with reordered packets.\nLet\u0027s look at the following sequence, in the 8bit range for the sake of simplicity: 254 1 255 2\nHere packets 1 and 255 have been swapped/reordered (and packet 0 was lost ;-)\nFor qsort to work, we want to rewrite indexes as: 254 257 255 258.\nWhen we look at packet 1, old is 254, so we could detect overflow, and update its index from 1 to 257, and we should also store 257 into old.\nWhen we look at packet 255, old is 257, so we could detect reordering, but we should not blindly update its index from 255 to 511, as line 176 attempts to do for all packets. Let\u0027s assume we can do that and set old to 255.\nWhen we look at packet 2, old is 255, so we would wrongly detect another overflow, and update its index from 2 to 514!\nLooks like proper overflow detection is much more demanding than a simple if...",
+      "revId": "5c0665c9527f6b2618b97d9aac80bfdff1307900",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5a3f45e8_c6d038fa",
+        "filename": "VNFs/DPPD-PROX/handle_lat.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 176,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-02-13T15:38:00Z",
+      "side": 1,
+      "message": "This is an uint32_t, so this line likely results in decrementing it by n_overflow, instead of expected 64bit increment.\nBy the way, you should actually add N * (UINT32_MAX + 1), which might be written as:\n((uint64_t)UINT32_MAX + 1) * n_overflow",
+      "range": {
+        "startLine": 176,
+        "startChar": 2,
+        "endLine": 176,
+        "endChar": 22
+      },
+      "revId": "5c0665c9527f6b2618b97d9aac80bfdff1307900",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5a3f45e8_863bd0ea",
+        "filename": "VNFs/DPPD-PROX/handle_lat.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 182,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-02-13T15:38:00Z",
+      "side": 1,
+      "message": "Similar concerns as for fix_latency_buffer_tx_packet_index() above.",
+      "revId": "5c0665c9527f6b2618b97d9aac80bfdff1307900",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5a3f45e8_06fce03d",
+        "filename": "VNFs/DPPD-PROX/handle_lat.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 377,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-02-13T15:38:00Z",
+      "side": 1,
+      "message": "Unused parameter, is that intended?",
+      "range": {
+        "startLine": 377,
+        "startChar": 67,
+        "endLine": 377,
+        "endChar": 82
+      },
+      "revId": "5c0665c9527f6b2618b97d9aac80bfdff1307900",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5a3f45e8_e6f8d44b",
+        "filename": "VNFs/DPPD-PROX/handle_lat.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 466,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-02-13T15:38:00Z",
+      "side": 1,
+      "message": "Indirectly unused parameter, is that intended?",
+      "range": {
+        "startLine": 466,
+        "startChar": 63,
+        "endLine": 466,
+        "endChar": 78
+      },
+      "revId": "5c0665c9527f6b2618b97d9aac80bfdff1307900",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5a3f45e8_469548e3",
+        "filename": "VNFs/DPPD-PROX/handle_lat.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 570,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-02-13T15:38:00Z",
+      "side": 1,
+      "message": "Actually unused parameter in called function chain, is that intended?",
+      "range": {
+        "startLine": 570,
+        "startChar": 9,
+        "endLine": 570,
+        "endChar": 44
+      },
+      "revId": "5c0665c9527f6b2618b97d9aac80bfdff1307900",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5a3f45e8_269abc14",
+        "filename": "VNFs/DPPD-PROX/handle_lat.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 587,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-02-13T15:38:00Z",
+      "side": 1,
+      "message": "Actually unused parameter in called function chain, is that intended?",
+      "range": {
+        "startLine": 587,
+        "startChar": 28,
+        "endLine": 587,
+        "endChar": 49
+      },
+      "revId": "5c0665c9527f6b2618b97d9aac80bfdff1307900",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
