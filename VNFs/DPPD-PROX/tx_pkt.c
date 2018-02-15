@@ -704,7 +704,10 @@ int tx_pkt_dump(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkt
    task that xmits the packet, no atomic operation is needed. */
 int tx_pkt_distr(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts, uint8_t *out)
 {
-	tbase->aux->tx_bucket[n_pkts]++;
+	if (likely(n_pkts < TX_BUCKET_SIZE))
+		tbase->aux->tx_bucket[n_pkts]++;
+	else
+		tbase->aux->tx_bucket[TX_BUCKET_SIZE - 1]++;
 	return tbase->aux->tx_pkt_orig(tbase, mbufs, n_pkts, out);
 }
 
