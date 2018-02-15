@@ -1,0 +1,56 @@
+---
+project: 'Sample Virtual Network Function (SAMPLEVNF)'
+project_creation_date: '27/03/2017'
+project_category: ''
+lifecycle_state: 'Incubation'
+project_lead: &opnfv_samplevnf_ptl
+    name: 'Deepak S'
+    email: 'deepak.s@linux.intel.com'
+    company: 'linux.intel.com'
+    id: 'ds2'
+    timezone: 'Unknown'
+primary_contact: *opnfv_samplevnf_ptl
+issue_tracking:
+    type: 'jira'
+    url: 'https://jira.opnfv.org/projects/[SAMPLEVNF]'
+    key: '[SAMPLEVNF]'
+mailing_list:
+    type: 'mailman2'
+    url: 'opnfv-tech-discuss@lists.opnfv.org'
+    tag: '[samplevnf]'
+realtime_discussion:
+    type: irc
+    server: 'freenode.net'
+    channel: '#opnfv-samplevnf'
+meetings:
+    - type: 'gotomeeting+irc'
+      agenda:  # eg: 'https://wiki.opnfv.org/display/'
+      url:  # eg: 'https://global.gotomeeting.com/join/819733085'
+      server: 'freenode.net'
+      channel: '#opnfv-meeting'
+      repeats: 'weekly'
+      time:  # eg: '16:00 UTC'
+repositories:
+    - 'samplevnf'
+committers:
+    - <<: *opnfv_samplevnf_ptl
+    - name: 'Frank Brockners'
+      email: 'fbrockne@cisco.com'
+      company: 'cisco.com'
+      id: 'brockners'
+    - name: 'xiaodong shang'
+      email: 'shang.xiaodong@zte.com.cn'
+      company: 'zte.com.cn'
+      id: 'shangxdy'
+    - name: 'Deepak S'
+      email: 'deepak.s@linux.intel.com'
+      company: 'linux.intel.com'
+      id: 'ds2'
+    - name: 'Sonika Jindal'
+      email: 'sonijindal@gmail.com'
+      company: 'gmail.com'
+      id: 'sonika.jindal'
+tsc:
+    # yamllint disable rule:line-length
+    approval: 'http//meetbot.opnfv.org/meetings/opnfv-meeting/2017/opnfv-meeting.2017-02-07-15.00.html'
+    # yamllint enable rule:line-length
