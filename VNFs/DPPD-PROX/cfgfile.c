@@ -188,13 +188,17 @@ static struct cfg_section *cfg_check_section(char *buffer, struct cfg_section *p
 	if (*pend == '\0') {
 		return NULL;
 	}
-	/* only numeric characters are valid for section index
-	   (currently, variables not checked!) */
-	if (pend[0] != '$') {
-		for (len = 0; pend[len] != '\0'; ++len) {
-			if (strchr(valid, pend[len]) == NULL) {
-				return NULL;
-			}
+
+	/* only numeric characters are valid for section index */
+	char val[MAX_CFG_STRING_LEN];
+	if (pend[0] == '$')
+		parse_single_var(val, sizeof(val), pend);
+	else
+		strncpy(val, pend, sizeof(val));
+
+	for (len = 0; val[len] != '\0'; ++len) {
+		if (strchr(valid, val[len]) == NULL) {
+			return NULL;
 		}
 	}
 

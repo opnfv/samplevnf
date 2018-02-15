@@ -106,7 +106,7 @@ static struct var *var_lookup(const char *name)
 	return NULL;
 }
 
-static int parse_single_var(char *val, size_t len, const char *name)
+int parse_single_var(char *val, size_t len, const char *name)
 {
 	struct var *match;
 
@@ -135,7 +135,7 @@ int parse_vars(char *val, size_t len, const char *name)
 {
 	static char result[MAX_CFG_STRING_LEN];
 	static char cur_var[MAX_CFG_STRING_LEN];
-	char parsed[2048];
+	char parsed[MAX_CFG_STRING_LEN];
 	size_t name_len = strlen(name);
 	enum parse_vars_state {NO_VAR, WHOLE_VAR, INLINE_VAR} state = NO_VAR;
 	size_t result_len = 0;
