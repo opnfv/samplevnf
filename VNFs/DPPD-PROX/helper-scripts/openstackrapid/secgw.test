@@ -25,7 +25,7 @@ script_control = false
 group1cores = not_used
 group2cores = not_used
 group3cores = not_used
-drop_rate_treshold = 1
+drop_rate_treshold = 0.01
 accuracy = 0.01
 
 [VM1]

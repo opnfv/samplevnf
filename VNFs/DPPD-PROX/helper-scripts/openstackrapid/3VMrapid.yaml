@@ -47,11 +47,15 @@ parameters:
     label: Floating network name or ID
     description: Public Network to attach instance to.
     default: admin_floating_net
-  availability_zone:
+  vm1_availability_zone:
     type: string
     description: The Availability Zone to launch the instance.
     default: nova
-  vm1_availability_zone:
+  vm2_availability_zone:
+    type: string
+    description: The Availability Zone to launch the instance.
+    default: nova
+  vm3_availability_zone:
     type: string
     description: The Availability Zone to launch the instance.
     default: nova
@@ -106,7 +110,7 @@ resources:
   vm2:
     type: OS::Nova::Server
     properties:
-      availability_zone: { get_param: availability_zone }
+      availability_zone: { get_param: vm2_availability_zone }
       user_data:
         get_file: prox_user_data.sh
       key_name: { get_param: key }
@@ -135,7 +139,7 @@ resources:
   vm3:
     type: OS::Nova::Server
     properties:
-      availability_zone: { get_param: availability_zone }
+      availability_zone: { get_param: vm3_availability_zone }
       user_data:
         get_file: prox_user_data.sh
       key_name: { get_param: key }

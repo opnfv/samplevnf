@@ -31,7 +31,7 @@ from logging import handlers
 from prox_ctrl import prox_ctrl
 import ConfigParser
 
-version="18.2.3"
+version="18.2.12"
 stack = "rapid" #Default string for stack
 yaml = "rapid.yaml" #Default string for yaml file
 key = "prox" # This is also the default in the yaml file....
@@ -43,6 +43,9 @@ subnet = "dpdk-subnet" #subnet for dataplane
 subnet_cidr="10.10.10.0/24" # cidr for dataplane
 internal_network="admin_internal_net"
 floating_network="admin_floating_net"
+vm1_availability_zone="nova"
+vm2_availability_zone="nova"
+vm3_availability_zone="nova"
 loglevel="DEBUG" # sets log level for writing to file
 runtime=10 # time in seconds for 1 test run
 
@@ -59,6 +62,9 @@ def usage():
 	print("                   [--subnet_cidr SUBNET_CIDR]")
 	print("                   [--internal_network ADMIN_NETWORK]")
 	print("                   [--floating_network ADMIN_NETWORK]")
+	print("                   [--vm1_availability_zone ZONE_FOR_VM1]")
+	print("                   [--vm2_availability_zone ZONE_FOR_VM2]")
+	print("                   [--vm3_availability_zone ZONE_FOR_VM3]")
 	print("                   [--log DEBUG|INFO|WARNING|ERROR|CRITICAL")
 	print("                   [-h] [--help]")
 	print("")
@@ -77,6 +83,9 @@ def usage():
 	print("  --subnet_cidr SUBNET_CIDR  	Specify the subnet CIDR to be used for the dataplane. Default is %s."%subnet_cidr)
 	print("  --internal_network NETWORK 	Specify the network name to be used for the control plane. Default is %s."%internal_network)
 	print("  --floating_network NETWORK 	Specify the external floating ip network name. Default is %s. NO if no floating ip used."%floating_network)
+	print("  --vm1_availability_zone ZONE 	Specify the availability zone for VM1. Default is %s."%vm1_availability_zone)
+	print("  --vm2_availability_zone ZONE 	Specify the availability zone for VM2. Default is %s."%vm2_availability_zone)
+	print("  --vm3_availability_zone ZONE 	Specify the availability zone for VM3. Default is %s."%vm3_availability_zone)
 	print("  --log				Specify logging level for log file output, screen output level is hard coded")
 	print("  -h, --help               	Show help message and exit.")
 	print("")
@@ -85,7 +94,7 @@ def usage():
 	print("Note that %s is the default stack name. Replace with STACK_NAME if needed"%stack)
 
 try:
-	opts, args = getopt.getopt(sys.argv[1:], "vh", ["version","help", "yaml=","stack=","key=","flavor=","image=","image_file=","dataplane_network=","subnet=","subnet_cidr=","internal_network=","floating_network=","log="])
+	opts, args = getopt.getopt(sys.argv[1:], "vh", ["version","help", "yaml=","stack=","key=","flavor=","image=","image_file=","dataplane_network=","subnet=","subnet_cidr=","internal_network=","floating_network=","vm1_availability_zone=","vm2_availability_zone=","vm3_availability_zone=","log="])
 except getopt.GetoptError as err:
 	print("===========================================")
 	print(str(err))
@@ -135,6 +144,15 @@ for opt, arg in opts:
 	elif opt in ("--floating_network"):
 		floating_network = arg
 		print ("Using floating ip network: "+ floating_network)
+	elif opt in ("--vm1_availability_zone"):
+		vm1_availability_zone = arg
+		print ("Using VM1 availability zone: "+ vm1_availability_zone)
+	elif opt in ("--vm2_availability_zone"):
+		vm2_availability_zone = arg
+		print ("Using VM2 availability zone: "+ vm2_availability_zone)
+	elif opt in ("--vm3_availability_zone"):
+		vm3_availability_zone = arg
+		print ("Using VM3 availability zone: "+ vm3_availability_zone)
 	elif opt in ("--log"):
 		loglevel = arg
 		print ("Log level: "+ loglevel)
@@ -279,7 +297,7 @@ else:
 	cmd = cmd + ' |grep "name " | tr -s " " | cut -d" " -f 4'
 	FlavorExist = subprocess.check_output(cmd , shell=True).strip()
 	if FlavorExist == flavor:
-		cmd = 'openstack flavor set '+ flavor +' --property hw:mem_page_size="large" --property hw:cpu_policy="dedicated" --property hw:cpu_threads_policy="isolate"'
+		cmd = 'openstack flavor set '+ flavor +' --property hw:mem_page_size="large" --property hw:cpu_policy="dedicated" --property hw:cpu_thread_policy="isolate"'
 		log.debug(cmd)
 		subprocess.check_call(cmd , shell=True)
 		log.info("Flavor created")
@@ -335,7 +353,7 @@ cmd = cmd+' |grep "stack_status " | tr -s " " | cut -d"|" -f 3'
 StackRunning = subprocess.check_output(cmd , shell=True).strip()
 if StackRunning == '':
 	log.info('Creating Stack ...')
-	cmd = 'openstack stack create -t '+ yaml +  ' --parameter flavor="'+flavor  +'" --parameter key="'+ key + '" --parameter image="'+image  + '" --parameter dataplane_network="'+dataplane_network+ '" --parameter internal_network="'+internal_network+'" --parameter floating_network="'+floating_network+'" --wait '+stack 
+	cmd = 'openstack stack create -t '+ yaml +  ' --parameter flavor="'+flavor  +'" --parameter key="'+ key + '" --parameter image="'+image  + '" --parameter dataplane_network="'+dataplane_network+ '" --parameter internal_network="'+internal_network+'" --parameter floating_network="'+floating_network+'" --parameter vm1_availability_zone="'+vm1_availability_zone+'" --parameter vm2_availability_zone="'+vm2_availability_zone+'" --parameter vm3_availability_zone="'+vm3_availability_zone+'" --wait '+stack 
 	log.debug(cmd)
 	cmd = cmd + ' |grep "stack_status " | tr -s " " | cut -d"|" -f 3'
 	StackRunning = subprocess.check_output(cmd , shell=True).strip()
