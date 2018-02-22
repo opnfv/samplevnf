@@ -1174,7 +1174,8 @@ static void init_task_gen_early(struct task_args *targ)
 	uint8_t *generator_count = prox_sh_find_system("generator_count");
 
 	if (generator_count == NULL) {
-		generator_count = prox_zmalloc(sizeof(*generator_count), 0);
+		generator_count = prox_zmalloc(sizeof(*generator_count), rte_lcore_to_socket_id(targ->lconf->id));
+		PROX_PANIC(generator_count == NULL, "Failed to allocate generator count\n");
 		prox_sh_add_system("generator_count", generator_count);
 	}
 	targ->generator_id = *generator_count;
@@ -1224,6 +1225,7 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 	PROX_PANIC((task->lat_pos || task->accur_pos) && !task->lat_enabled, "lat not enabled by lat pos or accur pos configured\n");
 
 	task->generator_id = targ->generator_id;
+	plog_info("\tGenerator id = %d\n", task->generator_id);
 	task->link_speed = UINT64_MAX;
 
 	if (!strcmp(targ->pcap_file, "")) {
@@ -1258,6 +1260,7 @@ static struct task_init task_init_gen = {
 	.init = init_task_gen,
 	.handle = handle_gen_bulk,
 	.start = start,
+	.early_init = init_task_gen_early,
 #ifdef SOFT_CRC
 	// For SOFT_CRC, no offload is needed. If both NOOFFLOADS and NOMULTSEGS flags are set the
 	// vector mode is used by DPDK, resulting (theoretically) in higher performance.
@@ -1274,6 +1277,7 @@ static struct task_init task_init_gen_l3 = {
 	.init = init_task_gen,
 	.handle = handle_gen_bulk,
 	.start = start,
+	.early_init = init_task_gen_early,
 #ifdef SOFT_CRC
 	// For SOFT_CRC, no offload is needed. If both NOOFFLOADS and NOMULTSEGS flags are set the
 	// vector mode is used by DPDK, resulting (theoretically) in higher performance.
@@ -1290,6 +1294,7 @@ static struct task_init task_init_gen_pcap = {
 	.init = init_task_gen_pcap,
 	.handle = handle_gen_pcap_bulk,
 	.start = start_pcap,
+	.early_init = init_task_gen_early,
 #ifdef SOFT_CRC
 	.flag_features = TASK_FEATURE_NEVER_DISCARDS | TASK_FEATURE_NO_RX | TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS | TASK_FEATURE_TXQ_FLAGS_NOMULTSEGS,
 #else
