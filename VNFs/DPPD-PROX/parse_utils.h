@@ -118,4 +118,6 @@ const char* get_parse_err(void);
 /* Returns true if running from  a virtual machine. */
 int is_virtualized(void);
 
+int parse_single_var(char *val, size_t len, const char *name);
+
 #endif /* _PARSE_UTILS_H_ */
