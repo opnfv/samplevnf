@@ -37,12 +37,14 @@ env = "rapid" #Default string for environment
 test = "basicrapid" #Default string for test
 loglevel="DEBUG" # sets log level for writing to file
 runtime=10 # time in seconds for 1 test run
+configonly = False # IF True, the system will upload all the necessary config fiels to the VMs, but not start PROX and the actual testing
 
 def usage():
 	print("usage: runrapid    [--version] [-v]")
 	print("                   [--env ENVIRONMENT_NAME]")
 	print("                   [--test TEST_NAME]")
 	print("                   [--runtime TIME_FOR_TEST]")
+	print("                   [--configonly False|True]")
 	print("                   [--log DEBUG|INFO|WARNING|ERROR|CRITICAL]")
 	print("                   [-h] [--help]")
 	print("")
@@ -53,12 +55,13 @@ def usage():
 	print("  --env ENVIRONMENT_NAME       	Parameters will be read from ENVIRONMENT_NAME.env Default is %s."%env)
 	print("  --test TEST_NAME       	Test cases will be read from TEST_NAME.test Default is %s."%test)
 	print("  --runtime			Specify time in seconds for 1 test run")
+	print("  --configonly			If True, only upload all config files to the VMs, do not run the tests. Default is %s."%configonly)
 	print("  --log				Specify logging level for log file output, screen output level is hard coded")
 	print("  -h, --help               	Show help message and exit.")
 	print("")
 
 try:
-	opts, args = getopt.getopt(sys.argv[1:], "vh", ["version","help", "env=", "test=","runtime=","log="])
+	opts, args = getopt.getopt(sys.argv[1:], "vh", ["version","help", "env=", "test=","runtime=","configonly=","log="])
 except getopt.GetoptError as err:
 	print("===========================================")
 	print(str(err))
@@ -84,6 +87,9 @@ for opt, arg in opts:
 	if opt in ("--runtime"):
 		runtime = arg
 		print ("Runtime: "+ runtime)
+	if opt in ("--configonly"):
+		configonly = arg
+		print ("configonly: "+ configonly)
 	if opt in ("--log"):
 		loglevel = arg
 		print ("Log level: "+ loglevel)
@@ -178,6 +184,7 @@ def connect_client(client):
 def run_iteration(gensock,sutsock):
 	sleep_time = 2
 	# Sleep_time is needed to be able to do accurate measurements to check for packet loss. We need to make this time large enough so that we do not take the first measurement while some packets from the previous tests migth still be in flight
+	time.sleep(sleep_time)
 	abs_old_rx, abs_old_tx, abs_old_drop, abs_old_tsc, abs_tsc_hz = gensock.core_stats(genstatcores)
 	gensock.start(gencores)
 	time.sleep(sleep_time)
@@ -214,7 +221,7 @@ def run_iteration(gensock,sutsock):
 	if (tx == 0):
         	log.critical("TX = 0. Test interrupted since no packet has been sent.")
 		raise Exception("TX = 0")
-	return(pps_req_tx,pps_tx,pps_sut_tx_str,pps_rx,lat_avg,abs_dropped)
+	return(pps_req_tx,pps_tx,pps_sut_tx_str,pps_rx,lat_avg,lat_max,abs_dropped,(abs_new_tx - abs_old_tx))
 
 def new_speed(speed,minspeed,maxspeed,success):
 	# Following calculates the ratio for the new speed to be applied
@@ -239,31 +246,20 @@ def new_speed(speed,minspeed,maxspeed,success):
 def get_pps(speed,size):
 	return (speed * 100.0 / (8*(size+24)))
 
-def get_drop_rate(speed,pps_rx,size):
-	# pps_rx are all the packets that are received by the generator. That is substracted
-	# from the pps that we wanted to send. This is calculated by taking the variable speed
-	# which is the requested percentage of a 10Gb/s link. So we take  10000bps (10Gbps, note
-	# that the speed variable is already expressed in % so we only take 100 and not 10000)
-	# divided by the number of bits in 1 packet. That is 8 bits in a byte times the size of
-	# a frame (=our size + 24 bytes overhead).
-	tried_to_send = get_pps(speed,size)
-	return abs(100.0*(tried_to_send - pps_rx)/tried_to_send)
-
 def run_speedtest(gensock,sutsock):
-        log.info("+-------------------------------------------------------------------------------------------------------------------------------------------------------------+")
-        log.info("| Generator is sending UDP (1 flow) packets (64 bytes) to SUT. SUT sends packets back                                                                         |")
-        log.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+-------------------------+")
-        log.info("| Test   |  Speed requested   | Sent to NIC    |  Sent by Gen   | Forward by SUT |  Rec. by Gen   |  Avg. Latency  |  Packets Lost  | Loss Ratio | Result     |")
-        log.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+------------+")
-	speed = 100
-	maxspeed = speed
+        log.info("+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+")
+        log.info("| Generator is sending UDP (1 flow) packets (64 bytes) to SUT. SUT sends packets back                                                                                          |")
+	log.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+------------+")
+	log.info("| Test   |  Speed requested   | Sent to NIC    |  Sent by Gen   | Forward by SUT |  Rec. by Gen   |  Avg. Latency  |  Max. Latency  |  Packets Lost  | Loss Ratio | Result     |")
+	log.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+------------+")
+	maxspeed = speed = 100
 	minspeed = 0
 	size=60
 	attempts = 0
 	endpps_sut_tx_str = 'NO_RESULTS'
 	gensock.set_size(gencores,0,size) # This is setting the frame size
-	gensock.set_value(gencores,0,16,(size-18),2) # 18 is the difference between the frame size and IP size = size of (MAC addresses, ethertype and FCS)
-	gensock.set_value(gencores,0,38,(size-38),2) # 38 is the difference between the frame size and UDP size = 18 + size of IP header (=20)
+	gensock.set_value(gencores,0,16,(size-14),2) # 18 is the difference between the frame size and IP size = size of (MAC addresses, ethertype and FCS)
+	gensock.set_value(gencores,0,38,(size-34),2) # 38 is the difference between the frame size and UDP size = 18 + size of IP header (=20)
 	# This will only work when using sending UDP packets. For different protocls and ehternet types, we would need a differnt calculation
         while (maxspeed-minspeed > ACCURACY):
                 attempts += 1
@@ -273,44 +269,44 @@ def run_speedtest(gensock,sutsock):
                 gensock.speed(speed, gencores)
                 time.sleep(1)
                 # Get statistics now that the generation is stable and NO ARP messages any more
-		pps_req_tx,pps_tx,pps_sut_tx_str,pps_rx,lat_avg,abs_dropped = run_iteration(gensock,sutsock)
-		drop_rate = get_drop_rate(speed,pps_rx,size)
-	        if (drop_rate < DROP_RATE_TRESHOLD) or (abs_dropped==DROP_RATE_TRESHOLD ==0):
-	                log.info('|{:>7}'.format(str(attempts))+" | " + '{:>5.1f}'.format(speed) + '% ' +'{:>6.3f}'.format(get_pps(speed,size)) + ' Mpps | '+ '{:>9.3f}'.format(pps_req_tx)+' Mpps | '+ '{:>9.3f}'.format(pps_tx) +' Mpps | ' + '{:>9}'.format(pps_sut_tx_str) +' Mpps | '+ '{:>9.3f}'.format(pps_rx)+' Mpps | '+ '{:>9.0f}'.format(lat_avg)+' us   | '+ '{:>14d}'.format(abs_dropped)+ ' |''{:>9.2f}'.format(drop_rate)+ '%  | SUCCESS    |')
+		pps_req_tx,pps_tx,pps_sut_tx_str,pps_rx,lat_avg,lat_max, abs_dropped, abs_tx = run_iteration(gensock,sutsock)
+		drop_rate = 100.0*abs_dropped/abs_tx
+        	if ((get_pps(speed,size) - pps_tx)/pps_tx)<0.001 and ((drop_rate < DROP_RATE_TRESHOLD) or (abs_dropped==DROP_RATE_TRESHOLD ==0)):
+	                log.info('|{:>7}'.format(str(attempts))+" | " + '{:>5.1f}'.format(speed) + '% ' +'{:>6.3f}'.format(get_pps(speed,size)) + ' Mpps | '+ '{:>9.3f}'.format(pps_req_tx)+' Mpps | '+ '{:>9.3f}'.format(pps_tx) +' Mpps | ' + '{:>9}'.format(pps_sut_tx_str) +' Mpps | '+ '{:>9.3f}'.format(pps_rx)+' Mpps | '+ '{:>9.0f}'.format(lat_avg)+' us   | '+  '{:>9.0f}'.format(lat_max)+' us   | '+ '{:>14d}'.format(abs_dropped)+ ' |''{:>9.2f}'.format(drop_rate)+ '%  | SUCCESS    |')
 			endspeed = speed
 			endpps_req_tx = pps_req_tx
 			endpps_tx = pps_tx
 			endpps_sut_tx_str = pps_sut_tx_str
 			endpps_rx = pps_rx
 			endlat_avg = lat_avg
+			endlat_max = lat_max
 			endabs_dropped = abs_dropped
 			enddrop_rate = drop_rate
 			success = True 
 	        else:
-	                log.info('|{:>7}'.format(str(attempts))+" | " + '{:>5.1f}'.format(speed) + '% ' +'{:>6.3f}'.format(get_pps(speed,size)) + ' Mpps | '+ '{:>9.3f}'.format(pps_req_tx)+' Mpps | '+ '{:>9.3f}'.format(pps_tx) +' Mpps | ' + '{:>9}'.format(pps_sut_tx_str) +' Mpps | '+ '{:>9.3f}'.format(pps_rx)+' Mpps | '+ '{:>9.0f}'.format(lat_avg)+' us   | '+ '{:>14d}'.format(abs_dropped)+ ' |''{:>9.2f}'.format(drop_rate)+ '%  | FAILED     |')
+	                log.info('|{:>7}'.format(str(attempts))+" | " + '{:>5.1f}'.format(speed) + '% ' +'{:>6.3f}'.format(get_pps(speed,size)) + ' Mpps | '+ '{:>9.3f}'.format(pps_req_tx)+' Mpps | '+ '{:>9.3f}'.format(pps_tx) +' Mpps | ' + '{:>9}'.format(pps_sut_tx_str) +' Mpps | '+ '{:>9.3f}'.format(pps_rx)+' Mpps | '+ '{:>9.0f}'.format(lat_avg)+' us   | '+ '{:>9.0f}'.format(lat_max)+' us   | '+ '{:>14d}'.format(abs_dropped)+ ' |''{:>9.2f}'.format(drop_rate)+ '%  | FAILED     |')
 			success = False 
 		speed,minspeed,maxspeed = new_speed(speed,minspeed,maxspeed,success)
 	if endpps_sut_tx_str <>  'NO_RESULTS':
-        	log.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+------------+")
-                log.info('|{:>7}'.format('END')+" | " + '{:>5.1f}'.format(endspeed) + '% ' +'{:>6.3f}'.format(get_pps(endspeed,size)) + ' Mpps | '+ '{:>9.3f}'.format(endpps_req_tx)+' Mpps | '+ '{:>9.3f}'.format(endpps_tx) +' Mpps | ' + '{:>9}'.format(endpps_sut_tx_str) +' Mpps | '+ '{:>9.3f}'.format(endpps_rx)+' Mpps | '+ '{:>9.0f}'.format(endlat_avg)+' us   | '+ '{:>14d}'.format(endabs_dropped)+ ' |''{:>9.2f}'.format(enddrop_rate)+ '%  | SUCCESS    |')
-        	log.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+------------+")
+		log.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+------------+")
+                log.info('|{:>7}'.format('END')+" | " + '{:>5.1f}'.format(endspeed) + '% ' +'{:>6.3f}'.format(get_pps(endspeed,size)) + ' Mpps | '+ '{:>9.3f}'.format(endpps_req_tx)+' Mpps | '+ '{:>9.3f}'.format(endpps_tx) +' Mpps | ' + '{:>9}'.format(endpps_sut_tx_str) +' Mpps | '+ '{:>9.3f}'.format(endpps_rx)+' Mpps | '+ '{:>9.0f}'.format(endlat_avg)+' us   | '+ '{:>9.0f}'.format(endlat_max)+' us   | '+'{:>14d}'.format(endabs_dropped)+ ' |''{:>9.2f}'.format(enddrop_rate)+ '%  | SUCCESS    |')
+		log.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+------------+")
 	else:
 		log.info('| Speed 0 or close to 0')
 
 def run_flowtest(gensock,sutsock):
-	log.info("+------------------------------------------------------------------------------------------------------------------------------------------------+")
-	log.info("| UDP, 64 bytes, different number of flows by randomizing SRC & DST UDP port                                                                     |")
-        log.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+")
-        log.info("| Flows  |  Speed requested   | Sent to NIC    |  Sent by Gen   | Forward by SUT |  Rec. by Gen   |  Avg. Latency  |  Packets Lost  | Loss Ratio |")
-        log.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+")
-	speed = 100
+	log.info("+-----------------------------------------------------------------------------------------------------------------------------------------------------------------+")
+	log.info("| UDP, 64 bytes, different number of flows by randomizing SRC & DST UDP port                                                                                      |")
+	log.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+")
+	log.info("| Flows  |  Speed requested   | Sent to NIC    |  Sent by Gen   | Forward by SUT |  Rec. by Gen   |  Avg. Latency  |  Max. Latency  |  Packets Lost  | Loss Ratio |")
+	log.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+")
 	size=60
 	# To generate a desired number of flows, PROX will randomize the bits in source and destination ports, as specified by the bit masks in the flows variable. 
 	flows={128:['1000000000000XXX','100000000000XXXX'],1024:['10000000000XXXXX','10000000000XXXXX'],8192:['1000000000XXXXXX','100000000XXXXXXX'],65535:['10000000XXXXXXXX','10000000XXXXXXXX'],524280:['1000000XXXXXXXXX','100000XXXXXXXXXX']}
 #	flows={524280:['1000000XXXXXXXXX','100000XXXXXXXXXX']}
 	gensock.set_size(gencores,0,size) # This is setting the frame size
-	gensock.set_value(gencores,0,16,(size-18),2) # 18 is the difference between the frame size and IP size = size of (MAC addresses, ethertype and FCS)
-	gensock.set_value(gencores,0,38,(size-38),2) # 38 is the difference between the frame size and UDP size = 18 + size of IP header (=20)
+	gensock.set_value(gencores,0,16,(size-14),2) # 18 is the difference between the frame size and IP size = size of (MAC addresses, ethertype and FCS)
+	gensock.set_value(gencores,0,38,(size-34),2) # 38 is the difference between the frame size and UDP size = 18 + size of IP header (=20)
 	# This will only work when using sending UDP packets. For different protocls and ehternet types, we would need a differnt calculation
 	for flow_number in sorted(flows.iterkeys()):
 		#speed = 100 Commented out: Not starting from 100% since we are trying more flows, so speed will not be higher than the speed achieved in previous loop
@@ -321,7 +317,7 @@ def run_flowtest(gensock,sutsock):
 		gensock.set_random(gencores,0,34,source_port,2)
 		gensock.set_random(gencores,0,36,destination_port,2)
 		endpps_sut_tx_str = 'NO_RESULTS'
-		maxspeed = speed
+		maxspeed = speed = 100
 		minspeed = 0
 		while (maxspeed-minspeed > ACCURACY):
 			print(str(flow_number)+' flows: Measurement ongoing at speed: ' + str(round(speed,2)) + '%      ',end='\r')
@@ -330,15 +326,16 @@ def run_flowtest(gensock,sutsock):
 			gensock.speed(speed, gencores)
 			time.sleep(1)
 			# Get statistics now that the generation is stable and NO ARP messages any more
-			pps_req_tx,pps_tx,pps_sut_tx_str,pps_rx,lat_avg,abs_dropped = run_iteration(gensock,sutsock)
-			drop_rate = get_drop_rate(speed,pps_rx,size)
-	        	if (drop_rate < DROP_RATE_TRESHOLD) or (abs_dropped==DROP_RATE_TRESHOLD ==0):
+			pps_req_tx,pps_tx,pps_sut_tx_str,pps_rx,lat_avg,lat_max, abs_dropped, abs_tx = run_iteration(gensock,sutsock)
+			drop_rate = 100.0*abs_dropped/abs_tx
+	        	if ((get_pps(speed,size) - pps_tx)/pps_tx)<0.001 and ((drop_rate < DROP_RATE_TRESHOLD) or (abs_dropped==DROP_RATE_TRESHOLD ==0)):
 				endspeed = speed
 				endpps_req_tx = pps_req_tx
 				endpps_tx = pps_tx
 				endpps_sut_tx_str = pps_sut_tx_str
 				endpps_rx = pps_rx
 				endlat_avg = lat_avg 
+				endlat_max = lat_max 
 				endabs_dropped = abs_dropped
 				enddrop_rate = drop_rate
 				success = True
@@ -346,18 +343,17 @@ def run_flowtest(gensock,sutsock):
 				success = False 
 			speed,minspeed,maxspeed = new_speed(speed,minspeed,maxspeed,success)
 		if endpps_sut_tx_str <>  'NO_RESULTS':
-                	log.info('|{:>7}'.format(str(flow_number))+" | " + '{:>5.1f}'.format(endspeed) + '% ' +'{:>6.3f}'.format(get_pps(endspeed,size)) + ' Mpps | '+ '{:>9.3f}'.format(endpps_req_tx)+' Mpps | '+ '{:>9.3f}'.format(endpps_tx) +' Mpps | ' + '{:>9}'.format(endpps_sut_tx_str) +' Mpps | '+ '{:>9.3f}'.format(endpps_rx)+' Mpps | '+ '{:>9.0f}'.format(endlat_avg)+' us   | '+ '{:>14d}'.format(endabs_dropped)+ ' |'+'{:>9.2f}'.format(enddrop_rate)+ '% |')
-        		log.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+")
+                	log.info('|{:>7}'.format(str(flow_number))+" | " + '{:>5.1f}'.format(endspeed) + '% ' +'{:>6.3f}'.format(get_pps(endspeed,size)) + ' Mpps | '+ '{:>9.3f}'.format(endpps_req_tx)+' Mpps | '+ '{:>9.3f}'.format(endpps_tx) +' Mpps | ' + '{:>9}'.format(endpps_sut_tx_str) +' Mpps | '+ '{:>9.3f}'.format(endpps_rx)+' Mpps | '+ '{:>9.0f}'.format(endlat_avg)+' us   | '+ '{:>9.0f}'.format(endlat_max)+' us   | '+ '{:>14d}'.format(endabs_dropped)+ ' |'+'{:>9.2f}'.format(enddrop_rate)+ '%  |')
+			log.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+")
 		else:
 			log.info('|{:>7}'.format(str(flow_number))+" | Speed 0 or close to 0")
 
 def run_sizetest(gensock,sutsock):
-	log.info("+------------------------------------------------------------------------------------------------------------------------------------------------+")
-	log.info("| UDP, 1 flow, different packet sizes                                                                                                            |")
-	log.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+")
-	log.info("| Pktsize|  Speed requested   | Sent to NIC    |  Sent by Gen   | Forward by SUT |  Rec. by Gen   |  Avg. Latency  |  Packets Lost  | Loss Ratio |")
-	log.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+")
-	speed = 100
+	log.info("+-----------------------------------------------------------------------------------------------------------------------------------------------------------------+")
+	log.info("| UDP, 1 flow, different packet sizes                                                                                                                             |")
+	log.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+")
+	log.info("| Pktsize|  Speed requested   | Sent to NIC    |  Sent by Gen   | Forward by SUT |  Rec. by Gen   |  Avg. Latency  |  Max. Latency  |  Packets Lost  | Loss Ratio |")
+	log.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+")
 	# PROX will use different packet sizes as defined in sizes[]
 #	sizes=[1496,1020,508,252,124,60]
 	sizes=[1020,508,252,124,60]
@@ -367,11 +363,11 @@ def run_sizetest(gensock,sutsock):
 		if sutsock!='none':
 			sutsock.reset_stats()
 		gensock.set_size(gencores,0,size) # This is setting the frame size
-		gensock.set_value(gencores,0,16,(size-18),2) # 18 is the difference between the frame size and IP size = size of (MAC addresses, ethertype and FCS)
-		gensock.set_value(gencores,0,38,(size-38),2) # 38 is the difference between the frame size and UDP size = 18 + size of IP header (=20)
+		gensock.set_value(gencores,0,16,(size-14),2) # 18 is the difference between the frame size and IP size = size of (MAC addresses, ethertype and FCS)
+		gensock.set_value(gencores,0,38,(size-34),2) # 38 is the difference between the frame size and UDP size = 18 + size of IP header (=20)
 		# This will only work when using sending UDP packets. For different protocls and ehternet types, we would need a differnt calculation
 		endpps_sut_tx_str = 'NO_RESULTS'
-		maxspeed = speed
+		maxspeed = speed = 100
 		minspeed = 0
 		while (maxspeed-minspeed > ACCURACY):
 			print(str(size+4)+' bytes: Measurement ongoing at speed: ' + str(round(speed,2)) + '%      ',end='\r')
@@ -379,15 +375,16 @@ def run_sizetest(gensock,sutsock):
 			# Start generating packets at requested speed (in % of a 10Gb/s link)
 			gensock.speed(speed, gencores)
 			# Get statistics now that the generation is stable and NO ARP messages any more
-			pps_req_tx,pps_tx,pps_sut_tx_str,pps_rx,lat_avg, abs_dropped = run_iteration(gensock,sutsock)
-			drop_rate = get_drop_rate(speed,pps_rx,size)
-	        	if (drop_rate < DROP_RATE_TRESHOLD) or (abs_dropped==DROP_RATE_TRESHOLD ==0):
+			pps_req_tx,pps_tx,pps_sut_tx_str,pps_rx,lat_avg,lat_max, abs_dropped, abs_tx = run_iteration(gensock,sutsock)
+			drop_rate = 100.0*abs_dropped/abs_tx
+	        	if ((get_pps(speed,size) - pps_tx)/pps_tx)<0.001 and ((drop_rate < DROP_RATE_TRESHOLD) or (abs_dropped==DROP_RATE_TRESHOLD ==0)):
 				endspeed = speed
 				endpps_req_tx = pps_req_tx
 				endpps_tx = pps_tx
 				endpps_sut_tx_str = pps_sut_tx_str
 				endpps_rx = pps_rx
 				endlat_avg = lat_avg 
+				endlat_max = lat_max 
 				endabs_dropped = abs_dropped
 				enddrop_rate = drop_rate
 				success = True
@@ -395,8 +392,8 @@ def run_sizetest(gensock,sutsock):
 				success = False 
 			speed,minspeed,maxspeed = new_speed(speed,minspeed,maxspeed,success)
 		if endpps_sut_tx_str <>  'NO_RESULTS':
-                	log.info('|{:>7}'.format(size+4)+" | " + '{:>5.1f}'.format(endspeed) + '% ' +'{:>6.3f}'.format(get_pps(endspeed,size)) + ' Mpps | '+ '{:>9.3f}'.format(endpps_req_tx)+' Mpps | '+ '{:>9.3f}'.format(endpps_tx) +' Mpps | ' + '{:>9}'.format(endpps_sut_tx_str) +' Mpps | '+ '{:>9.3f}'.format(endpps_rx)+' Mpps | '+ '{:>9.0f}'.format(endlat_avg)+' us   | '+ '{:>14d}'.format(endabs_dropped)+ ' |'+'{:>9.2f}'.format(enddrop_rate)+ '% |')
-        		log.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+")
+                	log.info('|{:>7}'.format(size+4)+" | " + '{:>5.1f}'.format(endspeed) + '% ' +'{:>6.3f}'.format(get_pps(endspeed,size)) + ' Mpps | '+ '{:>9.3f}'.format(endpps_req_tx)+' Mpps | '+ '{:>9.3f}'.format(endpps_tx) +' Mpps | ' + '{:>9}'.format(endpps_sut_tx_str) +' Mpps | '+ '{:>9.3f}'.format(endpps_rx)+' Mpps | '+ '{:>9.0f}'.format(endlat_avg)+' us   | '+'{:>9.0f}'.format(endlat_max)+' us   | '+ '{:>14d}'.format(endabs_dropped)+ ' |'+'{:>9.2f}'.format(enddrop_rate)+ '%  |')
+        		log.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+")
 		else:
 			log.debug('|{:>7}'.format(str(size))+" | Speed 0 or close to 0")
 
@@ -552,9 +549,11 @@ for vm in range(0, int(required_number_of_VMs)):
 		cmd = '/root/prox/build/prox -e -t -o cli -f /root/%s'%config_file[vm]
 	else:
 		cmd = '/root/prox/build/prox -t -o cli -f /root/%s'%config_file[vm]
-	client[-1].fork_cmd(cmd, 'PROX Testing on VM%d'%(vm+1))
-	sock.append(connect_socket(client[-1]))
-
+	if configonly == False:
+		client[-1].fork_cmd(cmd, 'PROX Testing on VM%d'%(vm+1))
+		sock.append(connect_socket(client[-1]))
+if configonly:
+	sys.exit()
 init_code = testconfig.get('DEFAULT', 'init_code')
 if init_code <> 'not_used':
 	eval(init_code)
