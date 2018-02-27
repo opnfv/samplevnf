@@ -115,10 +115,14 @@ struct task_lat {
 	FILE *fp_tx;
 	struct prox_port_cfg *port;
 };
-
-static uint32_t diff_or_zero(uint32_t a, uint32_t b)
+/* This function calculate the difference between rx and tx_time
+ * Both values are uint32_t (see handle_lat_bulk)
+ * rx time should be higher than tx_time...except every UINT32_MAX
+ * cycles, when rx_time overflows
+ */
+static uint32_t diff_time(uint32_t a, uint32_t b)
 {
-       return a < b? 0 : a - b;
+	return a < b? UINT32_MAX - (b - a - 1) : a - b;
 }
 
 struct lat_test *task_lat_get_latency_meassurement(struct task_lat *task)
@@ -257,7 +261,7 @@ static uint64_t lat_latency_buffer_get_min_tsc(struct task_lat *task)
 
 static uint64_t lat_info_get_lat_tsc(struct lat_info *lat_info)
 {
-	uint64_t lat = diff_or_zero(lat_info->rx_time, lat_info->tx_time);
+	uint64_t lat = diff_time(lat_info->rx_time, lat_info->tx_time);
 
 	return lat << LATENCY_ACCURACY;
 }
@@ -498,7 +502,7 @@ static void task_lat_store_lat(struct task_lat *task, uint64_t rx_packet_index, 
 {
 	if (tx_time == 0)
 		return;
-	uint32_t lat_tsc = diff_or_zero(rx_time, tx_time) << LATENCY_ACCURACY;
+	uint32_t lat_tsc = diff_time(rx_time, tx_time) << LATENCY_ACCURACY;
 
 	lat_test_add_latency(task->lat_test, lat_tsc, rx_error + tx_error);
 
