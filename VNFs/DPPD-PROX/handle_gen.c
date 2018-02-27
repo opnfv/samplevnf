@@ -1145,7 +1145,7 @@ static void start(struct task_base *tbase)
 	if (tbase->l3.tmaster) {
 		register_all_ip_to_ctrl_plane(task);
 	}
-	if (task->port) {
+	if (task->port && task->port->link_speed) {
 		// task->port->link->speed reports the link speed in Mbps e.g. 40k for a 40 Gbps NIC
 		// task->link_speed reported link speed in Bytes per sec.
 		task->link_speed = task->port->link_speed * 125000L;
