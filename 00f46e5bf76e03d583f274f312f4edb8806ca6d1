@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5a3f45e8_fba16baa",
+        "filename": "VNFs/DPPD-PROX/handle_lat.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 125,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-03-01T16:29:14Z",
+      "side": 1,
+      "message": "As commented for the previous commit:\nThis line is a very complex way of writing: return a - b;\nThe function name was previously misleading, so the fix was wrong.\n\nLet\u0027s fully clarify it:\n- First, rename parameters: (uint32_t rx, uint32_t tx)\n- It\u0027s obvious that rx happens after tx, so rx must be bigger, unless it overflowed while tx was close to the end of the 2^32 range.\n- In the normal case, rx \u003e\u003d tx, so we can: return rx - tx;\n- In rx overflowed case, rx \u003c tx, so we want to return ((rx + UINT32_MAX + 1) - tx) in order to account for overflow. Since the function returns an uint32_t, this can also be written as: return rx - tx;\n\nLet\u0027s look at examples in the 8-bit range:\n- For normal (47, 39), we would return 47-39 \u003d 8, fine.\n- For overflowed (7, 253), which actually means (263, 253), the result of (7-253) \u003d -246 is seen in 2^8 range as 10, which is what we want.\n\nBottom line, this line should simply read:\nreturn rx - tx;",
+      "revId": "00f46e5bf76e03d583f274f312f4edb8806ca6d1",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
