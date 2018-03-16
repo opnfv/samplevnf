@@ -7,8 +7,8 @@ Results listed by scenario
 ==========================
 
 The following sections describe the yardstick results as evaluated for the
-Euphrates release. Each section describes the determined state of the specific
-test case in Euphrates release.
+Farser release. Each section describes the determined state of the specific
+test case in Farser release.
 
 Feature Test Results
 ====================

@@ -17,7 +17,7 @@ The *SampleVNFs*, the *SampleVNF test cases* are opensource software,
 licensed under the terms of the Apache License, Version 2.0.
 
 ==========================================
-OPNFV Euphrates Release Note for SampleVNF
+OPNFV Farser Release Note for SampleVNF
 ==========================================
 
 .. toctree::
@@ -43,7 +43,7 @@ Version History
 | *Date*         | *Version*          | *Comment*                       |
 |                |                    |                                 |
 +----------------+--------------------+---------------------------------+
-| "Oct 20 2017"  |  5.1               | SampleVNF for Euphrates release |
+| "Oct 20 2017"  |  6.0               | SampleVNF for Farser release |
 |                |                    |                                 |
 +----------------+--------------------+---------------------------------+
 
@@ -56,10 +56,10 @@ The software delivered in the OPNFV SampleVNF_ Project, comprising the
 Project is a realization of the methodology in ETSI-ISG NFV-TST001_.
 
 
-OPNFV Euphrates Release
+OPNFV Farser Release
 ======================
 
-This Euphrates release provides *SampleVNF* as a approx VNF repository for
+This Farser release provides *SampleVNF* as a approx VNF repository for
 VNF/NFVI testing, characterization and OPNFV feature testing, automated on
 OPNFV platform, including:
 
@@ -77,7 +77,7 @@ OPNFV platform, including:
 
 * SampleVNF source code
 
-For Euphrates release, the *SampleVNF* supported:
+For Farser release, the *SampleVNF* supported:
 
 +----------------+---------------------------------------------------------+-------------------+
 | *VNF*          |                 *Name*                                  |    *version*      |
@@ -97,7 +97,7 @@ For Euphrates release, the *SampleVNF* supported:
 .. note:: Highlevel Desgin and features supported by each of the VNFs is described in Developer
           and user guide.
 
-For Euphrates release, the *SampleVNF* is used for the following
+For Farser release, the *SampleVNF* is used for the following
 testing:
 
 * OPNFV platform testing - generic test cases to measure the categories:
@@ -108,7 +108,7 @@ testing:
 
   * VNF Characterization:
 
-    * Network - rfc2544, rfc3511, latency, http_test etc
+    * Network - rfc2544, rfc36.0, latency, http_test etc
 
 
 The *SampleVNF* is developed in the OPNFV community, by the SampleVNF_ team.
@@ -127,19 +127,19 @@ Release Data
 | **Project**                          | SampleVNF                            |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
-| **Repo/tag**                         | samplevnf/Euphrates.5.1              |
+| **Repo/tag**                         | samplevnf/Farser.6.0              |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
-| **SampleVNF Docker image tag**       | Euphrates.5.1                        |
+| **SampleVNF Docker image tag**       | Farser.6.0                        |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
-| **Release designation**              | Euphrates                            |
+| **Release designation**              | Farser                            |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
 | **Release date**                     | "October 20 2017"                    |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
-| **Purpose of the delivery**          | OPNFV Euphrates release 5.1          |
+| **Purpose of the delivery**          | OPNFV Farser release 6.0          |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
 
@@ -211,7 +211,7 @@ Known Issues/Faults
 Corrected Faults
 ----------------
 
-Euphrates.5.1:
+Farser.6.0:
 
 +----------------------------+------------------------------------------------+
 | **JIRA REFERENCE**         | **DESCRIPTION**                                |
@@ -222,7 +222,7 @@ Euphrates.5.1:
 +----------------------------+------------------------------------------------+
 
 
-Euphrates known restrictions/issues
+Farser known restrictions/issues
 ====================================
 +-----------+-----------+----------------------------------------------+
 | Installer | Scenario  |  Issue                                       |
@@ -248,7 +248,7 @@ Useful links
 
  - wiki project page: https://wiki.opnfv.org/display/SAM
 
- - wiki SampleVNF Euphrates release planing page: https://wiki.opnfv.org/display/SAM/SampleVNF+Euphrates+Release+Planning
+ - wiki SampleVNF Farser release planing page: https://wiki.opnfv.org/display/SAM/F+Release+Plan+for+SampleVNF
 
  - SampleVNF repo: https://git.opnfv.org/cgit/samplevnf
 
