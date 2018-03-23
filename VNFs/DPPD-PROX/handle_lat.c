@@ -118,8 +118,8 @@ struct task_lat {
 /* This function calculate the difference between rx and tx_time
  * Both values are uint32_t (see handle_lat_bulk)
  * rx time should be higher than tx_time...except every UINT32_MAX
- * cycles, when rx_time overflows. 
- * As the return value is also uint32_t, returning (rx_time - tx_time) 
+ * cycles, when rx_time overflows.
+ * As the return value is also uint32_t, returning (rx_time - tx_time)
  * is also fine when it overflows.
  */
 static uint32_t diff_time(uint32_t rx_time, uint32_t tx_time)
