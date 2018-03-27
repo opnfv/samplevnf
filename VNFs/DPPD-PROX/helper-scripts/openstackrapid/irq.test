@@ -17,7 +17,7 @@
 [DEFAULT]
 name = BasicSwapTesting
 number_of_tests = 2
-total_number_of_vms = 2
+total_number_of_test_machines = 2
 init_code= not_used
 dest_vm = not_used
 gw_vm = not_used
@@ -28,18 +28,21 @@ group3cores = not_used
 drop_rate_treshold = 1
 accuracy = 0.01
 
-[VM1]
+[TestM1]
 name = InterruptTesting
+machine_index = 1
 config_file = irq.cfg
 group1cores = [1,2,3]
 
-[VM2]
+[TestM2]
 name = InterruptTesting
+machine_index = 2
 config_file = irq.cfg
 group1cores = [1,2,3]
 
-[VM3]
+[TestM3]
 name = InterruptTesting
+machine_index = 3
 config_file = irq.cfg
 group1cores = [1,2,3]
 

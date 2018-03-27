@@ -31,30 +31,25 @@ from logging import handlers
 from prox_ctrl import prox_ctrl
 import ConfigParser
 
-version="18.2.12"
-stack = "rapid" #Default string for stack
-yaml = "rapid.yaml" #Default string for yaml file
-key = "prox" # This is also the default in the yaml file....
-flavor = "prox_flavor" # This is also the default in the yaml file....
-image = "rapidVM" # This is also the default in the yaml file....
+version="18.3.27"
+stack = "rapid" #Default string for stack. This is not an OpenStack Heat stack, just a group of VMs
+vms = "rapidVMs" #Default string for vms file
+key = "prox" # default name for kay
+image = "rapidVM" # default name for the image
 image_file = "rapidVM.qcow2"
-dataplane_network = "dataplane-network" # This is also the default in the yaml file....
+dataplane_network = "dataplane-network" # default name for the dataplane network
 subnet = "dpdk-subnet" #subnet for dataplane
 subnet_cidr="10.10.10.0/24" # cidr for dataplane
 internal_network="admin_internal_net"
 floating_network="admin_floating_net"
-vm1_availability_zone="nova"
-vm2_availability_zone="nova"
-vm3_availability_zone="nova"
 loglevel="DEBUG" # sets log level for writing to file
 runtime=10 # time in seconds for 1 test run
 
 def usage():
 	print("usage: createrapid [--version] [-v]")
 	print("                   [--stack STACK_NAME]")
-	print("                   [--yaml YAML_FILE]")
+	print("                   [--vms VMS_FILE]")
 	print("                   [--key KEY_NAME]")
-	print("                   [--flavor FLAVOR_NAME]")
 	print("                   [--image IMAGE_NAME]")
 	print("                   [--image_file IMAGE_FILE]")
 	print("                   [--dataplane_network DP_NETWORK]")
@@ -62,20 +57,16 @@ def usage():
 	print("                   [--subnet_cidr SUBNET_CIDR]")
 	print("                   [--internal_network ADMIN_NETWORK]")
 	print("                   [--floating_network ADMIN_NETWORK]")
-	print("                   [--vm1_availability_zone ZONE_FOR_VM1]")
-	print("                   [--vm2_availability_zone ZONE_FOR_VM2]")
-	print("                   [--vm3_availability_zone ZONE_FOR_VM3]")
-	print("                   [--log DEBUG|INFO|WARNING|ERROR|CRITICAL")
+	print("                   [--log DEBUG|INFO|WARNING|ERROR|CRITICAL]")
 	print("                   [-h] [--help]")
 	print("")
 	print("Command-line interface to createrapid")
 	print("")
 	print("optional arguments:")
 	print("  -v,  --version           	Show program's version number and exit")
-	print("  --stack STACK_NAME       	Specify a name for the heat stack. Default is %s."%stack)
-	print("  --yaml YAML_FILE         	Specify the yaml file to be used. Default is %s."%yaml)
+	print("  --stack STACK_NAME       	Specify a name for the stack. Default is %s."%stack)
+	print("  --vms VMS_FILE         	Specify the vms file to be used. Default is %s.vms."%vms)
 	print("  --key KEY_NAME           	Specify the key to be used. Default is %s."%key)
-	print("  --flavor FLAVOR_NAME     	Specify the flavor to be used. Default is %s."%flavor)
 	print("  --image IMAGE_NAME       	Specify the image to be used. Default is %s."%image)
 	print("  --image_file IMAGE_FILE  	Specify the image qcow2 file to be used. Default is %s."%image_file)
 	print("  --dataplane_network NETWORK 	Specify the network name to be used for the dataplane. Default is %s."%dataplane_network)
@@ -83,18 +74,12 @@ def usage():
 	print("  --subnet_cidr SUBNET_CIDR  	Specify the subnet CIDR to be used for the dataplane. Default is %s."%subnet_cidr)
 	print("  --internal_network NETWORK 	Specify the network name to be used for the control plane. Default is %s."%internal_network)
 	print("  --floating_network NETWORK 	Specify the external floating ip network name. Default is %s. NO if no floating ip used."%floating_network)
-	print("  --vm1_availability_zone ZONE 	Specify the availability zone for VM1. Default is %s."%vm1_availability_zone)
-	print("  --vm2_availability_zone ZONE 	Specify the availability zone for VM2. Default is %s."%vm2_availability_zone)
-	print("  --vm3_availability_zone ZONE 	Specify the availability zone for VM3. Default is %s."%vm3_availability_zone)
 	print("  --log				Specify logging level for log file output, screen output level is hard coded")
 	print("  -h, --help               	Show help message and exit.")
 	print("")
-	print("To delete the rapid stack, type the following command")
-	print("   openstack stack delete --yes --wait %s"%stack)
-	print("Note that %s is the default stack name. Replace with STACK_NAME if needed"%stack)
 
 try:
-	opts, args = getopt.getopt(sys.argv[1:], "vh", ["version","help", "yaml=","stack=","key=","flavor=","image=","image_file=","dataplane_network=","subnet=","subnet_cidr=","internal_network=","floating_network=","vm1_availability_zone=","vm2_availability_zone=","vm3_availability_zone=","log="])
+	opts, args = getopt.getopt(sys.argv[1:], "vh", ["version","help", "vms=","stack=","key=","image=","image_file=","dataplane_network=","subnet=","subnet_cidr=","internal_network=","floating_network=","log="])
 except getopt.GetoptError as err:
 	print("===========================================")
 	print(str(err))
@@ -114,15 +99,12 @@ for opt, arg in opts:
 	if opt in ("--stack"):
 		stack = arg
 		print ("Using '"+stack+"' as name for the stack")
-	elif opt in ("--yaml"):
-		yaml = arg
-		print ("Using stack: "+yaml)
+	elif opt in ("--vms"):
+		vms = arg
+		print ("Using Virtual Machines Description: "+vms)
 	elif opt in ("--key"):
 		key = arg
 		print ("Using key: "+key)
-	elif opt in ("--flavor"):
-		flavor = arg
-		print ("Using flavor: "+flavor)
 	elif opt in ("--image"):
 		image = arg
 		print ("Using image: "+image)
@@ -144,15 +126,6 @@ for opt, arg in opts:
 	elif opt in ("--floating_network"):
 		floating_network = arg
 		print ("Using floating ip network: "+ floating_network)
-	elif opt in ("--vm1_availability_zone"):
-		vm1_availability_zone = arg
-		print ("Using VM1 availability zone: "+ vm1_availability_zone)
-	elif opt in ("--vm2_availability_zone"):
-		vm2_availability_zone = arg
-		print ("Using VM2 availability zone: "+ vm2_availability_zone)
-	elif opt in ("--vm3_availability_zone"):
-		vm3_availability_zone = arg
-		print ("Using VM3 availability zone: "+ vm3_availability_zone)
 	elif opt in ("--log"):
 		loglevel = arg
 		print ("Log level: "+ loglevel)
@@ -282,28 +255,6 @@ else:
 		log.exception("Failed to create key: " + key)
 		raise Exception("Failed to create key: " + key)
 
-# Checking if the flavor already exists, if not create it
-log.debug("Checking flavor: "+flavor)
-cmd = 'openstack flavor show '+flavor
-log.debug (cmd)
-cmd = cmd + ' |grep "name " | tr -s " " | cut -d" " -f 4'
-FlavorExist = subprocess.check_output(cmd , shell=True).strip()
-if FlavorExist == flavor:
-	log.info("Flavor ("+flavor+") already installed")
-else:
-	log.info('Creating flavor ...')
-	cmd = 'openstack flavor create '+flavor+' --ram 8192 --disk 20 --vcpus 4'
-	log.debug(cmd)
-	cmd = cmd + ' |grep "name " | tr -s " " | cut -d" " -f 4'
-	FlavorExist = subprocess.check_output(cmd , shell=True).strip()
-	if FlavorExist == flavor:
-		cmd = 'openstack flavor set '+ flavor +' --property hw:mem_page_size="large" --property hw:cpu_policy="dedicated" --property hw:cpu_thread_policy="isolate"'
-		log.debug(cmd)
-		subprocess.check_call(cmd , shell=True)
-		log.info("Flavor created")
-	else :
-		log.exception("Failed to create flavor: " + flavor)
-		raise Exception("Failed to create flavor: " + flavor)
 
 # Checking if the dataplane network already exists, if not create it
 log.debug("Checking dataplane network: "+dataplane_network)
@@ -345,58 +296,105 @@ else:
 		log.exception("Failed to create subnet: " + subnet)
 		raise Exception("Failed to create subnet: " + subnet)
 
-# Checking if the stack already exists, if not create it
-log.debug("Checking Stack: "+stack)
-cmd = 'openstack stack show '+stack
-log.debug (cmd)
-cmd = cmd+' |grep "stack_status " | tr -s " " | cut -d"|" -f 3'
-StackRunning = subprocess.check_output(cmd , shell=True).strip()
-if StackRunning == '':
-	log.info('Creating Stack ...')
-	cmd = 'openstack stack create -t '+ yaml +  ' --parameter flavor="'+flavor  +'" --parameter key="'+ key + '" --parameter image="'+image  + '" --parameter dataplane_network="'+dataplane_network+ '" --parameter internal_network="'+internal_network+'" --parameter floating_network="'+floating_network+'" --parameter vm1_availability_zone="'+vm1_availability_zone+'" --parameter vm2_availability_zone="'+vm2_availability_zone+'" --parameter vm3_availability_zone="'+vm3_availability_zone+'" --wait '+stack 
-	log.debug(cmd)
-	cmd = cmd + ' |grep "stack_status " | tr -s " " | cut -d"|" -f 3'
-	StackRunning = subprocess.check_output(cmd , shell=True).strip()
-if StackRunning != 'CREATE_COMPLETE':
-	log.exception("Failed to create stack")
-	raise Exception("Failed to create stack")
 
-# Obtaining IP & MAC addresses for the VMs created in the stack
-log.info("Stack ("+stack+") running")
-cmd='openstack stack show -f yaml -c outputs ' + stack
-log.debug(cmd)
-output = subprocess.check_output(cmd , shell=True).strip()
-matchObj = re.search('.*total_number_of_VMs.*?([0-9])', output, re.DOTALL)
-total_number_of_VMs = matchObj.group(1)
-vmDPIP =[]
-vmAdminIP =[]
-vmDPmac =[]
 config = ConfigParser.RawConfigParser()
+vmconfig = ConfigParser.RawConfigParser()
+vmconfig.read(vms+'.vms')
+total_number_of_VMs = vmconfig.get('DEFAULT', 'total_number_of_vms')
 for vm in range(1, int(total_number_of_VMs)+1):
-	searchString = '.*vm%d_dataplane_ip.*?([0-9]*\.[0-9]*\.[0-9]*\.[0-9]*)' % vm
-	matchObj = re.search(searchString, output, re.DOTALL)
-	vmDPIP.append(matchObj.group(1))
-	if floating_network <> 'NO':
-		searchString = '.*vm%d_public_ip.*?([0-9]*\.[0-9]*\.[0-9]*\.[0-9]*)' % vm
-		matchObj = re.search(searchString, output, re.DOTALL)
-		vmAdminIP.append(matchObj.group(1))
+	flavor_info = vmconfig.get('VM%d'%vm, 'flavor_info')
+	flavor_meta_data = vmconfig.get('VM%d'%vm, 'flavor_meta_data')
+	boot_info = vmconfig.get('VM%d'%vm, 'boot_info')
+	SRIOV_port = vmconfig.get('VM%d'%vm, 'SRIOV_port')
+	server_name = '%s-VM%d'%(stack,vm)
+	flavor_name = '%s-VM%d-flavor'%(stack,vm)
+	log.debug("Checking server: "+server_name)
+	cmd = 'openstack server show '+server_name
+	log.debug (cmd)
+	cmd = cmd + ' |grep "\sname\s" | tr -s " " | cut -d" " -f 4'
+	ServerExist = subprocess.check_output(cmd , shell=True).strip()
+	if ServerExist == server_name:
+		log.info("Server ("+server_name+") already active")
 	else:
-		searchString = '.*vm%d_private_ip.*?([0-9]*\.[0-9]*\.[0-9]*\.[0-9]*)' % vm
-		matchObj = re.search(searchString, output, re.DOTALL)
-		vmAdminIP.append(matchObj.group(1))
-	searchString = '.*vm%d_dataplane_mac.*?([a-fA-F0-9:]{17})' % vm
-	matchObj = re.search(searchString, output, re.DOTALL)
-	vmDPmac.append(matchObj.group(1))
-	log.info('VM%d: (admin IP: %s), (dataplane IP: %s), (dataplane MAC: %s)' % (vm,vmAdminIP[-1],vmDPIP[-1],vmDPmac[-1]))
-	config.add_section('VM%d'%vm)
-	config.set('VM%d'%vm, 'admin_ip', vmAdminIP[-1])
-	config.set('VM%d'%vm, 'dp_ip', vmDPIP[-1])
-	config.set('VM%d'%vm, 'dp_mac', vmDPmac[-1])
+		# Checking if the flavor already exists, if not create it
+		log.debug("Checking flavor: "+flavor_name)
+		cmd = 'openstack flavor show '+flavor_name
+		log.debug (cmd)
+		cmd = cmd + ' |grep "\sname\s" | tr -s " " | cut -d" " -f 4'
+		FlavorExist = subprocess.check_output(cmd , shell=True).strip()
+		if FlavorExist == flavor_name:
+			log.info("Flavor ("+flavor_name+") already installed")
+		else:
+			log.info('Creating flavor ...')
+			cmd = 'openstack flavor create %s %s'%(flavor_name,flavor_info)
+			log.debug(cmd)
+			cmd = cmd + ' |grep "\sname\s" | tr -s " " | cut -d" " -f 4'
+			FlavorExist = subprocess.check_output(cmd , shell=True).strip()
+			if FlavorExist == flavor_name:
+				cmd = 'openstack flavor set %s %s'%(flavor_name, flavor_meta_data)
+				log.debug(cmd)
+				subprocess.check_call(cmd , shell=True)
+				log.info("Flavor created")
+			else :
+				log.exception("Failed to create flavor: " + flavor_name)
+				raise Exception("Failed to create flavor: " + flavor_name)
+		if SRIOV_port == 'NO':
+			nic_info = '--nic net-id=%s --nic net-id=%s'%(internal_network,dataplane_network)
+		else:
+			nic_info = '--nic net-id=%s'%(internal_network)
+			for port in SRIOV_port.split(','):
+				nic_info = nic_info + ' --nic port-id=%s'%(port)
+		if vm==int(total_number_of_VMs):
+			# For the last server, we want to wait for the server creation to complete, so the next operations will succeeed (e.g. IP allocation)
+			# Note that this waiting is not bullet proof. Imagine, we loop through all the VMs, and the last VM was already running, while the previous
+			# VMs still needed to be created. Or the previous server creations take much longer than the last one.
+			# In that case, we might be to fast when we query for the IP & MAC addresses.
+			wait = ' --wait '
+		else:
+			wait = ' '
+		log.info("Creating server...")
+		cmd = 'openstack server create --flavor %s --key-name %s --image %s %s %s%s%s'%(flavor_name,key,image,nic_info,boot_info,wait,server_name)
+		log.debug(cmd)
+		cmd = cmd + ' |grep "\sname\s" | tr -s " " | cut -d" " -f 4'
+		ServerExist = subprocess.check_output(cmd , shell=True).strip()
+		if floating_network <> 'NO':
+			log.info('Creating floating IP ...')
+			cmd = 'openstack floating ip create  ' + floating_network
+			log.debug(cmd)
+			cmd = cmd + ' |grep "floating_ip_address " | tr -s " " | cut -d"|" -f 3'
+			vmAdminIP = subprocess.check_output(cmd , shell=True).strip()
+			log.info('Associating floating IP ...')
+			cmd = 'openstack server add floating ip %s %s'%(server_name,vmAdminIP)
+			log.debug(cmd)
+			output = subprocess.check_output(cmd , shell=True).strip()
+			print (output)
+for vm in range(1, int(total_number_of_VMs)+1):
+	server_name = '%s-VM%d'%(stack,vm)
+	cmd = 'openstack server show %s'%(server_name)
+	log.debug(cmd)
+	output = subprocess.check_output(cmd , shell=True).strip()
+        searchString = '.*%s.*?([0-9]*\.[0-9]*\.[0-9]*\.[0-9]*)' %(dataplane_network)
+        matchObj = re.search(searchString, output, re.DOTALL)
+	vmDPIP = matchObj.group(1)
+        searchString = '.*%s=([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+),*\s*([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)*' %(internal_network)
+        matchObj = re.search(searchString, output, re.DOTALL)
+	vmAdminIP = matchObj.group(2)
+	if vmAdminIP == None:
+		vmAdminIP = matchObj.group(1)
+	cmd = 'openstack port list |grep  %s | tr -s " " | cut -d"|" -f 4'%(vmDPIP)
+	log.debug(cmd)
+	vmDPmac = subprocess.check_output(cmd , shell=True).strip()
+	config.add_section('M%d'%vm)
+	config.set('M%d'%vm, 'name', server_name)
+	config.set('M%d'%vm, 'admin_ip', vmAdminIP)
+	config.set('M%d'%vm, 'dp_ip', vmDPIP)
+	config.set('M%d'%vm, 'dp_mac', vmDPmac)
+	log.info('%s: (admin IP: %s), (dataplane IP: %s), (dataplane MAC: %s)' % (server_name,vmAdminIP,vmDPIP,vmDPmac))
+
 config.add_section('OpenStack')
 config.set('OpenStack', 'stack', stack)
-config.set('OpenStack', 'yaml', yaml)
+config.set('OpenStack', 'VMs', vms)
 config.set('OpenStack', 'key', key)
-config.set('OpenStack', 'flavor', flavor)
 config.set('OpenStack', 'image', image)
 config.set('OpenStack', 'image_file', image_file)
 config.set('OpenStack', 'dataplane_network', dataplane_network)
@@ -407,9 +405,8 @@ config.set('OpenStack', 'floating_network', floating_network)
 config.add_section('rapid')
 config.set('rapid', 'loglevel', loglevel)
 config.set('rapid', 'version', version)
-config.set('rapid', 'total_number_of_VMs', total_number_of_VMs)
+config.set('rapid', 'total_number_of_machines', total_number_of_VMs)
 config.set('DEFAULT', 'admin_ip', 'none')
 # Writing the environment file
 with open(stack+'.env', 'wb') as envfile:
     config.write(envfile)
-

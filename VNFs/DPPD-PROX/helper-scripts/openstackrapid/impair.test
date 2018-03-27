@@ -17,7 +17,7 @@
 [DEFAULT]
 name = impairTesting
 number_of_tests = 1
-total_number_of_vms = 3
+total_number_of_test_machines = 3
 init_code=init_test()
 dest_vm = not_used
 gw_vm = not_used
@@ -29,8 +29,9 @@ drop_rate_treshold = 1
 accuracy = 0.01
 
 
-[VM1]
+[TestM1]
 name = Generator
+machine_index = 1
 config_file = gen_gw.cfg
 gw_vm = 2
 dest_vm = 3
@@ -38,13 +39,15 @@ group1cores = [1]
 group2cores = [3]
 group3cores = [1,3]
 
-[VM2]
+[TestM2]
 name = ImpairGW
+machine_index = 2
 config_file = impair.cfg
 group1cores = [1]
 
-[VM3]
+[TestM3]
 name = Swap
+machine_index = 3
 config_file = swap.cfg
 group1cores = [1]
 

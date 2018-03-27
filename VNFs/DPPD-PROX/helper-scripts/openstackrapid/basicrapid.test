@@ -17,7 +17,7 @@
 [DEFAULT]
 name = BasicSwapTesting
 number_of_tests = 3
-total_number_of_vms = 2
+total_number_of_test_machines = 2
 init_code=init_test()
 dest_vm = not_used
 gw_vm = not_used
@@ -25,12 +25,13 @@ script_control = false
 group1cores = not_used
 group2cores = not_used
 group3cores = not_used
-drop_rate_treshold = 0.01
+drop_rate_treshold = 0.1
 accuracy = 0.01
 
 
-[VM1]
+[TestM1]
 name = Generator
+machine_index = 1
 config_file = gen.cfg
 dest_vm = 2
 script_control = true
@@ -38,8 +39,9 @@ group1cores = [1]
 group2cores = [3]
 group3cores = [1,3]
 
-[VM2]
+[TestM2]
 name = Swap
+machine_index = 2
 config_file = swap.cfg
 group1cores = [1]
 

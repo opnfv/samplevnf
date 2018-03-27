@@ -32,7 +32,7 @@ from prox_ctrl import prox_ctrl
 import ConfigParser
 import ast
 
-version="18.2.12"
+version="18.3.27"
 env = "rapid" #Default string for environment
 test = "basicrapid" #Default string for test
 loglevel="DEBUG" # sets log level for writing to file
@@ -271,7 +271,7 @@ def run_speedtest(gensock,sutsock):
                 # Get statistics now that the generation is stable and NO ARP messages any more
 		pps_req_tx,pps_tx,pps_sut_tx_str,pps_rx,lat_avg,lat_max, abs_dropped, abs_tx = run_iteration(gensock,sutsock)
 		drop_rate = 100.0*abs_dropped/abs_tx
-        	if ((get_pps(speed,size) - pps_tx)/pps_tx)<0.001 and ((drop_rate < DROP_RATE_TRESHOLD) or (abs_dropped==DROP_RATE_TRESHOLD ==0)):
+        	if ((get_pps(speed,size) - pps_tx)/get_pps(speed,size))<0.001 and ((drop_rate < DROP_RATE_TRESHOLD) or (abs_dropped==DROP_RATE_TRESHOLD ==0)):
 	                log.info('|{:>7}'.format(str(attempts))+" | " + '{:>5.1f}'.format(speed) + '% ' +'{:>6.3f}'.format(get_pps(speed,size)) + ' Mpps | '+ '{:>9.3f}'.format(pps_req_tx)+' Mpps | '+ '{:>9.3f}'.format(pps_tx) +' Mpps | ' + '{:>9}'.format(pps_sut_tx_str) +' Mpps | '+ '{:>9.3f}'.format(pps_rx)+' Mpps | '+ '{:>9.0f}'.format(lat_avg)+' us   | '+  '{:>9.0f}'.format(lat_max)+' us   | '+ '{:>14d}'.format(abs_dropped)+ ' |''{:>9.2f}'.format(drop_rate)+ '%  | SUCCESS    |')
 			endspeed = speed
 			endpps_req_tx = pps_req_tx
@@ -328,7 +328,7 @@ def run_flowtest(gensock,sutsock):
 			# Get statistics now that the generation is stable and NO ARP messages any more
 			pps_req_tx,pps_tx,pps_sut_tx_str,pps_rx,lat_avg,lat_max, abs_dropped, abs_tx = run_iteration(gensock,sutsock)
 			drop_rate = 100.0*abs_dropped/abs_tx
-	        	if ((get_pps(speed,size) - pps_tx)/pps_tx)<0.001 and ((drop_rate < DROP_RATE_TRESHOLD) or (abs_dropped==DROP_RATE_TRESHOLD ==0)):
+	        	if ((get_pps(speed,size) - pps_tx)/get_pps(speed,size))<0.001 and ((drop_rate < DROP_RATE_TRESHOLD) or (abs_dropped==DROP_RATE_TRESHOLD ==0)):
 				endspeed = speed
 				endpps_req_tx = pps_req_tx
 				endpps_tx = pps_tx
@@ -377,7 +377,7 @@ def run_sizetest(gensock,sutsock):
 			# Get statistics now that the generation is stable and NO ARP messages any more
 			pps_req_tx,pps_tx,pps_sut_tx_str,pps_rx,lat_avg,lat_max, abs_dropped, abs_tx = run_iteration(gensock,sutsock)
 			drop_rate = 100.0*abs_dropped/abs_tx
-	        	if ((get_pps(speed,size) - pps_tx)/pps_tx)<0.001 and ((drop_rate < DROP_RATE_TRESHOLD) or (abs_dropped==DROP_RATE_TRESHOLD ==0)):
+	        	if ((get_pps(speed,size) - pps_tx)/get_pps(speed,size))<0.001 and ((drop_rate < DROP_RATE_TRESHOLD) or (abs_dropped==DROP_RATE_TRESHOLD ==0)):
 				endspeed = speed
 				endpps_req_tx = pps_req_tx
 				endpps_tx = pps_tx
@@ -459,49 +459,52 @@ script_control =[]
 
 testconfig = ConfigParser.RawConfigParser()
 testconfig.read(test+'.test')
-required_number_of_VMs = testconfig.get('DEFAULT', 'total_number_of_vms')
+required_number_of_test_machines = testconfig.get('DEFAULT', 'total_number_of_test_machines')
 DROP_RATE_TRESHOLD = float(testconfig.get('DEFAULT', 'drop_rate_treshold'))
 ACCURACY = float(testconfig.get('DEFAULT', 'accuracy'))
 config = ConfigParser.RawConfigParser()
 config.read(env+'.env')
 key = config.get('OpenStack', 'key')
-total_number_of_VMs = config.get('rapid', 'total_number_of_VMs')
-if int(required_number_of_VMs) > int(total_number_of_VMs):
-	log.exception("Not enough VMs for this test: %s needed and only %s available" % (required_number_of_VMs,total_number_of_VMs))
-	raise Exception("Not enough VMs for this test: %s needed and only %s available" % (required_number_of_VMs,total_number_of_VMs))
-for vm in range(1, int(total_number_of_VMs)+1):
-	vmAdminIP.append(config.get('VM%d'%vm, 'admin_ip'))
-	vmDPmac.append(config.get('VM%d'%vm, 'dp_mac'))
-	vmDPIP.append(config.get('VM%d'%vm, 'dp_ip'))
+total_number_of_machines = config.get('rapid', 'total_number_of_machines')
+if int(required_number_of_test_machines) > int(total_number_of_machines):
+	log.exception("Not enough VMs for this test: %s needed and only %s available" % (required_number_of_test_machines,total_number_of_machines))
+	raise Exception("Not enough VMs for this test: %s needed and only %s available" % (required_number_of_test_machines,total_number_of_machines))
+for vm in range(1, int(total_number_of_machines)+1):
+	vmAdminIP.append(config.get('M%d'%vm, 'admin_ip'))
+	vmDPmac.append(config.get('M%d'%vm, 'dp_mac'))
+	vmDPIP.append(config.get('M%d'%vm, 'dp_ip'))
 	ip = vmDPIP[-1].split('.')
 	hexDPIP.append(hex(int(ip[0]))[2:].zfill(2) + ' ' + hex(int(ip[1]))[2:].zfill(2) + ' ' + hex(int(ip[2]))[2:].zfill(2) + ' ' + hex(int(ip[3]))[2:].zfill(2))
-for vm in range(1, int(required_number_of_VMs)+1):
-	config_file.append(testconfig.get('VM%d'%vm, 'config_file'))
-	script_control.append(testconfig.get('VM%d'%vm, 'script_control'))
-        group1cores=testconfig.get('VM%d'%vm, 'group1cores')
+machine_index = []
+for vm in range(1, int(required_number_of_test_machines)+1):
+	machine_index.append(int(testconfig.get('TestM%d'%vm, 'machine_index'))-1)
+for vm in range(1, int(required_number_of_test_machines)+1):
+	config_file.append(testconfig.get('TestM%d'%vm, 'config_file'))
+	script_control.append(testconfig.get('TestM%d'%vm, 'script_control'))
+        group1cores=testconfig.get('TestM%d'%vm, 'group1cores')
 	if group1cores <> 'not_used':
 		group1cores=ast.literal_eval(group1cores)
-        group2cores=testconfig.get('VM%d'%vm, 'group2cores')
+        group2cores=testconfig.get('TestM%d'%vm, 'group2cores')
 	if group2cores <> 'not_used':
 		group2cores=ast.literal_eval(group2cores)
-        group3cores=testconfig.get('VM%d'%vm, 'group3cores')
+        group3cores=testconfig.get('TestM%d'%vm, 'group3cores')
 	if group3cores <> 'not_used':
 		group3cores=ast.literal_eval(group3cores)
 	with open("parameters%d.lua"%vm, "w") as f:
-		f.write('name="%s"\n'% testconfig.get('VM%d'%vm, 'name'))
-		f.write('local_ip="%s"\n'% vmDPIP[vm-1])
-		f.write('local_hex_ip="%s"\n'% hexDPIP[vm-1])
-		gwVM = testconfig.get('VM%d'%vm, 'gw_vm')
+		f.write('name="%s"\n'% testconfig.get('TestM%d'%vm, 'name'))
+		f.write('local_ip="%s"\n'% vmDPIP[machine_index[vm-1]])
+		f.write('local_hex_ip="%s"\n'% hexDPIP[machine_index[vm-1]])
+		gwVM = testconfig.get('TestM%d'%vm, 'gw_vm')
 		if gwVM <> 'not_used':
 			gwVMindex = int(gwVM)-1
-			f.write('gw_ip="%s"\n'% vmDPIP[gwVMindex])
-			f.write('gw_hex_ip="%s"\n'% hexDPIP[gwVMindex])
-		destVM = testconfig.get('VM%d'%vm, 'dest_vm')
+			f.write('gw_ip="%s"\n'% vmDPIP[machine_index[gwVMindex]])
+			f.write('gw_hex_ip="%s"\n'% hexDPIP[machine_index[gwVMindex]])
+		destVM = testconfig.get('TestM%d'%vm, 'dest_vm')
 		if destVM <> 'not_used':
 			destVMindex = int(destVM)-1
-			f.write('dest_ip="%s"\n'% vmDPIP[destVMindex])
-			f.write('dest_hex_ip="%s"\n'% hexDPIP[destVMindex])
-			f.write('dest_hex_mac="%s"\n'% vmDPmac[destVMindex].replace(':',' '))
+			f.write('dest_ip="%s"\n'% vmDPIP[machine_index[destVMindex]])
+			f.write('dest_hex_ip="%s"\n'% hexDPIP[machine_index[destVMindex]])
+			f.write('dest_hex_mac="%s"\n'% vmDPmac[machine_index[destVMindex]].replace(':',' '))
                 if group1cores <> 'not_used':
                         f.write('group1="%s"\n'% ','.join(map(str, group1cores)))
                 if group2cores <> 'not_used':
@@ -527,13 +530,13 @@ for vm in range(1, int(required_number_of_VMs)+1):
 client =[]
 sock =[]
 
-for vm in range(0, int(required_number_of_VMs)):
-	client.append(prox_ctrl(vmAdminIP[vm], key+'.pem','root'))
+for vm in range(0, int(required_number_of_test_machines)):
+	client.append(prox_ctrl(vmAdminIP[machine_index[vm]], key+'.pem','root'))
 	connect_client(client[-1])
 # Creating script to bind the right network interface to the poll mode driver
 	devbindfile = "devbindvm%d.sh"%(vm+1)
 	with open("devbind.sh") as f:
-		newText=f.read().replace('MACADDRESS', vmDPmac[vm])
+		newText=f.read().replace('MACADDRESS', vmDPmac[machine_index[vm]])
 		with open(devbindfile, "w") as f:
 			f.write(newText)
 	st = os.stat(devbindfile)
@@ -550,7 +553,7 @@ for vm in range(0, int(required_number_of_VMs)):
 	else:
 		cmd = '/root/prox/build/prox -t -o cli -f /root/%s'%config_file[vm]
 	if configonly == False:
-		client[-1].fork_cmd(cmd, 'PROX Testing on VM%d'%(vm+1))
+		client[-1].fork_cmd(cmd, 'PROX Testing on TestM%d'%(vm+1))
 		sock.append(connect_socket(client[-1]))
 if configonly:
 	sys.exit()
@@ -566,6 +569,6 @@ for vm in range(1, int(number_of_tests)+1):
 	cmd=testconfig.get('test%d'%vm,'cmd')
 	eval(cmd)
 ####################################################
-for vm in range(0, int(required_number_of_VMs)):
+for vm in range(0, int(required_number_of_test_machines)):
 	sock[vm].quit()
 	client[vm].close()
