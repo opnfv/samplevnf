@@ -159,7 +159,7 @@ void task_init_l3(struct task_base *tbase, struct task_args *targ)
 	static char hash_name[30];
 	uint32_t n_entries = MAX_ARP_ENTRIES * 4;
 	const int socket_id = rte_lcore_to_socket_id(targ->lconf->id);
-	sprintf(hash_name, "A%03d_mac_table", targ->lconf->id);
+	sprintf(hash_name, "A%03d_%03d_mac_table", targ->lconf->id, targ->id);
 
 	hash_name[0]++;
 
