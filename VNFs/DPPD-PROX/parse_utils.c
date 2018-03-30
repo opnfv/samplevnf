@@ -430,6 +430,8 @@ int parse_mac(struct ether_addr *ether_addr, const char *str2)
 		return -1;
 
 	uint8_t ret = rte_strsplit(str, strlen(str), addr_parts, 7, ':');
+	if (ret != 6)
+		ret = rte_strsplit(str, strlen(str), addr_parts, 7, ' ');
 
 	if (ret != 6) {
 		set_errf("Invalid MAC address format");
