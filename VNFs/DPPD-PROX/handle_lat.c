@@ -520,6 +520,14 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 
 	uint32_t pkt_rx_time, pkt_tx_time;
 
+	if (task->link_speed == 0) {
+		if (task->port && task->port->link_speed != 0) {
+			task->link_speed = task->port->link_speed * 125000L;
+			plog_dbg("\tReceiving at %lu Mbps\n", 8 * task->link_speed / 1000000);
+		} else
+			return 0;
+	}
+
 	if (n_pkts == 0) {
 		task->begin = tbase->aux->tsc_rx.before;
 		return 0;
