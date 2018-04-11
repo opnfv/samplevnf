@@ -641,6 +641,15 @@ static int handle_gen_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 
 	int i, j;
 
+	// If link is down, link_speed is 0
+	if (task->link_speed == 0) {
+		if (task->port && task->port->link_speed != 0) {
+			task->link_speed = task->port->link_speed * 125000L;
+			plog_dbg("\tGenerating at %ld Mbps\n", 8 * task->link_speed / 1000000);
+		} else
+			return 0;
+	}
+
 	task_gen_update_config(task);
 
 	if (task->pkt_count == 0) {
