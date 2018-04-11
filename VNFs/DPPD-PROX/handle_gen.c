@@ -641,6 +641,16 @@ static int handle_gen_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 
 	int i, j;
 
+	// If link is down, link_speed is 0
+	if (unlikely(task->link_speed == 0)) {
+		if (task->port && task->port->link_speed != 0) {
+			task->link_speed = task->port->link_speed * 125000L;
+			plog_info("\tPort %u: link speed is %ld Mbps\n",
+				(uint8_t)(task->port - prox_port_cfg), 8 * task->link_speed / 1000000);
+		} else
+			return 0;
+	}
+
 	task_gen_update_config(task);
 
 	if (task->pkt_count == 0) {
@@ -1145,11 +1155,17 @@ static void start(struct task_base *tbase)
 	if (tbase->l3.tmaster) {
 		register_all_ip_to_ctrl_plane(task);
 	}
-	if (task->port && task->port->link_speed) {
-		// task->port->link->speed reports the link speed in Mbps e.g. 40k for a 40 Gbps NIC
-		// task->link_speed reported link speed in Bytes per sec.
+	if (task->port) {
+		// task->port->link_speed reports the link speed in Mbps e.g. 40k for a 40 Gbps NIC.
+		// task->link_speed reports link speed in Bytes per sec.
+		// It can be 0 if link is down, and must hence be updated in fast path.
 		task->link_speed = task->port->link_speed * 125000L;
-		plog_info("\tGenerating at %ld Mbps\n", 8 * task->link_speed / 1000000);
+		if (task->link_speed)
+			plog_info("\tPort %u: link speed is %ld Mbps\n",
+				(uint8_t)(task->port - prox_port_cfg), 8 * task->link_speed / 1000000);
+		else
+			plog_info("\tPort %u: link speed is %ld Mbps - link might be down\n",
+				(uint8_t)(task->port - prox_port_cfg), 8 * task->link_speed / 1000000);
 	}
 	/* TODO
 	   Handle the case when two tasks transmit to the same port
