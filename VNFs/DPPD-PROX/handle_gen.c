@@ -52,7 +52,7 @@ struct pkt_template {
 	uint16_t len;
 	uint16_t l2_len;
 	uint16_t l3_len;
-	uint8_t  buf[ETHER_MAX_LEN];
+	uint8_t  *buf;
 };
 
 #define MAX_TEMPLATE_INDEX	65536
@@ -97,6 +97,7 @@ struct task_gen {
 	uint32_t n_pkts; /* number of packets in pcap */
 	uint32_t pkt_idx; /* current packet from pcap */
 	uint32_t pkt_count; /* how many pakets to generate */
+	uint32_t max_frame_size;
 	uint32_t runtime_flags;
 	uint16_t lat_pos;
 	uint16_t packet_id_pos;
@@ -697,14 +698,17 @@ static void init_task_gen_seeds(struct task_gen *task)
 		random_init_seed(&task->rand[i].state);
 }
 
-static uint32_t pcap_count_pkts(pcap_t *handle)
+static uint32_t pcap_count_pkts(pcap_t *handle, uint32_t *max_frame_size)
 {
 	struct pcap_pkthdr header;
 	const uint8_t *buf;
 	uint32_t ret = 0;
+	*max_frame_size = 0;
 	long pkt1_fpos = ftell(pcap_file(handle));
 
 	while ((buf = pcap_next(handle, &header))) {
+		if (header.len > *max_frame_size)
+			*max_frame_size = header.len;
 		ret++;
 	}
 	int ret2 = fseek(pcap_file(handle), pkt1_fpos, SEEK_SET);
@@ -767,7 +771,7 @@ static int pcap_read_pkts(pcap_t *handle, const char *file_name, uint32_t n_pkts
 static int check_pkt_size(struct task_gen *task, uint32_t pkt_size, int do_panic)
 {
 	const uint16_t min_len = sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr);
-	const uint16_t max_len = ETHER_MAX_LEN - 4;
+	const uint16_t max_len = task->max_frame_size;
 
 	if (do_panic) {
 		PROX_PANIC(pkt_size == 0, "Invalid packet size length (no packet defined?)\n");
@@ -928,8 +932,6 @@ static void task_init_gen_load_pkt_inline(struct task_gen *task, struct task_arg
 {
 	const int socket_id = rte_lcore_to_socket_id(targ->lconf->id);
 
-	if (targ->pkt_size > sizeof(task->pkt_template[0].buf))
-		targ->pkt_size = sizeof(task->pkt_template[0].buf);
 	task->n_pkts = 1;
 
 	size_t mem_size = task->n_pkts * sizeof(*task->pkt_template);
@@ -938,7 +940,17 @@ static void task_init_gen_load_pkt_inline(struct task_gen *task, struct task_arg
 
 	PROX_PANIC(task->pkt_template == NULL ||
 		   task->pkt_template_orig == NULL,
-		   "Failed to allocate %lu bytes (in huge pages) for pcap file\n", mem_size);
+		   "Failed to allocate %lu bytes (in huge pages) for packet template\n", mem_size);
+
+	task->pkt_template->buf = prox_zmalloc(task->max_frame_size, socket_id);
+	task->pkt_template_orig->buf = prox_zmalloc(task->max_frame_size, socket_id);
+	PROX_PANIC(task->pkt_template->buf == NULL ||
+		task->pkt_template_orig->buf == NULL,
+		"Failed to allocate %u bytes (in huge pages) for packet\n", task->max_frame_size);
+
+	PROX_PANIC(targ->pkt_size > task->max_frame_size,
+		targ->pkt_size > ETHER_MAX_LEN + 2 * PROX_VLAN_TAG_SIZE - 4 ?
+			"pkt_size too high and jumbo frames disabled" : "pkt_size > mtu");
 
 	rte_memcpy(task->pkt_template_orig[0].buf, targ->pkt_inline, targ->pkt_size);
 	task->pkt_template_orig[0].len = targ->pkt_size;
@@ -951,11 +963,15 @@ static void task_init_gen_load_pcap(struct task_gen *task, struct task_args *tar
 {
 	const int socket_id = rte_lcore_to_socket_id(targ->lconf->id);
 	char err[PCAP_ERRBUF_SIZE];
+	uint32_t max_frame_size;
 	pcap_t *handle = pcap_open_offline(targ->pcap_file, err);
 	PROX_PANIC(handle == NULL, "Failed to open PCAP file: %s\n", err);
 
-	task->n_pkts = pcap_count_pkts(handle);
+	task->n_pkts = pcap_count_pkts(handle, &max_frame_size);
 	plogx_info("%u packets in pcap file '%s'\n", task->n_pkts, targ->pcap_file);
+	PROX_PANIC(max_frame_size > task->max_frame_size,
+		max_frame_size > ETHER_MAX_LEN + 2 * PROX_VLAN_TAG_SIZE -4 ?
+			"pkt_size too high and jumbo frames disabled" : "pkt_size > mtu");
 
 	if (targ->n_pkts)
 		task->n_pkts = RTE_MIN(task->n_pkts, targ->n_pkts);
@@ -968,19 +984,31 @@ static void task_init_gen_load_pcap(struct task_gen *task, struct task_args *tar
 		   task->pkt_template_orig == NULL,
 		   "Failed to allocate %lu bytes (in huge pages) for pcap file\n", mem_size);
 
+	for (uint i = 0; i < task->n_pkts; i++) {
+		task->pkt_template[i].buf = prox_zmalloc(max_frame_size, socket_id);
+		task->pkt_template_orig[i].buf = prox_zmalloc(max_frame_size, socket_id);
+
+		PROX_PANIC(task->pkt_template->buf == NULL ||
+			task->pkt_template_orig->buf == NULL,
+			"Failed to allocate %u bytes (in huge pages) for pcap file\n", task->max_frame_size);
+	}
+
 	pcap_read_pkts(handle, targ->pcap_file, task->n_pkts, task->pkt_template_orig, NULL);
 	pcap_close(handle);
 	task_gen_reset_pkt_templates(task);
 }
 
-static struct rte_mempool *task_gen_create_mempool(struct task_args *targ)
+static struct rte_mempool *task_gen_create_mempool(struct task_args *targ, uint16_t max_frame_size)
 {
 	static char name[] = "gen_pool";
 	struct rte_mempool *ret;
 	const int sock_id = rte_lcore_to_socket_id(targ->lconf->id);
 
 	name[0]++;
-	ret = rte_mempool_create(name, targ->nb_mbuf - 1, MBUF_SIZE,
+	uint32_t mbuf_size = MBUF_SIZE;
+	if (max_frame_size + (unsigned)sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM > mbuf_size)
+		mbuf_size = max_frame_size + (unsigned)sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM;
+	ret = rte_mempool_create(name, targ->nb_mbuf - 1, mbuf_size,
 				 targ->nb_cache_mbuf, sizeof(struct rte_pktmbuf_pool_private),
 				 rte_pktmbuf_pool_init, NULL, rte_pktmbuf_init, 0,
 				 sock_id, 0);
@@ -1062,21 +1090,22 @@ static void init_task_gen_pcap(struct task_base *tbase, struct task_args *targ)
 {
 	struct task_gen_pcap *task = (struct task_gen_pcap *)tbase;
 	const uint32_t sockid = rte_lcore_to_socket_id(targ->lconf->id);
+	uint32_t max_frame_size;
 
 	task->loop = targ->loop;
 	task->pkt_idx = 0;
 	task->hz = rte_get_tsc_hz();
 
-	task->local_mbuf.mempool = task_gen_create_mempool(targ);
-
-	PROX_PANIC(!strcmp(targ->pcap_file, ""), "No pcap file defined\n");
-
 	char err[PCAP_ERRBUF_SIZE];
 	pcap_t *handle = pcap_open_offline(targ->pcap_file, err);
 	PROX_PANIC(handle == NULL, "Failed to open PCAP file: %s\n", err);
 
-	task->n_pkts = pcap_count_pkts(handle);
+	task->n_pkts = pcap_count_pkts(handle, &max_frame_size);
 	plogx_info("%u packets in pcap file '%s'\n", task->n_pkts, targ->pcap_file);
+
+	task->local_mbuf.mempool = task_gen_create_mempool(targ, max_frame_size);
+
+	PROX_PANIC(!strcmp(targ->pcap_file, ""), "No pcap file defined\n");
 
 	if (targ->n_pkts) {
 		plogx_info("Configured to load %u packets\n", targ->n_pkts);
@@ -1093,6 +1122,11 @@ static void init_task_gen_pcap(struct task_base *tbase, struct task_args *targ)
 	PROX_PANIC(mem == NULL, "Failed to allocate %lu bytes (in huge pages) for pcap file\n", mem_size);
 	task->proto = (struct pkt_template *) mem;
 	task->proto_tsc = (uint64_t *)(mem + task->n_pkts * sizeof(*task->proto));
+
+	for (uint i = 0; i < targ->n_pkts; i++) {
+		task->proto[i].buf = prox_zmalloc(max_frame_size, sockid);
+		PROX_PANIC(task->proto[i].buf == NULL, "Failed to allocate %u bytes (in huge pages) for pcap file\n", max_frame_size);
+	}
 
 	pcap_read_pkts(handle, targ->pcap_file, task->n_pkts, task->proto, task->proto_tsc);
 	pcap_close(handle);
@@ -1204,7 +1238,17 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 
 	task->packet_id_pos = targ->packet_id_pos;
 
-	task->local_mbuf.mempool = task_gen_create_mempool(targ);
+	struct prox_port_cfg *port = find_reachable_port(targ);
+	// TODO: check that all reachable ports have the same mtu...
+	if (port) {
+		task->cksum_offload = port->capabilities.tx_offload_cksum;
+		task->port = port;
+		task->max_frame_size = port->mtu + ETHER_HDR_LEN + 2 * PROX_VLAN_TAG_SIZE;
+	} else {
+		// Not generating to any port...
+		task->max_frame_size = ETHER_MAX_LEN;
+	}
+	task->local_mbuf.mempool = task_gen_create_mempool(targ, task->max_frame_size);
 	PROX_PANIC(task->local_mbuf.mempool == NULL, "Failed to create mempool\n");
 	task->pkt_idx = 0;
 	task->hz = rte_get_tsc_hz();
@@ -1262,12 +1306,6 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 	for (uint32_t i = 0; i < targ->n_rand_str; ++i) {
 		PROX_PANIC(task_gen_add_rand(tbase, targ->rand_str[i], targ->rand_offset[i], UINT32_MAX),
 			   "Failed to add random\n");
-	}
-
-	struct prox_port_cfg *port = find_reachable_port(targ);
-	if (port) {
-		task->cksum_offload = port->capabilities.tx_offload_cksum;
-		task->port = port;
 	}
 }
 
