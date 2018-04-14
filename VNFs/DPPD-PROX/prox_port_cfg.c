@@ -294,12 +294,10 @@ static void init_port(struct prox_port_cfg *port_cfg)
 			   port_cfg->socket, port_cfg->n_rxd);
 		dummy_pool_name[0]++;
 	} else {
-		// Most pmd do not support setting mtu yet...
-		if (!strcmp(port_cfg->short_name, "ixgbe")) {
-			plog_info("\t\tSetting MTU size to %u for port %u ...\n", port_cfg->mtu, port_id);
-			ret = rte_eth_dev_set_mtu(port_id, port_cfg->mtu);
-			PROX_PANIC(ret < 0, "\n\t\t\trte_eth_dev_set_mtu() failed on port %u: error %d\n", port_id, ret);
-		}
+		// Most pmd should now support setting mtu
+		plog_info("\t\tSetting MTU size to %u for port %u ...\n", port_cfg->mtu, port_id);
+		ret = rte_eth_dev_set_mtu(port_id, port_cfg->mtu);
+		PROX_PANIC(ret < 0, "\n\t\t\trte_eth_dev_set_mtu() failed on port %u: error %d\n", port_id, ret);
 
 		if (port_cfg->n_txq == 0) {
 			/* not sending on this port */

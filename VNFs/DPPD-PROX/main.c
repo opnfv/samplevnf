@@ -285,6 +285,7 @@ static void configure_if_tx_queues(struct task_args *targ, uint8_t socket)
 
 static void configure_if_rx_queues(struct task_args *targ, uint8_t socket)
 {
+	struct prox_port_cfg *port;
 	for (int i = 0; i < targ->nb_rxports; i++) {
 		uint8_t if_port = targ->rx_port_queue[i].port;
 
@@ -293,15 +294,23 @@ static void configure_if_rx_queues(struct task_args *targ, uint8_t socket)
 		}
 
 		PROX_PANIC(!prox_port_cfg[if_port].active, "Port %u not used, aborting...\n", if_port);
+		port = &prox_port_cfg[if_port];
 
-		if(prox_port_cfg[if_port].rx_ring[0] != '\0') {
-			prox_port_cfg[if_port].n_rxq = 0;
+		if(port->rx_ring[0] != '\0') {
+			port->n_rxq = 0;
 		}
 
+		// Force multi segment support if mbuf size is not big enough.
+		// This is usually the case when setting a big mtu size i.e. enabling jumbo frames.
+		uint16_t max_frame_size = port->mtu + ETHER_HDR_LEN + ETHER_CRC_LEN + 2 * PROX_VLAN_TAG_SIZE;
+		if (max_frame_size + sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM > targ->mbuf_size) {
+			targ->task_init->flag_features &= ~TASK_FEATURE_TXQ_FLAGS_NOMULTSEGS;
+			plog_info("\t\tDisabling No MultSegs on port %u as %lu > %u\n", if_port, max_frame_size + sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM, targ->mbuf_size);
+		}
 		targ->rx_port_queue[i].queue = prox_port_cfg[if_port].n_rxq;
-		prox_port_cfg[if_port].pool[targ->rx_port_queue[i].queue] = targ->pool;
-		prox_port_cfg[if_port].pool_size[targ->rx_port_queue[i].queue] = targ->nb_mbuf - 1;
-		prox_port_cfg[if_port].n_rxq++;
+		port->pool[targ->rx_port_queue[i].queue] = targ->pool;
+		port->pool_size[targ->rx_port_queue[i].queue] = targ->nb_mbuf - 1;
+		port->n_rxq++;
 
 		int dsocket = prox_port_cfg[if_port].socket;
 		if (dsocket != -1 && dsocket != socket) {
@@ -319,8 +328,8 @@ static void configure_if_queues(void)
 	while (core_targ_next(&lconf, &targ, 0) == 0) {
 		socket = rte_lcore_to_socket_id(lconf->id);
 
-		configure_if_tx_queues(targ, socket);
 		configure_if_rx_queues(targ, socket);
+		configure_if_tx_queues(targ, socket);
 	}
 }
 
@@ -578,6 +587,52 @@ static void shuffle_mempool(struct rte_mempool* mempool, uint32_t nb_mbuf)
 	prox_free(pkts);
 }
 
+static void set_mbuf_size(struct task_args *targ)
+{
+	/* mbuf size can be set
+	 *  - from config file (highest priority, overwriting any other config) - should only be used as workaround
+	 *  - through each 'mode', overwriting the default mbuf_size
+	 *  - defaulted to MBUF_SIZE i.e. 1518 Bytes
+	 * Except if set explicitely, ensure that size is big enough for vmxnet3 driver
+	 */
+	if (targ->mbuf_size_set_explicitely)
+		return;
+
+	if (targ->task_init->mbuf_size != 0) {
+		/* mbuf_size not set through config file but set through mode */
+		targ->mbuf_size = targ->task_init->mbuf_size;
+	}
+
+	struct prox_port_cfg *port;
+	uint16_t max_frame_size = 0;
+	for (int i = 0; i < targ->nb_rxports; i++) {
+		uint8_t if_port = targ->rx_port_queue[i].port;
+
+		if (if_port == OUT_DISCARD) {
+			continue;
+		}
+		port = &prox_port_cfg[if_port];
+		if (max_frame_size < port->mtu + ETHER_HDR_LEN + ETHER_CRC_LEN + 2 * PROX_VLAN_TAG_SIZE)
+			max_frame_size = port->mtu + ETHER_HDR_LEN + ETHER_CRC_LEN + 2 * PROX_VLAN_TAG_SIZE;
+
+		if (strcmp(port->short_name, "vmxnet3") == 0) {
+			if (targ->mbuf_size < MBUF_SIZE + RTE_PKTMBUF_HEADROOM)
+				targ->mbuf_size = MBUF_SIZE + RTE_PKTMBUF_HEADROOM;
+			if (targ->mbuf_size < max_frame_size)
+				targ->mbuf_size = max_frame_size + RTE_PKTMBUF_HEADROOM;
+		}
+	}
+	if (max_frame_size) {
+		// i40e supports a maximum of 5 descriptors chained
+		uint16_t required_mbuf_size = RTE_ALIGN(max_frame_size / 5, 128) + sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM;
+		if (required_mbuf_size > targ->mbuf_size) {
+			targ->mbuf_size = required_mbuf_size;
+			plog_info("\t\tSetting mbuf_size to %u to support frame_size %u (mtu %u)\n", targ->mbuf_size, max_frame_size, port->mtu);
+		}
+	}
+
+}
+
 static void setup_mempools_unique_per_socket(void)
 {
 	uint32_t flags = 0;
@@ -595,11 +650,7 @@ static void setup_mempools_unique_per_socket(void)
 		uint8_t socket = rte_lcore_to_socket_id(lconf->id);
 		PROX_ASSERT(socket < MAX_SOCKETS);
 
-		if (targ->mbuf_size_set_explicitely)
-			flags = MEMPOOL_F_NO_SPREAD;
-		if ((!targ->mbuf_size_set_explicitely) && (targ->task_init->mbuf_size != 0)) {
-			targ->mbuf_size = targ->task_init->mbuf_size;
-		}
+		set_mbuf_size(targ);
 		if (targ->rx_port_queue[0].port != OUT_DISCARD) {
 			struct prox_port_cfg* port_cfg = &prox_port_cfg[targ->rx_port_queue[0].port];
 			PROX_ASSERT(targ->nb_mbuf != 0);
@@ -615,10 +666,6 @@ static void setup_mempools_unique_per_socket(void)
 			else {
 				PROX_PANIC(mbuf_size[socket] != targ->mbuf_size,
 					   "all mbuf_size must have the same size if using a unique mempool per socket\n");
-			}
-			if ((!targ->mbuf_size_set_explicitely) && (strcmp(port_cfg->short_name, "vmxnet3") == 0)) {
-				if (mbuf_size[socket] < MBUF_SIZE + RTE_PKTMBUF_HEADROOM)
-					mbuf_size[socket] = MBUF_SIZE + RTE_PKTMBUF_HEADROOM;
 			}
 		}
 	}
@@ -668,24 +715,7 @@ static void setup_mempool_for_rx_task(struct lcore_cfg *lconf, struct task_args 
 	char memzone_name[64];
 	char name[64];
 
-	/* mbuf size can be set
-	 *  - from config file (highest priority, overwriting any other config) - should only be used as workaround
-	 *  - through each 'mode', overwriting the default mbuf_size
-	 *  - defaulted to MBUF_SIZE i.e. 1518 Bytes
-	 * Except is set expliciteky, ensure that size is big enough for vmxnet3 driver
-	 */
-	if (targ->mbuf_size_set_explicitely) {
-		flags = MEMPOOL_F_NO_SPREAD;
-		/* targ->mbuf_size already set */
-	}
-	else if (targ->task_init->mbuf_size != 0) {
-		/* mbuf_size not set through config file but set through mode */
-		targ->mbuf_size = targ->task_init->mbuf_size;
-	}
-	else if (strcmp(port_cfg->short_name, "vmxnet3") == 0) {
-		if (targ->mbuf_size < MBUF_SIZE + RTE_PKTMBUF_HEADROOM)
-			targ->mbuf_size = MBUF_SIZE + RTE_PKTMBUF_HEADROOM;
-	}
+	set_mbuf_size(targ);
 
 	/* allocate memory pool for packets */
 	PROX_ASSERT(targ->nb_mbuf != 0);
