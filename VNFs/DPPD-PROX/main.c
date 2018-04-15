@@ -249,7 +249,7 @@ static void configure_if_tx_queues(struct task_args *targ, uint8_t socket)
 		}
 		/* Set the ETH_TXQ_FLAGS_NOREFCOUNT flag if none of
 		   the tasks up to the task transmitting to the port
-		   does not use refcnt. */
+		   use refcnt. */
 		if (!chain_flag_state(targ, TASK_FEATURE_TXQ_FLAGS_REFCOUNT, 1)) {
 			prox_port_cfg[if_port].tx_conf.txq_flags |= ETH_TXQ_FLAGS_NOREFCOUNT;
 			plog_info("\t\tEnabling No refcnt on port %d\n", if_port);
@@ -262,7 +262,7 @@ static void configure_if_tx_queues(struct task_args *targ, uint8_t socket)
 		   chain has NOOFFLOADS set all the way until the
 		   first task that receives from a port, it will be
 		   disabled for the destination port. */
-		if (chain_flag_state(targ, TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS, 1)) {
+		if (!chain_flag_state(targ, TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS, 0)) {
 			prox_port_cfg[if_port].tx_conf.txq_flags |= ETH_TXQ_FLAGS_NOOFFLOADS;
 			plog_info("\t\tDisabling TX offloads on port %d\n", if_port);
 		} else {
@@ -271,8 +271,8 @@ static void configure_if_tx_queues(struct task_args *targ, uint8_t socket)
 
 		/* By default NOMULTSEGS is disabled, as drivers/NIC might split packets on RX
 		   It should only be enabled when we know for sure that the RX does not split packets.
-		   Set the ETH_TXQ_FLAGS_NOMULTSEGS flag if none of the tasks up to the task
-		   transmitting to the port does not use multsegs. */
+		   Set the ETH_TXQ_FLAGS_NOMULTSEGS flag if all of the tasks up to the task
+		   transmitting to the port use no_multsegs. */
 		if (!chain_flag_state(targ, TASK_FEATURE_TXQ_FLAGS_NOMULTSEGS, 0)) {
 			prox_port_cfg[if_port].tx_conf.txq_flags |= ETH_TXQ_FLAGS_NOMULTSEGS;
 			plog_info("\t\tEnabling No MultiSegs on port %d\n", if_port);
