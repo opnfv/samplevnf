@@ -372,14 +372,14 @@ static void init_port(struct prox_port_cfg *port_cfg)
 
 		PROX_PANIC(ret < 0, "\t\t\trte_eth_rx_queue_setup() failed on port %u: error %s (%d)\n", port_id, strerror(-ret), ret);
 	}
-	if (!strcmp(port_cfg->short_name, "virtio")) {
+	if (port_cfg->capabilities.tx_offload_cksum == 0) {
 		port_cfg->tx_conf.txq_flags |= ETH_TXQ_FLAGS_NOOFFLOADS;
-		plog_info("\t\tDisabling TX offloads (virtio does not support TX offloads)\n");
+		plog_info("\t\tDisabling TX offloads as pmd reports that it does not support them)\n");
 	}
 
 	if (!strcmp(port_cfg->short_name, "vmxnet3")) {
-		port_cfg->tx_conf.txq_flags |= ETH_TXQ_FLAGS_NOOFFLOADS | ETH_TXQ_FLAGS_NOMULTSEGS;
-		plog_info("\t\tDisabling TX offloads and multsegs on port %d as vmxnet3 does not support them\n", port_id);
+		port_cfg->tx_conf.txq_flags |= ETH_TXQ_FLAGS_NOMULTSEGS;
+		plog_info("\t\tDisabling multsegs on port %d as vmxnet3 does not support them\n", port_id);
 	}
 	/* initialize one TX queue per logical core on each port */
 	for (uint16_t queue_id = 0; queue_id < port_cfg->n_txq; ++queue_id) {
