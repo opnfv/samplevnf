@@ -18,6 +18,7 @@
 #define _CFG_FILE_H_
 
 #include <stdio.h>
+#include "defaults.h"
 
 #define DEFAULT_CONFIG_FILE	"./prox.cfg"
 
@@ -38,7 +39,7 @@ struct cfg_section {
 	int		error;
 };
 
-#define MAX_CFG_STRING_LEN 8192
+#define MAX_CFG_STRING_LEN (3 * MAX_PKT_SIZE)
 #define STRING_TERMINATOR_LEN 4
 
 struct cfg_file {

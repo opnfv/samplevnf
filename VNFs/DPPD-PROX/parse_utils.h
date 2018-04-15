@@ -20,7 +20,7 @@
 #include <inttypes.h>
 #include "ip_subnet.h"
 
-#define MAX_STR_LEN_PROC  (3 * 1518 + 20)
+#define MAX_STR_LEN_PROC  (3 * MAX_PKT_SIZE + 20)
 
 struct ipv6_addr;
 struct ether_addr;
