@@ -973,7 +973,8 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 				return -1;
 			}
 			if (targ->pkt_size == sizeof(targ->pkt_inline)) {
-				set_errf("Inline packet definition can't be longer than 1518");
+				set_errf("Inline packet definition can't be longer than %u", sizeof(targ->pkt_inline));
+				return -1;
 			}
 
 			targ->pkt_inline[targ->pkt_size++] = byte;

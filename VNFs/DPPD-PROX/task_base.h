@@ -153,7 +153,6 @@ typedef uint16_t (*rx_pkt_func) (struct task_base *tbase, struct rte_mbuf ***mbu
 struct task_base_aux {
 	/* Not used when PROX_STATS is not defined */
 	struct task_rt_stats stats;
-	struct task_rt_dump task_rt_dump;
 
 	/* Used if TASK_TSC_RX is enabled*/
 	struct {
@@ -163,8 +162,8 @@ struct task_base_aux {
 
 	struct  rte_mbuf **all_mbufs;
 
-	int      rx_prev_count;
-	int      rx_prev_idx;
+	uint16_t      rx_prev_count;
+	uint16_t      rx_prev_idx;
 	uint16_t (*rx_pkt_prev[MAX_STACKED_RX_FUCTIONS])(struct task_base *tbase, struct rte_mbuf ***mbufs);
 
 	uint32_t rx_bucket[RX_BUCKET_SIZE];
@@ -177,6 +176,7 @@ struct task_base_aux {
 	void (*start)(struct task_base *tbase);
 	void (*stop_last)(struct task_base *tbase);
 	void (*start_first)(struct task_base *tbase);
+	struct task_rt_dump task_rt_dump;
 };
 
 /* The task_base is accessed for _all_ task types. In case

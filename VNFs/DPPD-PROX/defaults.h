@@ -26,9 +26,10 @@ void set_global_defaults(struct prox_cfg* prox_cfg);
 void set_task_defaults(struct prox_cfg* prox_cfg, struct lcore_cfg* lcore_cfg_init);
 void set_port_defaults(void);
 
+#define MAX_PKT_SIZE	10000
 #define MAX_PKT_BURST   64
 #define MAX_RING_BURST	64
-#define DUMP_PKT_LEN 128
+#define DUMP_PKT_LEN 	MAX_PKT_SIZE
 
 #if MAX_RING_BURST < MAX_PKT_BURST
 #error MAX_RING_BURST < MAX_PKT_BURST
