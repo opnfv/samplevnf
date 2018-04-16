@@ -39,12 +39,14 @@
 typedef unsigned int u32;
 typedef unsigned char u8;
 
+#define MAX_ASYNC_SESSIONS	256
 #define BYTE_LENGTH(x)                          (x/8)
 #define DIGEST_BYTE_LENGTH_SHA1                 (BYTE_LENGTH(160))
 
 //#define CIPHER_KEY_LENGTH_AES_CBC       (32)
 #define CIPHER_KEY_LENGTH_AES_CBC       (16)//==TEST
 #define CIPHER_IV_LENGTH_AES_CBC        16
+//#define SINGLE_VDEV 1
 
 static inline void *get_sym_cop(struct rte_crypto_op *cop)
 {
@@ -65,7 +67,10 @@ struct task_esp_enc {
         struct rte_cryptodev_sym_session *sess;
         struct rte_crypto_sym_xform cipher_xform;
         struct rte_crypto_sym_xform auth_xform;
-        struct rte_crypto_op *ops_burst[MAX_PKT_BURST];
+	uint8_t head;
+	uint8_t nb_enc;
+	struct rte_crypto_op *ops_rx_burst[MAX_ASYNC_SESSIONS];
+	struct rte_crypto_op *ops_tx_burst[MAX_ASYNC_SESSIONS];
 };
 
 struct task_esp_dec {
@@ -115,27 +120,40 @@ struct esp_hdr {
         uint32_t sn;
 };
 
-static void init_task_esp_common(void)
+static void init_task_esp_common(struct task_base *tbase, struct task_args *targ)
 {
+	struct task_esp_enc *task = (struct task_esp_enc *)tbase;
+	char name[30];
         static int vdev_initialized = 0;
         struct crypto_testsuite_params *ts_params = &testsuite_params;
 
+#ifdef SINGLE_VDEV
         if (!vdev_initialized) {
-                //rte_vdev_init(RTE_STR(CRYPTODEV_NAME_AESNI_MB_PMD), NULL);
-                //rte_vdev_init(RTE_STR(CRYPTODEV_NAME_AESNI_MB_PMD), "max_nb_queue_pairs=16 max_nb_sessions=16 socket_id=0");
                 rte_vdev_init("crypto_aesni_mb", "max_nb_queue_pairs=16,max_nb_sessions=1024,socket_id=0");
                 int nb_devs = rte_cryptodev_count_devtype(RTE_CRYPTODEV_AESNI_MB_PMD);
                 PROX_PANIC(nb_devs < 1, "No crypto devices found?\n");
                 vdev_initialized = 1;
-        }
+		plog_info("%d crypto \n", nb_devs);
+		task->crypto_dev_id = rte_cryptodev_get_dev_id("crypto_aesni_mb");
+        } else {
+		 task->crypto_dev_id = 0;
+	}
+#else
+	sprintf(name, "crypto_aesni_mb%02d", targ->lconf->id);
+	rte_vdev_init(name, "max_nb_queue_pairs=4,max_nb_sessions=128,socket_id=0");
+	int nb_devs = rte_cryptodev_count_devtype(RTE_CRYPTODEV_AESNI_MB_PMD);
+	PROX_PANIC(nb_devs < 1, "No crypto devices found?\n");
+	plog_info("%d crypto \n", nb_devs);
+	task->crypto_dev_id = rte_cryptodev_get_dev_id(name);
+#endif
 
-#if 0
+#if 1
         plog_info("cryptodev_count=%d\n", rte_cryptodev_count());
         plog_info("cryptodev_count_devtype(RTE_CRYPTODEV_AESNI_MB_PMD)=%d\n",
             rte_cryptodev_count_devtype(RTE_CRYPTODEV_AESNI_MB_PMD));
 
         struct rte_cryptodev_info info;
-        rte_cryptodev_info_get(0, &info);
+        rte_cryptodev_info_get(task->crypto_dev_id, &info);
         plog_info("driver_name=%s pci_dev=? feature_flags=? capabilities=? max_nb_queue_pairs=%u, max_nb_sessions=%u max_nb_sessions_per_qp=%u\n",
             info.driver_name,
             info.max_nb_queue_pairs,
@@ -144,14 +162,19 @@ static void init_task_esp_common(void)
         );
 #endif
 
-        ts_params->conf.nb_queue_pairs = 16;
         ts_params->conf.socket_id = SOCKET_ID_ANY;
         ts_params->conf.session_mp.nb_objs = 2048;
+#ifdef SINGLE_VDEV
+        ts_params->conf.nb_queue_pairs = 16;
         ts_params->qp_conf.nb_descriptors = 4096;
+#else
+	ts_params->conf.nb_queue_pairs = 4;
+	ts_params->qp_conf.nb_descriptors = 2048;
+	ts_params->conf.session_mp.cache_size = 64;
+#endif
 
         /*Now reconfigure queues to size we actually want to use in this testsuite.*/
-        ts_params->qp_conf.nb_descriptors = 128;
-        rte_cryptodev_configure(0, &ts_params->conf);
+        rte_cryptodev_configure(task->crypto_dev_id, &ts_params->conf);
         //TODO: move qp init here
         //rte_cryptodev_start(task->crypto_dev_id);//call after setup qp
         //to undo call rte_cryptodev_stop()
@@ -160,7 +183,7 @@ static void init_task_esp_common(void)
 static uint16_t get_qp_id(void)
 {
         static uint16_t qp_id=0;
-        PROX_PANIC(qp_id+1 >= 16, "exceeded max_nb_queue_pairs\n");
+        PROX_PANIC(qp_id >= 16, "exceeded max_nb_queue_pairs\n");
         return qp_id++;
 }
 
@@ -170,16 +193,24 @@ static void init_task_esp_enc(struct task_base *tbase, struct task_args *targ)
         struct rte_cryptodev_info info;
         struct crypto_testsuite_params *ts_params = &testsuite_params;
 
-        init_task_esp_common();
+        init_task_esp_common(tbase, targ);
         tbase->flags |= FLAG_NEVER_FLUSH;
 
+	char name[30];
+	sprintf(name, "crypto_op_pool_enc_%03d", targ->lconf->id);
+
+#ifdef SINGLE_VDEV
         ts_params->mbuf_ol_pool_enc = rte_crypto_op_pool_create("crypto_op_pool_enc",
                         RTE_CRYPTO_OP_TYPE_SYMMETRIC, (2*1024*1024), 128, 0,
                         rte_socket_id());
+#else
+        ts_params->mbuf_ol_pool_enc = rte_crypto_op_pool_create(name,
+                        RTE_CRYPTO_OP_TYPE_SYMMETRIC, (2*1024*1024/8), 128, 16,
+                        rte_socket_id());
+#endif
         PROX_PANIC(ts_params->mbuf_ol_pool_enc == NULL, "Can't create ENC CRYPTO_OP_POOL\n");
 
         struct task_esp_enc *task = (struct task_esp_enc *)tbase;
-        task->crypto_dev_id = 0;
 
         /*
          * Since we can't free and re-allocate queue memory always set the queues
@@ -187,7 +218,11 @@ static void init_task_esp_enc(struct task_base *tbase, struct task_args *targ)
          * any later re-configures needed by other tests
          */
 
+#ifdef SINGLE_VDEV
         task->qp_id=get_qp_id();
+#else
+        task->qp_id=0;
+#endif
         plog_info("enc: task->qp_id=%u\n", task->qp_id);
         rte_cryptodev_queue_pair_setup(task->crypto_dev_id, task->qp_id,
                                 &ts_params->qp_conf, rte_cryptodev_socket_id(task->crypto_dev_id));
@@ -220,7 +255,7 @@ static void init_task_esp_enc(struct task_base *tbase, struct task_args *targ)
         //TODO: doublecheck task->ops_burst lifecycle!
         if (rte_crypto_op_bulk_alloc(ts_params->mbuf_ol_pool_enc,
                      RTE_CRYPTO_OP_TYPE_SYMMETRIC,
-                     task->ops_burst, MAX_PKT_BURST) != MAX_PKT_BURST) {
+                     task->ops_rx_burst, MAX_ASYNC_SESSIONS) != MAX_ASYNC_SESSIONS) {
                 PROX_PANIC(1, "Failed to allocate ENC crypto operations\n");
         }
         //to clean up after rte_crypto_op_bulk_alloc:
@@ -243,11 +278,11 @@ static void init_task_esp_dec(struct task_base *tbase, struct task_args *targ)
 {
         int i, nb_devs;
         struct crypto_testsuite_params *ts_params = &testsuite_params;
-        init_task_esp_common();
+        init_task_esp_common(tbase, targ);
 
         tbase->flags |= FLAG_NEVER_FLUSH;
         ts_params->mbuf_ol_pool_dec = rte_crypto_op_pool_create("crypto_op_pool_dec",
-                        RTE_CRYPTO_OP_TYPE_SYMMETRIC, (2*1024*1024), 128, 0,
+                        RTE_CRYPTO_OP_TYPE_SYMMETRIC, (2*1024*1024), 128, MBUF_SIZE,
                         rte_socket_id());
         PROX_PANIC(ts_params->mbuf_ol_pool_dec == NULL, "Can't create DEC CRYPTO_OP_POOL\n");
 
@@ -305,6 +340,12 @@ static void init_task_esp_dec(struct task_base *tbase, struct task_args *targ)
         for (i = 0; i < 16; i++) task->iv[i] = i;
 }
 
+static inline struct rte_mbuf *get_mbuf(struct task_esp_enc *task, struct rte_crypto_op *cop)
+{
+	struct rte_crypto_sym_op *sym_cop = get_sym_cop(cop);
+	return sym_cop->m_src;
+}
+
 static inline uint8_t handle_esp_ah_enc(struct task_esp_enc *task, struct rte_mbuf *mbuf, struct rte_crypto_op *cop)
 {
         u8 *data;
@@ -356,7 +397,7 @@ static inline uint8_t handle_esp_ah_enc(struct task_esp_enc *task, struct rte_mb
         peth = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
         l1 = rte_pktmbuf_pkt_len(mbuf);
         peth->ether_type = ETYPE_IPv4;
-#if 0
+#if 1
         //send it back
         ether_addr_copy(&dst_mac, &peth->s_addr);
         ether_addr_copy(&src_mac, &peth->d_addr);
@@ -375,7 +416,7 @@ static inline uint8_t handle_esp_ah_enc(struct task_esp_enc *task, struct rte_mb
         pip4->packet_id = 0x0101;
         pip4->type_of_service = 0;
         pip4->time_to_live = 64;
-        prox_ip_cksum_sw(pip4);
+	prox_ip_cksum(mbuf, pip4, sizeof(struct ether_hdr), sizeof(struct ipv4_hdr), 1);
 
         //find the SA when there will be more than one
         if (task->ipaddr == pip4->src_addr)
@@ -558,30 +599,54 @@ static int handle_esp_enc_bulk(struct task_base *tbase, struct rte_mbuf **mbufs,
 {
         struct task_esp_enc *task = (struct task_esp_enc *)tbase;
         struct crypto_testsuite_params *ts_params = &testsuite_params;
-        uint8_t out[MAX_PKT_BURST];
-        uint16_t i = 0, nb_rx = 0, nb_enc=0, j = 0;
+
+	uint8_t out[MAX_ASYNC_SESSIONS];
+	uint16_t i = 0, nb_rx = 0, j = 0, nb_del = 0, n_fwd = 0, ret;
+	uint8_t nb_enc = 0;
+	uint8_t head = task->head;
+	struct rte_mbuf *del_mbufs[MAX_PKT_BURST], *fwd_mbufs[MAX_ASYNC_SESSIONS];
+
+	if (task->nb_enc + n_pkts >= MAX_ASYNC_SESSIONS) {
+		// Discards all packets for now - TODO fine grain...
+		for (uint16_t j = 0; j < n_pkts; ++j) {
+			out[j] = OUT_DISCARD;
+		}
+		task->base.tx_pkt(&task->base, mbufs, n_pkts, out);
+		n_pkts = 0;
+	}
 
         for (uint16_t j = 0; j < n_pkts; ++j) {
-                out[j] = handle_esp_ah_enc(task, mbufs[j], task->ops_burst[nb_enc]);
-                if (out[j] != OUT_DISCARD)
+                ret = handle_esp_ah_enc(task, mbufs[j], task->ops_rx_burst[head]);
+                if (ret != OUT_DISCARD) {
                         ++nb_enc;
+			head++;
+		} else {
+			out[nb_del] = ret;
+			del_mbufs[nb_del++] = mbufs[j];
+		}
         }
 
-        if (rte_cryptodev_enqueue_burst(task->crypto_dev_id, task->qp_id, task->ops_burst, nb_enc) != nb_enc) {
-                plog_info("Error enc enqueue_burst\n");
-                return -1;
+	if ((ret = rte_cryptodev_enqueue_burst(task->crypto_dev_id, task->qp_id, &task->ops_rx_burst[task->head], nb_enc)) != nb_enc) {
+		for (uint16_t j = 0; j < nb_enc - ret; ++j) {
+			out[nb_del] = OUT_DISCARD;
+			del_mbufs[nb_del++] = get_mbuf(task, task->ops_rx_burst[task->head+ret]);
+		}
         }
+	task->head+=ret;
+	if (nb_del)
+		task->base.tx_pkt(&task->base, del_mbufs, nb_del, out);
+	task->nb_enc += nb_enc;
 
-        //do not call rte_cryptodev_dequeue_burst() on already dequeued packets
-        //otherwise handle_completed_jobs() screws up the content of the ops_burst array!
-        do {
-                nb_rx = rte_cryptodev_dequeue_burst(
-                                   task->crypto_dev_id, task->qp_id,
-                                   task->ops_burst+i, nb_enc-i);
-                i += nb_rx;
-        } while (i < nb_enc);
+	if (task->nb_enc == 0)
+		return 0;
 
-        return task->base.tx_pkt(&task->base, mbufs, n_pkts, out);
+	ret = rte_cryptodev_dequeue_burst(task->crypto_dev_id, task->qp_id, task->ops_tx_burst, task->nb_enc);
+	for (uint16_t j = 0; j < ret; ++j) {
+		out[n_fwd] = 0;
+		fwd_mbufs[n_fwd++] = get_mbuf(task, task->ops_tx_burst[j]);
+	}
+	task->nb_enc -= n_fwd;
+	return task->base.tx_pkt(&task->base, fwd_mbufs, n_fwd, out);
 }
 
 static int handle_esp_dec_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts)
@@ -630,6 +695,7 @@ struct task_init task_init_esp_enc = {
         .mode_str = "esp_enc",
         .init = init_task_esp_enc,
         .handle = handle_esp_enc_bulk,
+	.flag_features = TASK_FEATURE_ZERO_RX,
         .size = sizeof(struct task_esp_enc),
         .mbuf_size = 2048 + sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM
 };
@@ -639,6 +705,7 @@ struct task_init task_init_esp_dec = {
         .mode_str = "esp_dec",
         .init = init_task_esp_dec,
         .handle = handle_esp_dec_bulk,
+	.flag_features = TASK_FEATURE_ZERO_RX,
         .size = sizeof(struct task_esp_dec),
         .mbuf_size = 2048 + sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM
 };
