@@ -546,6 +546,20 @@ static int get_port_cfg(unsigned sindex, char *str, void *data)
 		}
 		cfg->port_conf.rxmode.hw_strip_crc = val;
 	}
+	else if (STR_EQ(str, "mtu size")) {
+		uint32_t val;
+		if (parse_int(&val, pkey)) {
+			return -1;
+		}
+		if (val) {
+			cfg->mtu = val;
+			if (cfg->mtu + ETHER_HDR_LEN + ETHER_CRC_LEN > ETHER_MAX_LEN) {
+				cfg->port_conf.rxmode.max_rx_pkt_len = cfg->mtu + ETHER_HDR_LEN + ETHER_CRC_LEN + 2 * PROX_VLAN_TAG_SIZE;
+				cfg->port_conf.rxmode.jumbo_frame = 1;
+			}
+		}
+	}
+
 	else if (STR_EQ(str, "rss")) {
 		uint32_t val;
 		if (parse_bool(&val, pkey)) {
