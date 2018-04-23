@@ -191,9 +191,10 @@ static struct cfg_section *cfg_check_section(char *buffer, struct cfg_section *p
 
 	/* only numeric characters are valid for section index */
 	char val[MAX_CFG_STRING_LEN];
-	if (pend[0] == '$')
-		parse_single_var(val, sizeof(val), pend);
-	else
+	if (pend[0] == '$') {
+		if (parse_vars(val, sizeof(val), pend))
+			return NULL;
+	} else
 		strncpy(val, pend, sizeof(val));
 
 	for (len = 0; val[len] != '\0'; ++len) {
