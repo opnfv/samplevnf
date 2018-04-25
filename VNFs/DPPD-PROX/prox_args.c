@@ -553,8 +553,11 @@ static int get_port_cfg(unsigned sindex, char *str, void *data)
 		}
 		if (val) {
 			cfg->mtu = val;
-			if (cfg->mtu + ETHER_HDR_LEN + ETHER_CRC_LEN > ETHER_MAX_LEN) {
-				cfg->port_conf.rxmode.max_rx_pkt_len = cfg->mtu + ETHER_HDR_LEN + ETHER_CRC_LEN + 2 * PROX_VLAN_TAG_SIZE;
+			// A frame of 1526 bytes (1500 bytes mtu, 14 bytes hdr, 4 bytes crc and 8 bytes vlan)
+			// should not be considered as a jumbo frame. However rte_ethdev.c considers that
+			// the max_rx_pkt_len for a non jumbo frame is 1518
+			cfg->port_conf.rxmode.max_rx_pkt_len = cfg->mtu + ETHER_HDR_LEN + ETHER_CRC_LEN;
+			if (cfg->port_conf.rxmode.max_rx_pkt_len > ETHER_MAX_LEN) {
 				cfg->port_conf.rxmode.jumbo_frame = 1;
 			}
 		}
@@ -1219,7 +1222,6 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 	}
 
 	else if (STR_EQ(str, "mbuf size")) {
-		targ->mbuf_size_set_explicitely = 1;
 		return parse_int(&targ->mbuf_size, pkey);
 	}
 	if (STR_EQ(str, "memcache size")) {

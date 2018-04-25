@@ -41,7 +41,24 @@ void set_port_defaults(void);
 #define MAX_RSS_QUEUE_BITS      9
 
 #define PROX_VLAN_TAG_SIZE	4
-#define MBUF_SIZE (ETHER_MAX_LEN + (unsigned)sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM +  2 * PROX_VLAN_TAG_SIZE)
+
+/* MBUF_SIZE can be configured based on the following:
+   - If only one segment is used ETH_TXQ_FLAGS_NOMULTSEGS can be used resulting
+     in vector mode used for transmission hence higher performance
+   - Only one segment is used by the rx function if the mbuf size is big enough
+   - Bigger mbufs result in more memory used, hence slighly lower performance (DTLB misses)
+   - Selecting the smaller mbuf is not obvious as pmds might behave slighly differently:
+     - on ixgbe a 1526 + 256 mbuf size will cause any packets bigger than 1024 bytes to be segmented
+     - on i40e a 1526 + 256 mbuf size will cause any packets bigger than 1408 bytes to be segmented
+     - other pmds might have additional requirements
+   As the performance decrease due to the usage of bigger mbuf is not very important, we prefer
+   here to use  the same, bigger, mbuf size for all pmds, making the code easier to support.
+   An mbuf size of 2048 + 128 + 128 + 8 can hold a 2048 packet, and only one segment will be used
+   except if jumbo frames are enabled. +8 (VLAN) is needed for i40e (and maybe other pmds).
+   TX_MBUF_SIZE is used for when transmitting only: in this case the mbuf size can be smaller.
+*/
+#define MBUF_SIZE (2048 + (unsigned)sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM + 2 * PROX_VLAN_TAG_SIZE)
+#define TX_MBUF_SIZE (ETHER_MAX_LEN + (unsigned)sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM +  2 * PROX_VLAN_TAG_SIZE)
 
 #define PROX_MTU   ETHER_MAX_LEN - ETHER_HDR_LEN - ETHER_CRC_LEN
 

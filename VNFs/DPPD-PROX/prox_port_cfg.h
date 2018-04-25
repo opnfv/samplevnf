@@ -64,6 +64,8 @@ struct prox_port_cfg {
 	struct {
 		int tx_offload_cksum;
 	} capabilities;
+	uint32_t max_rx_pkt_len;
+	uint32_t min_rx_bufsize;
 };
 
 extern rte_atomic32_t lsc;

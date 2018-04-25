@@ -112,9 +112,8 @@ static struct task_init task_init_l2fwd = {
 	.mode_str = "l2fwd",
 	.init = init_task_l2fwd,
 	.handle = handle_l2fwd_bulk,
-	.flag_features = TASK_FEATURE_NEVER_DISCARDS|TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS|TASK_FEATURE_TXQ_FLAGS_NOMULTSEGS,
+	.flag_features = TASK_FEATURE_NEVER_DISCARDS|TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS,
 	.size = sizeof(struct task_l2fwd),
-	.mbuf_size = 2048 + sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM,
 };
 
 __attribute__((constructor)) static void reg_task_l2fwd(void)

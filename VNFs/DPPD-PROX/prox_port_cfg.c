@@ -182,6 +182,8 @@ void init_rte_dev(int use_dummy_devices)
 
 		port_cfg->max_txq = dev_info.max_tx_queues;
 		port_cfg->max_rxq = dev_info.max_rx_queues;
+		port_cfg->max_rx_pkt_len = dev_info.max_rx_pktlen;
+		port_cfg->min_rx_bufsize = dev_info.min_rx_bufsize;
 
 		if (!dev_info.pci_dev)
 			continue;
@@ -189,7 +191,7 @@ void init_rte_dev(int use_dummy_devices)
 		snprintf(port_cfg->pci_addr, sizeof(port_cfg->pci_addr),
 			 "%04x:%02x:%02x.%1x", dev_info.pci_dev->addr.domain, dev_info.pci_dev->addr.bus, dev_info.pci_dev->addr.devid, dev_info.pci_dev->addr.function);
 		strncpy(port_cfg->driver_name, dev_info.driver_name, sizeof(port_cfg->driver_name));
-		plog_info("\tPort %u : driver='%s' tx_queues=%d rx_queues=%d\n", port_id, !strcmp(port_cfg->driver_name, "")? "null" : port_cfg->driver_name, port_cfg->max_txq, port_cfg->max_rxq);
+		plog_info("\tPort %u : driver='%s' tx_queues=%d rx_queues=%d, max_rx_pktlen = %d, min_rx_bufsize = %d\n", port_id, !strcmp(port_cfg->driver_name, "")? "null" : port_cfg->driver_name, port_cfg->max_txq, port_cfg->max_rxq, port_cfg->max_rx_pkt_len, port_cfg->min_rx_bufsize);
 
 		if (strncmp(port_cfg->driver_name, "rte_", 4) == 0) {
 			strncpy(port_cfg->short_name, prox_port_cfg[port_id].driver_name + 4, sizeof(port_cfg->short_name));
@@ -278,10 +280,7 @@ static void init_port(struct prox_port_cfg *port_cfg)
 		/* not receiving on this port */
 		plog_info("\t\tPort %u had no RX queues, setting to 1\n", port_id);
 		port_cfg->n_rxq = 1;
-		uint32_t mbuf_size = MBUF_SIZE;
-		if (strcmp(port_cfg->short_name, "vmxnet3") == 0) {
-			mbuf_size = MBUF_SIZE + RTE_PKTMBUF_HEADROOM;
-		}
+		uint32_t mbuf_size = TX_MBUF_SIZE;
 		plog_info("\t\tAllocating dummy memory pool on socket %u with %u elements of size %u\n",
 			  port_cfg->socket, port_cfg->n_rxd, mbuf_size);
 		port_cfg->pool[0] = rte_mempool_create(dummy_pool_name, port_cfg->n_rxd, mbuf_size,
@@ -295,9 +294,14 @@ static void init_port(struct prox_port_cfg *port_cfg)
 		dummy_pool_name[0]++;
 	} else {
 		// Most pmd should now support setting mtu
+		if (port_cfg->mtu + ETHER_HDR_LEN + ETHER_CRC_LEN > port_cfg->max_rx_pkt_len) {
+			plog_info("\t\tMTU is too big for the port, reducing MTU from %d to %d\n", port_cfg->mtu, port_cfg->max_rx_pkt_len);
+			port_cfg->mtu = port_cfg->max_rx_pkt_len;
+		}
 		plog_info("\t\tSetting MTU size to %u for port %u ...\n", port_cfg->mtu, port_id);
 		ret = rte_eth_dev_set_mtu(port_id, port_cfg->mtu);
-		PROX_PANIC(ret < 0, "\n\t\t\trte_eth_dev_set_mtu() failed on port %u: error %d\n", port_id, ret);
+		if (ret)
+			plog_err("\t\t\trte_eth_dev_set_mtu() failed on port %u: error %d\n", port_id, ret);
 
 		if (port_cfg->n_txq == 0) {
 			/* not sending on this port */
@@ -317,6 +321,20 @@ static void init_port(struct prox_port_cfg *port_cfg)
 		port_cfg->port_conf.rx_adv_conf.rss_conf.rss_hf 	= ETH_RSS_IPV4|ETH_RSS_NONF_IPV4_UDP;
 #endif
 	}
+	if (port_cfg->tx_conf.txq_flags & ETH_TXQ_FLAGS_NOREFCOUNT)
+		plog_info("\t\tEnabling No refcnt on port %d\n", port_id);
+	else
+		plog_info("\t\tRefcnt enabled on port %d\n", port_id);
+
+	if (port_cfg->tx_conf.txq_flags & ETH_TXQ_FLAGS_NOOFFLOADS)
+		plog_info("\t\tEnabling No TX offloads on port %d\n", port_id);
+	else
+		plog_info("\t\tTX offloads enabled on port %d\n", port_id);
+
+	if (port_cfg->tx_conf.txq_flags & ETH_TXQ_FLAGS_NOMULTSEGS)
+		plog_info("\t\tEnabling No TX MultiSegs on port %d\n", port_id);
+	else
+		plog_info("\t\tTX Multi segments enabled on port %d\n", port_id);
 
 	plog_info("\t\tConfiguring port %u... with %u RX queues and %u TX queues\n",
 		  port_id, port_cfg->n_rxq, port_cfg->n_txq);
