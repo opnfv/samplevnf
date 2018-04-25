@@ -1005,15 +1005,20 @@ static struct rte_mempool *task_gen_create_mempool(struct task_args *targ, uint1
 	const int sock_id = rte_lcore_to_socket_id(targ->lconf->id);
 
 	name[0]++;
-	uint32_t mbuf_size = MBUF_SIZE;
+	uint32_t mbuf_size = TX_MBUF_SIZE;
 	if (max_frame_size + (unsigned)sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM > mbuf_size)
 		mbuf_size = max_frame_size + (unsigned)sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM;
+	plog_info("\t\tCreating mempool with name '%s'\n", name);
 	ret = rte_mempool_create(name, targ->nb_mbuf - 1, mbuf_size,
 				 targ->nb_cache_mbuf, sizeof(struct rte_pktmbuf_pool_private),
 				 rte_pktmbuf_pool_init, NULL, rte_pktmbuf_init, 0,
 				 sock_id, 0);
 	PROX_PANIC(ret == NULL, "Failed to allocate dummy memory pool on socket %u with %u elements\n",
 		   sock_id, targ->nb_mbuf - 1);
+
+        plog_info("\t\tMempool %p size = %u * %u cache %u, socket %d\n", ret,
+                  targ->nb_mbuf - 1, mbuf_size, targ->nb_cache_mbuf, sock_id);
+
 	return ret;
 }
 
@@ -1318,7 +1323,7 @@ static struct task_init task_init_gen = {
 #ifdef SOFT_CRC
 	// For SOFT_CRC, no offload is needed. If both NOOFFLOADS and NOMULTSEGS flags are set the
 	// vector mode is used by DPDK, resulting (theoretically) in higher performance.
-	.flag_features = TASK_FEATURE_NEVER_DISCARDS | TASK_FEATURE_NO_RX | TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS | TASK_FEATURE_TXQ_FLAGS_NOMULTSEGS,
+	.flag_features = TASK_FEATURE_NEVER_DISCARDS | TASK_FEATURE_NO_RX | TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS,
 #else
 	.flag_features = TASK_FEATURE_NEVER_DISCARDS | TASK_FEATURE_NO_RX,
 #endif
@@ -1335,7 +1340,7 @@ static struct task_init task_init_gen_l3 = {
 #ifdef SOFT_CRC
 	// For SOFT_CRC, no offload is needed. If both NOOFFLOADS and NOMULTSEGS flags are set the
 	// vector mode is used by DPDK, resulting (theoretically) in higher performance.
-	.flag_features = TASK_FEATURE_NEVER_DISCARDS | TASK_FEATURE_NO_RX | TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS | TASK_FEATURE_TXQ_FLAGS_NOMULTSEGS,
+	.flag_features = TASK_FEATURE_NEVER_DISCARDS | TASK_FEATURE_NO_RX | TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS,
 #else
 	.flag_features = TASK_FEATURE_NEVER_DISCARDS | TASK_FEATURE_NO_RX,
 #endif
@@ -1350,7 +1355,7 @@ static struct task_init task_init_gen_pcap = {
 	.start = start_pcap,
 	.early_init = init_task_gen_early,
 #ifdef SOFT_CRC
-	.flag_features = TASK_FEATURE_NEVER_DISCARDS | TASK_FEATURE_NO_RX | TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS | TASK_FEATURE_TXQ_FLAGS_NOMULTSEGS,
+	.flag_features = TASK_FEATURE_NEVER_DISCARDS | TASK_FEATURE_NO_RX | TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS,
 #else
 	.flag_features = TASK_FEATURE_NEVER_DISCARDS | TASK_FEATURE_NO_RX,
 #endif

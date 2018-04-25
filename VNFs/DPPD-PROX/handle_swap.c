@@ -246,9 +246,8 @@ static struct task_init task_init_swap = {
 	.mode_str = "swap",
 	.init = init_task_swap,
 	.handle = handle_swap_bulk,
-	.flag_features = TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS|TASK_FEATURE_TXQ_FLAGS_NOMULTSEGS,
+	.flag_features = TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS,
 	.size = sizeof(struct task_swap),
-	.mbuf_size = 2048 + sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM,
 };
 
 static struct task_init task_init_swap_arp = {
@@ -256,9 +255,8 @@ static struct task_init task_init_swap_arp = {
 	.sub_mode_str = "l3",
 	.init = init_task_swap,
 	.handle = handle_swap_bulk,
-	.flag_features = TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS|TASK_FEATURE_TXQ_FLAGS_NOMULTSEGS,
+	.flag_features = TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS,
 	.size = sizeof(struct task_swap),
-	.mbuf_size = 2048 + sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM,
 };
 
 __attribute__((constructor)) static void reg_task_swap(void)

@@ -139,9 +139,8 @@ static struct task_init task_init_mirror = {
 	.mode_str = "mirror",
 	.init = init_task_mirror,
 	.handle = handle_mirror_bulk,
-	.flag_features = TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS | TASK_FEATURE_TXQ_FLAGS_NOMULTSEGS | TASK_FEATURE_TXQ_FLAGS_REFCOUNT,
+	.flag_features = TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS | TASK_FEATURE_TXQ_FLAGS_REFCOUNT,
 	.size = sizeof(struct task_mirror),
-	.mbuf_size = 2048 + sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM,
 };
 
 static struct task_init task_init_mirror2 = {
@@ -149,9 +148,8 @@ static struct task_init task_init_mirror2 = {
 	.sub_mode_str = "copy",
 	.init = init_task_mirror_copy,
 	.handle = handle_mirror_bulk_copy,
-	.flag_features = TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS | TASK_FEATURE_TXQ_FLAGS_NOMULTSEGS,
+	.flag_features = TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS,
 	.size = sizeof(struct task_mirror),
-	.mbuf_size = 2048 + sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM,
 };
 
 __attribute__((constructor)) static void reg_task_mirror(void)
