@@ -845,7 +845,7 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 	static char name[] = "server_mempool";
 	name[0]++;
 	task->mempool = rte_mempool_create(name,
-					   4*1024 - 1, MBUF_SIZE,
+					   4*1024 - 1, TX_MBUF_SIZE,
 					   targ->nb_cache_mbuf,
 					   sizeof(struct rte_pktmbuf_pool_private),
 					   rte_pktmbuf_pool_init, NULL,
@@ -959,7 +959,7 @@ static void init_task_gen_client(struct task_base *tbase, struct task_args *targ
 	const uint32_t socket = rte_lcore_to_socket_id(targ->lconf->id);
 	name[0]++;
 	task->mempool = rte_mempool_create(name,
-					   4*1024 - 1, MBUF_SIZE,
+					   4*1024 - 1, TX_MBUF_SIZE,
 					   targ->nb_cache_mbuf,
 					   sizeof(struct rte_pktmbuf_pool_private),
 					   rte_pktmbuf_pool_init, NULL,
@@ -1118,7 +1118,6 @@ static struct task_init task_init_gen1 = {
 	.stop = stop_task_gen_server,
 	.flag_features = TASK_FEATURE_ZERO_RX,
 	.size = sizeof(struct task_gen_server),
-	.mbuf_size = 2048 + sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM,
 };
 
 static struct task_init task_init_gen2 = {
@@ -1129,7 +1128,6 @@ static struct task_init task_init_gen2 = {
 	.stop = stop_task_gen_client,
 	.flag_features = TASK_FEATURE_ZERO_RX,
 	.size = sizeof(struct task_gen_client),
-	.mbuf_size = 2048 + sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM,
 };
 
 __attribute__((constructor)) static void reg_task_gen(void)

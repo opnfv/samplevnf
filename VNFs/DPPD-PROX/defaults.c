@@ -54,7 +54,8 @@ static const struct rte_eth_conf default_port_conf = {
 		.jumbo_frame    = 0, /* Jumbo frame support disabled */
 		.hw_strip_crc   = 1, /* CRC stripped by hardware --- always set to 1 in VF */
 		.hw_vlan_extend = 0,
-		.mq_mode        = 0
+		.mq_mode        = 0,
+		.max_rx_pkt_len = PROX_MTU + ETHER_HDR_LEN + ETHER_CRC_LEN
 	},
 	.rx_adv_conf = {
 		.rss_conf = {
@@ -164,7 +165,6 @@ void set_task_defaults(struct prox_cfg* prox_cfg, struct lcore_cfg* lcore_cfg_in
 			targ->tunnel_hop_limit = 3;
 			targ->ctrl_freq = 1000;
 			targ->lb_friend_core = 0xFF;
-			targ->mbuf_size = MBUF_SIZE;
 			targ->n_pkts = 1024*64;
 			targ->runtime_flags |= TASK_TX_CRC;
 			targ->accuracy_limit_nsec = 5000;

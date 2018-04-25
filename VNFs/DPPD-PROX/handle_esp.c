@@ -691,21 +691,19 @@ static int handle_esp_dec_bulk(struct task_base *tbase, struct rte_mbuf **mbufs,
 }
 
 struct task_init task_init_esp_enc = {
-	.mode = ESP_ENC,
-	.mode_str = "esp_enc",
-	.init = init_task_esp_enc,
-	.handle = handle_esp_enc_bulk,
-	.size = sizeof(struct task_esp_enc),
-	.mbuf_size = 2048 + sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM
+        .mode = ESP_ENC,
+        .mode_str = "esp_enc",
+        .init = init_task_esp_enc,
+        .handle = handle_esp_enc_bulk,
+        .size = sizeof(struct task_esp_enc),
 };
 
 struct task_init task_init_esp_dec = {
-	.mode = ESP_ENC,
-	.mode_str = "esp_dec",
-	.init = init_task_esp_dec,
-	.handle = handle_esp_dec_bulk,
-	.size = sizeof(struct task_esp_dec),
-	.mbuf_size = 2048 + sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM
+        .mode = ESP_ENC,
+        .mode_str = "esp_dec",
+        .init = init_task_esp_dec,
+        .handle = handle_esp_dec_bulk,
+        .size = sizeof(struct task_esp_dec),
 };
 
 __attribute__((constructor)) static void reg_task_esp_enc(void)

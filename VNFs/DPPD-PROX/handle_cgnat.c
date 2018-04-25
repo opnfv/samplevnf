@@ -973,12 +973,11 @@ static struct task_init task_init_nat = {
 	.init = init_task_nat,
 	.handle = handle_nat_bulk,
 #ifdef SOFT_CRC
-	.flag_features = TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS|TASK_FEATURE_TXQ_FLAGS_NOMULTSEGS|TASK_FEATURE_ROUTING|TASK_FEATURE_ZERO_RX,
+	.flag_features = TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS|TASK_FEATURE_ROUTING|TASK_FEATURE_ZERO_RX,
 #else
-	.flag_features = TASK_FEATURE_TXQ_FLAGS_NOMULTSEGS|TASK_FEATURE_ROUTING|TASK_FEATURE_ZERO_RX,
+	.flag_features = TASK_FEATURE_ROUTING|TASK_FEATURE_ZERO_RX,
 #endif
 	.size = sizeof(struct task_nat),
-	.mbuf_size = 2048 + sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM,
 };
 
 __attribute__((constructor)) static void reg_task_nat(void)

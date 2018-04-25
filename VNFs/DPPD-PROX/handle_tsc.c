@@ -40,9 +40,8 @@ static struct task_init task_init = {
 	.mode_str = "tsc",
 	.init = NULL,
 	.handle = handle_bulk_tsc,
-	.flag_features = TASK_FEATURE_NEVER_DISCARDS|TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS|TASK_FEATURE_TXQ_FLAGS_NOMULTSEGS|TASK_FEATURE_THROUGHPUT_OPT,
+	.flag_features = TASK_FEATURE_NEVER_DISCARDS|TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS|TASK_FEATURE_THROUGHPUT_OPT,
 	.size = sizeof(struct task_tsc),
-	.mbuf_size = 2048 + sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM,
 };
 
 __attribute__((constructor)) static void reg_task_nop(void)
