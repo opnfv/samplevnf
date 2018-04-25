@@ -252,10 +252,6 @@ static void configure_if_tx_queues(struct task_args *targ, uint8_t socket)
 		   use refcnt. */
 		if (!chain_flag_state(targ, TASK_FEATURE_TXQ_FLAGS_REFCOUNT, 1)) {
 			prox_port_cfg[if_port].tx_conf.txq_flags |= ETH_TXQ_FLAGS_NOREFCOUNT;
-			plog_info("\t\tEnabling No refcnt on port %d\n", if_port);
-		}
-		else {
-			plog_info("\t\tRefcnt used on port %d\n", if_port);
 		}
 
 		/* By default OFFLOAD is enabled, but if the whole
@@ -264,22 +260,8 @@ static void configure_if_tx_queues(struct task_args *targ, uint8_t socket)
 		   disabled for the destination port. */
 		if (!chain_flag_state(targ, TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS, 0)) {
 			prox_port_cfg[if_port].tx_conf.txq_flags |= ETH_TXQ_FLAGS_NOOFFLOADS;
-			plog_info("\t\tDisabling TX offloads on port %d\n", if_port);
-		} else {
-			plog_info("\t\tEnabling TX offloads on port %d\n", if_port);
 		}
 
-		/* By default NOMULTSEGS is disabled, as drivers/NIC might split packets on RX
-		   It should only be enabled when we know for sure that the RX does not split packets.
-		   Set the ETH_TXQ_FLAGS_NOMULTSEGS flag if all of the tasks up to the task
-		   transmitting to the port use no_multsegs. */
-		if (!chain_flag_state(targ, TASK_FEATURE_TXQ_FLAGS_NOMULTSEGS, 0)) {
-			prox_port_cfg[if_port].tx_conf.txq_flags |= ETH_TXQ_FLAGS_NOMULTSEGS;
-			plog_info("\t\tEnabling No MultiSegs on port %d\n", if_port);
-		}
-		else {
-			plog_info("\t\tMultiSegs used on port %d\n", if_port);
-		}
 	}
 }
 
@@ -293,28 +275,46 @@ static void configure_if_rx_queues(struct task_args *targ, uint8_t socket)
 			return;
 		}
 
-		PROX_PANIC(!prox_port_cfg[if_port].active, "Port %u not used, aborting...\n", if_port);
 		port = &prox_port_cfg[if_port];
+		PROX_PANIC(!port->active, "Port %u not used, aborting...\n", if_port);
 
 		if(port->rx_ring[0] != '\0') {
 			port->n_rxq = 0;
 		}
 
-		// Force multi segment support if mbuf size is not big enough.
+		// If the mbuf size (of the rx task) is not big enough, we might receive multiple segments
 		// This is usually the case when setting a big mtu size i.e. enabling jumbo frames.
+		// If the packets get transmitted, then multi segments will have to be enabled on the TX port
 		uint16_t max_frame_size = port->mtu + ETHER_HDR_LEN + ETHER_CRC_LEN + 2 * PROX_VLAN_TAG_SIZE;
 		if (max_frame_size + sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM > targ->mbuf_size) {
-			targ->task_init->flag_features &= ~TASK_FEATURE_TXQ_FLAGS_NOMULTSEGS;
-			plog_info("\t\tDisabling No MultSegs on port %u as %lu > %u\n", if_port, max_frame_size + sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM, targ->mbuf_size);
+			targ->task_init->flag_features |= TASK_FEATURE_TXQ_FLAGS_MULTSEGS;
 		}
-		targ->rx_port_queue[i].queue = prox_port_cfg[if_port].n_rxq;
+		targ->rx_port_queue[i].queue = port->n_rxq;
 		port->pool[targ->rx_port_queue[i].queue] = targ->pool;
 		port->pool_size[targ->rx_port_queue[i].queue] = targ->nb_mbuf - 1;
 		port->n_rxq++;
 
-		int dsocket = prox_port_cfg[if_port].socket;
+		int dsocket = port->socket;
 		if (dsocket != -1 && dsocket != socket) {
 			plog_warn("RX core on socket %d while device on socket %d\n", socket, dsocket);
+		}
+	}
+}
+
+static void configure_multi_segments(void)
+{
+	struct lcore_cfg *lconf = NULL;
+	struct task_args *targ;
+	uint8_t if_port;
+
+	while (core_targ_next(&lconf, &targ, 0) == 0) {
+		for (uint8_t i = 0; i < targ->nb_txports; ++i) {
+			if_port = targ->tx_port_queue[i].port;
+			// Multi segment is disabled for most tasks. It is only enabled for tasks requiring big packets.
+			// We can only enable "no multi segment" if no such task exists in the chain of tasks.
+			if (!chain_flag_state(targ, TASK_FEATURE_TXQ_FLAGS_MULTSEGS, 1)) {
+				prox_port_cfg[if_port].tx_conf.txq_flags |= ETH_TXQ_FLAGS_NOMULTSEGS;
+			}
 		}
 	}
 }
@@ -591,20 +591,16 @@ static void set_mbuf_size(struct task_args *targ)
 {
 	/* mbuf size can be set
 	 *  - from config file (highest priority, overwriting any other config) - should only be used as workaround
-	 *  - through each 'mode', overwriting the default mbuf_size
-	 *  - defaulted to MBUF_SIZE i.e. 1518 Bytes
+	 *  - defaulted to MBUF_SIZE.
 	 * Except if set explicitely, ensure that size is big enough for vmxnet3 driver
 	 */
-	if (targ->mbuf_size_set_explicitely)
+	if (targ->mbuf_size)
 		return;
 
-	if (targ->task_init->mbuf_size != 0) {
-		/* mbuf_size not set through config file but set through mode */
-		targ->mbuf_size = targ->task_init->mbuf_size;
-	}
-
+	targ->mbuf_size = MBUF_SIZE;
 	struct prox_port_cfg *port;
-	uint16_t max_frame_size = 0;
+	uint16_t max_frame_size = 0, min_buffer_size = 0;
+	int i40e = 0;
 	for (int i = 0; i < targ->nb_rxports; i++) {
 		uint8_t if_port = targ->rx_port_queue[i].port;
 
@@ -614,21 +610,23 @@ static void set_mbuf_size(struct task_args *targ)
 		port = &prox_port_cfg[if_port];
 		if (max_frame_size < port->mtu + ETHER_HDR_LEN + ETHER_CRC_LEN + 2 * PROX_VLAN_TAG_SIZE)
 			max_frame_size = port->mtu + ETHER_HDR_LEN + ETHER_CRC_LEN + 2 * PROX_VLAN_TAG_SIZE;
+		if (min_buffer_size < port->min_rx_bufsize)
+			min_buffer_size = port->min_rx_bufsize;
 
-		if (strcmp(port->short_name, "vmxnet3") == 0) {
-			if (targ->mbuf_size < MBUF_SIZE + RTE_PKTMBUF_HEADROOM)
-				targ->mbuf_size = MBUF_SIZE + RTE_PKTMBUF_HEADROOM;
-			if (targ->mbuf_size < max_frame_size)
-				targ->mbuf_size = max_frame_size + RTE_PKTMBUF_HEADROOM;
-		}
+		// Check whether we receive from i40e. This driver have extra mbuf size requirements
+		if (strcmp(port->short_name, "i40e") == 0)
+			i40e = 1;
 	}
-	if (max_frame_size) {
+	if (i40e) {
 		// i40e supports a maximum of 5 descriptors chained
 		uint16_t required_mbuf_size = RTE_ALIGN(max_frame_size / 5, 128) + sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM;
 		if (required_mbuf_size > targ->mbuf_size) {
 			targ->mbuf_size = required_mbuf_size;
-			plog_info("\t\tSetting mbuf_size to %u to support frame_size %u (mtu %u)\n", targ->mbuf_size, max_frame_size, port->mtu);
+			plog_info("\t\tSetting mbuf_size to %u to support frame_size %u\n", targ->mbuf_size, max_frame_size);
 		}
+	}
+	if (min_buffer_size > targ->mbuf_size) {
+		plog_warn("Mbuf size might be too small. This might result in packet segmentation and memory leak\n");
 	}
 
 }
@@ -914,6 +912,8 @@ static void init_lcores(void)
 
 	plog_info("=== Initializing queue numbers on cores ===\n");
 	configure_if_queues();
+
+	configure_multi_segments();
 
 	plog_info("=== Initializing rings on cores ===\n");
 	init_rings();

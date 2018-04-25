@@ -80,7 +80,6 @@ struct task_init {
 	size_t size;
 	uint16_t     flag_req_data; /* flags from prox_shared.h */
 	uint64_t     flag_features;
-	uint32_t mbuf_size;
 	LIST_ENTRY(task_init) entries;
 };
 
@@ -106,7 +105,6 @@ struct task_args {
 	struct lcore_cfg       *lconf;
 	uint32_t               nb_mbuf;
 	uint32_t               mbuf_size;
-	uint8_t    	       mbuf_size_set_explicitely;
 	uint32_t               nb_cache_mbuf;
 	uint8_t                nb_slave_threads;
 	uint8_t		       nb_worker_threads;
