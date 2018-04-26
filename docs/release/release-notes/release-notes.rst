@@ -43,7 +43,7 @@ Version History
 | *Date*         | *Version*          | *Comment*                       |
 |                |                    |                                 |
 +----------------+--------------------+---------------------------------+
-| "Oct 20 2017"  |  6.0               | SampleVNF for Farser release |
+| "April 27 2018"|  6.0.0             | SampleVNF for Farser release    |
 |                |                    |                                 |
 +----------------+--------------------+---------------------------------+
 
@@ -84,7 +84,7 @@ For Farser release, the *SampleVNF* supported:
 +----------------+---------------------------------------------------------+-------------------+
 | *CGNAPT*       | Carrier Grade Network Address and port Translation .5.0 |     v0.1.0        |
 +----------------+---------------------------------------------------------+-------------------+
-| *Prox*         | Packet pROcessing eXecution engine                      |     v0.39.0       |
+| *Prox*         | Packet pROcessing eXecution engine                      |     v0.40.0       |
 |                |  acts as traffic generator, L3FWD, L2FWD, BNG etc       |                   |
 +----------------+---------------------------------------------------------+-------------------+
 | *vACL*         | Access Control List                                     |     v0.1.0        |
@@ -108,7 +108,7 @@ testing:
 
   * VNF Characterization:
 
-    * Network - rfc2544, rfc36.0, latency, http_test etc
+    * Network - rfc2544, rfc3511, latency, http_test etc
 
 
 The *SampleVNF* is developed in the OPNFV community, by the SampleVNF_ team.
@@ -127,19 +127,19 @@ Release Data
 | **Project**                          | SampleVNF                            |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
-| **Repo/tag**                         | samplevnf/Farser.6.0              |
+| **Repo/tag**                         | samplevnf/Farser.6.0.0               |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
-| **SampleVNF Docker image tag**       | Farser.6.0                        |
+| **SampleVNF Docker image tag**       | Farser.6.0.0                         |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
-| **Release designation**              | Farser                            |
+| **Release designation**              | Farser                               |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
-| **Release date**                     | "October 20 2017"                    |
+| **Release date**                     | "April" 27 2018"                     |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
-| **Purpose of the delivery**          | OPNFV Farser release 6.0          |
+| **Purpose of the delivery**          | OPNFV Farser release 6.0.0           |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
 
@@ -150,9 +150,9 @@ Deliverables
 Documents
 ---------
 
- - User Guide: http://artifacts.opnfv.org/samplevnf/euphrates/5.0.0/docs/testing_user_userguide/index.html
+ - User Guide: http://artifacts.opnfv.org/samplevnf/docs/testing_user_userguide/index.html
 
- - Developer Guide: http://artifacts.opnfv.org/samplevnf/euphrates/5.0.0/docs/testing_developer/index.html
+ - Developer Guide: http://artifacts.opnfv.org/samplevnf/docs/testing_developer/index.html
 
 
 Software Deliverables
@@ -194,8 +194,39 @@ Feature additions
 -----------------
 
 - SampleVNF RESTful API support
+- Security gateway testing
+- Support reading inline jumbo frame and dump them
+- Add support for generation of jumbo frames
+- Support for dpdk-stable-17.11.1 crypto
+- Add support for multiple variables in core definition
+- Support async operation in handle_esp
+- Add support for reception of jumbo frames
+- Support additional MAC format in config file
+- Add support for multiple GEN tasks running on the same core
+- Add support for crypto on multiple cores
+- Zero packet loss testing has been added.
+- Integrate irq mode into PROX (support display and command line)
+- Support async operation in handle_esp
+- Add config option to use port mac as src mac in l2fwd and swap
+- Add support for DPDK 17.11
+- Add support for multiple tasks generating to same ip in l3 mode.
+- Add l3 support for tasks without physical tx ports
 
-- Introduce Network service benchmarking
+Bug fixes:
+- link speed when link is down at startup.
+- minimum latency
+- potential crash if link speed is null
+- the calculation of dropped packets and other changes
+- latency accuracy and dumping latencies to file
+- issues with the pkt_size command
+- potential crash in rx and tx distribution
+- extrapolation used in latency measurements
+- dumping receive packets
+- using signature in latency measurements
+- stacking of rx receive functions
+- potential crash when issuing "tx distr stop" command.
+- extrapolation used in latency measurements
+- memory leak introduced by 4a65cd84
 
 
 Known Issues/Faults
@@ -211,16 +242,73 @@ Known Issues/Faults
 Corrected Faults
 ----------------
 
-Farser.6.0:
+Farser.6.0.0:
 
-+----------------------------+------------------------------------------------+
-| **JIRA REFERENCE**         | **DESCRIPTION**                                |
-|                            |                                                |
-+----------------------------+------------------------------------------------+
-|                            |                                                |
-|                            |                                                |
-+----------------------------+------------------------------------------------+
++----------------------------+-------------------------------------------------------------------+
+| **JIRA REFERENCE**         | **DESCRIPTION**                                                   |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-98               |  SampleVNF RESTful API support                                    |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-99               |  Security gateway testing                                         |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-100              |  Add support for generation of jumbo frames                       |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-101              |  Support for dpdk-stable-17.11.1 crypto                           |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-102              |  Support async operation in handle_espo                           |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-103              |  Add support for reception of jumbo frames                        |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-104              |  Support additional MAC format in config file                     |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-105              |  support for multiple GEN tasks running on the same core          |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-106              |  Add support for crypto on multiple cores                         |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-107              |  Zero packet loss testing                                         |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-108              |  Integrate irq mode into PROX (support display and command line)  |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-109              |  Add config option to use port mac as src mac in l2fwd and swap   |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-110              |  Add support for DPDK 17.11                                       |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-111              |  Add support for multiple tasks generating to same ip in l3 mode  |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-112              |  Add l3 support for tasks without physical tx ports               |
++----------------------------+-------------------------------------------------------------------+
 
+Bug Fix Jira:
+
++----------------------------+-------------------------------------------------------------------+
+| **JIRA REFERENCE**         | **DESCRIPTION**                                                   |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-113              |  link speed when link is down at startup.                         |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-114              |  minimum latency                                                  |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-115              |  potential crash if link speed is null                            |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-116              |  the calculation of dropped packets and other changes             |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-117              |  latency accuracy and dumping latencies to file                   |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-118              |  issues with the pkt_size command                                 |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-119              |  extrapolation used in latency measurements                       |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-120              |  dumping receive packets                                          |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-121              |  using signature in latency measurements                          |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-122              |  stacking of rx receive functions                                 |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-123              |  potential crash when issuing "tx distr stop" command.            |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-124              |  extrapolation used in latency measurements                       |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-125              |  memory leak introduced by 4a65cd84                               |
++----------------------------+-------------------------------------------------------------------+
 
 Farser known restrictions/issues
 ====================================
