@@ -526,8 +526,11 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 			task->link_speed = task->port->link_speed * 125000L;
 			plog_info("\tPort %u: link speed is %ld Mbps\n",
 				(uint8_t)(task->port - prox_port_cfg), 8 * task->link_speed / 1000000);
-		} else
+		} else if (n_pkts) {
+			return task->base.tx_pkt(&task->base, mbufs, n_pkts, NULL);
+		} else {
 			return 0;
+		}
 	}
 
 	if (n_pkts == 0) {
