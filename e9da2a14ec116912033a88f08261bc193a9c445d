@@ -94,6 +94,30 @@
     },
     {
       "key": {
+        "uuid": "5a3f45e8_e5e82ae4",
+        "filename": "VNFs/DPPD-PROX/main.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 296,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2018-04-26T00:22:24Z",
+      "side": 1,
+      "message": "Will be fixed in be7812ea",
+      "parentUuid": "5a3f45e8_c42a5d8f",
+      "range": {
+        "startLine": 296,
+        "startChar": 14,
+        "endLine": 296,
+        "endChar": 37
+      },
+      "revId": "e9da2a14ec116912033a88f08261bc193a9c445d",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "5a3f45e8_a743d340",
         "filename": "VNFs/DPPD-PROX/main.c",
         "patchSetId": 1
@@ -111,6 +135,24 @@
     },
     {
       "key": {
+        "uuid": "5a3f45e8_fd960c3e",
+        "filename": "VNFs/DPPD-PROX/main.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 301,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2018-04-26T00:22:24Z",
+      "side": 1,
+      "message": "We still want to allocate pools etc.\nExample: we generate to a ring (i.e. another core).",
+      "parentUuid": "5a3f45e8_a743d340",
+      "revId": "e9da2a14ec116912033a88f08261bc193a9c445d",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "5a3f45e8_6411c95c",
         "filename": "VNFs/DPPD-PROX/main.c",
         "patchSetId": 1
@@ -122,6 +164,30 @@
       "writtenOn": "2018-04-20T18:54:53Z",
       "side": 1,
       "message": "Should be \"port-\u003e\"",
+      "range": {
+        "startLine": 310,
+        "startChar": 33,
+        "endLine": 310,
+        "endChar": 56
+      },
+      "revId": "e9da2a14ec116912033a88f08261bc193a9c445d",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5a3f45e8_c5e52e0a",
+        "filename": "VNFs/DPPD-PROX/main.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 310,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2018-04-26T00:22:24Z",
+      "side": 1,
+      "message": "Will be fixed in be7812ea",
+      "parentUuid": "5a3f45e8_6411c95c",
       "range": {
         "startLine": 310,
         "startChar": 33,
@@ -157,6 +223,30 @@
     },
     {
       "key": {
+        "uuid": "5a3f45e8_25efb2ea",
+        "filename": "VNFs/DPPD-PROX/main.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 315,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2018-04-26T00:22:24Z",
+      "side": 1,
+      "message": "Will be fixed in be7812ea",
+      "parentUuid": "5a3f45e8_44164d56",
+      "range": {
+        "startLine": 315,
+        "startChar": 16,
+        "endLine": 315,
+        "endChar": 39
+      },
+      "revId": "e9da2a14ec116912033a88f08261bc193a9c445d",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "5a3f45e8_475bef2d",
         "filename": "VNFs/DPPD-PROX/main.c",
         "patchSetId": 1
@@ -168,6 +258,24 @@
       "writtenOn": "2018-04-20T18:54:53Z",
       "side": 1,
       "message": "Shouldn\u0027t this be done in a second loop, once the maximum max_frame_size is known and targ-\u003embuf_size has been adjusted. Currently, line 629 could overwrite the actions taken below...",
+      "revId": "e9da2a14ec116912033a88f08261bc193a9c445d",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5a3f45e8_05ec36f2",
+        "filename": "VNFs/DPPD-PROX/main.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 618,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2018-04-26T00:22:24Z",
+      "side": 1,
+      "message": "Commit be7812ea is increasing default mbuf_size. There should be no extra requirements for vmxnet3 anymore",
+      "parentUuid": "5a3f45e8_475bef2d",
       "revId": "e9da2a14ec116912033a88f08261bc193a9c445d",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": false
@@ -191,6 +299,24 @@
     },
     {
       "key": {
+        "uuid": "5a3f45e8_fde44ce2",
+        "filename": "VNFs/DPPD-PROX/main.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 620,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2018-04-26T00:22:24Z",
+      "side": 1,
+      "message": "This was at least the case in the past - vmxnet3 was requiring this extra size. Not retested. But commit be7812ea, by increasing default mbuf_size, remore this extra requirements",
+      "parentUuid": "5a3f45e8_e71b1b71",
+      "revId": "e9da2a14ec116912033a88f08261bc193a9c445d",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "5a3f45e8_c7189f77",
         "filename": "VNFs/DPPD-PROX/main.c",
         "patchSetId": 1
@@ -202,6 +328,24 @@
       "writtenOn": "2018-04-20T18:54:53Z",
       "side": 1,
       "message": "Comparison and assignment should be consistent.\nTo be consistent with comparisons done on line 306 and 628, we should compare/assign targ-\u003embuf_size against/with:\nmax_frame_size + sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM",
+      "revId": "e9da2a14ec116912033a88f08261bc193a9c445d",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5a3f45e8_65bc1add",
+        "filename": "VNFs/DPPD-PROX/main.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 622,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2018-04-26T00:22:24Z",
+      "side": 1,
+      "message": "Same comment as above",
+      "parentUuid": "5a3f45e8_c7189f77",
       "revId": "e9da2a14ec116912033a88f08261bc193a9c445d",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": false
@@ -225,6 +369,24 @@
     },
     {
       "key": {
+        "uuid": "5a3f45e8_45c11e53",
+        "filename": "VNFs/DPPD-PROX/main.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 626,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2018-04-26T00:22:24Z",
+      "side": 1,
+      "message": "ixgbe seems OK.\nOther pmds are untested. But if mbuf size is too small, thn it can still be configured in the prox config file.",
+      "parentUuid": "5a3f45e8_c72fff86",
+      "revId": "e9da2a14ec116912033a88f08261bc193a9c445d",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "5a3f45e8_c7b41f37",
         "filename": "VNFs/DPPD-PROX/prox_args.c",
         "patchSetId": 1
@@ -242,6 +404,24 @@
     },
     {
       "key": {
+        "uuid": "5a3f45e8_85b7a6f4",
+        "filename": "VNFs/DPPD-PROX/prox_args.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 557,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2018-04-26T00:22:24Z",
+      "side": 1,
+      "message": "Different drivers seem to have different definition. In future commit we go to the defintion w/o VLAN. If we want toreceive 1526 bytes packets, we will need to increase mbuf size",
+      "parentUuid": "5a3f45e8_c7b41f37",
+      "revId": "e9da2a14ec116912033a88f08261bc193a9c445d",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "5a3f45e8_47f76ff5",
         "filename": "VNFs/DPPD-PROX/prox_port_cfg.c",
         "patchSetId": 1
@@ -253,6 +433,24 @@
       "writtenOn": "2018-04-20T18:54:53Z",
       "side": 1,
       "message": "Might not work on i40e and DPDK \u003c 16.07, according to https://mail.openvswitch.org/pipermail/ovs-dev/2017-June/333842.html\nSome good info in this thread, as well as in http://dpdk.org/ml/archives/dev/2017-June/068784.html\ne.g. ixgbe might require setting rx_mode.enable_scatter",
+      "revId": "e9da2a14ec116912033a88f08261bc193a9c445d",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5a3f45e8_a5b2a203",
+        "filename": "VNFs/DPPD-PROX/prox_port_cfg.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 297,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2018-04-26T00:22:24Z",
+      "side": 1,
+      "message": "Good catch. Setting mtu for ixgbe first check if the device is started (not our case here), so is ok. \nHowever, ixgbevf will fail setting mtu as only checking rx_mode.enable_scatter (not checking if device is started).\nCommit be7812ea have mbuf big enough to avoid scatter for non jumbo frames. This commit now considers failures in setting mtu as an error, but will not panic. \nScatter mode seems to be enabled for both drivers in dev_start if the buffer size is too small.",
+      "parentUuid": "5a3f45e8_47f76ff5",
       "revId": "e9da2a14ec116912033a88f08261bc193a9c445d",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": false
