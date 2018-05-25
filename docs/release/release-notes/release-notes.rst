@@ -43,7 +43,7 @@ Version History
 | *Date*         | *Version*          | *Comment*                       |
 |                |                    |                                 |
 +----------------+--------------------+---------------------------------+
-| "April 27 2018"|  6.0.0             | SampleVNF for Farser release    |
+| "May 25 2018"  |  6.1.0             | SampleVNF for Farser release    |
 |                |                    |                                 |
 +----------------+--------------------+---------------------------------+
 
@@ -127,19 +127,25 @@ Release Data
 | **Project**                          | SampleVNF                            |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
-| **Repo/tag**                         | samplevnf/Farser.6.0.0               |
+| **Repo/tag**                         | opnfv-6.1.0                          |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
-| **SampleVNF Docker image tag**       | Farser.6.0.0                         |
+| **SampleVNF Docker image tag**       | Farser 6.1                           |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
-| **Release designation**              | Farser                               |
+| **Release designation**              | Farser 6.1                           |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
-| **Release date**                     | "April" 27 2018"                     |
+| **Release date**                     | "May 25 2018"                        |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
-| **Purpose of the delivery**          | OPNFV Farser release 6.0.0           |
+| **Purpose of the delivery**          | Fraser alignment to Released         |
+|                                      | bug-fixes for the following:         |
+|                                      | - Memory leak                        |
+|                                      | - minimum latency                    |
+|                                      | - Increase default mbuf size and     |
+|                                      |   code simplification/cleanup        |
+|                                      | - Crash in rx/tx distribution        |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
 
@@ -242,7 +248,7 @@ Known Issues/Faults
 Corrected Faults
 ----------------
 
-Farser.6.0.0:
+Farser 6.1:
 
 +----------------------------+-------------------------------------------------------------------+
 | **JIRA REFERENCE**         | **DESCRIPTION**                                                   |
