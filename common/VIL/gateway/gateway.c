@@ -122,29 +122,16 @@ uint32_t is_gateway(void)
  */
 
 void gw_get_nh_port_ipv4(uint32_t dst_ip_addr,
-				uint32_t *dst_port, uint32_t *nhip)
+			 uint32_t *dst_port, uint32_t *nhip)
 {
-	int i;
 	uint32_t j;
 
 	*nhip = 0;
 	*dst_port = 0xff;
 
-	for(j = 0; j < gw_get_num_ports(); j++){
-
-		for (i = 0; i < p_route_data[j]->route_ent_cnt; i++) {
-
-			if ((p_route_data[j]->route_table[i].nh_mask) ==
-					(dst_ip_addr &
-					 p_route_data[j]->route_table[i].mask)) {
-
-				*dst_port = p_route_data[j]->route_table[i].port;
-				*nhip =  p_route_data[j]->route_table[i].nh;
-
-				lib_arp_nh_found++;
-				return;
-			}
-		}
+	for(j = 0; j < num_out_ports; j++) {
+           if (gw_get_route_nh_port_ipv4(dst_ip_addr, dst_port, nhip, j))
+               return;
 	}
 }
 
