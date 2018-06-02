@@ -1163,7 +1163,13 @@ static void vfw_fwd_pkts_ipv4(struct rte_mbuf **pkts, uint64_t *pkts_mask,
 		src_phy_port = pkt->port;
 		uint32_t dst_phy_port = INVALID_DESTIF;
 
-		if(is_gateway()){
+		if(is_phy_port_privte(src_phy_port))
+		    dst_phy_port = prv_to_pub_map[src_phy_port];
+		else
+		    dst_phy_port = pub_to_prv_map[src_phy_port];
+
+
+		if(likely(is_gateway())){
 			struct ipv4_hdr *ipv4hdr = (struct ipv4_hdr *)
 				RTE_MBUF_METADATA_UINT32_PTR(pkt, IP_START);
 
@@ -1174,13 +1180,13 @@ static void vfw_fwd_pkts_ipv4(struct rte_mbuf **pkts, uint64_t *pkts_mask,
 			uint32_t nhip = 0;
 			uint32_t dst_ip_addr = rte_bswap32(ipv4hdr->dst_addr);
 
-			gw_get_nh_port_ipv4(dst_ip_addr, &dst_phy_port, &nhip);
+			gw_get_route_nh_port_ipv4(dst_ip_addr, &dst_phy_port, &nhip, dst_phy_port);
 
 			ret_arp_data = get_dest_mac_addr_ipv4(nhip, dst_phy_port, &dst_mac);
 
 			/* Gateway Proc Ends */
 
-			if (arp_cache_dest_mac_present(dst_phy_port)) {
+			if (likely(arp_cache_dest_mac_present(dst_phy_port))) {
 
 				ether_addr_copy(&dst_mac, &ehdr->d_addr);
 				ether_addr_copy(get_link_hw_addr(dst_phy_port), &ehdr->s_addr);
@@ -1221,11 +1227,6 @@ static void vfw_fwd_pkts_ipv4(struct rte_mbuf **pkts, uint64_t *pkts_mask,
 			}
 		} else {
 			/* IP Pkt forwarding based on  pub/prv mapping */
-			if(is_phy_port_privte(src_phy_port))
-				dst_phy_port = prv_to_pub_map[src_phy_port];
-			else
-				dst_phy_port = pub_to_prv_map[src_phy_port];
-
 			meta_data_addr->output_port = vfw_pipe->outport_id[dst_phy_port];
 
 			if(VFW_DEBUG) {
