@@ -52,7 +52,7 @@
 #include "pipeline_arpicmp.h"
 
 #include <civetweb.h>
-#include <json/json.h>
+#include <json-c/json.h>
 #include "app.h"
 #include "lib_arp.h"
 #include "interface.h"

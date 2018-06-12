@@ -29,7 +29,7 @@
 #include "pipeline.h"
 #include "pipeline_cgnapt_common.h"
 #include <civetweb.h>
-#include <json/json.h>
+#include <json-c/json.h>
 
 /**
  * Add NAPT rule to the NAPT rule table.

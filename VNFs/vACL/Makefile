@@ -66,7 +66,7 @@ CFLAGS += -I$(VNF_CORE)/common/VIL/gateway
 TOP = $(RTE_SDK)/../civetweb
 CFLAGS += -I$(TOP)/include $(COPT) -DUSE_WEBSOCKET -DUSE_IPV6 -DUSE_SSL_DH=1
 CFLAGS += -DREST_API_SUPPORT
-LDFLAGS +=  -ljson -lcrypto -lssl
+LDFLAGS +=  -ljson-c -lcrypto -lssl
 LDFLAGS += -L$(RTE_SDK)/../civetweb/ -lcivetweb
 
 # all source are stored in SRCS-y

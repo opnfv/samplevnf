@@ -31,7 +31,7 @@
 #include "pipeline_vfw_be.h"
 
 #include <civetweb.h>
-#include <json/json.h>
+#include <json-c/json.h>
 
 /* VFW IPV4 and IPV6 enable flags for debugging (Default both on) */
 extern int vfw_ipv4_enabled;
