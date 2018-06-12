@@ -179,8 +179,7 @@ install_libs()
 	sudo apt-get update
 	sudo apt-get -y install build-essential linux-headers-$(uname -r) git unzip libpcap0.8-dev gcc \
 		make libc6 libc6-dev g++-multilib libzmq3-dev libcurl4-openssl-dev net-tools wget gcc unzip \
-                libpcap-dev libncurses-dev libedit-dev pciutils liblua5.2-dev libncursesw5-dev libjson0 \
-		libjson0-dev libssl-dev
+                libpcap-dev libncurses-dev libedit-dev pciutils liblua5.2-dev libncursesw5-dev libjson-c-dev libssl-dev
 	touch .download
 }
 

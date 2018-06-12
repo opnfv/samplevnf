@@ -29,7 +29,7 @@
 #include "pipeline.h"
 #include "pipeline_acl_be.h"
 #include <civetweb.h>
-#include <json/json.h>
+#include <json-c/json.h>
 
 /* ACL IPV4 and IPV6 enable flags for debugging (Default both on) */
 extern int acl_ipv4_enabled;
