@@ -24,3 +24,4 @@ then
 else
        echo Assuming port is already bound to DPDK
 fi
+exit 0

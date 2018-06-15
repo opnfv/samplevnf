@@ -31,8 +31,9 @@ from logging import handlers
 from prox_ctrl import prox_ctrl
 import ConfigParser
 import ast
+import atexit
 
-version="18.3.27"
+version="18.6.15"
 env = "rapid" #Default string for environment
 test = "basicrapid" #Default string for test
 loglevel="DEBUG" # sets log level for writing to file
@@ -182,7 +183,7 @@ def connect_client(client):
 	log.debug("Connected to VM on %s" % client.ip())
 
 def run_iteration(gensock,sutsock):
-	sleep_time = 2
+	sleep_time = 3
 	# Sleep_time is needed to be able to do accurate measurements to check for packet loss. We need to make this time large enough so that we do not take the first measurement while some packets from the previous tests migth still be in flight
 	time.sleep(sleep_time)
 	abs_old_rx, abs_old_tx, abs_old_drop, abs_old_tsc, abs_tsc_hz = gensock.core_stats(genstatcores)
@@ -260,7 +261,7 @@ def run_speedtest(gensock,sutsock):
 	gensock.set_size(gencores,0,size) # This is setting the frame size
 	gensock.set_value(gencores,0,16,(size-14),2) # 18 is the difference between the frame size and IP size = size of (MAC addresses, ethertype and FCS)
 	gensock.set_value(gencores,0,38,(size-34),2) # 38 is the difference between the frame size and UDP size = 18 + size of IP header (=20)
-	# This will only work when using sending UDP packets. For different protocls and ehternet types, we would need a differnt calculation
+	# This will only work when using sending UDP packets. For different protocols and ethernet types, we would need a different calculation
         while (maxspeed-minspeed > ACCURACY):
                 attempts += 1
                 print('Measurement ongoing at speed: ' + str(round(speed,2)) + '%      ',end='\r')
@@ -416,10 +417,11 @@ def run_irqtest(sock):
 	for j,bucket in enumerate(buckets,start=1):
 		irq[0][j] = '<'+ bucket
 	irq[0][-1] = '>'+ buckets [-2]
+	sock.start(irqcores)
+	time.sleep(2)
 	for j,bucket in enumerate(buckets,start=1):
 		for i,irqcore in enumerate(irqcores,start=1):
 			old_irq[i][j] = sock.irq_stats(irqcore,j-1)
-	sock.start(irqcores)
 	time.sleep(float(runtime))
 	sock.stop(irqcores)
 	for i,irqcore in enumerate(irqcores,start=1):
@@ -429,19 +431,41 @@ def run_irqtest(sock):
 			if diff == 0:
 				irq[i][j] = '0'
 			else:
-				irq[i][j] = diff/float(runtime)
+				irq[i][j] = str(round(diff/float(runtime), 2))
 	log.info('\n'.join([''.join(['{:>12}'.format(item) for item in row]) for row in irq]))
 
+def run_impairtest(gensock,sutsock,speed):
+        log.info("+-----------------------------------------------------------------------------------------------------------------------------------------------------------------+")
+        log.info("| Generator is sending UDP (1 flow) packets (64 bytes) to SUT via GW dropping and delaying packets. SUT sends packets back. Use ctrl-c to stop the test           |")
+	log.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+")
+	log.info("| Test   |  Speed requested   | Sent to NIC    |  Sent by Gen   | Forward by SUT |  Rec. by Gen   |  Avg. Latency  |  Max. Latency  |  Packets Lost  | Loss Ratio |")
+	log.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+")
+	size=60
+	attempts = 0
+	gensock.set_size(gencores,0,size) # This is setting the frame size
+	gensock.set_value(gencores,0,16,(size-14),2) # 18 is the difference between the frame size and IP size = size of (MAC addresses, ethertype and FCS)
+	gensock.set_value(gencores,0,38,(size-34),2) # 38 is the difference between the frame size and UDP size = 18 + size of IP header (=20)
+	# This will only work when using sending UDP packets. For different protocols and ethernet types, we would need a different calculation
+        gensock.speed(speed, gencores)
+        while True:
+                attempts += 1
+                print('Measurement ongoing at speed: ' + str(round(speed,2)) + '%      ',end='\r')
+                sys.stdout.flush()
+                time.sleep(1)
+                # Get statistics now that the generation is stable and NO ARP messages any more
+		pps_req_tx,pps_tx,pps_sut_tx_str,pps_rx,lat_avg,lat_max, abs_dropped, abs_tx = run_iteration(gensock,sutsock)
+		drop_rate = 100.0*abs_dropped/abs_tx
+	        log.info('|{:>7}'.format(str(attempts))+" | " + '{:>5.1f}'.format(speed) + '% ' +'{:>6.3f}'.format(get_pps(speed,size)) + ' Mpps | '+ '{:>9.3f}'.format(pps_req_tx)+' Mpps | '+ '{:>9.3f}'.format(pps_tx) +' Mpps | ' + '{:>9}'.format(pps_sut_tx_str) +' Mpps | '+ '{:>9.3f}'.format(pps_rx)+' Mpps | '+ '{:>9.0f}'.format(lat_avg)+' us   | '+ '{:>9.0f}'.format(lat_max)+' us   | '+ '{:>14d}'.format(abs_dropped)+ ' |''{:>9.2f}'.format(drop_rate)+ '%  |')
 
 def init_test():
 # Running at low speed to make sure the ARP messages can get through.
 # If not doing this, the ARP message could be dropped by a switch in overload and then the test will not give proper results
 # Note hoever that if we would run the test steps during a very long time, the ARP would expire in the switch.
 # PROX will send a new ARP request every seconds so chances are very low that they will all fail to get through
-	sock[0].speed(0.01, gencores)
-	sock[0].start(genstatcores)
+	socks[0].speed(0.01, gencores)
+	socks[0].start(genstatcores)
 	time.sleep(2)
-	sock[0].stop(gencores)
+	socks[0].stop(gencores)
 
 global sutstatcores
 global genstatcores
@@ -450,6 +474,9 @@ global gencores
 global irqcores
 global DROP_RATE_TRESHOLD
 global ACCURACY
+global required_number_of_test_machines
+clients =[]
+socks =[]
 vmDPIP =[]
 vmAdminIP =[]
 vmDPmac =[]
@@ -527,12 +554,19 @@ for vm in range(1, int(required_number_of_test_machines)+1):
 		irqcores = group1cores
 	f.close
 #####################################################################################
-client =[]
-sock =[]
+def exit_handler():
+	log.debug ('exit cleanup')
+	for sock in socks:
+        	sock.quit()
+	for client in clients:
+	        client.close()
+	sys.exit(0)
+
+atexit.register(exit_handler)
 
 for vm in range(0, int(required_number_of_test_machines)):
-	client.append(prox_ctrl(vmAdminIP[machine_index[vm]], key+'.pem','root'))
-	connect_client(client[-1])
+	clients.append(prox_ctrl(vmAdminIP[machine_index[vm]], key+'.pem','root'))
+	connect_client(clients[-1])
 # Creating script to bind the right network interface to the poll mode driver
 	devbindfile = "devbindvm%d.sh"%(vm+1)
 	with open("devbind.sh") as f:
@@ -541,20 +575,20 @@ for vm in range(0, int(required_number_of_test_machines)):
 			f.write(newText)
 	st = os.stat(devbindfile)
 	os.chmod(devbindfile, st.st_mode | stat.S_IEXEC)
-	client[-1].scp_put('./%s'%devbindfile, '/root/devbind.sh')
+	clients[-1].scp_put('./%s'%devbindfile, '/root/devbind.sh')
 	cmd = '/root/devbind.sh'
-	client[-1].run_cmd(cmd)
+	clients[-1].run_cmd(cmd)
 	log.debug("devbind.sh running on VM%d"%(vm+1))
-	client[-1].scp_put('./%s'%config_file[vm], '/root/%s'%config_file[vm])
-	client[-1].scp_put('./parameters%d.lua'%(vm+1), '/root/parameters.lua')
+	clients[-1].scp_put('./%s'%config_file[vm], '/root/%s'%config_file[vm])
+	clients[-1].scp_put('./parameters%d.lua'%(vm+1), '/root/parameters.lua')
 	log.debug("Starting PROX on VM%d"%(vm+1))
 	if script_control[vm] == 'true':
 		cmd = '/root/prox/build/prox -e -t -o cli -f /root/%s'%config_file[vm]
 	else:
 		cmd = '/root/prox/build/prox -t -o cli -f /root/%s'%config_file[vm]
 	if configonly == False:
-		client[-1].fork_cmd(cmd, 'PROX Testing on TestM%d'%(vm+1))
-		sock.append(connect_socket(client[-1]))
+		clients[-1].fork_cmd(cmd, 'PROX Testing on TestM%d'%(vm+1))
+		socks.append(connect_socket(clients[-1]))
 if configonly:
 	sys.exit()
 init_code = testconfig.get('DEFAULT', 'init_code')
@@ -569,6 +603,3 @@ for vm in range(1, int(number_of_tests)+1):
 	cmd=testconfig.get('test%d'%vm,'cmd')
 	eval(cmd)
 ####################################################
-for vm in range(0, int(required_number_of_test_machines)):
-	sock[vm].quit()
-	client[vm].close()
