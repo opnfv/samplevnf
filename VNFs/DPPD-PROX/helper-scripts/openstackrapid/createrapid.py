@@ -31,7 +31,7 @@ from logging import handlers
 from prox_ctrl import prox_ctrl
 import ConfigParser
 
-version="18.3.27"
+version="18.6.15"
 stack = "rapid" #Default string for stack. This is not an OpenStack Heat stack, just a group of VMs
 vms = "rapidVMs" #Default string for vms file
 key = "prox" # default name for kay
@@ -296,7 +296,8 @@ else:
 		log.exception("Failed to create subnet: " + subnet)
 		raise Exception("Failed to create subnet: " + subnet)
 
-
+ServerToBeCreated=[]
+ServerName=[]
 config = ConfigParser.RawConfigParser()
 vmconfig = ConfigParser.RawConfigParser()
 vmconfig.read(vms+'.vms')
@@ -306,16 +307,18 @@ for vm in range(1, int(total_number_of_VMs)+1):
 	flavor_meta_data = vmconfig.get('VM%d'%vm, 'flavor_meta_data')
 	boot_info = vmconfig.get('VM%d'%vm, 'boot_info')
 	SRIOV_port = vmconfig.get('VM%d'%vm, 'SRIOV_port')
-	server_name = '%s-VM%d'%(stack,vm)
+	ServerName.append('%s-VM%d'%(stack,vm))
 	flavor_name = '%s-VM%d-flavor'%(stack,vm)
-	log.debug("Checking server: "+server_name)
-	cmd = 'openstack server show '+server_name
+	log.debug("Checking server: "+ServerName[-1])
+	cmd = 'openstack server show '+ServerName[-1]
 	log.debug (cmd)
 	cmd = cmd + ' |grep "\sname\s" | tr -s " " | cut -d" " -f 4'
 	ServerExist = subprocess.check_output(cmd , shell=True).strip()
-	if ServerExist == server_name:
-		log.info("Server ("+server_name+") already active")
+	if ServerExist == ServerName[-1]:
+		log.info("Server ("+ServerName[-1]+") already active")
+		ServerToBeCreated.append("no")
 	else:
+		ServerToBeCreated.append("yes")
 		# Checking if the flavor already exists, if not create it
 		log.debug("Checking flavor: "+flavor_name)
 		cmd = 'openstack flavor show '+flavor_name
@@ -353,24 +356,25 @@ for vm in range(1, int(total_number_of_VMs)+1):
 		else:
 			wait = ' '
 		log.info("Creating server...")
-		cmd = 'openstack server create --flavor %s --key-name %s --image %s %s %s%s%s'%(flavor_name,key,image,nic_info,boot_info,wait,server_name)
+		cmd = 'openstack server create --flavor %s --key-name %s --image %s %s %s%s%s'%(flavor_name,key,image,nic_info,boot_info,wait,ServerName[-1])
 		log.debug(cmd)
 		cmd = cmd + ' |grep "\sname\s" | tr -s " " | cut -d" " -f 4'
 		ServerExist = subprocess.check_output(cmd , shell=True).strip()
-		if floating_network <> 'NO':
+if floating_network <> 'NO':
+	for vm in range(0, int(total_number_of_VMs)):
+		if ServerToBeCreated[vm] =="yes":
 			log.info('Creating floating IP ...')
 			cmd = 'openstack floating ip create  ' + floating_network
 			log.debug(cmd)
 			cmd = cmd + ' |grep "floating_ip_address " | tr -s " " | cut -d"|" -f 3'
 			vmAdminIP = subprocess.check_output(cmd , shell=True).strip()
 			log.info('Associating floating IP ...')
-			cmd = 'openstack server add floating ip %s %s'%(server_name,vmAdminIP)
+			cmd = 'openstack server add floating ip %s %s'%(ServerName[vm],vmAdminIP)
 			log.debug(cmd)
 			output = subprocess.check_output(cmd , shell=True).strip()
-			print (output)
+		
 for vm in range(1, int(total_number_of_VMs)+1):
-	server_name = '%s-VM%d'%(stack,vm)
-	cmd = 'openstack server show %s'%(server_name)
+	cmd = 'openstack server show %s'%(ServerName[vm-1])
 	log.debug(cmd)
 	output = subprocess.check_output(cmd , shell=True).strip()
         searchString = '.*%s.*?([0-9]*\.[0-9]*\.[0-9]*\.[0-9]*)' %(dataplane_network)
@@ -381,15 +385,15 @@ for vm in range(1, int(total_number_of_VMs)+1):
 	vmAdminIP = matchObj.group(2)
 	if vmAdminIP == None:
 		vmAdminIP = matchObj.group(1)
-	cmd = 'openstack port list |grep  %s | tr -s " " | cut -d"|" -f 4'%(vmDPIP)
+	cmd = 'openstack port list |egrep  "\\b%s\\b" | tr -s " " | cut -d"|" -f 4'%(vmDPIP)
 	log.debug(cmd)
 	vmDPmac = subprocess.check_output(cmd , shell=True).strip()
 	config.add_section('M%d'%vm)
-	config.set('M%d'%vm, 'name', server_name)
+	config.set('M%d'%vm, 'name', ServerName[vm-1])
 	config.set('M%d'%vm, 'admin_ip', vmAdminIP)
 	config.set('M%d'%vm, 'dp_ip', vmDPIP)
 	config.set('M%d'%vm, 'dp_mac', vmDPmac)
-	log.info('%s: (admin IP: %s), (dataplane IP: %s), (dataplane MAC: %s)' % (server_name,vmAdminIP,vmDPIP,vmDPmac))
+	log.info('%s: (admin IP: %s), (dataplane IP: %s), (dataplane MAC: %s)' % (ServerName[vm-1],vmAdminIP,vmDPIP,vmDPmac))
 
 config.add_section('OpenStack')
 config.set('OpenStack', 'stack', stack)
