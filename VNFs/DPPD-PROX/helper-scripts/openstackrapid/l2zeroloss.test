@@ -45,9 +45,8 @@ config_file = l2swap.cfg
 group1cores = [1]
 
 [test1]
-cmd=run_speedtest(sock[0],sock[1])
+cmd=run_speedtest(socks[0],socks[1])
 [test2]
-cmd=run_sizetest(sock[0],sock[1])
+cmd=run_sizetest(socks[0],socks[1])
 [test3]
-cmd=run_flowtest(sock[0],sock[1])
-
+cmd=run_flowtest(socks[0],socks[1])

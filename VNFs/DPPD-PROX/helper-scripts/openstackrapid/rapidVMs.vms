@@ -19,8 +19,10 @@
 total_number_of_vms=3
 flavor_info=--ram 4096 --disk 20 --vcpus 4
 ;flavor_meta_data=--property hw:mem_page_size=large --property hw:cpu_policy=dedicated --property hw:cpu_thread_policy=isolate --property hw:numa_nodes=1 --property hw:numa_cpus.0=0,1,2,3 --property hw:numa_mempolicy=strict --property hw:numa_mem.0=4096
-flavor_meta_data=--property hw:mem_page_size=large --property hw:cpu_policy=dedicated --property hw:cpu_thread_policy=isolate
-boot_info=--availability-zone nova --user-data prox_user_data.sh --security-group default
+;flavor_meta_data=--property hw:mem_page_size=large --property hw:cpu_policy=dedicated --property hw:cpu_thread_policy=isolate
+;flavor_meta_data=--property hw:mem_page_size=large --property hw:cpu_policy=dedicated
+flavor_meta_data=--property hw:mem_page_size=large --property hw:cpu_policy=dedicated --property hw:cpu_realtime=yes --property hw:cpu_realtime_mask=^0
+boot_info=--availability-zone nova --security-group default
 SRIOV_port=NO
 
 [VM1]
@@ -28,4 +30,31 @@ SRIOV_port=NO
 [VM2]
 
 [VM3]
+
+[VM4]
+
+[VM5]
+
+[VM6]
+
+[VM7]
+
+[VM8]
+
+[VM9]
+
+[VM10]
+
+[VM11]
+
+[VM12]
+
+[VM13]
+
+[VM14]
+
+[VM15]
+
+[VM16]
+
 

@@ -1,0 +1,11 @@
+[Unit]
+Description=Check PROX system setup (isolated_cores, uio)
+DefaultDependencies=no
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/check_prox_system_setup.sh
+
+[Install]
+WantedBy=multi-user.target

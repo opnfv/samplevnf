@@ -1,0 +1,33 @@
+{
+"_Copyright": "Copyright (c) 2010-2018 Intel Corporation",
+"_License":   "SPDX-License-Identifier: Apache-2.0",
+"builders": [
+   {
+"type": "openstack",
+"ssh_username": "centos",
+"image_name": "newrapidVM",
+"source_image": "aa0f8333-d8e1-42db-8210-6b39d9ee7267",
+"flavor": "7aaec028-eccc-4612-8f9b-29a1e039943a",
+"networks": "97bbe96f-ee1b-4789-ace8-e922f76bea3f",
+"use_floating_ip": true,
+"floating_ip_pool": "1f564356-8c23-41e2-8292-7696ffd98adf",
+"security_groups": "8fd498fc-5bd8-4be6-94e4-a2cc3b02d151"
+   }
+],
+"provisioners": [
+   {
+   "type": "file",
+   "source": "./check_prox_system_setup.sh",
+   "destination": "/home/centos/"
+   },
+   {
+   "type": "file",
+   "source": "./check-prox-system-setup.service",
+   "destination": "/home/centos/"
+   },
+   {
+   "type": "shell",
+   "script": "deploycentos.sh"
+   }
+]
+}
