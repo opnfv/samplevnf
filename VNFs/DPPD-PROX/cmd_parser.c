@@ -1582,6 +1582,49 @@ static int parse_cmd_port_stats(const char *str, struct input *input)
 	return 0;
 }
 
+static int parse_cmd_multi_port_stats(const char *str, struct input *input)
+{
+	uint32_t ports[PROX_MAX_PORTS];
+	int nb_ports = parse_list_set(ports, str, PROX_MAX_PORTS);
+	if (nb_ports <= 0) {
+		return -1;
+	}
+
+	char buf[PROX_MAX_PORTS * (11+5*21) + 1], *pbuf = buf;
+	int left = sizeof(buf);
+	for (int i = 0; i < nb_ports; ++i) {
+		struct get_port_stats s;
+		if (stats_port(ports[i], &s)) {
+			plog_err("Invalid port %u\n", ports[i]);
+			return 0;
+		}
+
+		int len = snprintf(pbuf, left,
+				"%u,"
+				"%"PRIu64",%"PRIu64","
+				"%"PRIu64",%"PRIu64","
+				"%"PRIu64";",
+				//TODO: adjust buf size above when adding fields
+				ports[i],
+				s.rx_tot, s.tx_tot,
+				s.no_mbufs_tot, s.ierrors_tot + s.imissed_tot,
+				s.last_tsc);
+		if ((len < 0) || (len >= left)) {
+			plog_err("Cannot print stats for port %u\n", ports[i]);
+			return 0;
+		}
+		pbuf += len;
+		left -= len;
+	}
+	pbuf--;
+	*pbuf = '\n';
+
+	plog_info("%s", buf);
+	if (input->reply)
+		input->reply(input, buf, sizeof(buf) - left);
+	return 0;
+}
+
 static int parse_cmd_core_stats(const char *str, struct input *input)
 {
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
@@ -1933,6 +1976,7 @@ static struct cmd_str cmd_strings[] = {
 	{"accuracy limit", "<core id> <task id> <nsec>", "Only consider latency of packets that were measured with an error no more than <nsec>", parse_cmd_accuracy},
 	{"core stats", "<core id> <task id>", "Print rx/tx/drop for task <task id> running on core <core id>", parse_cmd_core_stats},
 	{"port_stats", "<port id>", "Print rate for no_mbufs, ierrors + imissed, rx_bytes, tx_bytes, rx_pkts, tx_pkts; totals for RX, TX, no_mbufs, ierrors + imissed for port <port id>", parse_cmd_port_stats},
+	{"multi port stats", "<port list>", "Get stats for multiple ports, semi-colon separated: port id, total for rx_pkts, tx_pkts, no_mbufs, ierrors + imissed, last_tsc", parse_cmd_multi_port_stats},
 	{"read reg", "", "Read register", parse_cmd_read_reg},
 	{"write reg", "", "Read register", parse_cmd_write_reg},
 	{"set vlan offload", "", "Set Vlan offload", parse_cmd_set_vlan_offload},
