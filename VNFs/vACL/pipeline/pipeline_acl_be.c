@@ -777,7 +777,13 @@ pkt_work_acl_key(struct rte_pipeline *p,
             uint32_t packet_length = rte_pktmbuf_pkt_len(pkt);
 
             uint32_t dest_if = INVALID_DESTIF;
+            uint32_t dst_phy_port = INVALID_DESTIF;
             uint32_t src_phy_port = pkt->port;
+            if(is_phy_port_privte(src_phy_port))
+              dst_phy_port = prv_to_pub_map[src_phy_port];
+            else
+              dst_phy_port = pub_to_prv_map[src_phy_port];
+
 
             if(is_gateway()){
 
@@ -794,7 +800,7 @@ pkt_work_acl_key(struct rte_pipeline *p,
                 uint32_t nhip = 0;
                 uint32_t dst_ip_addr = rte_bswap32(ipv4hdr->dst_addr);
 
-                gw_get_nh_port_ipv4(dst_ip_addr, &dest_if, &nhip);
+                gw_get_route_nh_port_ipv4(dst_ip_addr, &dest_if, &nhip, dst_phy_port);
 
                 ret_arp_data = get_dest_mac_addr_ipv4(nhip, dest_if, &dst_mac);
 
@@ -1475,6 +1481,11 @@ pkt_work_acl_ipv4_key(struct rte_pipeline *p,
 
             uint32_t dest_if = INVALID_DESTIF;
             uint32_t src_phy_port = pkt->port;
+            uint32_t dst_phy_port = INVALID_DESTIF;
+            if(is_phy_port_privte(src_phy_port))
+              dst_phy_port = prv_to_pub_map[src_phy_port];
+            else
+              dst_phy_port = pub_to_prv_map[src_phy_port];
 
             if(is_gateway()){
 
@@ -1493,7 +1504,7 @@ pkt_work_acl_ipv4_key(struct rte_pipeline *p,
                 uint32_t src_phy_port = pkt->port;
                 uint32_t dst_ip_addr = rte_bswap32(ipv4hdr->dst_addr);
 
-                gw_get_nh_port_ipv4(dst_ip_addr, &dest_if, &nhip);
+                gw_get_route_nh_port_ipv4(dst_ip_addr, &dest_if, &nhip, dst_phy_port);
 
                 ret_arp_data = get_dest_mac_addr_ipv4(nhip, dest_if, &dst_mac);
 
