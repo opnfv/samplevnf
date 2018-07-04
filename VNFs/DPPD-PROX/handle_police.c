@@ -58,8 +58,11 @@ static uint8_t handle_police(struct task_police *task, struct rte_mbuf *mbuf, ui
 	enum rte_meter_color in_color = e_RTE_METER_GREEN;
 	enum rte_meter_color out_color;
 	uint32_t pkt_len = rte_pktmbuf_pkt_len(mbuf) + task->overhead;
+#if RTE_VERSION < RTE_VERSION_NUM(18,5,0,0)
 	out_color = rte_meter_srtcm_color_aware_check(&task->sr_flows[user], tsc, pkt_len, in_color);
-
+#else
+	out_color = 0;	// TODO DPDK1805
+#endif
 	return task->police_act[in_color][out_color] == ACT_DROP? OUT_DISCARD : 0;
 }
 
@@ -68,7 +71,11 @@ static uint8_t handle_police_tr(struct task_police *task, struct rte_mbuf *mbuf,
 	enum rte_meter_color in_color = e_RTE_METER_GREEN;
 	enum rte_meter_color out_color;
 	uint32_t pkt_len = rte_pktmbuf_pkt_len(mbuf) + task->overhead;
+#if RTE_VERSION < RTE_VERSION_NUM(18,5,0,0)
 	out_color = rte_meter_trtcm_color_aware_check(&task->tr_flows[user], tsc, pkt_len, in_color);
+#else
+	out_color = 0;// TODO DPDK1805
+#endif
 
 	if (task->runtime_flags  & TASK_MARK) {
 #if RTE_VERSION >= RTE_VERSION_NUM(1,8,0,0)
@@ -190,6 +197,7 @@ static void init_task_police(struct task_base *tbase, struct task_args *targ)
 {
 	struct task_police *task = (struct task_police *)tbase;
 	const int socket_id = rte_lcore_to_socket_id(targ->lconf->id);
+	plog_warn("mode police might not be supported in this prox/dpdk version\n"); // TODO DPDK1805
 
 	task->overhead = targ->overhead;
 	task->runtime_flags = targ->runtime_flags;
@@ -216,7 +224,11 @@ static void init_task_police(struct task_base *tbase, struct task_args *targ)
 		};
 
 		for (uint32_t i = 0; i < targ->n_flows; ++i) {
+#if RTE_VERSION < RTE_VERSION_NUM(18,5,0,0)
 			rte_meter_srtcm_config(&task->sr_flows[i], &params);
+#else
+	// TODO DPDK1805
+#endif
 		}
 	}
 	else {
@@ -235,7 +247,11 @@ static void init_task_police(struct task_base *tbase, struct task_args *targ)
 		};
 
 		for (uint32_t i = 0; i < targ->n_flows; ++i) {
+#if RTE_VERSION < RTE_VERSION_NUM(18,5,0,0)
 			rte_meter_trtcm_config(&task->tr_flows[i], &params);
+#else
+	// TODO DPDK1805
+#endif
 		}
 	}
 
