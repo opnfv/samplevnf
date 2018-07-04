@@ -17,6 +17,8 @@
 #ifndef _VXLANGPE_NSH_H_
 #define _VXLANGPE_NSH_H_
 
+#include <rte_version.h>
+
 struct nsh_hdr {
 	uint16_t version :2;
 	uint16_t oa_flag :1;
@@ -33,12 +35,13 @@ struct nsh_hdr {
 	uint32_t ctx_4;
 } __attribute__((__packed__));
 
+#if RTE_VERSION < RTE_VERSION_NUM(18,5,0,0)
 struct vxlan_gpe_hdr {
 	uint8_t flag_0;
 	uint8_t flag_1;
 	uint8_t reserved;
-	uint8_t next_proto;
+	uint8_t proto;
 	uint32_t vni_res;
 } __attribute__((__packed__));
-
+#endif
 #endif /* _VXLANGPE_NSH_H_ */

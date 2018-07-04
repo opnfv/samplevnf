@@ -261,6 +261,7 @@ void cmd_mem_stats(void)
 
 void cmd_mem_layout(void)
 {
+#if RTE_VERSION < RTE_VERSION_NUM(18,5,0,0)
 	const struct rte_memseg* memseg = rte_eal_get_physmem_layout();
 
 	plog_info("Memory layout:\n");
@@ -287,6 +288,10 @@ void cmd_mem_layout(void)
 			  memseg[i].addr,
 			  memseg[i].len/memseg[i].hugepage_sz, sz_str);
 	}
+#else
+	plog_info("Memory layout: command not supported in this DPDK version\n");
+	// TODO DPDK1805
+#endif
 }
 
 void cmd_dump(uint8_t lcore_id, uint8_t task_id, uint32_t nb_packets, struct input *input, int rx, int tx)
