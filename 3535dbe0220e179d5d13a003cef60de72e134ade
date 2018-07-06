@@ -1,0 +1,123 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "da5c1566_499fdf52",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 14,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-07-06T15:37:37Z",
+      "side": 1,
+      "message": "In order to easily identify the remaining changes, it might be wise to add some DPDK1805 tag into the comments.",
+      "revId": "3535dbe0220e179d5d13a003cef60de72e134ade",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da5c1566_29b70bda",
+        "filename": "VNFs/DPPD-PROX/commands.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 293,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-07-06T15:37:37Z",
+      "side": 1,
+      "message": "Good to inform user.\nThat\u0027s were a DPDK1805 tag in the TODO comment would also help developers later.",
+      "revId": "3535dbe0220e179d5d13a003cef60de72e134ade",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da5c1566_69b103e1",
+        "filename": "VNFs/DPPD-PROX/handle_police.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 64,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-07-06T15:37:37Z",
+      "side": 1,
+      "message": "Same remark about DPDK1805 tag in TODO comments.",
+      "revId": "3535dbe0220e179d5d13a003cef60de72e134ade",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da5c1566_89c73745",
+        "filename": "VNFs/DPPD-PROX/handle_police.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 77,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-07-06T15:37:37Z",
+      "side": 1,
+      "message": "ditto",
+      "revId": "3535dbe0220e179d5d13a003cef60de72e134ade",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da5c1566_49ed1fc3",
+        "filename": "VNFs/DPPD-PROX/handle_police.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 196,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-07-06T15:37:37Z",
+      "side": 1,
+      "message": "It might be good, inside this init function, to log a \"not implemented\" warning when using both police mode and DPDK \u003e\u003d 18.05.",
+      "revId": "3535dbe0220e179d5d13a003cef60de72e134ade",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da5c1566_89ce1759",
+        "filename": "VNFs/DPPD-PROX/handle_police.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 229,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-07-06T15:37:37Z",
+      "side": 1,
+      "message": "ditto DPDK1805 tag",
+      "revId": "3535dbe0220e179d5d13a003cef60de72e134ade",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da5c1566_e9db5319",
+        "filename": "VNFs/DPPD-PROX/handle_police.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 252,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-07-06T15:37:37Z",
+      "side": 1,
+      "message": "ditto",
+      "revId": "3535dbe0220e179d5d13a003cef60de72e134ade",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
