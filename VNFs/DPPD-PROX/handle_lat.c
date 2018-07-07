@@ -106,6 +106,7 @@ struct task_lat {
 	struct lat_test lt[2];
 	struct lat_test *lat_test;
 	uint32_t generator_count;
+	uint16_t min_pkt_len;
 	struct early_loss_detect *eld;
 	struct rx_pkt_meta_data *rx_pkt_meta;
 	uint64_t link_speed;
@@ -428,20 +429,10 @@ static void task_lat_store_lat_buf(struct task_lat *task, uint64_t rx_packet_ind
 	lat_info->tx_err = tx_err;
 }
 
-static uint32_t task_lat_early_loss_detect(struct task_lat *task, struct unique_id *unique_id)
+static uint32_t task_lat_early_loss_detect(struct task_lat *task, uint32_t packet_id, uint8_t generator_id)
 {
-	struct early_loss_detect *eld;
-	uint8_t generator_id;
-	uint32_t packet_index;
-
-	unique_id_get(unique_id, &generator_id, &packet_index);
-
-	if (generator_id >= task->generator_count)
-		return 0;
-
-	eld = &task->eld[generator_id];
-
-	return early_loss_detect_add(eld, packet_index);
+	struct early_loss_detect *eld = &task->eld[generator_id];
+	return early_loss_detect_add(eld, packet_id);
 }
 
 static uint64_t tsc_extrapolate_backward(uint64_t link_speed, uint64_t tsc_from, uint64_t bytes, uint64_t tsc_minimum)
@@ -502,8 +493,6 @@ static int task_lat_can_store_latency(struct task_lat *task)
 
 static void task_lat_store_lat(struct task_lat *task, uint64_t rx_packet_index, uint64_t rx_time, uint64_t tx_time, uint64_t rx_error, uint64_t tx_error, uint32_t packet_id, uint8_t generator_id)
 {
-	if (tx_time == 0)
-		return;
 	uint32_t lat_tsc = diff_time(rx_time, tx_time) << LATENCY_ACCURACY;
 
 	lat_test_add_latency(task->lat_test, lat_tsc, rx_error + tx_error);
@@ -516,9 +505,6 @@ static void task_lat_store_lat(struct task_lat *task, uint64_t rx_packet_index, 
 static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts)
 {
 	struct task_lat *task = (struct task_lat *)tbase;
-	uint64_t rx_time_err;
-
-	uint32_t pkt_rx_time, pkt_tx_time;
 
 	// If link is down, link_speed is 0
 	if (unlikely(task->link_speed == 0)) {
@@ -540,8 +526,11 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 
 	task_lat_update_lat_test(task);
 
-	const uint64_t rx_tsc = tbase->aux->tsc_rx.after;
-	uint32_t tx_time_err = 0;
+	// Remember those packets with bad length or bad signature
+	uint64_t pkt_bad_len_sig[(MAX_RX_PKT_ALL + 63) / 64];
+#define BIT64_SET(a64, bit)	a64[bit / 64] |=  (((uint64_t)1) << (bit & 63))
+#define BIT64_CLR(a64, bit)	a64[bit / 64] &= ~(((uint64_t)1) << (bit & 63))
+#define BIT64_TEST(a64, bit)	a64[bit / 64]  &  (((uint64_t)1) << (bit & 63))
 
 	/* Go once through all received packets and read them.  If
 	   packet has just been modified by another core, the cost of
@@ -549,17 +538,28 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 	for (uint16_t j = 0; j < n_pkts; ++j) {
 		struct rte_mbuf *mbuf = mbufs[j];
 		task->rx_pkt_meta[j].hdr = rte_pktmbuf_mtod(mbuf, uint8_t *);
+
+		// Remember those packets which are too short to hold the values that we expect
+		if (unlikely(rte_pktmbuf_pkt_len(mbuf) < task->min_pkt_len))
+			BIT64_SET(pkt_bad_len_sig, j);
+		else
+			BIT64_CLR(pkt_bad_len_sig, j);
 	}
 
-	if (task->sig) {
+	if (task->sig_pos) {
 		for (uint16_t j = 0; j < n_pkts; ++j) {
-			if (*(uint32_t *)(task->rx_pkt_meta[j].hdr + task->sig_pos) == task->sig)
+			if (unlikely(BIT64_TEST(pkt_bad_len_sig, j)))
+				continue;
+			// Remember those packets with bad signature
+			if (likely(*(uint32_t *)(task->rx_pkt_meta[j].hdr + task->sig_pos) == task->sig))
 				task->rx_pkt_meta[j].pkt_tx_time = *(uint32_t *)(task->rx_pkt_meta[j].hdr + task->lat_pos);
 			else
-				task->rx_pkt_meta[j].pkt_tx_time = 0;
+				BIT64_SET(pkt_bad_len_sig, j);
 		}
 	} else {
 		for (uint16_t j = 0; j < n_pkts; ++j) {
+			if (unlikely(BIT64_TEST(pkt_bad_len_sig, j)))
+				continue;
 			task->rx_pkt_meta[j].pkt_tx_time = *(uint32_t *)(task->rx_pkt_meta[j].hdr + task->lat_pos);
 		}
 	}
@@ -573,37 +573,50 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 		bytes_total_in_bulk += mbuf_wire_size(mbufs[flipped]);
 	}
 
-	pkt_rx_time = tsc_extrapolate_backward(task->link_speed, rx_tsc, task->rx_pkt_meta[0].bytes_after_in_bulk, task->last_pkts_tsc) >> LATENCY_ACCURACY;
-	if ((uint32_t)((task->begin >> LATENCY_ACCURACY)) > pkt_rx_time) {
+	const uint64_t rx_tsc = tbase->aux->tsc_rx.after;
+
+	uint64_t rx_time_err;
+	uint64_t pkt_rx_time64 = tsc_extrapolate_backward(task->link_speed, rx_tsc, task->rx_pkt_meta[0].bytes_after_in_bulk, task->last_pkts_tsc) >> LATENCY_ACCURACY;
+	if (unlikely((task->begin >> LATENCY_ACCURACY) > pkt_rx_time64)) {
 		// Extrapolation went up to BEFORE begin => packets were stuck in the NIC but we were not seeing them
-		rx_time_err = pkt_rx_time - (uint32_t)(task->last_pkts_tsc >> LATENCY_ACCURACY);
+		rx_time_err = pkt_rx_time64 - (task->last_pkts_tsc >> LATENCY_ACCURACY);
 	} else {
-		rx_time_err = pkt_rx_time - (uint32_t)(task->begin >> LATENCY_ACCURACY);
+		rx_time_err = pkt_rx_time64 - (task->begin >> LATENCY_ACCURACY);
 	}
 
-	struct unique_id *unique_id = NULL;
-	struct delayed_latency_entry *delayed_latency_entry;
-	uint32_t packet_id, generator_id;
-
 	for (uint16_t j = 0; j < n_pkts; ++j) {
+		// Used to display % of packets within accuracy limit vs. total number of packets (used_col)
+		task->lat_test->tot_all_pkts++;
+
+		// Skip those packets with bad length or bad signature
+		if (unlikely(BIT64_TEST(pkt_bad_len_sig, j)))
+			continue;
+
 		struct rx_pkt_meta_data *rx_pkt_meta = &task->rx_pkt_meta[j];
 		uint8_t *hdr = rx_pkt_meta->hdr;
 
-		pkt_rx_time = tsc_extrapolate_backward(task->link_speed, rx_tsc, rx_pkt_meta->bytes_after_in_bulk, task->last_pkts_tsc) >> LATENCY_ACCURACY;
-		pkt_tx_time = rx_pkt_meta->pkt_tx_time;
+		uint32_t pkt_rx_time = tsc_extrapolate_backward(task->link_speed, rx_tsc, rx_pkt_meta->bytes_after_in_bulk, task->last_pkts_tsc) >> LATENCY_ACCURACY;
+		uint32_t pkt_tx_time = rx_pkt_meta->pkt_tx_time;
 
+		uint8_t generator_id;
+		uint32_t packet_id;
 		if (task->unique_id_pos) {
-			unique_id = (struct unique_id *)(hdr + task->unique_id_pos);
+			struct unique_id *unique_id = (struct unique_id *)(hdr + task->unique_id_pos);
+			unique_id_get(unique_id, &generator_id, &packet_id);
 
-			uint32_t n_loss = task_lat_early_loss_detect(task, unique_id);
-			packet_id = unique_id->packet_id;
-			generator_id = unique_id->generator_id;
-			lat_test_add_lost(task->lat_test, n_loss);
+			if (unlikely(generator_id >= task->generator_count)) {
+				/* No need to remember unexpected packet at this stage
+				BIT64_SET(pkt_bad_len_sig, j);
+				*/
+				// Skip unexpected packet
+				continue;
+			}
+
+			lat_test_add_lost(task->lat_test, task_lat_early_loss_detect(task, packet_id, generator_id));
 		} else {
-			packet_id = task->rx_packet_index;
 			generator_id = 0;
+			packet_id = task->rx_packet_index;
 		}
-		task->lat_test->tot_all_pkts++;
 
 		/* If accuracy is enabled, latency is reported with a
 		   delay of ACCURACY_BUFFER_SIZE packets since the generator puts the
@@ -611,9 +624,9 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 		   ensures that all reported latencies have both rx
 		   and tx error. */
 		if (task->accur_pos) {
-			tx_time_err = *(uint32_t *)(hdr + task->accur_pos);
+			uint32_t tx_time_err = *(uint32_t *)(hdr + task->accur_pos);
 
-			delayed_latency_entry = delayed_latency_get(task->delayed_latency_entries, generator_id, packet_id - ACCURACY_BUFFER_SIZE);
+			struct delayed_latency_entry *delayed_latency_entry = delayed_latency_get(task->delayed_latency_entries, generator_id, packet_id - ACCURACY_BUFFER_SIZE);
 
 			if (delayed_latency_entry) {
 				task_lat_store_lat(task,
@@ -636,13 +649,15 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 		} else {
 			task_lat_store_lat(task, task->rx_packet_index, pkt_rx_time, pkt_tx_time, 0, 0, packet_id, generator_id);
 		}
+
+		// Bad/unexpected packets do not need to be indexed
 		task->rx_packet_index++;
 	}
-	int ret;
-	ret = task->base.tx_pkt(&task->base, mbufs, n_pkts, NULL);
+
 	task->begin = tbase->aux->tsc_rx.before;
 	task->last_pkts_tsc = tbase->aux->tsc_rx.after;
-	return ret;
+
+	return task->base.tx_pkt(&task->base, mbufs, n_pkts, NULL);
 }
 
 static void init_task_lat_latency_buffer(struct task_lat *task, uint32_t core_id)
@@ -727,6 +742,19 @@ static void init_task_lat(struct task_base *tbase, struct task_args *targ)
 
 	task->unique_id_pos = targ->packet_id_pos;
 	task->latency_buffer_size = targ->latency_buffer_size;
+
+	PROX_PANIC(task->lat_pos == 0, "Missing 'lat pos' parameter in config file\n");
+	uint16_t min_pkt_len = task->lat_pos + sizeof(uint32_t);
+	if (task->unique_id_pos && (
+		min_pkt_len < task->unique_id_pos + sizeof(struct unique_id)))
+		min_pkt_len = task->unique_id_pos + sizeof(struct unique_id);
+	if (task->accur_pos && (
+		min_pkt_len < task->accur_pos + sizeof(uint32_t)))
+		min_pkt_len = task->accur_pos + sizeof(uint32_t);
+	if (task->sig_pos && (
+		min_pkt_len < task->sig_pos + sizeof(uint32_t)))
+		min_pkt_len = task->sig_pos + sizeof(uint32_t);
+	task->min_pkt_len = min_pkt_len;
 
 	task_init_generator_count(task);
 
