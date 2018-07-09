@@ -48,6 +48,30 @@
     },
     {
       "key": {
+        "uuid": "da5c1566_0cf4d559",
+        "filename": "VNFs/DPPD-PROX/handle_lat.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 514,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-07-09T13:22:41Z",
+      "side": 1,
+      "message": "In this case, we just don\u0027t early-return here.\nReturn will happen, back in main function flow, on line 660.",
+      "parentUuid": "da5c1566_ece521a9",
+      "range": {
+        "startLine": 514,
+        "startChar": 73,
+        "endLine": 514,
+        "endChar": 75
+      },
+      "revId": "2e924e65c5ac509925bc5a28b724db108fe99111",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "da5c1566_0ccdf531",
         "filename": "VNFs/DPPD-PROX/handle_lat.c",
         "patchSetId": 1
