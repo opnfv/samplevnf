@@ -1,0 +1,199 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "da5c1566_6cd2b1d3",
+        "filename": "VNFs/DPPD-PROX/handle_lat.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 494,
+      "author": {
+        "id": 6751
+      },
+      "writtenOn": "2018-07-09T13:13:19Z",
+      "side": 1,
+      "message": "Split this line if possible",
+      "range": {
+        "startLine": 494,
+        "startChar": 0,
+        "endLine": 494,
+        "endChar": 195
+      },
+      "revId": "2e924e65c5ac509925bc5a28b724db108fe99111",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da5c1566_ece521a9",
+        "filename": "VNFs/DPPD-PROX/handle_lat.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 514,
+      "author": {
+        "id": 6751
+      },
+      "writtenOn": "2018-07-09T13:13:19Z",
+      "side": 1,
+      "message": "So what are we returning in this case?",
+      "range": {
+        "startLine": 514,
+        "startChar": 73,
+        "endLine": 514,
+        "endChar": 75
+      },
+      "revId": "2e924e65c5ac509925bc5a28b724db108fe99111",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da5c1566_0ccdf531",
+        "filename": "VNFs/DPPD-PROX/handle_lat.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 579,
+      "author": {
+        "id": 6751
+      },
+      "writtenOn": "2018-07-09T13:13:19Z",
+      "side": 1,
+      "message": "Perhaps split this line if possible",
+      "range": {
+        "startLine": 579,
+        "startChar": 1,
+        "endLine": 579,
+        "endChar": 160
+      },
+      "revId": "2e924e65c5ac509925bc5a28b724db108fe99111",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da5c1566_2cc8b921",
+        "filename": "VNFs/DPPD-PROX/handle_lat.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 598,
+      "author": {
+        "id": 6751
+      },
+      "writtenOn": "2018-07-09T13:13:19Z",
+      "side": 1,
+      "message": "Perhaps split this line if possible",
+      "range": {
+        "startLine": 598,
+        "startChar": 2,
+        "endLine": 598,
+        "endChar": 151
+      },
+      "revId": "2e924e65c5ac509925bc5a28b724db108fe99111",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da5c1566_ec4ec1c0",
+        "filename": "VNFs/DPPD-PROX/handle_lat.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 629,
+      "author": {
+        "id": 6751
+      },
+      "writtenOn": "2018-07-09T13:13:19Z",
+      "side": 1,
+      "message": "Perhaps split this line if possible",
+      "range": {
+        "startLine": 629,
+        "startChar": 0,
+        "endLine": 629,
+        "endChar": 3
+      },
+      "revId": "2e924e65c5ac509925bc5a28b724db108fe99111",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da5c1566_cce2dd9e",
+        "filename": "VNFs/DPPD-PROX/handle_lat.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 654,
+      "author": {
+        "id": 6751
+      },
+      "writtenOn": "2018-07-09T13:13:19Z",
+      "side": 1,
+      "message": "Would it be usefull to add debug stats via LAT_DEBUG() ..for this and other values / situations",
+      "range": {
+        "startLine": 654,
+        "startChar": 2,
+        "endLine": 654,
+        "endChar": 26
+      },
+      "revId": "2e924e65c5ac509925bc5a28b724db108fe99111",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da5c1566_cc749dff",
+        "filename": "VNFs/DPPD-PROX/handle_lat.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 751,
+      "author": {
+        "id": 6751
+      },
+      "writtenOn": "2018-07-09T13:13:19Z",
+      "side": 1,
+      "message": "Could be a bit better .. add {} to clarify if .. then ...\n\nif (task-\u003eunique_id_pos \u0026\u0026 (\n    min_pkt_len \u003c task-\u003eunique_id_pos + sizeof(struct unique_id))) {\n\t\tmin_pkt_len \u003d task-\u003eunique_id_pos + sizeof(struct unique_id);\n}",
+      "range": {
+        "startLine": 751,
+        "startChar": 0,
+        "endLine": 751,
+        "endChar": 1
+      },
+      "revId": "2e924e65c5ac509925bc5a28b724db108fe99111",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da5c1566_2c61d939",
+        "filename": "VNFs/DPPD-PROX/handle_lat.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 753,
+      "author": {
+        "id": 6751
+      },
+      "writtenOn": "2018-07-09T13:13:19Z",
+      "side": 1,
+      "message": "same as above",
+      "revId": "2e924e65c5ac509925bc5a28b724db108fe99111",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da5c1566_0c669551",
+        "filename": "VNFs/DPPD-PROX/handle_lat.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 756,
+      "author": {
+        "id": 6751
+      },
+      "writtenOn": "2018-07-09T13:13:19Z",
+      "side": 1,
+      "message": "same as above",
+      "revId": "2e924e65c5ac509925bc5a28b724db108fe99111",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
