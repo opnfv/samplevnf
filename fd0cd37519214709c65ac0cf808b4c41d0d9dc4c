@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9a561d44_2058eb55",
+        "filename": "VNFs/DPPD-PROX/handle_police.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 200,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-07-21T10:27:52Z",
+      "side": 1,
+      "message": "Good, but this warning will be emitted whatever the DPDK version.",
+      "revId": "fd0cd37519214709c65ac0cf808b4c41d0d9dc4c",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
