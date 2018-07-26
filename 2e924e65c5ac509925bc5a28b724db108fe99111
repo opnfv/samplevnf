@@ -25,6 +25,30 @@
     },
     {
       "key": {
+        "uuid": "9a561d44_4f79c892",
+        "filename": "VNFs/DPPD-PROX/handle_lat.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 494,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-07-26T10:40:31Z",
+      "side": 1,
+      "message": "We don\u0027t have hard rules for line length in PROX.\nI agree that many lines would deserve a split, but that was not the topic for this commit, which didn\u0027t touch this line.\nCode formatting would better be done by a dedicated commit.",
+      "parentUuid": "da5c1566_6cd2b1d3",
+      "range": {
+        "startLine": 494,
+        "startChar": 0,
+        "endLine": 494,
+        "endChar": 195
+      },
+      "revId": "2e924e65c5ac509925bc5a28b724db108fe99111",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "da5c1566_ece521a9",
         "filename": "VNFs/DPPD-PROX/handle_lat.c",
         "patchSetId": 1
@@ -164,6 +188,30 @@
     },
     {
       "key": {
+        "uuid": "9a561d44_8f73e0b0",
+        "filename": "VNFs/DPPD-PROX/handle_lat.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 654,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-07-26T10:40:31Z",
+      "side": 1,
+      "message": "Not sure what you mean about LAT_DEBUG, which was only used during development and would have deserved to be removed from this source code. Even if it was enabled on line 17, it would still have no effect, because task_lat_store_lat_debug() on line 403 is not called from anywhere.\nThe comment here about \"bad/unexpected packets\" was meant to clarify that only good packets need to be indexed at the end of this code block, while bad/unexpected packets have been skipped earlier by means of lines 593 and 612.\nThis is in contrast with comment for line 589 at the beginning of this code block, where we want to count all packets: good, bad and unexpected.",
+      "parentUuid": "da5c1566_cce2dd9e",
+      "range": {
+        "startLine": 654,
+        "startChar": 2,
+        "endLine": 654,
+        "endChar": 26
+      },
+      "revId": "2e924e65c5ac509925bc5a28b724db108fe99111",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "da5c1566_cc749dff",
         "filename": "VNFs/DPPD-PROX/handle_lat.c",
         "patchSetId": 1
@@ -175,6 +223,30 @@
       "writtenOn": "2018-07-09T13:13:19Z",
       "side": 1,
       "message": "Could be a bit better .. add {} to clarify if .. then ...\n\nif (task-\u003eunique_id_pos \u0026\u0026 (\n    min_pkt_len \u003c task-\u003eunique_id_pos + sizeof(struct unique_id))) {\n\t\tmin_pkt_len \u003d task-\u003eunique_id_pos + sizeof(struct unique_id);\n}",
+      "range": {
+        "startLine": 751,
+        "startChar": 0,
+        "endLine": 751,
+        "endChar": 1
+      },
+      "revId": "2e924e65c5ac509925bc5a28b724db108fe99111",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a561d44_af6ea4c7",
+        "filename": "VNFs/DPPD-PROX/handle_lat.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 751,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-07-26T10:40:31Z",
+      "side": 1,
+      "message": "I like it very much the way it is, with test condition and assignment aligned for readability. Adding curly braces would not improve readability in my opinion, but breaking alignment would definitely impact it.",
+      "parentUuid": "da5c1566_cc749dff",
       "range": {
         "startLine": 751,
         "startChar": 0,
