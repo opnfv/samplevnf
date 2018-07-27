@@ -82,7 +82,7 @@ static inline uint8_t handle_decap_nsh(__attribute__((unused)) struct task_decap
 
 		/* check the Next Protocol field in VxLAN-GPE header */
 		vxlan_gpe_hdr = (struct vxlan_gpe_hdr *)(((unsigned char *)eth_hdr) + sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + sizeof(struct udp_hdr));
-		if (vxlan_gpe_hdr->next_proto != VXLAN_GPE_NP) {
+		if (vxlan_gpe_hdr->proto != VXLAN_GPE_NP) {
 			mbuf->udata64 = 0;
 			return 0;
 		}
@@ -168,7 +168,7 @@ static inline uint8_t handle_encap_nsh(__attribute__((unused)) struct task_encap
 
 		/* check the Next Protocol field in VxLAN-GPE header */
 		vxlan_gpe_hdr = (struct vxlan_gpe_hdr *)(((unsigned char *)eth_hdr) + sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + sizeof(struct udp_hdr));
-		if (vxlan_gpe_hdr->next_proto != VXLAN_GPE_NP)
+		if (vxlan_gpe_hdr->proto != VXLAN_GPE_NP)
 			return 0;
 
 		/* decrement Service Index in NSH header */

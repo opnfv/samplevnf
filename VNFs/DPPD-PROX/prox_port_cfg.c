@@ -129,6 +129,7 @@ void init_rte_dev(int use_dummy_devices)
 	uint8_t nb_ports, port_id_max;
 	int port_id_last;
 	struct rte_eth_dev_info dev_info;
+	const struct rte_pci_device *pci_dev;
 
 	nb_ports = rte_eth_dev_count();
 	/* get available ports configuration */
@@ -185,13 +186,18 @@ void init_rte_dev(int use_dummy_devices)
 		port_cfg->max_rx_pkt_len = dev_info.max_rx_pktlen;
 		port_cfg->min_rx_bufsize = dev_info.min_rx_bufsize;
 
-		if (!dev_info.pci_dev)
+#if RTE_VERSION < RTE_VERSION_NUM(18,5,0,0)
+		pci_dev = dev_info.pci_dev;
+#else
+		pci_dev = RTE_DEV_TO_PCI(dev_info.device);
+#endif
+		if (!pci_dev)
 			continue;
 
 		snprintf(port_cfg->pci_addr, sizeof(port_cfg->pci_addr),
-			 "%04x:%02x:%02x.%1x", dev_info.pci_dev->addr.domain, dev_info.pci_dev->addr.bus, dev_info.pci_dev->addr.devid, dev_info.pci_dev->addr.function);
+			 "%04x:%02x:%02x.%1x", pci_dev->addr.domain, pci_dev->addr.bus, pci_dev->addr.devid, pci_dev->addr.function);
 		strncpy(port_cfg->driver_name, dev_info.driver_name, sizeof(port_cfg->driver_name));
-		plog_info("\tPort %u : driver='%s' tx_queues=%d rx_queues=%d, max_rx_pktlen = %d, min_rx_bufsize = %d\n", port_id, !strcmp(port_cfg->driver_name, "")? "null" : port_cfg->driver_name, port_cfg->max_txq, port_cfg->max_rxq, port_cfg->max_rx_pkt_len, port_cfg->min_rx_bufsize);
+		plog_info("\tPort %u : driver='%s' tx_queues=%d rx_queues=%d\n", port_id, !strcmp(port_cfg->driver_name, "")? "null" : port_cfg->driver_name, port_cfg->max_txq, port_cfg->max_rxq);
 
 		if (strncmp(port_cfg->driver_name, "rte_", 4) == 0) {
 			strncpy(port_cfg->short_name, prox_port_cfg[port_id].driver_name + 4, sizeof(port_cfg->short_name));
@@ -321,6 +327,7 @@ static void init_port(struct prox_port_cfg *port_cfg)
 		port_cfg->port_conf.rx_adv_conf.rss_conf.rss_hf 	= ETH_RSS_IPV4|ETH_RSS_NONF_IPV4_UDP;
 #endif
 	}
+
 	if (port_cfg->tx_conf.txq_flags & ETH_TXQ_FLAGS_NOREFCOUNT)
 		plog_info("\t\tEnabling No refcnt on port %d\n", port_id);
 	else
