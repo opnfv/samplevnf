@@ -1,0 +1,8 @@
+Code-Review+1: Patrice Buriez <patrice.buriez@intel.com>
+Code-Review+2: Deepak S <deepak.s@linux.intel.com>
+Verified+1: Deepak S <deepak.s@linux.intel.com>
+Submitted-by: Deepak S <deepak.s@linux.intel.com>
+Submitted-at: Fri, 27 Jul 2018 16:13:49 +0000
+Reviewed-on: https://gerrit.opnfv.org/gerrit/59545
+Project: samplevnf
+Branch: refs/heads/master
