@@ -294,12 +294,20 @@ struct arp_entry_data *get_dest_mac_addr_ipv4(const uint32_t nhip,
 				 uint32_t phy_port, struct ether_addr *hw_addr)
 {
 	struct arp_entry_data *ret_arp_data = NULL;
+	struct ether_addr *x;
 	uint8_t index;
 
 	/* as part of optimization we store mac address in cache
 	 * & thus can be sent without having to retrieve
 	 */
 	if (likely(arp_cache_dest_mac_present(phy_port))) {
+		x = get_local_cache_hw_addr(phy_port, nhip);
+		if (unlikely(!x)) {
+			printf("local copy of address not stored\n");
+			return NULL;
+		}
+
+		ether_addr_copy(x, hw_addr);
 		return &arp_entry_data_default;
 	}
 
@@ -2488,7 +2496,7 @@ struct ether_addr *get_local_cache_hw_addr(uint8_t out_port, uint32_t nhip)
         limit = p_arp_data->arp_local_cache[out_port].num_nhip;
         for (i=0; i < limit; i++) {
                 tmp = p_arp_data->arp_local_cache[out_port].nhip[i];
-                if (tmp == nhip) {
+                if (likely(tmp == nhip)) {
 			x = &p_arp_data->arp_local_cache[out_port].link_hw_laddr[i];
                         return x;
 		}
