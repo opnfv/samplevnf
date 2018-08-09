@@ -1970,9 +1970,8 @@ static int cgnapt_in_port_ah_mix(struct rte_pipeline *rte_p,
 			/* Gateway Proc Starts */
 
 			struct arp_entry_data *ret_arp_data = NULL;
-			uint32_t src_phy_port = *src_port;
-
-		  dest_if = prv_to_pub_map[src_phy_port];
+			uint32_t src_phy_port = pkts[pkt_index]->port;
+			dest_if = prv_to_pub_map[src_phy_port];
 			gw_get_route_nh_port_ipv4(dest_address,
 					&dest_if, &nhip, dest_if);
 
@@ -2218,7 +2217,7 @@ static int cgnapt_in_port_ah_mix(struct rte_pipeline *rte_p,
 
 				struct arp_entry_data *ret_arp_data = NULL;
 				dest_if = INVALID_DESTIF;
-				uint32_t src_phy_port = *src_port;
+				uint32_t src_phy_port = pkts[pkt_index]->port;
 		    dest_if = pub_to_prv_map[src_phy_port];
 			  gw_get_route_nh_port_ipv4(dest_address,
 					&dest_if, &nhip, dest_if);
@@ -3728,7 +3727,7 @@ pkt_work_cgnapt_ipv4_prv(
 	uint32_t nhip = 0;
 	struct arp_entry_data *ret_arp_data = NULL;
 
-	uint32_t src_phy_port = *src_port;
+	uint32_t src_phy_port = pkt->port;
   dest_if = prv_to_pub_map[src_phy_port];
 	gw_get_route_nh_port_ipv4(dest_address,
 					&dest_if, &nhip, dest_if);
@@ -4082,8 +4081,7 @@ pkt_work_cgnapt_ipv4_pub(
 	dest_address = entry->data.u.prv_ip;
 	struct arp_entry_data *ret_arp_data = NULL;
 
-	uint32_t src_phy_port = *src_port;
-
+	uint32_t src_phy_port = pkt->port;
 
   dest_if = pub_to_prv_map[src_phy_port];
 	gw_get_route_nh_port_ipv4(dest_address,
@@ -4534,7 +4532,7 @@ pkt4_work_cgnapt_ipv4_prv(
 		dest_address = rte_bswap32(*dst_addr);
 		struct arp_entry_data *ret_arp_data = NULL;
 		uint64_t start, end;
-		uint32_t src_phy_port = *src_port;
+		uint32_t src_phy_port = pkt->port;
 		dest_if = prv_to_pub_map[src_phy_port];
 		gw_get_route_nh_port_ipv4(dest_address,
 					&dest_if, &nhip, dest_if);
@@ -4905,7 +4903,7 @@ pkt4_work_cgnapt_ipv4_pub(
 		}
 		dest_address = entry->data.u.prv_ip;
 		struct arp_entry_data *ret_arp_data = NULL;
-		uint32_t src_phy_port = *src_port;
+		uint32_t src_phy_port = pkt->port;
 		dest_if = pub_to_prv_map[src_phy_port];
 		gw_get_route_nh_port_ipv4(dest_address,
 					&dest_if, &nhip, dest_if);
@@ -6085,8 +6083,7 @@ pkt_work_cgnapt_ipv6_prv(
 
 	struct arp_entry_data *ret_arp_data;
 
-	uint32_t src_phy_port = *src_port;
-
+	uint32_t src_phy_port = pkt->port;
 	dest_if = prv_to_pub_map[src_phy_port];
 	gw_get_route_nh_port_ipv4(dest_address,
 					&dest_if, &nhip, dest_if);
@@ -6578,7 +6575,7 @@ pkt4_work_cgnapt_ipv6_prv(
 
 	{
 		struct arp_entry_data *ret_arp_data;
-		uint32_t src_phy_port = *src_port;
+		uint32_t src_phy_port = pkt->port;
    	dest_if = prv_to_pub_map[src_phy_port];
 	  gw_get_route_nh_port_ipv4(dest_address,
 					&dest_if, &nhip, dest_if);
