@@ -384,19 +384,6 @@ static void init_port(struct prox_port_cfg *port_cfg)
 
 	plog_info("\t\tMAC address set to "MAC_BYTES_FMT"\n", MAC_BYTES(port_cfg->eth_addr.addr_bytes));
 
-	/* initialize RX queues */
-	for (uint16_t queue_id = 0; queue_id < port_cfg->n_rxq; ++queue_id) {
-		plog_info("\t\tSetting up RX queue %u on port %u on socket %u with %u desc (pool 0x%p)\n",
-			  queue_id, port_id, port_cfg->socket,
-			  port_cfg->n_rxd, port_cfg->pool[queue_id]);
-
-		ret = rte_eth_rx_queue_setup(port_id, queue_id,
-					     port_cfg->n_rxd,
-					     port_cfg->socket, &port_cfg->rx_conf,
-					     port_cfg->pool[queue_id]);
-
-		PROX_PANIC(ret < 0, "\t\t\trte_eth_rx_queue_setup() failed on port %u: error %s (%d)\n", port_id, strerror(-ret), ret);
-	}
 	if (port_cfg->capabilities.tx_offload_cksum == 0) {
 		port_cfg->tx_conf.txq_flags |= ETH_TXQ_FLAGS_NOOFFLOADS;
 		plog_info("\t\tDisabling TX offloads as pmd reports that it does not support them)\n");
@@ -406,13 +393,26 @@ static void init_port(struct prox_port_cfg *port_cfg)
 		port_cfg->tx_conf.txq_flags |= ETH_TXQ_FLAGS_NOMULTSEGS;
 		plog_info("\t\tDisabling multsegs on port %d as vmxnet3 does not support them\n", port_id);
 	}
-	/* initialize one TX queue per logical core on each port */
+
+	/* initialize TX queues first */
 	for (uint16_t queue_id = 0; queue_id < port_cfg->n_txq; ++queue_id) {
 		plog_info("\t\tSetting up TX queue %u on socket %u with %u desc\n",
 			  queue_id, port_cfg->socket, port_cfg->n_txd);
 		ret = rte_eth_tx_queue_setup(port_id, queue_id, port_cfg->n_txd,
 					     port_cfg->socket, &port_cfg->tx_conf);
 		PROX_PANIC(ret < 0, "\t\t\trte_eth_tx_queue_setup() failed on port %u: error %d\n", port_id, ret);
+	}
+
+	/* initialize RX queues */
+	for (uint16_t queue_id = 0; queue_id < port_cfg->n_rxq; ++queue_id) {
+		plog_info("\t\tSetting up RX queue %u on port %u on socket %u with %u desc (pool 0x%p)\n",
+			  queue_id, port_id, port_cfg->socket,
+			  port_cfg->n_rxd, port_cfg->pool[queue_id]);
+		ret = rte_eth_rx_queue_setup(port_id, queue_id,
+					     port_cfg->n_rxd,
+					     port_cfg->socket, &port_cfg->rx_conf,
+					     port_cfg->pool[queue_id]);
+		PROX_PANIC(ret < 0, "\t\t\trte_eth_rx_queue_setup() failed on port %u: error %s (%d)\n", port_id, strerror(-ret), ret);
 	}
 
 	plog_info("\t\tStarting up port %u ...", port_id);
