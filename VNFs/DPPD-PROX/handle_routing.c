@@ -48,7 +48,6 @@ struct task_routing {
 	struct lcore_cfg                *lconf;
 	struct rte_lpm                  *ipv4_lpm;
 	struct next_hop                 *next_hops;
-	int                             offload_crc;
 	uint32_t			number_free_rules;
 	uint16_t                        qinq_tag;
 	uint32_t                        marking[4];
@@ -144,9 +143,6 @@ static void init_task_routing(struct task_base *tbase, struct task_args *targ)
 	}
 
 	struct prox_port_cfg *port = find_reachable_port(targ);
-	if (port) {
-		task->offload_crc = port->capabilities.tx_offload_cksum;
-	}
 
 	targ->lconf->ctrl_func_m[targ->task] = routing_update;
 	targ->lconf->ctrl_timeout = freq_to_tsc(20);
@@ -186,11 +182,9 @@ static void set_l2(struct task_routing *task, struct rte_mbuf *mbuf, uint8_t nh_
 	*((uint64_t *)(&peth->s_addr)) = task->src_mac[task->next_hops[nh_idx].mac_port.out_idx];
 }
 
-static void set_l2_mpls(struct task_routing *task, struct rte_mbuf *mbuf, uint8_t nh_idx, uint16_t l2_len)
+static void set_l2_mpls(struct task_routing *task, struct rte_mbuf *mbuf, uint8_t nh_idx)
 {
 	struct ether_hdr *peth = (struct ether_hdr *)rte_pktmbuf_prepend(mbuf, sizeof(struct mpls_hdr));
-	l2_len += sizeof(struct mpls_hdr);
-	prox_ip_cksum(mbuf, (struct ipv4_hdr *)((uint8_t *)peth + l2_len), l2_len, sizeof(struct ipv4_hdr), task->offload_crc);
 
 	*((uint64_t *)(&peth->d_addr)) = task->next_hops[nh_idx].mac_port_8bytes;
 	*((uint64_t *)(&peth->s_addr)) = task->src_mac[task->next_hops[nh_idx].mac_port.out_idx];
@@ -255,7 +249,7 @@ static uint8_t route_ipv4(struct task_routing *task, uint8_t *beg, uint32_t ip_o
 			rte_pktmbuf_trim(mbuf, padlen);
                 }
 
-                set_l2_mpls(task, mbuf, next_hop_index, ip_offset);
+                set_l2_mpls(task, mbuf, next_hop_index);
         }
 	else {
 		set_l2(task, mbuf, next_hop_index);
@@ -311,7 +305,7 @@ static struct task_init task_init_routing = {
 	.mode_str = "routing",
 	.init = init_task_routing,
 	.handle = handle_routing_bulk,
-	.flag_features = TASK_FEATURE_ROUTING,
+	.flag_features = TASK_FEATURE_ROUTING|TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS,
 	.size = sizeof(struct task_routing)
 };
 
