@@ -15,13 +15,6 @@
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
 ##
-sudo sh -c '(echo "export RTE_TARGET=\"build\"";echo "export RTE_SDK=\"/root/dpdk\"";echo "export AESNI_MULTI_BUFFER_LIB_PATH=\"/home/centos/intel-ipsec-mb-0.48\"";) >> /root/.bashrc'
-sudo yum install deltarpm -y
-sudo yum update -y
-sudo yum-config-manager --add-repo http://www.nasm.us/nasm.repo
-sudo yum install git wget gcc unzip libpcap-devel ncurses-devel libedit-devel lua-devel kernel-devel iperf3 pciutils numactl-devel vim tuna openssl-devel nasm -y
-# Enabling root ssh access
-sudo sed -i '/disable_root: 1/c\disable_root: 0' /etc/cloud/cloud.cfg
 # The following line is commented since this was a workaround for a problem with the content of /etc/resolv.conf.
 # That file could contain DNS information coming from the dataplane which might be wrong. A solution is to confire the correct DNS for the dataplne
 # in OpenStack.  DNS might be slowing down ssh access. We don't need that for our dataplane benchmarking purposes
@@ -33,42 +26,46 @@ sudo umount `awk '/hugetlbfs/ { print $2 }' /proc/mounts` >/dev/null 2>&1
 sudo mount -t hugetlbfs nodev /mnt/huge/
 sudo sh -c '(echo "vm.nr_hugepages = 1024") > /etc/sysctl.conf'
 
-# Downloading the Multi-buffer library
-wget https://github.com/01org/intel-ipsec-mb/archive/v0.48.zip
-unzip v0.48.zip
-export  AESNI_MULTI_BUFFER_LIB_PATH=/home/centos/intel-ipsec-mb-0.48
+# Downloading the Multi-buffer library. Note that the version to download is linked to the DPDK version being used
+cd /home/centos
+wget https://github.com/01org/intel-ipsec-mb/archive/v0.50.zip
+unzip v0.50.zip
+# AESNI_MULTI_BUFFER_LIB_PATH should be already set in deploycentos1.sh
+export  AESNI_MULTI_BUFFER_LIB_PATH=/home/centos/intel-ipsec-mb-0.50
 cd $AESNI_MULTI_BUFFER_LIB_PATH
-make -j8
+make
+sudo make install
 # Clone and compile DPDK
 cd /home/centos/
 git clone http://dpdk.org/git/dpdk
 cd dpdk
-git checkout v17.11
+git checkout v18.05
 export RTE_TARGET=build
 export RTE_SDK=/home/centos/dpdk
 make config T=x86_64-native-linuxapp-gcc
 # The next sed lines make sure that we can compile DPDK 17.11 with a relatively new OS. Using a newer DPDK (18.5) should also resolve this issue
-sudo sed -i '/CONFIG_RTE_LIBRTE_KNI=y/c\CONFIG_RTE_LIBRTE_KNI=n' /home/centos/dpdk/build/.config
-sudo sed -i '/CONFIG_RTE_LIBRTE_PMD_KNI=y/c\CONFIG_RTE_LIBRTE_PMD_KNI=n' /home/centos/dpdk/build/.config
-sudo sed -i '/CONFIG_RTE_KNI_KMOD=y/c\CONFIG_RTE_KNI_KMOD=n' /home/centos/dpdk/build/.config
-sudo sed -i '/CONFIG_RTE_KNI_PREEMPT_DEFAULT=y/c\CONFIG_RTE_KNI_PREEMPT_DEFAULT=n' /home/centos/dpdk/build/.config
+#sudo sed -i '/CONFIG_RTE_LIBRTE_KNI=y/c\CONFIG_RTE_LIBRTE_KNI=n' /home/centos/dpdk/build/.config
+#sudo sed -i '/CONFIG_RTE_LIBRTE_PMD_KNI=y/c\CONFIG_RTE_LIBRTE_PMD_KNI=n' /home/centos/dpdk/build/.config
+#sudo sed -i '/CONFIG_RTE_KNI_KMOD=y/c\CONFIG_RTE_KNI_KMOD=n' /home/centos/dpdk/build/.config
+#sudo sed -i '/CONFIG_RTE_KNI_PREEMPT_DEFAULT=y/c\CONFIG_RTE_KNI_PREEMPT_DEFAULT=n' /home/centos/dpdk/build/.config
 # Compile with MB library
-sudo sed -i '/CONFIG_RTE_LIBRTE_PMD_AESNI_MB=n/c\CONFIG_RTE_LIBRTE_PMD_AESNI_MB=y' /home/centos/dpdk/build/.config
-make -j8 
-cd /home/centos
-# Copy everything to root since the scripts are assuming /root as the directory for PROX
-sudo cp -r dpdk /root/
+sed -i '/CONFIG_RTE_LIBRTE_PMD_AESNI_MB=n/c\CONFIG_RTE_LIBRTE_PMD_AESNI_MB=y' /home/centos/dpdk/build/.config
+make 
+# Runtime scripts are assuming /root as the directory for PROX
+sudo ln -s /home/centos/dpdk /root/dpdk
 
 # Clone and compile PROX
-git clone https://git.opnfv.org/samplevnf
-cp -r /home/centos/samplevnf/VNFs/DPPD-PROX /home/centos/prox
-cd /home/centos/prox
-make -j8
 cd /home/centos
-# Copy everything to root since the scripts are assuming /root as the directory for PROX
-sudo cp -r /home/centos/prox /root/
+git clone https://git.opnfv.org/samplevnf
+cd /home/centos/samplevnf/VNFs/DPPD-PROX
+git checkout 4d59d3530d1c41734f15423142e64eb9c929c717
+# Compiling PROX with the crc=soft option because offloaded CRC calculation causes problems on multiple VIM environments. This will of course slow
+# down the performance of the generator.
+make crc=soft
+sudo ln -s /home/centos/samplevnf/VNFs/DPPD-PROX /root/prox
 
 # Enabling tuned with the realtime-virtual-guest profile
+cd /home/centos/
 wget http://linuxsoft.cern.ch/cern/centos/7/rt/x86_64/Packages/tuned-profiles-realtime-2.8.0-5.el7_4.2.noarch.rpm
 wget http://linuxsoft.cern.ch/cern/centos/7/rt/x86_64/Packages/tuned-profiles-nfv-guest-2.8.0-5.el7_4.2.noarch.rpm
 # Install with --nodeps. The latest CentOS cloud images come with a tuned version higher than 2.8. These 2 packages however

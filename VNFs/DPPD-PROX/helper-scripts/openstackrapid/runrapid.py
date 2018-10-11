@@ -32,8 +32,9 @@ from prox_ctrl import prox_ctrl
 import ConfigParser
 import ast
 import atexit
+import csv
 
-version="18.6.15"
+version="18.10.15"
 env = "rapid" #Default string for environment
 test = "basicrapid" #Default string for test
 loglevel="DEBUG" # sets log level for writing to file
@@ -95,6 +96,15 @@ for opt, arg in opts:
 		loglevel = arg
 		print ("Log level: "+ loglevel)
 
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
 
 # create formatters
 screen_formatter = logging.Formatter("%(message)s")
@@ -122,6 +132,7 @@ console_handler.setFormatter(screen_formatter)
 # and set its log level to DEBUG
 #
 log_file = 'RUN' +env+'.'+test+'.log'
+data_file = 'RUN' +env+'.'+test+'.csv'
 file_handler = logging.handlers.RotatingFileHandler(log_file, backupCount=10)
 #file_handler = log.handlers.TimedRotatingFileHandler(log_file, 'D', 1, 5)
 file_handler.setLevel(numeric_level)
@@ -253,7 +264,7 @@ def run_speedtest(gensock,sutsock):
 	log.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+------------+")
 	log.info("| Test   |  Speed requested   | Sent to NIC    |  Sent by Gen   | Forward by SUT |  Rec. by Gen   |  Avg. Latency  |  Max. Latency  |  Packets Lost  | Loss Ratio | Result     |")
 	log.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+------------+")
-	maxspeed = speed = 100
+	maxspeed = speed = STARTSPEED
 	minspeed = 0
 	size=60
 	attempts = 0
@@ -272,7 +283,7 @@ def run_speedtest(gensock,sutsock):
                 # Get statistics now that the generation is stable and NO ARP messages any more
 		pps_req_tx,pps_tx,pps_sut_tx_str,pps_rx,lat_avg,lat_max, abs_dropped, abs_tx = run_iteration(gensock,sutsock)
 		drop_rate = 100.0*abs_dropped/abs_tx
-        	if ((get_pps(speed,size) - pps_tx)/get_pps(speed,size))<0.001 and ((drop_rate < DROP_RATE_TRESHOLD) or (abs_dropped==DROP_RATE_TRESHOLD ==0)):
+        	if ((get_pps(speed,size) - pps_tx)/get_pps(speed,size))<0.001 and ((drop_rate < DROP_RATE_TRESHOLD) or (abs_dropped==DROP_RATE_TRESHOLD ==0)) and (lat_avg< LAT_AVG_TRESHOLD) and (lat_max < LAT_MAX_TRESHOLD):
 	                log.info('|{:>7}'.format(str(attempts))+" | " + '{:>5.1f}'.format(speed) + '% ' +'{:>6.3f}'.format(get_pps(speed,size)) + ' Mpps | '+ '{:>9.3f}'.format(pps_req_tx)+' Mpps | '+ '{:>9.3f}'.format(pps_tx) +' Mpps | ' + '{:>9}'.format(pps_sut_tx_str) +' Mpps | '+ '{:>9.3f}'.format(pps_rx)+' Mpps | '+ '{:>9.0f}'.format(lat_avg)+' us   | '+  '{:>9.0f}'.format(lat_max)+' us   | '+ '{:>14d}'.format(abs_dropped)+ ' |''{:>9.2f}'.format(drop_rate)+ '%  | SUCCESS    |')
 			endspeed = speed
 			endpps_req_tx = pps_req_tx
@@ -285,7 +296,26 @@ def run_speedtest(gensock,sutsock):
 			enddrop_rate = drop_rate
 			success = True 
 	        else:
-	                log.info('|{:>7}'.format(str(attempts))+" | " + '{:>5.1f}'.format(speed) + '% ' +'{:>6.3f}'.format(get_pps(speed,size)) + ' Mpps | '+ '{:>9.3f}'.format(pps_req_tx)+' Mpps | '+ '{:>9.3f}'.format(pps_tx) +' Mpps | ' + '{:>9}'.format(pps_sut_tx_str) +' Mpps | '+ '{:>9.3f}'.format(pps_rx)+' Mpps | '+ '{:>9.0f}'.format(lat_avg)+' us   | '+ '{:>9.0f}'.format(lat_max)+' us   | '+ '{:>14d}'.format(abs_dropped)+ ' |''{:>9.2f}'.format(drop_rate)+ '%  | FAILED     |')
+			abs_drop_rate_prefix = bcolors.ENDC
+			if ((abs_dropped>0) and (DROP_RATE_TRESHOLD ==0)):
+				abs_drop_rate_prefix = bcolors.FAIL
+			if (drop_rate < DROP_RATE_TRESHOLD):
+				drop_rate_prefix = bcolors.ENDC
+			else:
+				drop_rate_prefix = bcolors.FAIL
+			if (lat_avg< LAT_AVG_TRESHOLD):
+				lat_avg_prefix = bcolors.ENDC
+			else:
+				lat_avg_prefix = bcolors.FAIL
+			if (lat_max< LAT_MAX_TRESHOLD):
+				lat_max_prefix = bcolors.ENDC
+			else:
+				lat_max_prefix = bcolors.FAIL
+			if (((get_pps(speed,size) - pps_tx)/get_pps(speed,size))<0.001):
+				speed_prefix = bcolors.ENDC
+			else:
+				speed_prefix = bcolors.FAIL
+	                log.info('|{:>7}'.format(str(attempts))+" | " + '{:>5.1f}'.format(speed) + '% '+speed_prefix +'{:>6.3f}'.format(get_pps(speed,size)) + ' Mpps | '+ '{:>9.3f}'.format(pps_req_tx)+' Mpps | '+ bcolors.ENDC + '{:>9.3f}'.format(pps_tx) +' Mpps | ' + '{:>9}'.format(pps_sut_tx_str) +' Mpps | '+ '{:>9.3f}'.format(pps_rx)+' Mpps | '+lat_avg_prefix+ '{:>9.0f}'.format(lat_avg)+' us   | '+lat_max_prefix+ '{:>9.0f}'.format(lat_max)+' us   | '+ abs_drop_rate_prefix + '{:>14d}'.format(abs_dropped)+drop_rate_prefix+ ' |''{:>9.2f}'.format(drop_rate)+bcolors.ENDC+ '%  | FAILED     |')
 			success = False 
 		speed,minspeed,maxspeed = new_speed(speed,minspeed,maxspeed,success)
 	if endpps_sut_tx_str <>  'NO_RESULTS':
@@ -310,7 +340,6 @@ def run_flowtest(gensock,sutsock):
 	gensock.set_value(gencores,0,38,(size-34),2) # 38 is the difference between the frame size and UDP size = 18 + size of IP header (=20)
 	# This will only work when using sending UDP packets. For different protocls and ehternet types, we would need a differnt calculation
 	for flow_number in sorted(flows.iterkeys()):
-		#speed = 100 Commented out: Not starting from 100% since we are trying more flows, so speed will not be higher than the speed achieved in previous loop
 		gensock.reset_stats()
 		if sutsock!='none':
 			sutsock.reset_stats()
@@ -318,7 +347,7 @@ def run_flowtest(gensock,sutsock):
 		gensock.set_random(gencores,0,34,source_port,2)
 		gensock.set_random(gencores,0,36,destination_port,2)
 		endpps_sut_tx_str = 'NO_RESULTS'
-		maxspeed = speed = 100
+		maxspeed = speed = STARTSPEED
 		minspeed = 0
 		while (maxspeed-minspeed > ACCURACY):
 			print(str(flow_number)+' flows: Measurement ongoing at speed: ' + str(round(speed,2)) + '%      ',end='\r')
@@ -329,7 +358,7 @@ def run_flowtest(gensock,sutsock):
 			# Get statistics now that the generation is stable and NO ARP messages any more
 			pps_req_tx,pps_tx,pps_sut_tx_str,pps_rx,lat_avg,lat_max, abs_dropped, abs_tx = run_iteration(gensock,sutsock)
 			drop_rate = 100.0*abs_dropped/abs_tx
-	        	if ((get_pps(speed,size) - pps_tx)/get_pps(speed,size))<0.001 and ((drop_rate < DROP_RATE_TRESHOLD) or (abs_dropped==DROP_RATE_TRESHOLD ==0)):
+	        	if ((get_pps(speed,size) - pps_tx)/get_pps(speed,size))<0.001 and ((drop_rate < DROP_RATE_TRESHOLD) or (abs_dropped==DROP_RATE_TRESHOLD ==0)) and (lat_avg< LAT_AVG_TRESHOLD) and (lat_max < LAT_MAX_TRESHOLD):
 				endspeed = speed
 				endpps_req_tx = pps_req_tx
 				endpps_tx = pps_tx
@@ -346,6 +375,7 @@ def run_flowtest(gensock,sutsock):
 		if endpps_sut_tx_str <>  'NO_RESULTS':
                 	log.info('|{:>7}'.format(str(flow_number))+" | " + '{:>5.1f}'.format(endspeed) + '% ' +'{:>6.3f}'.format(get_pps(endspeed,size)) + ' Mpps | '+ '{:>9.3f}'.format(endpps_req_tx)+' Mpps | '+ '{:>9.3f}'.format(endpps_tx) +' Mpps | ' + '{:>9}'.format(endpps_sut_tx_str) +' Mpps | '+ '{:>9.3f}'.format(endpps_rx)+' Mpps | '+ '{:>9.0f}'.format(endlat_avg)+' us   | '+ '{:>9.0f}'.format(endlat_max)+' us   | '+ '{:>14d}'.format(endabs_dropped)+ ' |'+'{:>9.2f}'.format(enddrop_rate)+ '%  |')
 			log.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+")
+			writer.writerow({'flow':flow_number,'size':(size+4),'endspeed':endspeed,'endspeedpps':get_pps(endspeed,size),'endpps_req_tx':endpps_req_tx,'endpps_tx':endpps_tx,'endpps_sut_tx_str':endpps_sut_tx_str,'endpps_rx':endpps_rx,'endlat_avg':endlat_avg,'endlat_max':endlat_max,'endabs_dropped':endabs_dropped,'enddrop_rate':enddrop_rate})
 		else:
 			log.info('|{:>7}'.format(str(flow_number))+" | Speed 0 or close to 0")
 
@@ -356,10 +386,10 @@ def run_sizetest(gensock,sutsock):
 	log.info("| Pktsize|  Speed requested   | Sent to NIC    |  Sent by Gen   | Forward by SUT |  Rec. by Gen   |  Avg. Latency  |  Max. Latency  |  Packets Lost  | Loss Ratio |")
 	log.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+")
 	# PROX will use different packet sizes as defined in sizes[]
-#	sizes=[1496,1020,508,252,124,60]
-	sizes=[1020,508,252,124,60]
+	sizes=[1496,1020,508,252,124,60]
+#	sizes=[1020,508,252,124,60]
+#	sizes=[124,60]
 	for size in sizes:
-		#speed = 100 Commented out: Not starting from 100% since we are trying smaller packets, so speed will not be higher than the speed achieved in previous loop
 		gensock.reset_stats()
 		if sutsock!='none':
 			sutsock.reset_stats()
@@ -368,7 +398,7 @@ def run_sizetest(gensock,sutsock):
 		gensock.set_value(gencores,0,38,(size-34),2) # 38 is the difference between the frame size and UDP size = 18 + size of IP header (=20)
 		# This will only work when using sending UDP packets. For different protocls and ehternet types, we would need a differnt calculation
 		endpps_sut_tx_str = 'NO_RESULTS'
-		maxspeed = speed = 100
+		maxspeed = speed = STARTSPEED
 		minspeed = 0
 		while (maxspeed-minspeed > ACCURACY):
 			print(str(size+4)+' bytes: Measurement ongoing at speed: ' + str(round(speed,2)) + '%      ',end='\r')
@@ -378,7 +408,7 @@ def run_sizetest(gensock,sutsock):
 			# Get statistics now that the generation is stable and NO ARP messages any more
 			pps_req_tx,pps_tx,pps_sut_tx_str,pps_rx,lat_avg,lat_max, abs_dropped, abs_tx = run_iteration(gensock,sutsock)
 			drop_rate = 100.0*abs_dropped/abs_tx
-	        	if ((get_pps(speed,size) - pps_tx)/get_pps(speed,size))<0.001 and ((drop_rate < DROP_RATE_TRESHOLD) or (abs_dropped==DROP_RATE_TRESHOLD ==0)):
+	        	if ((get_pps(speed,size) - pps_tx)/get_pps(speed,size))<0.001 and ((drop_rate < DROP_RATE_TRESHOLD) or (abs_dropped==DROP_RATE_TRESHOLD ==0)) and (lat_avg< LAT_AVG_TRESHOLD) and (lat_max < LAT_MAX_TRESHOLD):
 				endspeed = speed
 				endpps_req_tx = pps_req_tx
 				endpps_tx = pps_tx
@@ -395,6 +425,7 @@ def run_sizetest(gensock,sutsock):
 		if endpps_sut_tx_str <>  'NO_RESULTS':
                 	log.info('|{:>7}'.format(size+4)+" | " + '{:>5.1f}'.format(endspeed) + '% ' +'{:>6.3f}'.format(get_pps(endspeed,size)) + ' Mpps | '+ '{:>9.3f}'.format(endpps_req_tx)+' Mpps | '+ '{:>9.3f}'.format(endpps_tx) +' Mpps | ' + '{:>9}'.format(endpps_sut_tx_str) +' Mpps | '+ '{:>9.3f}'.format(endpps_rx)+' Mpps | '+ '{:>9.0f}'.format(endlat_avg)+' us   | '+'{:>9.0f}'.format(endlat_max)+' us   | '+ '{:>14d}'.format(endabs_dropped)+ ' |'+'{:>9.2f}'.format(enddrop_rate)+ '%  |')
         		log.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+")
+			writer.writerow({'flow':'1','size':(size+4),'endspeed':endspeed,'endspeedpps':get_pps(endspeed,size),'endpps_req_tx':endpps_req_tx,'endpps_tx':endpps_tx,'endpps_sut_tx_str':endpps_sut_tx_str,'endpps_rx':endpps_rx,'endlat_avg':endlat_avg,'endlat_max':endlat_max,'endabs_dropped':endabs_dropped,'enddrop_rate':enddrop_rate})
 		else:
 			log.debug('|{:>7}'.format(str(size))+" | Speed 0 or close to 0")
 
@@ -473,7 +504,10 @@ global latcores
 global gencores
 global irqcores
 global DROP_RATE_TRESHOLD
+global LAT_AVG_TRESHOLD
+global LAT_MAX_TRESHOLD
 global ACCURACY
+global STARTSPEED
 global required_number_of_test_machines
 clients =[]
 socks =[]
@@ -488,7 +522,10 @@ testconfig = ConfigParser.RawConfigParser()
 testconfig.read(test+'.test')
 required_number_of_test_machines = testconfig.get('DEFAULT', 'total_number_of_test_machines')
 DROP_RATE_TRESHOLD = float(testconfig.get('DEFAULT', 'drop_rate_treshold'))
+LAT_AVG_TRESHOLD = float(testconfig.get('DEFAULT', 'lat_avg_treshold'))
+LAT_MAX_TRESHOLD = float(testconfig.get('DEFAULT', 'lat_max_treshold'))
 ACCURACY = float(testconfig.get('DEFAULT', 'accuracy'))
+STARTSPEED = float(testconfig.get('DEFAULT', 'startspeed'))
 config = ConfigParser.RawConfigParser()
 config.read(env+'.env')
 key = config.get('OpenStack', 'key')
@@ -596,10 +633,16 @@ if init_code <> 'not_used':
 	eval(init_code)
 ####################################################
 # Run test cases
-# Best to run the flow test at the end since otherwise the tests coming after thatmight be influenced by the big number of entries in the switch flow tables
+# Best to run the flow test at the end since otherwise the tests coming after might be influenced by the big number of entries in the switch flow tables
 ####################################################
 number_of_tests = testconfig.get('DEFAULT', 'number_of_tests')
-for vm in range(1, int(number_of_tests)+1):
-	cmd=testconfig.get('test%d'%vm,'cmd')
-	eval(cmd)
+data_file = 'RUN' +env+'.'+test+'.csv'
+data_csv_file = open(data_file,'w')
+with data_csv_file:
+	fieldnames = ['flow','size','endspeed','endspeedpps','endpps_req_tx','endpps_tx','endpps_sut_tx_str','endpps_rx','endlat_avg','endlat_max','endabs_dropped','enddrop_rate']
+	writer = csv.DictWriter(data_csv_file, fieldnames=fieldnames)
+	writer.writeheader()
+	for vm in range(1, int(number_of_tests)+1):
+		cmd=testconfig.get('test%d'%vm,'cmd')
+		eval(cmd)
 ####################################################
