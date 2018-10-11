@@ -26,8 +26,10 @@ group1cores = not_used
 group2cores = not_used
 group3cores = not_used
 drop_rate_treshold = 1
+lat_avg_treshold = 100
+lat_max_treshold = 800
 accuracy = 0.01
-
+startspeed = 10
 
 [TestM1]
 name = Generator
@@ -53,4 +55,3 @@ group1cores = [1]
 
 [test1]
 cmd=run_impairtest(socks[0],socks[2],8)
-# The last parameter specifies the speed at which this test will run

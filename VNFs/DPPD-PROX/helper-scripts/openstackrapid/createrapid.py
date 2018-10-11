@@ -31,7 +31,7 @@ from logging import handlers
 from prox_ctrl import prox_ctrl
 import ConfigParser
 
-version="18.6.15"
+version="18.10.15"
 stack = "rapid" #Default string for stack. This is not an OpenStack Heat stack, just a group of VMs
 vms = "rapidVMs" #Default string for vms file
 key = "prox" # default name for kay
