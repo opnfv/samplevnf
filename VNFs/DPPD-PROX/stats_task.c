@@ -58,6 +58,8 @@ void stats_task_reset(void)
 		cur_task_stats->tot_drop_tx_fail = 0;
 		cur_task_stats->tot_drop_discard = 0;
 		cur_task_stats->tot_drop_handled = 0;
+		cur_task_stats->tot_rx_non_dp = 0;
+		cur_task_stats->tot_tx_non_dp = 0;
 	}
 }
 
@@ -76,6 +78,16 @@ uint64_t stats_core_task_tot_drop(uint8_t lcore_id, uint8_t task_id)
 	return lcore_task_stats_all[lcore_id].task_stats[task_id].tot_drop_tx_fail +
 		lcore_task_stats_all[lcore_id].task_stats[task_id].tot_drop_discard +
 		lcore_task_stats_all[lcore_id].task_stats[task_id].tot_drop_handled;
+}
+
+uint64_t stats_core_task_tot_tx_non_dp(uint8_t lcore_id, uint8_t task_id)
+{
+	return lcore_task_stats_all[lcore_id].task_stats[task_id].tot_tx_non_dp;
+}
+
+uint64_t stats_core_task_tot_rx_non_dp(uint8_t lcore_id, uint8_t task_id)
+{
+	return lcore_task_stats_all[lcore_id].task_stats[task_id].tot_rx_non_dp;
 }
 
 uint64_t stats_core_task_last_tsc(uint8_t lcore_id, uint8_t task_id)
@@ -102,6 +114,8 @@ void stats_task_post_proc(void)
 		cur_task_stats->tot_drop_tx_fail += last->drop_tx_fail - prev->drop_tx_fail;
 		cur_task_stats->tot_drop_discard += last->drop_discard - prev->drop_discard;
 		cur_task_stats->tot_drop_handled += last->drop_handled - prev->drop_handled;
+		cur_task_stats->tot_rx_non_dp += last->rx_non_dp - prev->rx_non_dp;
+		cur_task_stats->tot_tx_non_dp += last->tx_non_dp - prev->tx_non_dp;
 	}
 }
 
@@ -127,6 +141,8 @@ void stats_task_update(void)
 		last->tx_bytes     = stats->tx_bytes;
 		last->rx_bytes     = stats->rx_bytes;
 		last->drop_bytes   = stats->drop_bytes;
+		last->rx_non_dp    = stats->rx_non_dp;
+		last->tx_non_dp    = stats->tx_non_dp;
 		after = rte_rdtsc();
 		last->tsc = (before >> 1) + (after >> 1);
 	}

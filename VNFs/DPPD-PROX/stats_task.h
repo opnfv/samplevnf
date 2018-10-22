@@ -45,6 +45,8 @@ struct task_rt_stats {
 	uint64_t        rx_bytes;
 	uint64_t        tx_bytes;
 	uint64_t        drop_bytes;
+	uint64_t        rx_non_dp;
+	uint64_t        tx_non_dp;
 } __attribute__((packed)) __rte_cache_aligned;
 
 #ifdef PROX_STATS
@@ -71,6 +73,14 @@ struct task_rt_stats {
 #define TASK_STATS_ADD_RX(stats, ntx) do {	\
 		(stats)->rx_pkt_count += ntx;	\
 	} while (0)				\
+
+#define TASK_STATS_ADD_RX_NON_DP(stats, ntx) do {    	\
+		(stats)->rx_non_dp += ntx;             \
+	} while(0)
+
+#define TASK_STATS_ADD_TX_NON_DP(stats, ntx) do {     	\
+		(stats)->tx_non_dp += ntx;		\
+	 } while(0)
 
 #define TASK_STATS_ADD_RX_BYTES(stats, bytes) do {	\
 		(stats)->rx_bytes += bytes;		\
@@ -109,6 +119,8 @@ struct task_stats_sample {
 	uint64_t rx_bytes;
 	uint64_t tx_bytes;
 	uint64_t drop_bytes;
+	uint64_t rx_non_dp;
+	uint64_t tx_non_dp;
 };
 
 struct task_stats {
@@ -117,6 +129,8 @@ struct task_stats {
 	uint64_t tot_drop_discard;
 	uint64_t tot_drop_handled;
 	uint64_t tot_rx_pkt_count;
+	uint64_t tot_tx_non_dp;
+	uint64_t tot_rx_non_dp;
 
 	struct task_stats_sample sample[2];
 
@@ -141,5 +155,7 @@ uint64_t stats_core_task_tot_rx(uint8_t lcore_id, uint8_t task_id);
 uint64_t stats_core_task_tot_tx(uint8_t lcore_id, uint8_t task_id);
 uint64_t stats_core_task_tot_drop(uint8_t lcore_id, uint8_t task_id);
 uint64_t stats_core_task_last_tsc(uint8_t lcore_id, uint8_t task_id);
+uint64_t stats_core_task_tot_rx_non_dp(uint8_t lcore_id, uint8_t task_id);
+uint64_t stats_core_task_tot_tx_non_dp(uint8_t lcore_id, uint8_t task_id);
 
 #endif /* _STATS_TASK_H_ */
