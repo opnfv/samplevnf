@@ -56,6 +56,8 @@ static struct display_column *class_col;
 static struct display_column *mbm_tot_col;
 static struct display_column *mbm_loc_col;
 static struct display_column *frac_col;
+static struct display_column *rx_non_dp_col;
+static struct display_column *tx_non_dp_col;
 
 static void stats_display_core_task_entry(struct lcore_cfg *lconf, struct task_args *targ, unsigned row)
 {
@@ -115,6 +117,12 @@ static void display_tasks_draw_frame(struct screen_state *state)
 		handled_col = display_table_add_col(stats);
 		display_column_init(handled_col, "Handled (K)", 9);
 
+		rx_non_dp_col = display_table_add_col(stats);
+		display_column_init(rx_non_dp_col, "Rx non DP (K)", 9);
+
+		tx_non_dp_col = display_table_add_col(stats);
+		display_column_init(tx_non_dp_col, "Tx non DP (K)", 9);
+
 		if (stats_cpu_freq_enabled()) {
 			struct display_table *other = display_page_add_table(&display_page_tasks);
 
@@ -150,6 +158,12 @@ static void display_tasks_draw_frame(struct screen_state *state)
 
 		handled_col = display_table_add_col(stats);
 		display_column_init(handled_col, "Handled (K)", 14);
+
+		rx_non_dp_col = display_table_add_col(stats);
+		display_column_init(rx_non_dp_col, "RX non DP (K)", 14);
+
+		tx_non_dp_col = display_table_add_col(stats);
+		display_column_init(tx_non_dp_col, "TX non DP (K)", 14);
 
 		if (stats_cmt_enabled()) {
 			struct display_table *other = display_page_add_table(&display_page_tasks);
@@ -231,6 +245,8 @@ static void display_core_task_stats_per_sec(const struct task_stats_disp *t, str
 	print_kpps(tx_fail_col, row, last->drop_tx_fail - prev->drop_tx_fail, delta_t);
 	print_kpps(discard_col, row, last->drop_discard - prev->drop_discard, delta_t);
 	print_kpps(handled_col, row, last->drop_handled - prev->drop_handled, delta_t);
+	print_kpps(rx_non_dp_col, row, last->rx_non_dp - prev->rx_non_dp, delta_t);
+	print_kpps(tx_non_dp_col, row, last->tx_non_dp - prev->tx_non_dp, delta_t);
 
 	if (stats_cpu_freq_enabled()) {
 		uint8_t lcore_stat_id = t->lcore_stat_id;
@@ -285,6 +301,8 @@ static void display_core_task_stats_tot(const struct task_stats_disp *t, struct 
 	display_column_print(tx_fail_col, row, "%lu", ts->tot_drop_tx_fail);
 	display_column_print(discard_col, row, "%lu", ts->tot_drop_discard);
 	display_column_print(handled_col, row, "%lu", ts->tot_drop_handled);
+	display_column_print(rx_non_dp_col, row, "%lu", ts->tot_rx_non_dp);
+	display_column_print(tx_non_dp_col, row, "%lu", ts->tot_tx_non_dp);
 
 	if (stats_cmt_enabled()) {
 		struct lcore_stats *c = stats_get_lcore_stats(t->lcore_stat_id);

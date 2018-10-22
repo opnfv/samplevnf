@@ -266,6 +266,7 @@ void handle_ctrl_plane_pkts(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 			break;
 		case ARP_REPLY_FROM_CTRL:
 		case ARP_REQ_FROM_CTRL:
+			TASK_STATS_ADD_TX_NON_DP(&tbase->aux->stats, 1);
 			out[0] = 0;
 			tbase->aux->tx_pkt_l2(tbase, &mbufs[j], 1, out);
 			break;
