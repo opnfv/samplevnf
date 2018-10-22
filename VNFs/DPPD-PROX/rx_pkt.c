@@ -145,7 +145,7 @@ static uint16_t rx_pkt_hw_param(struct task_base *tbase, struct rte_mbuf ***mbuf
 	}
 
 	if (skip)
-		TASK_STATS_ADD_DROP_HANDLED(&tbase->aux->stats, skip);
+		TASK_STATS_ADD_RX_NON_DP(&tbase->aux->stats, skip);
 	if (likely(nb_rx > 0)) {
 		TASK_STATS_ADD_RX(&tbase->aux->stats, nb_rx);
 		return nb_rx - skip;
@@ -201,7 +201,7 @@ static inline uint16_t rx_pkt_hw1_param(struct task_base *tbase, struct rte_mbuf
 	}
 
 	if (skip)
-		TASK_STATS_ADD_DROP_HANDLED(&tbase->aux->stats, skip);
+		TASK_STATS_ADD_RX_NON_DP(&tbase->aux->stats, skip);
 	if (likely(nb_rx > 0)) {
 		TASK_STATS_ADD_RX(&tbase->aux->stats, nb_rx);
 		return nb_rx - skip;
