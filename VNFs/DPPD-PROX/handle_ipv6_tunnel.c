@@ -167,7 +167,7 @@ static void init_task_ipv6_tun_base(struct task_ipv6_tun_base* tun_base, struct 
 
 	struct prox_port_cfg *port = find_reachable_port(targ);
 	if (port) {
-		tun_base->offload_crc = port->capabilities.tx_offload_cksum;
+		tun_base->offload_crc = port->requested_tx_offload & (DEV_TX_OFFLOAD_IPV4_CKSUM | DEV_TX_OFFLOAD_UDP_CKSUM);
 	}
 }
 

@@ -117,3 +117,14 @@ static void *prox_rte_table_create(struct prox_rte_table_params *params, int soc
 #define prox_rte_table_key8_stats       rte_table_hash_key8_ext_ops.f_stats
 
 #endif
+
+#if RTE_VERSION < RTE_VERSION_NUM(18,8,0,0)
+#define rte_cryptodev_sym_get_private_session_size rte_cryptodev_get_private_session_size
+#endif
+
+#ifndef DEV_RX_OFFLOAD_CRC_STRIP
+#define DEV_RX_OFFLOAD_CRC_STRIP 0x00001000
+#endif
+#ifndef DEV_RX_OFFLOAD_JUMBO_FRAME
+#define DEV_RX_OFFLOAD_JUMBO_FRAME 0x00000800
+#endif

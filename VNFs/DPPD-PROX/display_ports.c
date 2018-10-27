@@ -22,6 +22,7 @@
 #include "stats_port.h"
 #include "prox_globals.h"
 #include "prox_port_cfg.h"
+#include "prox_compat.h"
 
 static struct display_page display_page_ports;
 static struct display_column *nb_col;
@@ -179,7 +180,7 @@ static void display_ports_draw_per_sec_stats(void)
 		struct percent rx_percent;
 		struct percent tx_percent;
 		if (strcmp(prox_port_cfg[port_id].short_name, "i40e") == 0) {
-			if (prox_port_cfg[port_id].port_conf.rxmode.hw_strip_crc == 1) {
+			if (prox_port_cfg[port_id].requested_rx_offload & DEV_RX_OFFLOAD_CRC_STRIP) {
 				rx_percent = calc_percent(last->rx_bytes - prev->rx_bytes + 24 * (last->rx_tot - prev->rx_tot), delta_t);
 				tx_percent = calc_percent(last->tx_bytes - prev->tx_bytes + 24 * (last->tx_tot - prev->tx_tot), delta_t);
 			} else {
@@ -187,7 +188,7 @@ static void display_ports_draw_per_sec_stats(void)
 				tx_percent = calc_percent(last->tx_bytes - prev->tx_bytes + 20 * (last->tx_tot - prev->tx_tot), delta_t);
 			}
 		} else {
-			if (prox_port_cfg[port_id].port_conf.rxmode.hw_strip_crc == 1) {
+			if (prox_port_cfg[port_id].requested_rx_offload & DEV_RX_OFFLOAD_CRC_STRIP) {
 				rx_percent = calc_percent(last->rx_bytes - prev->rx_bytes + 24 * (last->rx_tot - prev->rx_tot), delta_t);
 				tx_percent = calc_percent(last->tx_bytes - prev->tx_bytes + 24 * (last->tx_tot - prev->tx_tot), delta_t);
 			} else {

@@ -27,6 +27,7 @@
 #include "etypes.h"
 #include "toeplitz.h"
 #include "handle_master.h"
+#include "prox_compat.h"
 
 #define TEN_GIGABIT     1250000000
 #define QUEUE_SIZES     128
@@ -46,14 +47,6 @@
 
 static const struct rte_eth_conf default_port_conf = {
 	.rxmode = {
-		.split_hdr_size = 0,
-		.header_split   = 0, /* Header Split disabled */
-		.hw_ip_checksum = 0, /* IP checksum offload disabled */
-		.hw_vlan_filter = 0, /* VLAN filtering disabled */
-		.hw_vlan_strip = 0, /* VLAN filtering disabled */
-		.jumbo_frame    = 0, /* Jumbo frame support disabled */
-		.hw_strip_crc   = 1, /* CRC stripped by hardware --- always set to 1 in VF */
-		.hw_vlan_extend = 0,
 		.mq_mode        = 0,
 		.max_rx_pkt_len = PROX_MTU + ETHER_HDR_LEN + ETHER_CRC_LEN
 	},
@@ -184,5 +177,7 @@ void set_port_defaults(void)
 		prox_port_cfg[i].rx_ring[0] = '\0';
 		prox_port_cfg[i].tx_ring[0] = '\0';
 		prox_port_cfg[i].mtu = PROX_MTU;
+		prox_port_cfg[i].requested_rx_offload = DEV_RX_OFFLOAD_CRC_STRIP;
+		prox_port_cfg[i].requested_tx_offload = DEV_TX_OFFLOAD_IPV4_CKSUM | DEV_TX_OFFLOAD_UDP_CKSUM;
 	}
 }

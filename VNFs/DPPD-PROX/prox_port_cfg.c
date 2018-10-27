@@ -40,6 +40,7 @@
 #include "defines.h"
 #include "prox_cksum.h"
 #include "stats_irq.h"
+#include "prox_compat.h"
 
 struct prox_port_cfg prox_port_cfg[PROX_MAX_PORTS];
 rte_atomic32_t lsc;
@@ -123,6 +124,42 @@ void prox_pktmbuf_reinit(void *arg, void *start, __attribute__((unused)) void *e
 	prox_pktmbuf_init(init_args->mp, init_args->lconf, obj, idx);
 }
 
+#define CONFIGURE_TX_OFFLOAD(flag)                                           \
+        if (port_cfg->requested_tx_offload & flag)                              {\
+		if (port_cfg->disabled_tx_offload & flag)			{\
+			plog_info("\t\t%s disabled by configuration\n", #flag);\
+                        port_cfg->requested_tx_offload &= ~flag;\
+                } else if (port_cfg->dev_info.tx_offload_capa & flag) {\
+                        port_cfg->port_conf.txmode.offloads |= flag;\
+                        plog_info("\t\t%s enabled on port\n", #flag);\
+                } else if (port_cfg->dev_info.tx_queue_offload_capa & flag) {\
+                        port_cfg->tx_conf.offloads |= flag;\
+                        plog_info("\t\t%s enabled on queue\n", #flag);\
+                } else {\
+                        port_cfg->requested_tx_offload &= ~flag;\
+                        plog_info("\t\t%s disabled as neither port or queue supports it\n", #flag);\
+                }\
+        } else {\
+                plog_info("\t\t%s disabled\n", #flag);\
+        }\
+
+#define CONFIGURE_RX_OFFLOAD(flag)                                           \
+        if (port_cfg->requested_rx_offload & flag)                              {\
+                if (port_cfg->dev_info.rx_offload_capa & flag) {\
+                        port_cfg->port_conf.rxmode.offloads |= flag;\
+                        plog_info("\t\t%s enabled on port\n", #flag);\
+                } else if (port_cfg->dev_info.rx_queue_offload_capa & flag) {\
+                        port_cfg->rx_conf.offloads |= flag;\
+                        plog_info("\t\t%s enabled on queue\n", #flag);\
+                } else {\
+                        port_cfg->requested_rx_offload &= ~flag;\
+                        plog_info("\t\t%s disabled as neither port or queue supports it\n", #flag);\
+                }\
+        } else {\
+                plog_info("\t\t%s disabled\n", #flag);\
+        }\
+
+
 /* initialize rte devices and check the number of available ports */
 void init_rte_dev(int use_dummy_devices)
 {
@@ -181,6 +218,7 @@ void init_rte_dev(int use_dummy_devices)
 		struct prox_port_cfg* port_cfg = &prox_port_cfg[port_id];
 		port_cfg->socket = -1;
 
+		memcpy(&port_cfg->dev_info, &dev_info, sizeof(struct rte_eth_dev_info));
 		port_cfg->max_txq = dev_info.max_tx_queues;
 		port_cfg->max_rxq = dev_info.max_rx_queues;
 		port_cfg->max_rx_pkt_len = dev_info.max_rx_pktlen;
@@ -226,11 +264,14 @@ void init_rte_dev(int use_dummy_devices)
 			fclose(numa_node_fd);
 		}
 
-		if (dev_info.tx_offload_capa & DEV_TX_OFFLOAD_IPV4_CKSUM) {
-			port_cfg->capabilities.tx_offload_cksum |= IPV4_CKSUM;
+		// In DPDK 18.08 vmxnet3 reports it supports IPV4 checksum, but packets does not go through when IPv4 cksum is enabled
+		if ((!strcmp(port_cfg->short_name, "vmxnet3")) && (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_IPV4_CKSUM)) {
+			plog_info("\t\tDisabling IPV4 cksum on vmxnet3\n");
+			port_cfg->disabled_tx_offload |= DEV_TX_OFFLOAD_IPV4_CKSUM;
 		}
-		if (dev_info.tx_offload_capa & DEV_TX_OFFLOAD_UDP_CKSUM) {
-			port_cfg->capabilities.tx_offload_cksum |= UDP_CKSUM;
+		if ((!strcmp(port_cfg->short_name, "vmxnet3")) && (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_UDP_CKSUM)) {
+			plog_info("\t\tDisabling UDP cksum on vmxnet3\n");
+			port_cfg->disabled_tx_offload |= DEV_TX_OFFLOAD_UDP_CKSUM;
 		}
 	}
 }
@@ -278,6 +319,9 @@ static void init_port(struct prox_port_cfg *port_cfg)
 	plog_info("\t\tPort name is set to %s\n", port_cfg->name);
 	plog_info("\t\tPort max RX/TX queue is %u/%u\n", port_cfg->max_rxq, port_cfg->max_txq);
 	plog_info("\t\tPort driver is %s\n", port_cfg->driver_name);
+#if RTE_VERSION >= RTE_VERSION_NUM(16,4,0,0)
+	plog_info("\t\tSupported speed mask = 0x%x\n", port_cfg->dev_info.speed_capa);
+#endif
 
 	PROX_PANIC(port_cfg->n_rxq == 0 && port_cfg->n_txq == 0,
 		   "\t\t port %u is enabled but no RX or TX queues have been configured", port_id);
@@ -328,20 +372,157 @@ static void init_port(struct prox_port_cfg *port_cfg)
 #endif
 	}
 
-	if (port_cfg->tx_conf.txq_flags & ETH_TXQ_FLAGS_NOREFCOUNT)
-		plog_info("\t\tEnabling No refcnt on port %d\n", port_id);
+#if RTE_VERSION >= RTE_VERSION_NUM(18,8,0,1)
+	plog_info("\t\tRX offload capa = 0x%lx = ", port_cfg->dev_info.rx_offload_capa);
+	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_VLAN_STRIP)
+		plog_info("VLAN STRIP | ");
+	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_IPV4_CKSUM)
+		plog_info("IPV4 CKSUM | ");
+	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_UDP_CKSUM)
+		plog_info("UDP CKSUM | ");
+	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_TCP_CKSUM)
+		plog_info("TCP CKSUM | ");
+	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_TCP_LRO)
+		plog_info("TCP LRO | ");
+	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_QINQ_STRIP)
+		plog_info("QINQ STRIP | ");
+	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_OUTER_IPV4_CKSUM)
+		plog_info("OUTER_IPV4_CKSUM | ");
+	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_MACSEC_STRIP)
+		plog_info("MACSEC STRIP | ");
+	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_HEADER_SPLIT)
+		plog_info("HEADER SPLIT | ");
+	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_VLAN_FILTER)
+		plog_info("VLAN FILTER | ");
+	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_VLAN_EXTEND)
+		plog_info("VLAN EXTEND | ");
+	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_JUMBO_FRAME)
+		plog_info("JUMBO FRAME | ");
+	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_CRC_STRIP)
+		plog_info("CRC STRIP | ");
+	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_SCATTER)
+		plog_info("SCATTER | ");
+	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_TIMESTAMP)
+		plog_info("TIMESTAMP | ");
+	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_SECURITY)
+		plog_info("SECURITY ");
+	plog_info("\n");
+
+	plog_info("\t\tTX offload capa = 0x%lx = ", port_cfg->dev_info.tx_offload_capa);
+	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_VLAN_INSERT)
+		plog_info("VLAN INSERT | ");
+	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_IPV4_CKSUM)
+		plog_info("IPV4 CKSUM | ");
+	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_UDP_CKSUM)
+		plog_info("UDP CKSUM | ");
+	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_TCP_CKSUM)
+		plog_info("TCP CKSUM | ");
+	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_SCTP_CKSUM)
+		plog_info("SCTP CKSUM | ");
+	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_TCP_TSO)
+		plog_info("TCP TS0 | ");
+	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_UDP_TSO)
+		plog_info("UDP TSO | ");
+	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_OUTER_IPV4_CKSUM)
+		plog_info("OUTER IPV4 CKSUM | ");
+	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_QINQ_INSERT)
+		plog_info("QINQ INSERT | ");
+	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_VXLAN_TNL_TSO)
+		plog_info("VLAN TNL TSO | ");
+	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_GRE_TNL_TSO)
+		plog_info("GRE TNL TSO | ");
+	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_IPIP_TNL_TSO)
+		plog_info("IPIP TNL TSO | ");
+	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_GENEVE_TNL_TSO)
+		plog_info("GENEVE TNL TSO | ");
+	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_MACSEC_INSERT)
+		plog_info("MACSEC INSERT | ");
+	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_MT_LOCKFREE)
+		plog_info("MT LOCKFREE | ");
+	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_MULTI_SEGS)
+		plog_info("MULTI SEG | ");
+	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_SECURITY)
+		plog_info("SECURITY | ");
+	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_UDP_TNL_TSO)
+		plog_info("UDP TNL TSO | ");
+	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_IP_TNL_TSO)
+		plog_info("IP TNL TSO | ");
+	plog_info("\n");
+
+	plog_info("\t\trx_queue_offload_capa = 0x%lx\n", port_cfg->dev_info.rx_queue_offload_capa);
+	plog_info("\t\ttx_queue_offload_capa = 0x%lx\n", port_cfg->dev_info.tx_queue_offload_capa);
+	plog_info("\t\tflow_type_rss_offloads = 0x%lx\n", port_cfg->dev_info.flow_type_rss_offloads);
+	plog_info("\t\tdefault RX port conf: burst_size = %d, ring_size = %d, nb_queues = %d\n", port_cfg->dev_info.default_rxportconf.burst_size, port_cfg->dev_info.default_rxportconf.ring_size, port_cfg->dev_info.default_rxportconf.nb_queues);
+	plog_info("\t\tdefault TX port conf: burst_size = %d, ring_size = %d, nb_queues = %d\n", port_cfg->dev_info.default_txportconf.burst_size, port_cfg->dev_info.default_txportconf.ring_size, port_cfg->dev_info.default_txportconf.nb_queues);
+#endif
+
+	// rxmode such as hw src strip
+#if RTE_VERSION >= RTE_VERSION_NUM(18,8,0,1)
+	CONFIGURE_RX_OFFLOAD(DEV_RX_OFFLOAD_CRC_STRIP);
+	CONFIGURE_RX_OFFLOAD(DEV_RX_OFFLOAD_JUMBO_FRAME);
+#else
+	if (port_cfg->requested_rx_offload & DEV_RX_OFFLOAD_CRC_STRIP) {
+		port_cfg->port_conf.rxmode.hw_strip_crc = 1;
+	}
+	if (port_cfg->requested_rx_offload & DEV_RX_OFFLOAD_JUMBO_FRAME) {
+		port_cfg->port_conf.rxmode.jumbo_frame = 1;
+	}
+#endif
+
+	// IPV4, UDP, SCTP Checksums
+#if RTE_VERSION >= RTE_VERSION_NUM(18,8,0,1)
+	CONFIGURE_TX_OFFLOAD(DEV_TX_OFFLOAD_IPV4_CKSUM);
+	CONFIGURE_TX_OFFLOAD(DEV_TX_OFFLOAD_UDP_CKSUM);
+#else
+	if ((port_cfg->dev_info.tx_offload_capa & (DEV_TX_OFFLOAD_IPV4_CKSUM | DEV_TX_OFFLOAD_UDP_CKSUM)) == 0) {
+		port_cfg->tx_conf.txq_flags |= ETH_TXQ_FLAGS_NOOFFLOADS;
+		plog_info("\t\tDisabling TX offloads as pmd reports that it does not support them)\n");
+	}
+	if (!strcmp(port_cfg->short_name, "vmxnet3")) {
+		port_cfg->tx_conf.txq_flags |= ETH_TXQ_FLAGS_NOXSUMSCTP;
+		plog_info("\t\tDisabling SCTP offload on port %d as vmxnet3 does not support them\n", port_id);
+	}
+#endif
+	// Multi Segments
+#if RTE_VERSION >= RTE_VERSION_NUM(18,8,0,1)
+	CONFIGURE_TX_OFFLOAD(DEV_TX_OFFLOAD_MULTI_SEGS);
+	//if (port_cfg->requested_tx_offload & DEV_TX_OFFLOAD_MULTI_SEGS) {
+		//if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_MULTI_SEGS) {
+			//port_cfg->port_conf.txmode.offloads |= DEV_TX_OFFLOAD_MULTI_SEGS;
+			//plog_info("\t\tMULTI SEGS TX offloads enabled on port)\n");
+		//} else if (port_cfg->dev_info.tx_queue_offload_capa & DEV_TX_OFFLOAD_MULTI_SEGS) {
+			//port_cfg->tx_conf.offloads |= DEV_TX_OFFLOAD_MULTI_SEGS;
+			//plog_info("\t\tMULTI SEGS TX offloads enabled on queue)\n");
+		//} else {
+			//port_cfg->requested_tx_offload &= ~DEV_TX_OFFLOAD_MULTI_SEGS;
+			//plog_info("\t\tMULTI SEGS TX offloads disabled) as neither port or queue supports it\n");
+		//}
+	//} else
+		//plog_info("\t\tMULTI SEGS TX offloads disabled)\n");
+#else
+	if (!strcmp(port_cfg->short_name, "vmxnet3")) {
+		port_cfg->tx_conf.txq_flags |= ETH_TXQ_FLAGS_NOMULTSEGS;
+		plog_info("\t\tDisabling TX multsegs on port %d as vmxnet3 does not support them\n", port_id);
+	} else if (port_cfg->tx_conf.txq_flags & ETH_TXQ_FLAGS_NOMULTSEGS)
+		plog_info("\t\tDisabling TX multsegs on port %d\n", port_id);
 	else
-		plog_info("\t\tRefcnt enabled on port %d\n", port_id);
+		plog_info("\t\tEnabling TX multsegs on port %d\n", port_id);
 
 	if (port_cfg->tx_conf.txq_flags & ETH_TXQ_FLAGS_NOOFFLOADS)
 		plog_info("\t\tEnabling No TX offloads on port %d\n", port_id);
 	else
 		plog_info("\t\tTX offloads enabled on port %d\n", port_id);
+#endif
 
-	if (port_cfg->tx_conf.txq_flags & ETH_TXQ_FLAGS_NOMULTSEGS)
-		plog_info("\t\tEnabling No TX MultiSegs on port %d\n", port_id);
+	// Refcount
+#if RTE_VERSION >= RTE_VERSION_NUM(18,8,0,1)
+	CONFIGURE_TX_OFFLOAD(DEV_TX_OFFLOAD_MBUF_FAST_FREE);
+#else
+	if (port_cfg->tx_conf.txq_flags & ETH_TXQ_FLAGS_NOREFCOUNT)
+		plog_info("\t\tEnabling No refcnt on port %d\n", port_id);
 	else
-		plog_info("\t\tTX Multi segments enabled on port %d\n", port_id);
+		plog_info("\t\tRefcnt enabled on port %d\n", port_id);
+#endif
 
 	plog_info("\t\tConfiguring port %u... with %u RX queues and %u TX queues\n",
 		  port_id, port_cfg->n_rxq, port_cfg->n_txq);
@@ -383,16 +564,6 @@ static void init_port(struct prox_port_cfg *port_cfg)
 	}
 
 	plog_info("\t\tMAC address set to "MAC_BYTES_FMT"\n", MAC_BYTES(port_cfg->eth_addr.addr_bytes));
-
-	if (port_cfg->capabilities.tx_offload_cksum == 0) {
-		port_cfg->tx_conf.txq_flags |= ETH_TXQ_FLAGS_NOOFFLOADS;
-		plog_info("\t\tDisabling TX offloads as pmd reports that it does not support them)\n");
-	}
-
-	if (!strcmp(port_cfg->short_name, "vmxnet3")) {
-		port_cfg->tx_conf.txq_flags |= ETH_TXQ_FLAGS_NOMULTSEGS;
-		plog_info("\t\tDisabling multsegs on port %d as vmxnet3 does not support them\n", port_id);
-	}
 
 	/* initialize TX queues first */
 	for (uint16_t queue_id = 0; queue_id < port_cfg->n_txq; ++queue_id) {

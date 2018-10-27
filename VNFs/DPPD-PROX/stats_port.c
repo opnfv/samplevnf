@@ -28,6 +28,7 @@
 #include "stats_port.h"
 #include "prox_port_cfg.h"
 #include "rw_reg.h"
+#include "prox_compat.h"
 
 #if defined(PROX_STATS) && defined(PROX_HW_DIRECT_STATS)
 
@@ -285,7 +286,7 @@ static void nic_read_stats(uint8_t port_id)
 			   dropped by the nic". Note that in case CRC
 			   is stripped on ixgbe, the CRC bytes are not
 			   counted. */
-			if (prox_port_cfg[port_id].port_conf.rxmode.hw_strip_crc == 1)
+			if (prox_port_cfg[port_id].requested_rx_offload & DEV_RX_OFFLOAD_CRC_STRIP)
 				stats->rx_bytes = eth_stat.ibytes +
 					(24 * eth_stat.ipackets - 20 * (eth_stat.ierrors + eth_stat.imissed));
 			else

@@ -37,6 +37,7 @@
 #include <rte_cryptodev_pmd.h>
 #include <rte_bus_vdev.h>
 #include "prox_port_cfg.h"
+#include "prox_compat.h"
 
 typedef unsigned int u32;
 typedef unsigned char u8;
@@ -147,8 +148,11 @@ static uint8_t get_cdev_id(void)
 		++cdev_id;
 		return cdev_id1;
 	}
-
+#if RTE_VERSION < RTE_VERSION_NUM(18,8,0,0)
 	int ret = rte_vdev_init(name, "max_nb_queue_pairs=8,max_nb_sessions=1024,socket_id=0");
+#else
+	int ret = rte_vdev_init(name, "max_nb_queue_pairs=8,socket_id=0");
+#endif
 	PROX_PANIC(ret != 0, "Failed rte_vdev_init\n");
 
 	return cdev_id++;
@@ -176,8 +180,8 @@ static void init_task_esp_enc(struct task_base *tbase, struct task_args *targ)
 	cdev_conf.socket_id = rte_socket_id();
 	rte_cryptodev_configure(task->cdev_id, &cdev_conf);
 
-	unsigned int session_size = rte_cryptodev_get_private_session_size(task->cdev_id);
-	plog_info("rte_cryptodev_get_private_session_size=%d\n", session_size);
+	unsigned int session_size = rte_cryptodev_sym_get_private_session_size(task->cdev_id);
+	plog_info("rte_cryptodev_sym_get_private_session_size=%d\n", session_size);
 	sprintf(name, "core_%03u_session_pool", lcore_id);
 	task->session_pool = rte_mempool_create(name,
 				MAX_SESSIONS,
@@ -277,8 +281,8 @@ static void init_task_esp_dec(struct task_base *tbase, struct task_args *targ)
 	cdev_conf.socket_id = rte_socket_id();
 	rte_cryptodev_configure(task->cdev_id, &cdev_conf);
 
-	unsigned int session_size = rte_cryptodev_get_private_session_size(task->cdev_id);
-	plog_info("rte_cryptodev_get_private_session_size=%d\n", session_size);
+	unsigned int session_size = rte_cryptodev_sym_get_private_session_size(task->cdev_id);
+	plog_info("rte_cryptodev_sym_get_private_session_size=%d\n", session_size);
 	sprintf(name, "core_%03u_session_pool", lcore_id);
 	task->session_pool = rte_mempool_create(name,
 				MAX_SESSIONS,

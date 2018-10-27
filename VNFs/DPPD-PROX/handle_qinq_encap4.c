@@ -152,7 +152,7 @@ static void init_task_qinq_encap4(struct task_base *tbase, struct task_args *tar
 
 	struct prox_port_cfg *port = find_reachable_port(targ);
 	if (port) {
-		task->offload_crc = port->capabilities.tx_offload_cksum;
+		task->offload_crc = port->requested_tx_offload & (DEV_TX_OFFLOAD_IPV4_CKSUM | DEV_TX_OFFLOAD_UDP_CKSUM);
 	}
 
 	/* TODO: check if it is not necessary to limit reverse mapping
