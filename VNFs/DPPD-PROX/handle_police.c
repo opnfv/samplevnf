@@ -44,7 +44,12 @@ struct task_police {
 		struct rte_meter_srtcm *sr_flows;
 		struct rte_meter_trtcm *tr_flows;
 	};
-
+	union {
+#if RTE_VERSION >= RTE_VERSION_NUM(18,5,0,0)
+        	struct rte_meter_srtcm_profile sr_profile;
+        	struct rte_meter_trtcm_profile tr_profile;
+#endif
+	};
 	uint16_t           *user_table;
 	enum police_action police_act[3][3];
 	uint16_t overhead;
@@ -58,10 +63,11 @@ static uint8_t handle_police(struct task_police *task, struct rte_mbuf *mbuf, ui
 	enum rte_meter_color in_color = e_RTE_METER_GREEN;
 	enum rte_meter_color out_color;
 	uint32_t pkt_len = rte_pktmbuf_pkt_len(mbuf) + task->overhead;
+
 #if RTE_VERSION < RTE_VERSION_NUM(18,5,0,0)
 	out_color = rte_meter_srtcm_color_aware_check(&task->sr_flows[user], tsc, pkt_len, in_color);
 #else
-	out_color = 0;	// TODO DPDK1805
+	out_color = rte_meter_srtcm_color_aware_check(&task->sr_flows[user], &task->sr_profile, tsc, pkt_len, in_color);
 #endif
 	return task->police_act[in_color][out_color] == ACT_DROP? OUT_DISCARD : 0;
 }
@@ -74,7 +80,7 @@ static uint8_t handle_police_tr(struct task_police *task, struct rte_mbuf *mbuf,
 #if RTE_VERSION < RTE_VERSION_NUM(18,5,0,0)
 	out_color = rte_meter_trtcm_color_aware_check(&task->tr_flows[user], tsc, pkt_len, in_color);
 #else
-	out_color = 0;// TODO DPDK1805
+	out_color = rte_meter_trtcm_color_aware_check(&task->tr_flows[user], &task->tr_profile, tsc, pkt_len, in_color);
 #endif
 
 	if (task->runtime_flags  & TASK_MARK) {
@@ -198,10 +204,6 @@ static void init_task_police(struct task_base *tbase, struct task_args *targ)
 	struct task_police *task = (struct task_police *)tbase;
 	const int socket_id = rte_lcore_to_socket_id(targ->lconf->id);
 
-#if RTE_VERSION >= RTE_VERSION_NUM(18,5,0,0)
-	plog_warn("mode police might not be supported in this prox/dpdk version\n"); // TODO DPDK1805
-#endif
-
 	task->overhead = targ->overhead;
 	task->runtime_flags = targ->runtime_flags;
 
@@ -225,14 +227,16 @@ static void init_task_police(struct task_base *tbase, struct task_args *targ)
 			.cbs = targ->cbs,
 			.ebs = targ->ebs,
 		};
-
+#if RTE_VERSION >= RTE_VERSION_NUM(18,5,0,0)
+		PROX_PANIC(rte_meter_srtcm_profile_config(&task->sr_profile, &params) != 0, "Failed to rte_meter_srtcm_profile_config\n");
 		for (uint32_t i = 0; i < targ->n_flows; ++i) {
-#if RTE_VERSION < RTE_VERSION_NUM(18,5,0,0)
-			rte_meter_srtcm_config(&task->sr_flows[i], &params);
-#else
-	// TODO DPDK1805
-#endif
+			PROX_PANIC(rte_meter_srtcm_config(&task->sr_flows[i], &task->sr_profile) != 0, "Failed to rte_meter_srtcm_config");
 		}
+#else
+		for (uint32_t i = 0; i < targ->n_flows; ++i) {
+			rte_meter_srtcm_config(&task->sr_flows[i], &params);
+		}
+#endif
 	}
 	else {
 		task->tr_flows = prox_zmalloc(targ->n_flows * sizeof(*task->tr_flows), socket_id);
@@ -248,14 +252,17 @@ static void init_task_police(struct task_base *tbase, struct task_args *targ)
 			.cir = targ->cir,
 			.cbs = targ->cbs,
 		};
+#if RTE_VERSION >= RTE_VERSION_NUM(18,5,0,0)
+		PROX_PANIC(rte_meter_trtcm_profile_config(&task->tr_profile, &params) != 0, "Failed to rte_meter_srtcm_profile_config\n");
+		for (uint32_t i = 0; i < targ->n_flows; ++i) {
+			PROX_PANIC(rte_meter_trtcm_config(&task->tr_flows[i], &task->tr_profile) != 0, "Failed to rte_meter_trtcm_config\n");
+		}
+#else
 
 		for (uint32_t i = 0; i < targ->n_flows; ++i) {
-#if RTE_VERSION < RTE_VERSION_NUM(18,5,0,0)
 			rte_meter_trtcm_config(&task->tr_flows[i], &params);
-#else
-	// TODO DPDK1805
-#endif
 		}
+#endif
 	}
 
 	for (uint32_t i = 0; i < 3; ++i) {

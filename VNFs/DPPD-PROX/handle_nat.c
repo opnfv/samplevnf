@@ -171,7 +171,7 @@ static void init_task_nat(struct task_base *tbase, struct task_args *targ)
 	PROX_PANIC(ret != 0, "Failed to load NAT table from lua:\n%s\n", get_lua_to_errors());
 	struct prox_port_cfg *port = find_reachable_port(targ);
 	if (port) {
-		task->offload_crc = port->capabilities.tx_offload_cksum;
+		task->offload_crc = port->requested_tx_offload & (DEV_TX_OFFLOAD_IPV4_CKSUM | DEV_TX_OFFLOAD_UDP_CKSUM);
 	}
 
 }

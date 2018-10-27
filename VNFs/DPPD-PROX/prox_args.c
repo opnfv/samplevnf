@@ -539,12 +539,25 @@ static int get_port_cfg(unsigned sindex, char *str, void *data)
 		}
 		cfg->lsc_val = val;
 	}
+#if RTE_VERSION >= RTE_VERSION_NUM(18,8,0,1)
+	else if (STR_EQ(str, "disable tx offload")) {
+		uint32_t val;
+		if (parse_int(&val, pkey)) {
+			return -1;
+		}
+		if (val)
+			cfg->disabled_tx_offload = val;
+	}
+#endif
 	else if (STR_EQ(str, "strip crc")) {
 		uint32_t val;
 		if (parse_bool(&val, pkey)) {
 			return -1;
 		}
-		cfg->port_conf.rxmode.hw_strip_crc = val;
+		if (val)
+			cfg->requested_rx_offload |= DEV_RX_OFFLOAD_CRC_STRIP;
+		else
+			cfg->requested_rx_offload &= ~DEV_RX_OFFLOAD_CRC_STRIP;
 	}
 	else if (STR_EQ(str, "mtu size")) {
 		uint32_t val;
@@ -558,7 +571,7 @@ static int get_port_cfg(unsigned sindex, char *str, void *data)
 			// the max_rx_pkt_len for a non jumbo frame is 1518
 			cfg->port_conf.rxmode.max_rx_pkt_len = cfg->mtu + ETHER_HDR_LEN + ETHER_CRC_LEN;
 			if (cfg->port_conf.rxmode.max_rx_pkt_len > ETHER_MAX_LEN) {
-				cfg->port_conf.rxmode.jumbo_frame = 1;
+				cfg->requested_rx_offload |= DEV_RX_OFFLOAD_JUMBO_FRAME;
 			}
 		}
 	}

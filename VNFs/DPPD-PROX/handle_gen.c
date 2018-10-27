@@ -1246,7 +1246,7 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 	struct prox_port_cfg *port = find_reachable_port(targ);
 	// TODO: check that all reachable ports have the same mtu...
 	if (port) {
-		task->cksum_offload = port->capabilities.tx_offload_cksum;
+		task->cksum_offload = port->requested_tx_offload & (DEV_TX_OFFLOAD_IPV4_CKSUM | DEV_TX_OFFLOAD_UDP_CKSUM);
 		task->port = port;
 		task->max_frame_size = port->mtu + ETHER_HDR_LEN + 2 * PROX_VLAN_TAG_SIZE;
 	} else {

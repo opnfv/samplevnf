@@ -18,6 +18,9 @@
 #include <rte_table_hash.h>
 #include <rte_version.h>
 #include <rte_malloc.h>
+#if RTE_VERSION >= RTE_VERSION_NUM(18,5,0,0)
+#include <rte_eal_memconfig.h>
+#endif
 
 #include "prox_malloc.h"
 #include "display.h"
@@ -259,6 +262,93 @@ void cmd_mem_stats(void)
 	}
 }
 
+static void get_hp_sz_string(char *sz_str, uint64_t hp_sz)
+{
+	switch (hp_sz >> 20) {
+	case 0:
+		strcpy(sz_str, " 0 ");
+		break;
+	case 2:
+		strcpy(sz_str, "2MB");
+		break;
+	case 1024:
+		strcpy(sz_str, "1GB");
+		break;
+	default:
+		strcpy(sz_str, "??");
+	}
+}
+
+#if RTE_VERSION >= RTE_VERSION_NUM(18,5,0,0)
+// Print all segments, 1 by 1
+// Unused for now, keep for reference
+static int print_all_segments(const struct rte_memseg_list *memseg_list, const struct rte_memseg *memseg, void *arg)
+{
+	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	int memseg_list_idx, memseg_idx;
+	int n = (*(int *)arg)++;
+
+	memseg_list_idx = memseg_list - mcfg->memsegs;
+	if ((memseg_list_idx < 0) || (memseg_list_idx >= RTE_MAX_MEMSEG_LISTS)) {
+		plog_err("Invalid memseg_list_idx = %d; memseg_list = %p, mcfg->memsegs = %p\n", memseg_list_idx, memseg_list, mcfg->memsegs);
+		return -1;
+	}
+	memseg_idx = rte_fbarray_find_idx(&memseg_list->memseg_arr, memseg);
+	if (memseg_idx < 0) {
+		plog_err("Invalid memseg_idx = %d; memseg_list = %p, memseg = %p\n", memseg_idx, memseg_list, memseg);
+		return -1;
+	}
+
+	char sz_str[5];
+	get_hp_sz_string(sz_str, memseg->hugepage_sz);
+	plog_info("Segment %u (sock %d): [%i-%i] [%#lx-%#lx] at %p using %zu pages of %s\n",
+		n,
+		memseg->socket_id,
+		memseg_list_idx,
+		memseg_idx,
+		memseg->iova,
+		memseg->iova+memseg->len,
+		memseg->addr,
+		memseg->len/memseg->hugepage_sz, sz_str);
+
+        return 0;
+}
+
+// Print memory segments
+// Contiguous segments are shown as 1 big segment
+static int print_segments(const struct rte_memseg_list *memseg_list, const struct rte_memseg *memseg, size_t len, void *arg)
+{
+	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	int memseg_list_idx, memseg_idx;
+	static int n = 0;
+
+	memseg_list_idx = memseg_list - mcfg->memsegs;
+	if ((memseg_list_idx < 0) || (memseg_list_idx >= RTE_MAX_MEMSEG_LISTS)) {
+		plog_err("Invalid memseg_list_idx = %d; memseg_list = %p, mcfg->memsegs = %p\n", memseg_list_idx, memseg_list, mcfg->memsegs);
+		return -1;
+	}
+	memseg_idx = rte_fbarray_find_idx(&memseg_list->memseg_arr, memseg);
+	if (memseg_idx < 0) {
+		plog_err("Invalid memseg_idx = %d; memseg_list = %p, memseg = %p\n", memseg_idx, memseg_list, memseg);
+		return -1;
+	}
+
+	char sz_str[5];
+	get_hp_sz_string(sz_str, memseg->hugepage_sz);
+	plog_info("Segment %u (sock %d): [%i-%i] [%#lx-%#lx] at %p using %zu pages of %s\n",
+		n++,
+		memseg->socket_id,
+		memseg_list_idx,
+		memseg_idx,
+		memseg->iova,
+		memseg->iova+len,
+		memseg->addr,
+		memseg->hugepage_sz?len/memseg->hugepage_sz:0, sz_str);
+
+        return 0;
+}
+
+#endif
 void cmd_mem_layout(void)
 {
 #if RTE_VERSION < RTE_VERSION_NUM(18,5,0,0)
@@ -269,17 +359,8 @@ void cmd_mem_layout(void)
 		if (memseg[i].addr == NULL)
 			break;
 
-		const char *sz_str;
-		switch (memseg[i].hugepage_sz >> 20) {
-		case 2:
-			sz_str = "2MB";
-			break;
-		case 1024:
-			sz_str = "1GB";
-			break;
-		default:
-			sz_str = "??";
-		}
+		char sz_str[5];
+		get_hp_sz_string(sz_str, memseg[i].hugepage_sz);
 
 		plog_info("Segment %u: [%#lx-%#lx] at %p using %zu pages of %s\n",
 			  i,
@@ -289,8 +370,9 @@ void cmd_mem_layout(void)
 			  memseg[i].len/memseg[i].hugepage_sz, sz_str);
 	}
 #else
-	plog_info("Memory layout: command not supported in this DPDK version\n");
-	// TODO DPDK1805
+	int segment_number = 0;
+	//rte_memseg_walk(print_all_segments, &segment_number);
+	rte_memseg_contig_walk(print_segments, &segment_number);
 #endif
 }
 

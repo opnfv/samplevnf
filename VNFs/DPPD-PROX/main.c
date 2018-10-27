@@ -224,6 +224,21 @@ static int chain_flag_state(struct task_args *targ, uint64_t flag, int is_set)
 	return 0;
 }
 
+static int chain_flag_always_set(struct task_args *targ, uint64_t flag)
+{
+	return (!chain_flag_state(targ, flag, 0));
+}
+
+static int chain_flag_never_set(struct task_args *targ, uint64_t flag)
+{
+	return (!chain_flag_state(targ, flag, 1));
+}
+
+static int chain_flag_sometimes_set(struct task_args *targ, uint64_t flag)
+{
+	return (chain_flag_state(targ, flag, 1));
+}
+
 static void configure_if_tx_queues(struct task_args *targ, uint8_t socket)
 {
 	uint8_t if_port;
@@ -247,21 +262,19 @@ static void configure_if_tx_queues(struct task_args *targ, uint8_t socket)
 			prox_port_cfg[if_port].n_txq = 1;
 			targ->tx_port_queue[i].queue = 0;
 		}
-		/* Set the ETH_TXQ_FLAGS_NOREFCOUNT flag if none of
-		   the tasks up to the task transmitting to the port
-		   use refcnt. */
-		if (!chain_flag_state(targ, TASK_FEATURE_TXQ_FLAGS_REFCOUNT, 1)) {
-			prox_port_cfg[if_port].tx_conf.txq_flags |= ETH_TXQ_FLAGS_NOREFCOUNT;
-		}
-
 		/* By default OFFLOAD is enabled, but if the whole
 		   chain has NOOFFLOADS set all the way until the
 		   first task that receives from a port, it will be
 		   disabled for the destination port. */
-		if (!chain_flag_state(targ, TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS, 0)) {
+#if RTE_VERSION < RTE_VERSION_NUM(18,8,0,1)
+		if (chain_flag_always_set(targ, TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS)) {
 			prox_port_cfg[if_port].tx_conf.txq_flags |= ETH_TXQ_FLAGS_NOOFFLOADS;
 		}
-
+#else
+		if (chain_flag_always_set(targ, TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS)) {
+			prox_port_cfg[if_port].requested_tx_offload &= ~(DEV_TX_OFFLOAD_IPV4_CKSUM | DEV_TX_OFFLOAD_UDP_CKSUM);
+		}
+#endif
 	}
 }
 
@@ -301,24 +314,6 @@ static void configure_if_rx_queues(struct task_args *targ, uint8_t socket)
 	}
 }
 
-static void configure_multi_segments(void)
-{
-	struct lcore_cfg *lconf = NULL;
-	struct task_args *targ;
-	uint8_t if_port;
-
-	while (core_targ_next(&lconf, &targ, 0) == 0) {
-		for (uint8_t i = 0; i < targ->nb_txports; ++i) {
-			if_port = targ->tx_port_queue[i].port;
-			// Multi segment is disabled for most tasks. It is only enabled for tasks requiring big packets.
-			// We can only enable "no multi segment" if no such task exists in the chain of tasks.
-			if (!chain_flag_state(targ, TASK_FEATURE_TXQ_FLAGS_MULTSEGS, 1)) {
-				prox_port_cfg[if_port].tx_conf.txq_flags |= ETH_TXQ_FLAGS_NOMULTSEGS;
-			}
-		}
-	}
-}
-
 static void configure_if_queues(void)
 {
 	struct lcore_cfg *lconf = NULL;
@@ -330,6 +325,62 @@ static void configure_if_queues(void)
 
 		configure_if_rx_queues(targ, socket);
 		configure_if_tx_queues(targ, socket);
+	}
+}
+
+static void configure_tx_queue_flags(void)
+{
+	struct lcore_cfg *lconf = NULL;
+	struct task_args *targ;
+	uint8_t socket;
+	uint8_t if_port;
+
+        while (core_targ_next(&lconf, &targ, 0) == 0) {
+                socket = rte_lcore_to_socket_id(lconf->id);
+                for (uint8_t i = 0; i < targ->nb_txports; ++i) {
+                        if_port = targ->tx_port_queue[i].port;
+#if RTE_VERSION < RTE_VERSION_NUM(18,8,0,1)
+                        /* Set the ETH_TXQ_FLAGS_NOREFCOUNT flag if none of
+                        the tasks up to the task transmitting to the port
+                        use refcnt. */
+                        if (chain_flag_never_set(targ, TASK_FEATURE_TXQ_FLAGS_REFCOUNT)) {
+                                prox_port_cfg[if_port].tx_conf.txq_flags |= ETH_TXQ_FLAGS_NOREFCOUNT;
+                        }
+#else
+                        /* Set the DEV_TX_OFFLOAD_MBUF_FAST_FREE flag if none of
+                        the tasks up to the task transmitting to the port
+                        use refcnt and per-queue all mbufs comes from the same mempool. */
+                        if (chain_flag_never_set(targ, TASK_FEATURE_TXQ_FLAGS_REFCOUNT)) {
+                                if (chain_flag_never_set(targ, TASK_FEATURE_TXQ_FLAGS_MULTIPLE_MEMPOOL))
+                                        prox_port_cfg[if_port].requested_tx_offload |= DEV_TX_OFFLOAD_MBUF_FAST_FREE;
+                        }
+#endif
+                }
+	}
+}
+
+static void configure_multi_segments(void)
+{
+	struct lcore_cfg *lconf = NULL;
+	struct task_args *targ;
+	uint8_t if_port;
+
+	while (core_targ_next(&lconf, &targ, 0) == 0) {
+		for (uint8_t i = 0; i < targ->nb_txports; ++i) {
+			if_port = targ->tx_port_queue[i].port;
+			// Multi segment is disabled for most tasks. It is only enabled for tasks requiring big packets.
+#if RTE_VERSION < RTE_VERSION_NUM(18,8,0,1)
+			// We can only enable "no multi segment" if no such task exists in the chain of tasks.
+			if (chain_flag_never_set(targ, TASK_FEATURE_TXQ_FLAGS_MULTSEGS)) {
+				prox_port_cfg[if_port].tx_conf.txq_flags |= ETH_TXQ_FLAGS_NOMULTSEGS;
+			}
+#else
+			// We enable "multi segment" if at least one task requires it in the chain of tasks.
+			if (chain_flag_sometimes_set(targ, TASK_FEATURE_TXQ_FLAGS_MULTSEGS)) {
+				prox_port_cfg[if_port].requested_tx_offload |= DEV_TX_OFFLOAD_MULTI_SEGS;
+			}
+#endif
+		}
 	}
 }
 
@@ -509,6 +560,8 @@ static struct rte_ring *init_ring_between_tasks(struct lcore_cfg *lconf, struct 
 		PROX_ASSERT(dtarg->nb_rxrings < MAX_RINGS_PER_TASK);
 		dtarg->rx_rings[dtarg->nb_rxrings] = ring;
 		++dtarg->nb_rxrings;
+		if (dtarg->nb_rxrings > 1)
+			dtarg->task_init->flag_features |= TASK_FEATURE_TXQ_FLAGS_MULTIPLE_MEMPOOL;
 	}
 	dtarg->nb_slave_threads = starg->core_task_set[idx].n_elems;
 	dtarg->lb_friend_core = lconf->id;
@@ -914,19 +967,16 @@ static void init_lcores(void)
 	plog_info("=== Initializing queue numbers on cores ===\n");
 	configure_if_queues();
 
-	configure_multi_segments();
-
 	plog_info("=== Initializing rings on cores ===\n");
 	init_rings();
+
+	configure_multi_segments();
+	configure_tx_queue_flags();
 
 	plog_info("=== Checking configuration consistency ===\n");
 	check_cfg_consistent();
 
 	plog_all_rings();
-
-	setup_all_task_structs_early_init();
-	plog_info("=== Initializing tasks ===\n");
-	setup_all_task_structs();
 }
 
 static int setup_prox(int argc, char **argv)
@@ -953,6 +1003,10 @@ static int setup_prox(int argc, char **argv)
 	init_lcores();
 	plog_info("=== Initializing ports ===\n");
 	init_port_all();
+
+	setup_all_task_structs_early_init();
+	plog_info("=== Initializing tasks ===\n");
+	setup_all_task_structs();
 
 	if (prox_cfg.logbuf_size) {
 		prox_cfg.logbuf = prox_zmalloc(prox_cfg.logbuf_size, rte_socket_id());

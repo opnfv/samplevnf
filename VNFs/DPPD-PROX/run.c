@@ -80,6 +80,7 @@ static void update_link_states(void)
 		rte_eth_link_get_nowait(portid, &link);
 		port_cfg->link_up = link.link_status;
 		port_cfg->link_speed = link.link_speed;
+		plog_info("Link speed now %d Mbps\n", port_cfg->link_speed);
 	}
 }
 

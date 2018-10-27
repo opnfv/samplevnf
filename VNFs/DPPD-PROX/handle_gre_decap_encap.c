@@ -156,7 +156,7 @@ static void init_task_gre_encap(struct task_base *tbase, struct task_args *targ)
 
 	struct port_cfg *port = find_reachable_task_sending_to_port(targ);
 	if (port) {
-		task->offload_crc = port->capabilities.tx_offload_cksum;
+		task->offload_crc = port->requested_tx_offload & TX_OFFLOAD_CKSUM;
 	}
 
 #ifdef GRE_TP

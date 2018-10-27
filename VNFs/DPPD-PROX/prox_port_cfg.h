@@ -61,6 +61,10 @@ struct prox_port_cfg {
 	struct rte_eth_conf port_conf;
 	struct rte_eth_rxconf rx_conf;
 	struct rte_eth_txconf tx_conf;
+	uint64_t requested_rx_offload;
+	uint64_t requested_tx_offload;
+	uint64_t disabled_tx_offload;
+	struct rte_eth_dev_info dev_info;
 	struct {
 		int tx_offload_cksum;
 	} capabilities;
