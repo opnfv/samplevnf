@@ -571,13 +571,14 @@ static void shuffle_mempool(struct rte_mempool* mempool, uint32_t nb_mbuf)
 	struct rte_mbuf** pkts = prox_zmalloc(nb_mbuf * sizeof(*pkts), rte_socket_id());
 	uint64_t got = 0;
 
-	while (rte_mempool_get_bulk(mempool, (void**)(pkts + got), 1) == 0)
+	while ((got < nb_mbuf) && (rte_mempool_get_bulk(mempool, (void**)(pkts + got), 1) == 0))
 		++got;
 
+	nb_mbuf = got;
 	while (got) {
 		int idx;
 		do {
-			idx = rand() % nb_mbuf - 1;
+			idx = rand() % nb_mbuf;
 		} while (pkts[idx] == 0);
 
 		rte_mempool_put_bulk(mempool, (void**)&pkts[idx], 1);
