@@ -577,7 +577,7 @@ static void shuffle_mempool(struct rte_mempool* mempool, uint32_t nb_mbuf)
 	while (got) {
 		int idx;
 		do {
-			idx = rand() % nb_mbuf - 1;
+			idx = rand() % (nb_mbuf - 1);
 		} while (pkts[idx] == 0);
 
 		rte_mempool_put_bulk(mempool, (void**)&pkts[idx], 1);
