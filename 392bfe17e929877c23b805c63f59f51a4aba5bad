@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5a682502_5ce82c10",
+        "filename": "VNFs/DPPD-PROX/main.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 569,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-10-29T17:38:51Z",
+      "side": 1,
+      "message": "Good catch for the bug on L580, but... I think we don\u0027t even need the \"-1\", and \"% nb_mbuf;\" should be fine too.\nAs an optimization, you could add \"nb_mbuf \u003d got;\" on L576.\nAnd for sanity, you could check that \"got \u003c nb_mbuf\" as a pre-condition before calling rte_mempool_get_bulk() on L574.",
+      "revId": "392bfe17e929877c23b805c63f59f51a4aba5bad",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
