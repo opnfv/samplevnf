@@ -1,0 +1,7 @@
+Code-Review+2: Deepak S <deepak.s@linux.intel.com>
+Verified+1: Deepak S <deepak.s@linux.intel.com>
+Submitted-by: Deepak S <deepak.s@linux.intel.com>
+Submitted-at: Wed, 31 Oct 2018 17:48:17 +0000
+Reviewed-on: https://gerrit.opnfv.org/gerrit/64335
+Project: samplevnf
+Branch: refs/heads/stable/gambia
