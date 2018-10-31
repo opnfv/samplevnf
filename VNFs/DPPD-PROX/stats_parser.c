@@ -149,6 +149,23 @@ static uint64_t sp_task_drop_handled(int argc, const char *argv[])
 	return stats_get_task_stats_sample(c, t, 1)->drop_handled;
 }
 
+static uint64_t sp_task_rx_non_dp(int argc, const char *argv[])
+{
+	struct task_stats_sample *last;
+	uint32_t c, t;
+	if (args_to_core_task(argv[0], argv[1], &c, &t))
+		return -1;
+	return stats_get_task_stats_sample(c, t, 1)->rx_non_dp;
+}
+
+static uint64_t sp_task_tx_non_dp(int argc, const char *argv[])
+{
+	struct task_stats_sample *last;
+	uint32_t c, t;
+	if (args_to_core_task(argv[0], argv[1], &c, &t))
+		return -1;
+	return stats_get_task_stats_sample(c, t, 1)->tx_non_dp;
+}
 static uint64_t sp_task_rx_bytes(int argc, const char *argv[])
 {
 	return -1;
@@ -790,6 +807,8 @@ struct stats_path_str stats_paths[] = {
 	{"task.core(#).task(#).rx_prio(#)", sp_task_rx_prio},
 	{"task.core(#).task(#).max_irq", sp_task_max_irq},
 	{"task.core(#).task(#).irq(#)", sp_task_irq},
+	{"task.core(#).task(#).rx_non_dp", sp_task_rx_non_dp},
+	{"task.core(#).task(#).tx_non_dp", sp_task_tx_non_dp},
 
 	{"port(#).no_mbufs", sp_port_no_mbufs},
 	{"port(#).ierrors", sp_port_ierrors},

@@ -1656,6 +1656,39 @@ static int parse_cmd_core_stats(const char *str, struct input *input)
 	return 0;
 }
 
+static int parse_cmd_dp_core_stats(const char *str, struct input *input)
+{
+	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
+
+	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+		return -1;
+
+	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
+		for (unsigned int i = 0; i < nb_cores; i++) {
+			lcore_id = lcores[i];
+			uint64_t tot_rx = stats_core_task_tot_rx(lcore_id, task_id);
+			uint64_t tot_tx = stats_core_task_tot_tx(lcore_id, task_id);
+			uint64_t tot_rx_non_dp = stats_core_task_tot_rx_non_dp(lcore_id, task_id);
+			uint64_t tot_tx_non_dp = stats_core_task_tot_tx_non_dp(lcore_id, task_id);
+			uint64_t tot_drop = stats_core_task_tot_drop(lcore_id, task_id);
+			uint64_t last_tsc = stats_core_task_last_tsc(lcore_id, task_id);
+
+			if (input->reply) {
+				char buf[128];
+				snprintf(buf, sizeof(buf),
+				 	"%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64"\n",
+				 	tot_rx, tot_tx, tot_rx_non_dp, tot_tx_non_dp, tot_drop, last_tsc, rte_get_tsc_hz());
+				input->reply(input, buf, strlen(buf));
+			}
+			else {
+				plog_info("RX: %"PRIu64", TX: %"PRIu64", RX_NON_DP:  %"PRIu64", TX_NON_DP: %"PRIu64", DROP: %"PRIu64"\n",
+				  	tot_rx, tot_tx, tot_rx_non_dp, tot_tx_non_dp, tot_drop);
+			}
+		}
+	}
+	return 0;
+}
+
 static int parse_cmd_lat_stats(const char *str, struct input *input)
 {
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
@@ -1975,6 +2008,7 @@ static struct cmd_str cmd_strings[] = {
 	{"lat packets", "<core id> <task id>", "Print the latency for each of the last set of packets", parse_cmd_lat_packets},
 	{"accuracy limit", "<core id> <task id> <nsec>", "Only consider latency of packets that were measured with an error no more than <nsec>", parse_cmd_accuracy},
 	{"core stats", "<core id> <task id>", "Print rx/tx/drop for task <task id> running on core <core id>", parse_cmd_core_stats},
+	{"dp core stats", "<core id> <task id>", "Print rx/tx/non_dp_rx/non_dp_tx/drop for task <task id> running on core <core id>", parse_cmd_dp_core_stats},
 	{"port_stats", "<port id>", "Print rate for no_mbufs, ierrors + imissed, rx_bytes, tx_bytes, rx_pkts, tx_pkts; totals for RX, TX, no_mbufs, ierrors + imissed for port <port id>", parse_cmd_port_stats},
 	{"multi port stats", "<port list>", "Get stats for multiple ports, semi-colon separated: port id, total for rx_pkts, tx_pkts, no_mbufs, ierrors + imissed, last_tsc", parse_cmd_multi_port_stats},
 	{"read reg", "", "Read register", parse_cmd_read_reg},

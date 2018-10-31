@@ -527,6 +527,7 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 	task_lat_update_lat_test(task);
 
 	// Remember those packets with bad length or bad signature
+	uint32_t non_dp_count = 0;
 	uint64_t pkt_bad_len_sig[(MAX_RX_PKT_ALL + 63) / 64];
 #define BIT64_SET(a64, bit)	a64[bit / 64] |=  (((uint64_t)1) << (bit & 63))
 #define BIT64_CLR(a64, bit)	a64[bit / 64] &= ~(((uint64_t)1) << (bit & 63))
@@ -540,9 +541,10 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 		task->rx_pkt_meta[j].hdr = rte_pktmbuf_mtod(mbuf, uint8_t *);
 
 		// Remember those packets which are too short to hold the values that we expect
-		if (unlikely(rte_pktmbuf_pkt_len(mbuf) < task->min_pkt_len))
+		if (unlikely(rte_pktmbuf_pkt_len(mbuf) < task->min_pkt_len)) {
 			BIT64_SET(pkt_bad_len_sig, j);
-		else
+			non_dp_count++;
+		} else
 			BIT64_CLR(pkt_bad_len_sig, j);
 	}
 
@@ -553,8 +555,10 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 			// Remember those packets with bad signature
 			if (likely(*(uint32_t *)(task->rx_pkt_meta[j].hdr + task->sig_pos) == task->sig))
 				task->rx_pkt_meta[j].pkt_tx_time = *(uint32_t *)(task->rx_pkt_meta[j].hdr + task->lat_pos);
-			else
+			else {
 				BIT64_SET(pkt_bad_len_sig, j);
+				non_dp_count++;
+			}
 		}
 	} else {
 		for (uint16_t j = 0; j < n_pkts; ++j) {
@@ -584,6 +588,7 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 		rx_time_err = pkt_rx_time64 - (task->begin >> LATENCY_ACCURACY);
 	}
 
+	TASK_STATS_ADD_RX_NON_DP(&tbase->aux->stats, non_dp_count);
 	for (uint16_t j = 0; j < n_pkts; ++j) {
 		// Used to display % of packets within accuracy limit vs. total number of packets (used_col)
 		task->lat_test->tot_all_pkts++;
