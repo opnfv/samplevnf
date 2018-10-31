@@ -17,7 +17,7 @@ The *SampleVNFs*, the *SampleVNF test cases* are opensource software,
 licensed under the terms of the Apache License, Version 2.0.
 
 ==========================================
-OPNFV Farser Release Note for SampleVNF
+OPNFV Gambia Release Note for SampleVNF
 ==========================================
 
 .. toctree::
@@ -43,7 +43,7 @@ Version History
 | *Date*         | *Version*          | *Comment*                       |
 |                |                    |                                 |
 +----------------+--------------------+---------------------------------+
-| "May 25 2018"  |  6.2.0             | SampleVNF for Farser release    |
+| "May 25 2018"  |  7.0.0             | SampleVNF for Gambia release    |
 |                |                    |                                 |
 +----------------+--------------------+---------------------------------+
 
@@ -56,10 +56,10 @@ The software delivered in the OPNFV SampleVNF_ Project, comprising the
 Project is a realization of the methodology in ETSI-ISG NFV-TST001_.
 
 
-OPNFV Farser Release
+OPNFV Gambia Release
 ======================
 
-This Farser release provides *SampleVNF* as a approx VNF repository for
+This Gambia release provides *SampleVNF* as a approx VNF repository for
 VNF/NFVI testing, characterization and OPNFV feature testing, automated on
 OPNFV platform, including:
 
@@ -77,7 +77,7 @@ OPNFV platform, including:
 
 * SampleVNF source code
 
-For Farser release, the *SampleVNF* supported:
+For Gambia release, the *SampleVNF* supported:
 
 +----------------+---------------------------------------------------------+-------------------+
 | *VNF*          |                 *Name*                                  |    *version*      |
@@ -97,7 +97,7 @@ For Farser release, the *SampleVNF* supported:
 .. note:: Highlevel Desgin and features supported by each of the VNFs is described in Developer
           and user guide.
 
-For Farser release, the *SampleVNF* is used for the following
+For Gambia release, the *SampleVNF* is used for the following
 testing:
 
 * OPNFV platform testing - generic test cases to measure the categories:
@@ -127,19 +127,19 @@ Release Data
 | **Project**                          | SampleVNF                            |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
-| **Repo/tag**                         | opnfv-6.2.0                          |
+| **Repo/tag**                         | opnfv-7.0.0                          |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
-| **SampleVNF Docker image tag**       | Farser 6.2                           |
+| **SampleVNF Docker image tag**       | Gambia 7.0                           |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
-| **Release designation**              | Farser 6.2                           |
+| **Release designation**              | Gambia 7.0                           |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
-| **Release date**                     | "May 25 2018"                        |
+| **Release date**                     | "Nov 02 2018"                        |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
-| **Purpose of the delivery**          | Fraser alignment to Released         |
+| **Purpose of the delivery**          | Gambia alignment to Released         |
 |                                      | bug-fixes for the following:         |
 |                                      | - Memory leak                        |
 |                                      | - minimum latency                    |
@@ -248,75 +248,26 @@ Known Issues/Faults
 Corrected Faults
 ----------------
 
-Farser 6.2:
+Gambia 7.0:
 
 +----------------------------+-------------------------------------------------------------------+
 | **JIRA REFERENCE**         | **DESCRIPTION**                                                   |
 +----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-98               |  SampleVNF RESTful API support                                    |
+| SAMPLEVNF-                 |  PROX support for dpdk 18,05                                    |
 +----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-99               |  Security gateway testing                                         |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-100              |  Add support for generation of jumbo frames                       |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-101              |  Support for dpdk-stable-17.11.1 crypto                           |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-102              |  Support async operation in handle_espo                           |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-103              |  Add support for reception of jumbo frames                        |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-104              |  Support additional MAC format in config file                     |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-105              |  support for multiple GEN tasks running on the same core          |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-106              |  Add support for crypto on multiple cores                         |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-107              |  Zero packet loss testing                                         |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-108              |  Integrate irq mode into PROX (support display and command line)  |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-109              |  Add config option to use port mac as src mac in l2fwd and swap   |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-110              |  Add support for DPDK 17.11                                       |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-111              |  Add support for multiple tasks generating to same ip in l3 mode  |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-112              |  Add l3 support for tasks without physical tx ports               |
-+----------------------------+-------------------------------------------------------------------+
+
+
+
 
 Bug Fix Jira:
 
 +----------------------------+-------------------------------------------------------------------+
 | **JIRA REFERENCE**         | **DESCRIPTION**                                                   |
 +----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-113              |  link speed when link is down at startup.                         |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-114              |  minimum latency                                                  |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-115              |  potential crash if link speed is null                            |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-116              |  the calculation of dropped packets and other changes             |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-117              |  latency accuracy and dumping latencies to file                   |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-118              |  issues with the pkt_size command                                 |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-119              |  extrapolation used in latency measurements                       |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-120              |  dumping receive packets                                          |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-121              |  using signature in latency measurements                          |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-122              |  stacking of rx receive functions                                 |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-123              |  potential crash when issuing "tx distr stop" command.            |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-124              |  extrapolation used in latency measurements                       |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-125              |  memory leak introduced by 4a65cd84                               |
+| SAMPLEVNF-                 |  Fix samplevnf perf issues          |
 +----------------------------+-------------------------------------------------------------------+
 
-Farser known restrictions/issues
+Gambia known restrictions/issues
 ====================================
 +-----------+-----------+----------------------------------------------+
 | Installer | Scenario  |  Issue                                       |
@@ -342,7 +293,7 @@ Useful links
 
  - wiki project page: https://wiki.opnfv.org/display/SAM
 
- - wiki SampleVNF Farser release planing page: https://wiki.opnfv.org/display/SAM/F+Release+Plan+for+SampleVNF
+ - wiki SampleVNF Gambia release planing page: https://wiki.opnfv.org/display/SAM/G+-+Release+SampleVNF+planning
 
  - SampleVNF repo: https://git.opnfv.org/cgit/samplevnf
 
