@@ -43,7 +43,7 @@ Version History
 | *Date*         | *Version*          | *Comment*                       |
 |                |                    |                                 |
 +----------------+--------------------+---------------------------------+
-| "May 25 2018"  |  7.0.0             | SampleVNF for Gambia release    |
+| "Nov 01 2018"  |  7.0.0             | SampleVNF for Gambia release    |
 |                |                    |                                 |
 +----------------+--------------------+---------------------------------+
 
@@ -199,40 +199,26 @@ It includes the following documentation updates:
 Feature additions
 -----------------
 
-- SampleVNF RESTful API support
-- Security gateway testing
-- Support reading inline jumbo frame and dump them
-- Add support for generation of jumbo frames
-- Support for dpdk-stable-17.11.1 crypto
-- Add support for multiple variables in core definition
-- Support async operation in handle_esp
-- Add support for reception of jumbo frames
-- Support additional MAC format in config file
-- Add support for multiple GEN tasks running on the same core
-- Add support for crypto on multiple cores
-- Zero packet loss testing has been added.
-- Integrate irq mode into PROX (support display and command line)
-- Support async operation in handle_esp
-- Add config option to use port mac as src mac in l2fwd and swap
-- Add support for DPDK 17.11
-- Add support for multiple tasks generating to same ip in l3 mode.
-- Add l3 support for tasks without physical tx ports
+- Support for DPDK 18.05 and DPDK 18.08
+- Add support for counting non dataplane related packets
+- test improvements and fixes for image creation
+- Local Documentation Builds
+- Improve l3fwd performance
+- Enable the local cache mac address
+- Initial support for DPDK 18.05
+- Adding centos.json to be used with packer to generate a VM with PROX
+- Adding support for Ubuntu 17.10...
+- Get multiple port stats simultaneously
+- Increase default mbuf size and code simplification/cleanup
+- update from src port in the pvt/pub handler
 
 Bug fixes:
-- link speed when link is down at startup.
-- minimum latency
-- potential crash if link speed is null
-- the calculation of dropped packets and other changes
-- latency accuracy and dumping latencies to file
-- issues with the pkt_size command
-- potential crash in rx and tx distribution
-- extrapolation used in latency measurements
-- dumping receive packets
-- using signature in latency measurements
-- stacking of rx receive functions
-- potential crash when issuing "tx distr stop" command.
-- extrapolation used in latency measurements
-- memory leak introduced by 4a65cd84
+- Fix potential crash with latency accuracy
+- TempFix: vCGNAPT/vACL ipv4 perf issue
+- Temp Fix for vFW perf issue
+- fix code standard in VNFs/DPPD-PROX/handle_esp.c
+- Workaround DPDK net/virtio queue setup issue
+- Fix potential crash when shuffling mbufs
 
 
 Known Issues/Faults
@@ -253,8 +239,302 @@ Gambia 7.0:
 +----------------------------+-------------------------------------------------------------------+
 | **JIRA REFERENCE**         | **DESCRIPTION**                                                   |
 +----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-129              |  Support for DPDK 18.05 and DPDK 18.08                            |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-130              |  Add support for counting non dataplane related packets           |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-131              |  test improvements and fixes for image creation                   |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-132              |  Local Documentation Builds                                       |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-133              |  Improve l3fwd performance                                        |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-134              |  Enable the local cache mac address                               |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-135              |  Initial support for DPDK 18.05                                   |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-136              |  Adding centos.json to be used with packer to generate a VM with PROX|
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-137              |  Adding support for Ubuntu 17.10...                               |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-138              |  Get multiple port stats simultaneously                           |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-139              |  Increase default mbuf size and code simplification/cleanup       |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-140              |  update from src port in the pvt/pub handler                      |
++----------------------------+-------------------------------------------------------------------+
+
+
+
+
+Bug Fix Jira:
+
++----------------------------+-------------------------------------------------------------------+
+| **JIRA REFERENCE**         | **DESCRIPTION**                                                   |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-141              |  Fix potential crash with latency accuracy                        |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-142              |  TempFix: vCGNAPT/vACL ipv4 perf issue                            |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-143              |  Temp Fix for vFW perf issue                                      |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-144              |  fix code standard in VNFs/DPPD-PROX/handle_esp.c                 |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-145              |  Workaround DPDK net/virtio queue setup issue                     |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-146              |  Fix potential crash when shuffling mbufs                         |
++----------------------------+-------------------------------------------------------------------+
+
+Gambia known restrictions/issues
+====================================
++-----------+-----------+----------------------------------------------+
+| Installer | Scenario  |  Issue                                       |
++===========+===========+==============================================+
+|           |           |                                              |
++-----------+-----------+----------------------------------------------+
+
+
+Open JIRA tickets
+=================
+
++----------------------------+------------------------------------------------+
+| **JIRA REFERENCE**         | **DESCRIPTION**                                |
+|                            |                                                |
++----------------------------+------------------------------------------------+
+|                            |                                                |
+|                            |                                                |
++----------------------------+------------------------------------------------+
+
+
+Useful links
+============
+
+ - wiki project page: https://wiki.opnfv.org/display/SAM
+
+ - wiki SampleVNF Gambia release planing page: https://wiki.opnfv.org/display/SAM/G+-+Release+SampleVNF+planning
+
+ - SampleVNF repo: https://git.opnfv.org/cgit/samplevnf
+
+ - SampleVNF IRC chanel: #opnfv-samplevnf
 | SAMPLEVNF-                 |  PROX support for dpdk 18,05                                    |
 +----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-                 |  PROX support for dpdk 18,05                                    |
++----------------------------+-------------------------------------------------------------------+
+
+
+
+
+Bug Fix Jira:
+
++----------------------------+-------------------------------------------------------------------+
+| **JIRA REFERENCE**         | **DESCRIPTION**                                                   |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-                 |  Fix samplevnf perf issues          |
++----------------------------+-------------------------------------------------------------------+
+
+Gambia known restrictions/issues
+====================================
++-----------+-----------+----------------------------------------------+
+| Installer | Scenario  |  Issue                                       |
++===========+===========+==============================================+
+|           |           |                                              |
++-----------+-----------+----------------------------------------------+
+
+
+Open JIRA tickets
+=================
+
++----------------------------+------------------------------------------------+
+| **JIRA REFERENCE**         | **DESCRIPTION**                                |
+|                            |                                                |
++----------------------------+------------------------------------------------+
+|                            |                                                |
+|                            |                                                |
++----------------------------+------------------------------------------------+
+
+
+Useful links
+============
+
+ - wiki project page: https://wiki.opnfv.org/display/SAM
+
+ - wiki SampleVNF Gambia release planing page: https://wiki.opnfv.org/display/SAM/G+-+Release+SampleVNF+planning
+
+ - SampleVNF repo: https://git.opnfv.org/cgit/samplevnf
+
+ - SampleVNF IRC chanel: #opnfv-samplevnf
+
+
+
+
+Bug Fix Jira:
+
++----------------------------+-------------------------------------------------------------------+
+| **JIRA REFERENCE**         | **DESCRIPTION**                                                   |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-                 |  Fix samplevnf perf issues          |
++----------------------------+-------------------------------------------------------------------+
+
+Gambia known restrictions/issues
+====================================
++-----------+-----------+----------------------------------------------+
+| Installer | Scenario  |  Issue                                       |
++===========+===========+==============================================+
+|           |           |                                              |
++-----------+-----------+----------------------------------------------+
+
+
+Open JIRA tickets
+=================
+
++----------------------------+------------------------------------------------+
+| **JIRA REFERENCE**         | **DESCRIPTION**                                |
+|                            |                                                |
++----------------------------+------------------------------------------------+
+|                            |                                                |
+|                            |                                                |
++----------------------------+------------------------------------------------+
+
+
+Useful links
+============
+
+ - wiki project page: https://wiki.opnfv.org/display/SAM
+
+ - wiki SampleVNF Gambia release planing page: https://wiki.opnfv.org/display/SAM/G+-+Release+SampleVNF+planning
+
+ - SampleVNF repo: https://git.opnfv.org/cgit/samplevnf
+
+ - SampleVNF IRC chanel: #opnfv-samplevnf
+
+
+
+
+Bug Fix Jira:
+
++----------------------------+-------------------------------------------------------------------+
+| **JIRA REFERENCE**         | **DESCRIPTION**                                                   |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-                 |  Fix samplevnf perf issues          |
++----------------------------+-------------------------------------------------------------------+
+
+Gambia known restrictions/issues
+====================================
++-----------+-----------+----------------------------------------------+
+| Installer | Scenario  |  Issue                                       |
++===========+===========+==============================================+
+|           |           |                                              |
++-----------+-----------+----------------------------------------------+
+
+
+Open JIRA tickets
+=================
+
++----------------------------+------------------------------------------------+
+| **JIRA REFERENCE**         | **DESCRIPTION**                                |
+|                            |                                                |
++----------------------------+------------------------------------------------+
+|                            |                                                |
+|                            |                                                |
++----------------------------+------------------------------------------------+
+
+
+Useful links
+============
+
+ - wiki project page: https://wiki.opnfv.org/display/SAM
+
+ - wiki SampleVNF Gambia release planing page: https://wiki.opnfv.org/display/SAM/G+-+Release+SampleVNF+planning
+
+ - SampleVNF repo: https://git.opnfv.org/cgit/samplevnf
+
+ - SampleVNF IRC chanel: #opnfv-samplevnf
+
+
+
+
+Bug Fix Jira:
+
++----------------------------+-------------------------------------------------------------------+
+| **JIRA REFERENCE**         | **DESCRIPTION**                                                   |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-                 |  Fix samplevnf perf issues          |
++----------------------------+-------------------------------------------------------------------+
+
+Gambia known restrictions/issues
+====================================
++-----------+-----------+----------------------------------------------+
+| Installer | Scenario  |  Issue                                       |
++===========+===========+==============================================+
+|           |           |                                              |
++-----------+-----------+----------------------------------------------+
+
+
+Open JIRA tickets
+=================
+
++----------------------------+------------------------------------------------+
+| **JIRA REFERENCE**         | **DESCRIPTION**                                |
+|                            |                                                |
++----------------------------+------------------------------------------------+
+|                            |                                                |
+|                            |                                                |
++----------------------------+------------------------------------------------+
+
+
+Useful links
+============
+
+ - wiki project page: https://wiki.opnfv.org/display/SAM
+
+ - wiki SampleVNF Gambia release planing page: https://wiki.opnfv.org/display/SAM/G+-+Release+SampleVNF+planning
+
+ - SampleVNF repo: https://git.opnfv.org/cgit/samplevnf
+
+ - SampleVNF IRC chanel: #opnfv-samplevnf
+
+
+
+
+Bug Fix Jira:
+
++----------------------------+-------------------------------------------------------------------+
+| **JIRA REFERENCE**         | **DESCRIPTION**                                                   |
++----------------------------+-------------------------------------------------------------------+
+| SAMPLEVNF-                 |  Fix samplevnf perf issues          |
++----------------------------+-------------------------------------------------------------------+
+
+Gambia known restrictions/issues
+====================================
++-----------+-----------+----------------------------------------------+
+| Installer | Scenario  |  Issue                                       |
++===========+===========+==============================================+
+|           |           |                                              |
++-----------+-----------+----------------------------------------------+
+
+
+Open JIRA tickets
+=================
+
++----------------------------+------------------------------------------------+
+| **JIRA REFERENCE**         | **DESCRIPTION**                                |
+|                            |                                                |
++----------------------------+------------------------------------------------+
+|                            |                                                |
+|                            |                                                |
++----------------------------+------------------------------------------------+
+
+
+Useful links
+============
+
+ - wiki project page: https://wiki.opnfv.org/display/SAM
+
+ - wiki SampleVNF Gambia release planing page: https://wiki.opnfv.org/display/SAM/G+-+Release+SampleVNF+planning
+
+ - SampleVNF repo: https://git.opnfv.org/cgit/samplevnf
+
+ - SampleVNF IRC chanel: #opnfv-samplevnf
 
 
 
