@@ -460,6 +460,7 @@ static void init_port(struct prox_port_cfg *port_cfg)
 #if RTE_VERSION >= RTE_VERSION_NUM(18,8,0,1)
 	CONFIGURE_RX_OFFLOAD(DEV_RX_OFFLOAD_CRC_STRIP);
 	CONFIGURE_RX_OFFLOAD(DEV_RX_OFFLOAD_JUMBO_FRAME);
+	CONFIGURE_RX_OFFLOAD(DEV_RX_OFFLOAD_VLAN_STRIP);
 #else
 	if (port_cfg->requested_rx_offload & DEV_RX_OFFLOAD_CRC_STRIP) {
 		port_cfg->port_conf.rxmode.hw_strip_crc = 1;
@@ -473,6 +474,7 @@ static void init_port(struct prox_port_cfg *port_cfg)
 #if RTE_VERSION >= RTE_VERSION_NUM(18,8,0,1)
 	CONFIGURE_TX_OFFLOAD(DEV_TX_OFFLOAD_IPV4_CKSUM);
 	CONFIGURE_TX_OFFLOAD(DEV_TX_OFFLOAD_UDP_CKSUM);
+	CONFIGURE_TX_OFFLOAD(DEV_TX_OFFLOAD_VLAN_INSERT);
 #else
 	if ((port_cfg->dev_info.tx_offload_capa & (DEV_TX_OFFLOAD_IPV4_CKSUM | DEV_TX_OFFLOAD_UDP_CKSUM)) == 0) {
 		port_cfg->tx_conf.txq_flags |= ETH_TXQ_FLAGS_NOOFFLOADS;

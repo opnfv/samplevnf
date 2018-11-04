@@ -559,6 +559,23 @@ static int get_port_cfg(unsigned sindex, char *str, void *data)
 		else
 			cfg->requested_rx_offload &= ~DEV_RX_OFFLOAD_CRC_STRIP;
 	}
+	else if (STR_EQ(str, "vlan")) {
+#if RTE_VERSION >= RTE_VERSION_NUM(18,8,0,1)
+		uint32_t val;
+		if (parse_bool(&val, pkey)) {
+			return -1;
+		}
+		if (val) {
+			cfg->requested_rx_offload |= DEV_RX_OFFLOAD_VLAN_STRIP;
+			cfg->requested_tx_offload |= DEV_TX_OFFLOAD_VLAN_INSERT;
+		} else {
+			cfg->requested_rx_offload &= ~DEV_RX_OFFLOAD_VLAN_STRIP;
+			cfg->requested_tx_offload &= ~DEV_TX_OFFLOAD_VLAN_INSERT;
+		}
+#else
+		plog_warn("vlan option not supported : update DPDK at least to 18.08 to support this option\n");
+#endif
+	}
 	else if (STR_EQ(str, "mtu size")) {
 		uint32_t val;
 		if (parse_int(&val, pkey)) {
