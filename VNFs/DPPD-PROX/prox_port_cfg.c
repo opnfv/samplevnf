@@ -224,16 +224,6 @@ void init_rte_dev(int use_dummy_devices)
 		port_cfg->max_rx_pkt_len = dev_info.max_rx_pktlen;
 		port_cfg->min_rx_bufsize = dev_info.min_rx_bufsize;
 
-#if RTE_VERSION < RTE_VERSION_NUM(18,5,0,0)
-		pci_dev = dev_info.pci_dev;
-#else
-		pci_dev = RTE_DEV_TO_PCI(dev_info.device);
-#endif
-		if (!pci_dev)
-			continue;
-
-		snprintf(port_cfg->pci_addr, sizeof(port_cfg->pci_addr),
-			 "%04x:%02x:%02x.%1x", pci_dev->addr.domain, pci_dev->addr.bus, pci_dev->addr.devid, pci_dev->addr.function);
 		strncpy(port_cfg->driver_name, dev_info.driver_name, sizeof(port_cfg->driver_name));
 		plog_info("\tPort %u : driver='%s' tx_queues=%d rx_queues=%d\n", port_id, !strcmp(port_cfg->driver_name, "")? "null" : port_cfg->driver_name, port_cfg->max_txq, port_cfg->max_rxq);
 
@@ -249,6 +239,18 @@ void init_rte_dev(int use_dummy_devices)
 			*ptr = '\x0';
 		}
 
+#if RTE_VERSION < RTE_VERSION_NUM(18,5,0,0)
+		pci_dev = dev_info.pci_dev;
+#else
+		if (!dev_info.device)
+			continue;
+		pci_dev = RTE_DEV_TO_PCI(dev_info.device);
+#endif
+		if (!pci_dev)
+			continue;
+
+		snprintf(port_cfg->pci_addr, sizeof(port_cfg->pci_addr),
+			 "%04x:%02x:%02x.%1x", pci_dev->addr.domain, pci_dev->addr.bus, pci_dev->addr.devid, pci_dev->addr.function);
 		/* Try to find the device's numa node */
 		char buf[1024];
 		snprintf(buf, sizeof(buf), "/sys/bus/pci/devices/%s/numa_node", port_cfg->pci_addr);
