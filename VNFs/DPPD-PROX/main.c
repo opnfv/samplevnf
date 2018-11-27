@@ -614,7 +614,7 @@ static void init_rings(void)
 
 			ct.core = lconf->id;
 			ct.task = starg->id;;
-			struct rte_ring *tx_ring = init_ring_between_tasks(lcore_cfg, lcore_cfg[prox_cfg.master].targs, ct, 0, 0, &ris);
+			struct rte_ring *tx_ring = init_ring_between_tasks(&lcore_cfg[prox_cfg.master], lcore_cfg[prox_cfg.master].targs, ct, 0, 0, &ris);
 		}
 	}
 }
