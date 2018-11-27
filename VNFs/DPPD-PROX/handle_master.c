@@ -217,7 +217,7 @@ static inline void handle_unknown_ip(struct task_base *tbase, struct rte_mbuf *m
 	struct ether_hdr_arp *hdr_arp = rte_pktmbuf_mtod(mbuf, struct ether_hdr_arp *);
 	uint8_t port = get_port(mbuf);
 	uint32_t ip_dst = get_ip(mbuf);
-	int ret1, ret2;
+	int ret1, ret2, i;
 
 	plogx_dbg("\tMaster handling unknown ip %x for port %d\n", ip_dst, port);
 	if (unlikely(port >= PROX_MAX_PORTS)) {
@@ -241,9 +241,26 @@ static inline void handle_unknown_ip(struct task_base *tbase, struct rte_mbuf *m
 		tx_drop(mbuf);
 		return;
 	}
-	task->external_ip_table[ret2].rings[task->external_ip_table[ret2].nb_requests] = ring;
-	task->external_ip_table[ret2].nb_requests++;
-	memcpy(&task->external_ip_table[ret2].mac, &task->internal_port_table[port].mac, 6);
+
+	// If multiple tasks requesting the same info, we will need to send a reply to all of them
+	// However if one task sends multiple requests to the same IP (e.g. because it is not answering)
+	// then we should not send multiple replies to the same task
+	if (task->external_ip_table[ret2].nb_requests >= PROX_MAX_ARP_REQUESTS) {
+		// This can only happen if really many tasks requests the same IP
+		plogx_dbg("Unable to add request for IP %d.%d.%d.%x in external_ip_hash\n", IP4(rte_be_to_cpu_32(hdr_arp->arp.data.tpa)));
+		tx_drop(mbuf);
+		return;
+	}
+	for (i = 0; i < task->external_ip_table[ret2].nb_requests; i++) {
+		if (task->external_ip_table[ret2].rings[i] == ring)
+			break;
+	}
+	if (i >= task->external_ip_table[ret2].nb_requests) {
+		// If this is a new request i.e. a new task requesting a new IP
+		task->external_ip_table[ret2].rings[task->external_ip_table[ret2].nb_requests] = ring;
+		task->external_ip_table[ret2].nb_requests++;
+		memcpy(&task->external_ip_table[ret2].mac, &task->internal_port_table[port].mac, 6);
+	}
 
 	// We send an ARP request even if one was just sent (and not yet answered) by another task
 	mbuf->ol_flags &= ~(PKT_TX_IP_CKSUM|PKT_TX_UDP_CKSUM);
