@@ -27,6 +27,12 @@
 #define MAX_ARP_ENTRIES	65536
 
 #define IP4(x) x & 0xff, (x >> 8) & 0xff, (x >> 16) & 0xff, x >> 24
+enum {
+	SEND_MBUF_AND_ARP,
+	SEND_MBUF,
+	SEND_ARP,
+	DROP_MBUF
+};
 
 struct task_base;
 struct task_args;
@@ -48,6 +54,7 @@ struct l3_base {
 	struct arp_table optimized_arp_table[4];
 	struct rte_hash *ip_hash;
 	struct arp_table *arp_table;
+	struct rte_mempool *arp_pool;
 };
 
 void task_init_l3(struct task_base *tbase, struct task_args *targ);
