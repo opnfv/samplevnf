@@ -69,6 +69,14 @@ static inline int find_ip(struct ether_hdr_arp *pkt, uint16_t len, uint32_t *ip_
 	return -1;
 }
 
+/* This implementation could be improved: instead of checking each time we send a packet whether we need also
+   to send an ARP, we should only check whether the MAC is valid.
+   We should check arp_update_time in the master process. This would also require the generating task to clear its arp ring
+   to avoid sending many ARP while starting after a long stop.
+   We could also check for arp_timeout in the master so that dataplane has only to check whether MAC is available
+   but this would require either thread safety, or the the exchange of information between master and generating core.
+*/
+
 int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_dst)
 {
 	const uint64_t hz = rte_get_tsc_hz();
@@ -80,78 +88,117 @@ int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_d
 	if (l3->gw.ip) {
 		if (likely((l3->flags & FLAG_DST_MAC_KNOWN) && (tsc < l3->gw.arp_update_time) && (tsc < l3->gw.arp_timeout))) {
 			memcpy(mac, &l3->gw.mac, sizeof(struct ether_addr));
-			return 0;
+			return SEND_MBUF;
 		} else if (tsc > l3->gw.arp_update_time) {
 			// long time since we have sent an arp, send arp
 			l3->gw.arp_update_time = tsc + hz;
 			*ip_dst = l3->gw.ip;
-			return -1;
+			if ((l3->flags & FLAG_DST_MAC_KNOWN) && (tsc < l3->gw.arp_timeout)){
+				// MAC is valid in the table => send also the mbuf
+				memcpy(mac, &l3->gw.mac, sizeof(struct ether_addr));
+				return SEND_MBUF_AND_ARP;
+			} else {
+				// MAC still unknown, or timed out => only send ARP
+				return SEND_ARP;
+			}
+		} else {
+			// MAC is unknown and we already sent an ARP recently, drop mbuf and wait for ARP reply
+			return DROP_MBUF;
 		}
-		return -2;
 	}
 
 	uint16_t len = rte_pktmbuf_pkt_len(mbuf);
 	if (find_ip(packet, len, ip_dst) != 0) {
-		return 0;
+		// Unable to find IP address => non IP packet => send it as it
+		return SEND_MBUF;
 	}
 	if (likely(l3->n_pkts < 4)) {
 		for (unsigned int idx = 0; idx < l3->n_pkts; idx++) {
 			if (*ip_dst == l3->optimized_arp_table[idx].ip) {
+				 // IP address already in table
 				if ((tsc < l3->optimized_arp_table[idx].arp_update_time) && (tsc < l3->optimized_arp_table[idx].arp_timeout)) {
+					// MAC address was recently updated in table, use it
 					memcpy(mac, &l3->optimized_arp_table[idx].mac, sizeof(struct ether_addr));
-					return 0;
+					return SEND_MBUF;
 				} else if (tsc > l3->optimized_arp_table[idx].arp_update_time) {
+					// ARP not sent since a long time, send ARP
 					l3->optimized_arp_table[idx].arp_update_time = tsc + hz;
-					return -1;
+					if (tsc < l3->optimized_arp_table[idx].arp_timeout) {
+						// MAC still valid => also send mbuf
+						memcpy(mac, &l3->optimized_arp_table[idx].mac, sizeof(struct ether_addr));
+						return SEND_MBUF_AND_ARP;
+					} else {
+						// MAC unvalid => only send ARP
+						return SEND_ARP;
+					}
 				} else {
-					return -2;
+					//  ARP timeout elapsed, MAC not valid anymore but waiting for ARP reply
+					return DROP_MBUF;
 				}
 			}
 		}
+		// IP address not found in table
 		l3->optimized_arp_table[l3->n_pkts].ip = *ip_dst;
 		l3->optimized_arp_table[l3->n_pkts].arp_update_time = tsc + hz;
 		l3->n_pkts++;
 
-		if (l3->n_pkts < 4)
-			return -1;
+		if (l3->n_pkts < 4) {
+			return SEND_ARP;
+		}
 
-		// We have ** many ** IP addresses; lets use hash table instead
+		// We have too many IP addresses to search linearly; lets use hash table instead => copy all entries in hash table
 		for (uint32_t idx = 0; idx < l3->n_pkts; idx++) {
 			uint32_t ip = l3->optimized_arp_table[idx].ip;
 			int ret = rte_hash_add_key(l3->ip_hash, (const void *)&ip);
 			if (ret < 0) {
-				plogx_info("Unable add ip %d.%d.%d.%d in mac_hash\n", IP4(ip));
+				// This should not happen as few entries so far.
+				// If it happens, we still send the ARP as easier:
+				//      If the ARP corresponds to this error, the ARP reply will be ignored
+				//      If ARP does not correspond to this error/ip, then ARP reply will be handled.
+				plogx_info("Unable add ip %d.%d.%d.%d in mac_hash (already %d entries)\n", IP4(ip), idx);
 			} else {
 				memcpy(&l3->arp_table[ret], &l3->optimized_arp_table[idx], sizeof(struct arp_table));
 			}
 		}
-		return -1;
+		return SEND_ARP;
 	} else {
-		// Find mac in lookup table. Send ARP if not found
+		// Find IP in lookup table. Send ARP if not found
 		int ret = rte_hash_lookup(l3->ip_hash, (const void *)ip_dst);
 		if (unlikely(ret < 0)) {
+			// IP not found, try to send an ARP
 			int ret = rte_hash_add_key(l3->ip_hash, (const void *)ip_dst);
 			if (ret < 0) {
-				plogx_info("Unable add ip %d.%d.%d.%d in mac_hash\n", IP4(*ip_dst));
-				return -2;
+				// No reason to send ARP, as reply would be anyhow ignored
+				plogx_err("Unable to add ip %d.%d.%d.%d in mac_hash\n", IP4(*ip_dst));
+				return DROP_MBUF;
 			} else {
 				l3->arp_table[ret].ip = *ip_dst;
 				l3->arp_table[ret].arp_update_time = tsc + hz;
 			}
-			return -1;
+			return SEND_ARP;
 		} else {
-			if ((tsc < l3->arp_table[ret].arp_update_time) && (tsc < l3->arp_table[ret].arp_timeout)) {
+			// IP has been found
+			if (likely((tsc < l3->arp_table[ret].arp_update_time) && (tsc < l3->arp_table[ret].arp_timeout))) {
+				// MAC still valid and ARP sent recently
 				memcpy(mac, &l3->arp_table[ret].mac, sizeof(struct ether_addr));
-				return 0;
+				return SEND_MBUF;
 			} else if (tsc > l3->arp_table[ret].arp_update_time) {
+				// ARP not sent since a long time, send ARP
 				l3->arp_table[ret].arp_update_time = tsc + hz;
-				return -1;
+				if (tsc < l3->arp_table[ret].arp_timeout) {
+					// MAC still valid => send also MBUF
+					memcpy(mac, &l3->arp_table[ret].mac, sizeof(struct ether_addr));
+					return SEND_MBUF_AND_ARP;
+				} else {
+					return SEND_ARP;
+				}
 			} else {
-				return -2;
+				return DROP_MBUF;
 			}
 		}
 	}
-	return 0;
+	// Should not happen
+	return DROP_MBUF;
 }
 
 void task_init_l3(struct task_base *tbase, struct task_args *targ)
@@ -188,13 +235,27 @@ void task_init_l3(struct task_base *tbase, struct task_args *targ)
 
 void task_start_l3(struct task_base *tbase, struct task_args *targ)
 {
+	const int NB_ARP_MBUF = 1024;
+	const int ARP_MBUF_SIZE = 2048;
+	const int NB_CACHE_ARP_MBUF = 256;
+
 	struct prox_port_cfg *port = find_reachable_port(targ);
         if (port) {
+		static char name[] = "arp0_pool";
                 tbase->l3.reachable_port_id = port - prox_port_cfg;
 		if (targ->local_ipv4) {
 			tbase->local_ipv4 = rte_be_to_cpu_32(targ->local_ipv4);
 			register_ip_to_ctrl_plane(tbase->l3.tmaster, tbase->local_ipv4, tbase->l3.reachable_port_id, targ->lconf->id, targ->id);
         	}
+		name[3]++;
+		struct rte_mempool *ret = rte_mempool_create(name, NB_ARP_MBUF, ARP_MBUF_SIZE, NB_CACHE_ARP_MBUF,
+			sizeof(struct rte_pktmbuf_pool_private), rte_pktmbuf_pool_init, NULL, rte_pktmbuf_init, 0,
+			rte_socket_id(), 0);
+		PROX_PANIC(ret == NULL, "Failed to allocate ARP memory pool on socket %u with %u elements\n",
+			rte_socket_id(), NB_ARP_MBUF);
+		plog_info("\t\tMempool %p (%s) size = %u * %u cache %u, socket %d\n", ret, name, NB_ARP_MBUF,
+			ARP_MBUF_SIZE, NB_CACHE_ARP_MBUF, rte_socket_id());
+		tbase->l3.arp_pool = ret;
 	}
 }
 
