@@ -45,8 +45,6 @@
 #define BIT_8_TO_15 0x0000ff00
 #define BIT_0_TO_15 0x0000ffff
 
-#define IP4(x) x & 0xff, (x >> 8) & 0xff, (x >> 16) & 0xff, x >> 24
-
 struct private_key {
 		uint32_t ip_addr;
 		uint16_t l4_port;
