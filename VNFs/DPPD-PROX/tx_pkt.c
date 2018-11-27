@@ -757,10 +757,10 @@ static inline int tx_ring_all(struct task_base *tbase, struct rte_ring *ring, ui
 
 void tx_ring_cti(struct task_base *tbase, struct rte_ring *ring, uint16_t command,  struct rte_mbuf *mbuf, uint8_t core_id, uint8_t task_id, uint32_t ip)
 {
-	plogx_dbg("\tSending command %s with ip %x to ring %p using mbuf %p, core %d and task %d - ring size now %d\n", actions_string[command], ip, ring, mbuf, core_id, task_id, rte_ring_free_count(ring));
+	plogx_dbg("\tSending command %s with ip %d.%d.%d.%d to ring %p using mbuf %p, core %d and task %d - ring size now %d\n", actions_string[command], IP4(ip), ring, mbuf, core_id, task_id, rte_ring_free_count(ring));
 	int ret = tx_ring_all(tbase, ring, command,  mbuf, core_id, task_id, ip);
 	if (unlikely(ret != 0)) {
-		plogx_dbg("\tFail to send command %s with ip %x to ring %p using mbuf %p, core %d and task %d - ring size now %d\n", actions_string[command], ip, ring, mbuf, core_id, task_id, rte_ring_free_count(ring));
+		plogx_dbg("\tFail to send command %s with ip %d.%d.%d.%d to ring %p using mbuf %p, core %d and task %d - ring size now %d\n", actions_string[command], IP4(ip), ring, mbuf, core_id, task_id, rte_ring_free_count(ring));
 		TASK_STATS_ADD_DROP_DISCARD(&tbase->aux->stats, 1);
 		rte_pktmbuf_free(mbuf);
 	}
@@ -768,10 +768,10 @@ void tx_ring_cti(struct task_base *tbase, struct rte_ring *ring, uint16_t comman
 
 void tx_ring_ip(struct task_base *tbase, struct rte_ring *ring, uint16_t command,  struct rte_mbuf *mbuf, uint32_t ip)
 {
-	plogx_dbg("\tSending command %s with ip %x to ring %p using mbuf %p - ring size now %d\n", actions_string[command], ip, ring, mbuf, rte_ring_free_count(ring));
+	plogx_dbg("\tSending command %s with ip %d.%d.%d.%d to ring %p using mbuf %p - ring size now %d\n", actions_string[command], IP4(ip), ring, mbuf, rte_ring_free_count(ring));
 	int ret = tx_ring_all(tbase, ring, command,  mbuf, 0, 0, ip);
 	if (unlikely(ret != 0)) {
-		plogx_dbg("\tFail to send command %s with ip %x to ring %p using mbuf %p - ring size now %d\n", actions_string[command], ip, ring, mbuf, rte_ring_free_count(ring));
+		plogx_dbg("\tFail to send command %s with ip %d.%d.%d.%d to ring %p using mbuf %p - ring size now %d\n", actions_string[command], IP4(ip), ring, mbuf, rte_ring_free_count(ring));
 		TASK_STATS_ADD_DROP_DISCARD(&tbase->aux->stats, 1);
 		rte_pktmbuf_free(mbuf);
 	}

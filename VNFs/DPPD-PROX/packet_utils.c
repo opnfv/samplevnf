@@ -24,8 +24,6 @@
 #include "handle_master.h"
 #include "prox_port_cfg.h"
 
-#define IP4(x) x & 0xff, (x >> 8) & 0xff, (x >> 16) & 0xff, x >> 24
-
 static inline int find_ip(struct ether_hdr_arp *pkt, uint16_t len, uint32_t *ip_dst)
 {
 	struct vlan_hdr *vlan_hdr;
