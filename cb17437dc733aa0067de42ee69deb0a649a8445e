@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1a622d24_c23ac535",
+        "filename": "VNFs/DPPD-PROX/handle_master.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 119,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-12-13T14:01:59Z",
+      "side": 1,
+      "message": "OK, fixed by 65419",
+      "range": {
+        "startLine": 119,
+        "startChar": 29,
+        "endLine": 119,
+        "endChar": 40
+      },
+      "revId": "cb17437dc733aa0067de42ee69deb0a649a8445e",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
