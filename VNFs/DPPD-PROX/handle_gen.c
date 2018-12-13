@@ -1301,7 +1301,8 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 		task_init_gen_load_pcap(task, targ);
 	}
 
-	if ((targ->flags & DSF_KEEP_SRC_MAC) == 0 && (targ->nb_txrings || targ->nb_txports)) {
+	PROX_PANIC(((targ->nb_txrings == 0) && (targ->nb_txports == 0)), "Gen mode requires a tx ring or a tx port");
+	if ((targ->flags & DSF_KEEP_SRC_MAC) == 0) {
 		uint8_t *src_addr = prox_port_cfg[tbase->tx_params_hw.tx_port_queue->port].eth_addr.addr_bytes;
 		for (uint32_t i = 0; i < task->n_pkts; ++i) {
 			rte_memcpy(&task->pkt_template[i].buf[6], src_addr, 6);
