@@ -89,7 +89,7 @@ int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_d
 			return SEND_MBUF;
 		} else if (tsc > l3->gw.arp_update_time) {
 			// long time since we have sent an arp, send arp
-			l3->gw.arp_update_time = tsc + hz;
+			l3->gw.arp_update_time = tsc + l3->arp_update_time * hz;
 			*ip_dst = l3->gw.ip;
 			if ((l3->flags & FLAG_DST_MAC_KNOWN) && (tsc < l3->gw.arp_timeout)){
 				// MAC is valid in the table => send also the mbuf
@@ -120,7 +120,7 @@ int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_d
 					return SEND_MBUF;
 				} else if (tsc > l3->optimized_arp_table[idx].arp_update_time) {
 					// ARP not sent since a long time, send ARP
-					l3->optimized_arp_table[idx].arp_update_time = tsc + hz;
+					l3->optimized_arp_table[idx].arp_update_time = tsc + l3->arp_update_time * hz;
 					if (tsc < l3->optimized_arp_table[idx].arp_timeout) {
 						// MAC still valid => also send mbuf
 						memcpy(mac, &l3->optimized_arp_table[idx].mac, sizeof(struct ether_addr));
@@ -137,7 +137,7 @@ int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_d
 		}
 		// IP address not found in table
 		l3->optimized_arp_table[l3->n_pkts].ip = *ip_dst;
-		l3->optimized_arp_table[l3->n_pkts].arp_update_time = tsc + hz;
+		l3->optimized_arp_table[l3->n_pkts].arp_update_time = tsc + l3->arp_update_time * hz;
 		l3->n_pkts++;
 
 		if (l3->n_pkts < 4) {
@@ -171,7 +171,7 @@ int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_d
 				return DROP_MBUF;
 			} else {
 				l3->arp_table[ret].ip = *ip_dst;
-				l3->arp_table[ret].arp_update_time = tsc + hz;
+				l3->arp_table[ret].arp_update_time = tsc + l3->arp_update_time * hz;
 			}
 			return SEND_ARP;
 		} else {
@@ -182,6 +182,7 @@ int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_d
 				return SEND_MBUF;
 			} else if (tsc > l3->arp_table[ret].arp_update_time) {
 				// ARP not sent since a long time, send ARP
+				l3->arp_table[ret].arp_update_time = tsc + l3->arp_update_time * hz;
 				l3->arp_table[ret].arp_update_time = tsc + hz;
 				if (tsc < l3->arp_table[ret].arp_timeout) {
 					// MAC still valid => send also MBUF
@@ -229,6 +230,14 @@ void task_init_l3(struct task_base *tbase, struct task_args *targ)
 	tbase->l3.core_id = targ->lconf->id;
 	tbase->l3.task_id = targ->id;
 	tbase->l3.tmaster = targ->tmaster;
+	if (tbase->l3.arp_timeout != 0)
+		tbase->l3.arp_timeout = targ->arp_timeout;
+	else
+		tbase->l3.arp_timeout = DEFAULT_ARP_TIMEOUT;
+	if (tbase->l3.arp_update_time != 0)
+		tbase->l3.arp_update_time = targ->arp_update_time;
+	else
+		tbase->l3.arp_update_time = DEFAULT_ARP_UPDATE_TIME;
 }
 
 void task_start_l3(struct task_base *tbase, struct task_args *targ)
@@ -299,7 +308,7 @@ void handle_ctrl_plane_pkts(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 				// MAC address of the gateway
 				memcpy(&l3->gw.mac, &hdr->arp.data.sha, 6);
 				l3->flags |= FLAG_DST_MAC_KNOWN;
-				l3->gw.arp_timeout = tsc + 30 * hz;
+				l3->gw.arp_timeout = tsc + l3->arp_timeout * hz;
 			} else if (l3->n_pkts < 4) {
 				// Few packets tracked - should be faster to loop through them thean using a hash table
 				for (idx = 0; idx < l3->n_pkts; idx++) {
@@ -310,7 +319,7 @@ void handle_ctrl_plane_pkts(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 				if (idx < l3->n_pkts) {
 					// IP not found; this is a reply while we never asked for the request!
 					memcpy(&l3->optimized_arp_table[idx].mac, &(hdr->arp.data.sha), sizeof(struct ether_addr));
-					l3->optimized_arp_table[idx].arp_timeout = tsc + 30 * hz;
+					l3->optimized_arp_table[idx].arp_timeout = tsc + l3->arp_timeout * hz;
 				}
 			} else {
 				int ret = rte_hash_add_key(l3->ip_hash, (const void *)&ip);
@@ -318,7 +327,7 @@ void handle_ctrl_plane_pkts(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 					plogx_info("Unable add ip %d.%d.%d.%d in mac_hash\n", IP4(ip));
 				} else {
 					memcpy(&l3->arp_table[ret].mac, &(hdr->arp.data.sha), sizeof(struct ether_addr));
-					l3->arp_table[ret].arp_timeout = tsc + 30 * hz;
+					l3->arp_table[ret].arp_timeout = tsc + l3->arp_timeout * hz;
 				}
 			}
 			tx_drop(mbufs[j]);

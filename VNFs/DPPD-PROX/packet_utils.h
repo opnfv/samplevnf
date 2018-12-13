@@ -33,6 +33,8 @@ enum {
 	SEND_ARP,
 	DROP_MBUF
 };
+#define DEFAULT_ARP_TIMEOUT	(3600 * 24 * 365)	// One year = disabled by default
+#define DEFAULT_ARP_UPDATE_TIME (1)			// 1 second
 
 struct task_base;
 struct task_args;
@@ -50,6 +52,8 @@ struct l3_base {
 	uint8_t reachable_port_id;
 	uint8_t core_id;
 	uint8_t task_id;
+	uint32_t arp_timeout;
+	uint32_t arp_update_time;
 	struct arp_table gw;
 	struct arp_table optimized_arp_table[4];
 	struct rte_hash *ip_hash;
