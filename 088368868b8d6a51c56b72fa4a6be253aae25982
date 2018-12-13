@@ -1,0 +1,73 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1a622d24_82bf2dd0",
+        "filename": "VNFs/DPPD-PROX/packet_utils.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 158,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-12-13T12:17:37Z",
+      "side": 1,
+      "message": "err",
+      "range": {
+        "startLine": 158,
+        "startChar": 10,
+        "endLine": 158,
+        "endChar": 14
+      },
+      "revId": "088368868b8d6a51c56b72fa4a6be253aae25982",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1a622d24_62c81175",
+        "filename": "VNFs/DPPD-PROX/packet_utils.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 239,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-12-13T12:17:37Z",
+      "side": 1,
+      "message": "Isn\u0027t that huge for ARP packets?",
+      "range": {
+        "startLine": 239,
+        "startChar": 27,
+        "endLine": 239,
+        "endChar": 31
+      },
+      "revId": "088368868b8d6a51c56b72fa4a6be253aae25982",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1a622d24_02cb1d73",
+        "filename": "VNFs/DPPD-PROX/packet_utils.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 253,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-12-13T12:17:37Z",
+      "side": 1,
+      "message": "Is that correct when master is on 2nd socket?",
+      "range": {
+        "startLine": 253,
+        "startChar": 3,
+        "endLine": 253,
+        "endChar": 18
+      },
+      "revId": "088368868b8d6a51c56b72fa4a6be253aae25982",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
