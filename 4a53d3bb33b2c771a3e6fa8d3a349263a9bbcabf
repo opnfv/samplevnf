@@ -1,0 +1,136 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1a622d24_62f131cd",
+        "filename": "VNFs/DPPD-PROX/handle_master.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 222,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-12-13T11:50:45Z",
+      "side": 1,
+      "message": "Change to %d.%d.%d.%d, if not fixed by other commits.\nSame on L240.",
+      "range": {
+        "startLine": 222,
+        "startChar": 41,
+        "endLine": 222,
+        "endChar": 43
+      },
+      "revId": "4a53d3bb33b2c771a3e6fa8d3a349263a9bbcabf",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1a622d24_42eeb5ed",
+        "filename": "VNFs/DPPD-PROX/handle_master.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 240,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-12-13T11:50:45Z",
+      "side": 1,
+      "message": "Is this different than ip_dst?\nSame on L250.",
+      "range": {
+        "startLine": 240,
+        "startChar": 74,
+        "endLine": 240,
+        "endChar": 95
+      },
+      "revId": "4a53d3bb33b2c771a3e6fa8d3a349263a9bbcabf",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1a622d24_c2e2c502",
+        "filename": "VNFs/DPPD-PROX/handle_master.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 250,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-12-13T11:50:45Z",
+      "side": 1,
+      "message": "Not needed, since IP4 macro takes network-byte-order IP.",
+      "range": {
+        "startLine": 250,
+        "startChar": 82,
+        "endLine": 250,
+        "endChar": 98
+      },
+      "revId": "4a53d3bb33b2c771a3e6fa8d3a349263a9bbcabf",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1a622d24_82d8cd54",
+        "filename": "VNFs/DPPD-PROX/handle_master.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 250,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-12-13T11:50:45Z",
+      "side": 1,
+      "message": "%d",
+      "range": {
+        "startLine": 250,
+        "startChar": 51,
+        "endLine": 250,
+        "endChar": 53
+      },
+      "revId": "4a53d3bb33b2c771a3e6fa8d3a349263a9bbcabf",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1a622d24_e2dd4144",
+        "filename": "VNFs/DPPD-PROX/handle_master.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 250,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-12-13T11:50:45Z",
+      "side": 1,
+      "message": "table",
+      "range": {
+        "startLine": 250,
+        "startChar": 69,
+        "endLine": 250,
+        "endChar": 73
+      },
+      "revId": "4a53d3bb33b2c771a3e6fa8d3a349263a9bbcabf",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1a622d24_02e4bd0b",
+        "filename": "VNFs/DPPD-PROX/handle_master.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 262,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2018-12-13T11:50:45Z",
+      "side": 1,
+      "message": "Looks like this just needs to be done for first request.",
+      "revId": "4a53d3bb33b2c771a3e6fa8d3a349263a9bbcabf",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
