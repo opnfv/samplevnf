@@ -36,7 +36,6 @@
 #include "input.h"
 #include "tx_pkt.h"
 
-#define IP4(x) x & 0xff, (x >> 8) & 0xff, (x >> 16) & 0xff, x >> 24
 #define PROX_MAX_ARP_REQUESTS	32	// Maximum number of tasks requesting the same MAC address
 
 const char *actions_string[] = {"UPDATE_FROM_CTRL", "SEND_ARP_REQUEST_FROM_CTRL", "SEND_ARP_REPLY_FROM_CTRL", "HANDLE_ARP_TO_CTRL", "REQ_MAC_TO_CTRL"};
@@ -116,10 +115,10 @@ void register_ip_to_ctrl_plane(struct task_base *tbase, uint32_t ip, uint8_t por
 {
 	struct task_master *task = (struct task_master *)tbase;
 	struct ip_port key;
-	plogx_dbg("\tregistering IP %x.%x.%x.%x with port %d core %d and task %d\n", IP4(ip), port_id, core_id, task_id);
+	plogx_dbg("\tregistering IP %d.%d.%d.%d with port %d core %d and task %d\n", IP4(ip), port_id, core_id, task_id);
 
 	if (port_id >= PROX_MAX_PORTS) {
-		plog_err("Unable to register ip %x, port %d\n", ip, port_id);
+		plog_err("Unable to register ip %d.%d.%d.%d, port %d\n", IP4(ip), port_id);
 		return;
 	}
 
@@ -139,7 +138,7 @@ void register_ip_to_ctrl_plane(struct task_base *tbase, uint32_t ip, uint8_t por
 	key.port = port_id;
 	int ret = rte_hash_add_key(task->internal_ip_hash, (const void *)&key);
 	if (unlikely(ret < 0)) {
-		plog_err("Unable to register ip %x\n", ip);
+		plog_err("Unable to register ip %d.%d.%d.%d\n", IP4(ip));
 		return;
 	}
 	memcpy(&task->internal_ip_table[ret].mac, &prox_port_cfg[port_id].eth_addr, 6);
@@ -153,7 +152,7 @@ static inline void handle_arp_reply(struct task_base *tbase, struct rte_mbuf *mb
 	struct ether_hdr_arp *hdr_arp = rte_pktmbuf_mtod(mbuf, struct ether_hdr_arp *);
 	int i, ret;
 	uint32_t key = hdr_arp->arp.data.spa;
-	plogx_dbg("\tMaster handling ARP reply for ip %x\n", key);
+	plogx_dbg("\tMaster handling ARP reply for ip %d.%d.%d.%d\n", IP4(key));
 
 	ret = rte_hash_lookup(task->external_ip_hash, (const void *)&key);
 	if (unlikely(ret < 0)) {
@@ -187,7 +186,7 @@ static inline void handle_arp_request(struct task_base *tbase, struct rte_mbuf *
 	key.port = port;
 	if (task->internal_port_table[port].flags & HANDLE_RANDOM_IP_FLAG) {
 		struct ether_addr mac;
-		plogx_dbg("\tMaster handling ARP request for ip %x on port %d which supports random ip\n", key.ip, key.port);
+		plogx_dbg("\tMaster handling ARP request for ip %d.%d.%d.%d on port %d which supports random ip\n", IP4(key.ip), key.port);
 		struct rte_ring *ring = task->internal_port_table[port].ring;
 		create_mac(hdr_arp, &mac);
 		mbuf->ol_flags &= ~(PKT_TX_IP_CKSUM|PKT_TX_UDP_CKSUM);
@@ -196,7 +195,7 @@ static inline void handle_arp_request(struct task_base *tbase, struct rte_mbuf *
 		return;
 	}
 
-	plogx_dbg("\tMaster handling ARP request for ip %x\n", key.ip);
+	plogx_dbg("\tMaster handling ARP request for ip %d.%d.%d.%d\n", IP4(key.ip));
 
 	ret = rte_hash_lookup(task->internal_ip_hash, (const void *)&key);
 	if (unlikely(ret < 0)) {
@@ -217,9 +216,9 @@ static inline void handle_unknown_ip(struct task_base *tbase, struct rte_mbuf *m
 	struct ether_hdr_arp *hdr_arp = rte_pktmbuf_mtod(mbuf, struct ether_hdr_arp *);
 	uint8_t port = get_port(mbuf);
 	uint32_t ip_dst = get_ip(mbuf);
-	int ret1, ret2;
+	int ret1, ret2, i;
 
-	plogx_dbg("\tMaster handling unknown ip %x for port %d\n", ip_dst, port);
+	plogx_dbg("\tMaster handling unknown ip %d.%d.%d.%d for port %d\n", IP4(ip_dst), port);
 	if (unlikely(port >= PROX_MAX_PORTS)) {
 		plogx_dbg("Port %d not found", port);
 		tx_drop(mbuf);
@@ -237,13 +236,32 @@ static inline void handle_unknown_ip(struct task_base *tbase, struct rte_mbuf *m
 	ret2 = rte_hash_add_key(task->external_ip_hash, (const void *)&ip_dst);
 	if (unlikely(ret2 < 0)) {
 		// entry not found for this IP: delete the reply
-		plogx_dbg("Unable to add IP %x in external_ip_hash\n", rte_be_to_cpu_32(hdr_arp->arp.data.tpa));
+		plogx_dbg("Unable to add IP %d.%d.%d.%d in external_ip_hash\n", IP4(ip_dst));
 		tx_drop(mbuf);
 		return;
 	}
-	task->external_ip_table[ret2].rings[task->external_ip_table[ret2].nb_requests] = ring;
-	task->external_ip_table[ret2].nb_requests++;
-	memcpy(&task->external_ip_table[ret2].mac, &task->internal_port_table[port].mac, 6);
+
+	// If multiple tasks requesting the same info, we will need to send a reply to all of them
+	// However if one task sends multiple requests to the same IP (e.g. because it is not answering)
+	// then we should not send multiple replies to the same task
+	if (task->external_ip_table[ret2].nb_requests >= PROX_MAX_ARP_REQUESTS) {
+		// This can only happen if really many tasks requests the same IP
+		plogx_dbg("Unable to add request for IP %d.%d.%d.%d in external_ip_table\n", IP4(ip_dst));
+		tx_drop(mbuf);
+		return;
+	}
+	for (i = 0; i < task->external_ip_table[ret2].nb_requests; i++) {
+		if (task->external_ip_table[ret2].rings[i] == ring)
+			break;
+	}
+	if (i >= task->external_ip_table[ret2].nb_requests) {
+		// If this is a new request i.e. a new task requesting a new IP
+		task->external_ip_table[ret2].rings[task->external_ip_table[ret2].nb_requests] = ring;
+		task->external_ip_table[ret2].nb_requests++;
+		// Only needed for first request - but avoid test and copy the same 6 bytes
+		// In most cases we will only have one request per IP.
+		memcpy(&task->external_ip_table[ret2].mac, &task->internal_port_table[port].mac, 6);
+	}
 
 	// We send an ARP request even if one was just sent (and not yet answered) by another task
 	mbuf->ol_flags &= ~(PKT_TX_IP_CKSUM|PKT_TX_UDP_CKSUM);

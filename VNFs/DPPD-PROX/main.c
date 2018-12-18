@@ -501,7 +501,7 @@ static struct rte_ring *init_ring_between_tasks(struct lcore_cfg *lconf, struct 
 			starg->ctrl_plane_ring = ring;
 		}
 
-		plog_info("\t\tCore %u task %u to -> core %u task %u ctrl_ring %s %p %s\n",
+		plog_info("\t\t\tCore %u task %u to -> core %u task %u ctrl_ring %s %p %s\n",
 			  lconf->id, starg->id, ct.core, ct.task, ct.type == CTRL_TYPE_PKT?
 			  "pkt" : "msg", ring, ring->name);
 		ris->n_ctrl_rings++;
@@ -614,7 +614,7 @@ static void init_rings(void)
 
 			ct.core = lconf->id;
 			ct.task = starg->id;;
-			struct rte_ring *tx_ring = init_ring_between_tasks(lcore_cfg, lcore_cfg[prox_cfg.master].targs, ct, 0, 0, &ris);
+			struct rte_ring *tx_ring = init_ring_between_tasks(&lcore_cfg[prox_cfg.master], lcore_cfg[prox_cfg.master].targs, ct, 0, 0, &ris);
 		}
 	}
 }
