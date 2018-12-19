@@ -642,6 +642,8 @@ static int handle_gen_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 
 	int i, j;
 
+#if RTE_VERSION < RTE_VERSION_NUM(16,4,0,0)
+	// On more recent DPDK, we use the speed_capa of the port, and not the negotiated speed
 	// If link is down, link_speed is 0
 	if (unlikely(task->link_speed == 0)) {
 		if (task->port && task->port->link_speed != 0) {
@@ -651,6 +653,7 @@ static int handle_gen_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 		} else
 			return 0;
 	}
+#endif
 
 	task_gen_update_config(task);
 
@@ -1197,6 +1200,7 @@ static void start(struct task_base *tbase)
 	if (task->port) {
 		// task->port->link_speed reports the link speed in Mbps e.g. 40k for a 40 Gbps NIC.
 		// task->link_speed reports link speed in Bytes per sec.
+#if RTE_VERSION < RTE_VERSION_NUM(16,4,0,0)
 		// It can be 0 if link is down, and must hence be updated in fast path.
 		task->link_speed = task->port->link_speed * 125000L;
 		if (task->link_speed)
@@ -1205,6 +1209,15 @@ static void start(struct task_base *tbase)
 		else
 			plog_info("\tPort %u: link speed is %ld Mbps - link might be down\n",
 				(uint8_t)(task->port - prox_port_cfg), 8 * task->link_speed / 1000000);
+#else
+		if (task->port->link_speed == UINT32_MAX)
+			task->link_speed = UINT64_MAX;
+		else {
+			task->link_speed = task->port->link_speed * 125000L;
+			plog_info("\tPort %u: link speed is %ld Mbps\n",
+				(uint8_t)(task->port - prox_port_cfg), 8 * task->link_speed / 1000000);
+		}
+#endif
 	}
 	/* TODO
 	   Handle the case when two tasks transmit to the same port

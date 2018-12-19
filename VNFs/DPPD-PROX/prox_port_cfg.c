@@ -311,6 +311,108 @@ uint8_t init_rte_ring_dev(void)
 
 static void print_port_capa(struct prox_port_cfg *port_cfg)
 {
+	static char dummy_pool_name[] = "0_dummy";
+	struct rte_eth_link link;
+	uint8_t port_id;
+	int ret;
+
+	port_id = port_cfg - prox_port_cfg;
+	plog_info("\t*** Initializing port %u ***\n", port_id);
+	plog_info("\t\tPort name is set to %s\n", port_cfg->name);
+	plog_info("\t\tPort max RX/TX queue is %u/%u\n", port_cfg->max_rxq, port_cfg->max_txq);
+	plog_info("\t\tPort driver is %s\n", port_cfg->driver_name);
+#if RTE_VERSION >= RTE_VERSION_NUM(16,4,0,0)
+	plog_info("\t\tSupported speed mask = 0x%x\n", port_cfg->dev_info.speed_capa);
+	port_cfg->link_speed = UINT32_MAX;
+
+	// virtio and vmxnet3 reports fake link_speed
+	if (strcmp(port_cfg->short_name, "vmxnet3") && strcmp(port_cfg->short_name, "virtio")) {
+		// Get link_speed from highest capability from the port
+		// This will be used by gen and lat for extrapolation purposes
+		// The negotiated link_speed (as reported by rte_eth_link_get
+		// or rte_eth_link_get_nowait) might be reported too late
+		// and might result in wrong exrapolation, and hence should not be used
+		// for extrapolation purposes
+		if (port_cfg->dev_info.speed_capa & ETH_LINK_SPEED_100G)
+			port_cfg->link_speed = ETH_SPEED_NUM_100G;
+		else if (port_cfg->dev_info.speed_capa & ETH_LINK_SPEED_56G)
+			port_cfg->link_speed = ETH_SPEED_NUM_56G;
+		else if (port_cfg->dev_info.speed_capa & ETH_LINK_SPEED_50G)
+			port_cfg->link_speed = ETH_SPEED_NUM_50G;
+		else if (port_cfg->dev_info.speed_capa & ETH_LINK_SPEED_40G)
+			port_cfg->link_speed = ETH_SPEED_NUM_40G;
+		else if (port_cfg->dev_info.speed_capa & ETH_LINK_SPEED_25G)
+			port_cfg->link_speed = ETH_SPEED_NUM_25G;
+		else if (port_cfg->dev_info.speed_capa & ETH_LINK_SPEED_20G)
+			port_cfg->link_speed = ETH_SPEED_NUM_20G;
+		else if (port_cfg->dev_info.speed_capa & ETH_LINK_SPEED_10G)
+			port_cfg->link_speed = ETH_SPEED_NUM_10G;
+		else if (port_cfg->dev_info.speed_capa & ETH_LINK_SPEED_5G)
+			port_cfg->link_speed = ETH_SPEED_NUM_5G;
+		else if (port_cfg->dev_info.speed_capa & ETH_LINK_SPEED_2_5G)
+			port_cfg->link_speed = ETH_SPEED_NUM_2_5G;
+		else if (port_cfg->dev_info.speed_capa & ETH_LINK_SPEED_1G)
+			port_cfg->link_speed = ETH_SPEED_NUM_1G;
+		else if (port_cfg->dev_info.speed_capa & (ETH_LINK_SPEED_100M_HD | ETH_LINK_SPEED_100M))
+			port_cfg->link_speed = ETH_SPEED_NUM_100M;
+		else if (port_cfg->dev_info.speed_capa & (ETH_LINK_SPEED_10M_HD | ETH_LINK_SPEED_10M))
+			port_cfg->link_speed = ETH_SPEED_NUM_10M;
+
+		if (port_cfg->link_speed != UINT32_MAX) {
+			plog_info("\t\tHighest link speed capa = %d Mbps\n", port_cfg->link_speed);
+		}
+	}
+#endif
+
+	PROX_PANIC(port_cfg->n_rxq == 0 && port_cfg->n_txq == 0,
+		   "\t\t port %u is enabled but no RX or TX queues have been configured", port_id);
+
+	if (port_cfg->n_rxq == 0) {
+		/* not receiving on this port */
+		plog_info("\t\tPort %u had no RX queues, setting to 1\n", port_id);
+		port_cfg->n_rxq = 1;
+		uint32_t mbuf_size = TX_MBUF_SIZE;
+		plog_info("\t\tAllocating dummy memory pool on socket %u with %u elements of size %u\n",
+			  port_cfg->socket, port_cfg->n_rxd, mbuf_size);
+		port_cfg->pool[0] = rte_mempool_create(dummy_pool_name, port_cfg->n_rxd, mbuf_size,
+						       0,
+						       sizeof(struct rte_pktmbuf_pool_private),
+						       rte_pktmbuf_pool_init, NULL,
+						       prox_pktmbuf_init, 0,
+						       port_cfg->socket, 0);
+		PROX_PANIC(port_cfg->pool[0] == NULL, "Failed to allocate dummy memory pool on socket %u with %u elements\n",
+			   port_cfg->socket, port_cfg->n_rxd);
+		dummy_pool_name[0]++;
+	} else {
+		// Most pmd should now support setting mtu
+		if (port_cfg->mtu + ETHER_HDR_LEN + ETHER_CRC_LEN > port_cfg->max_rx_pkt_len) {
+			plog_info("\t\tMTU is too big for the port, reducing MTU from %d to %d\n", port_cfg->mtu, port_cfg->max_rx_pkt_len);
+			port_cfg->mtu = port_cfg->max_rx_pkt_len;
+		}
+		plog_info("\t\tSetting MTU size to %u for port %u ...\n", port_cfg->mtu, port_id);
+		ret = rte_eth_dev_set_mtu(port_id, port_cfg->mtu);
+		if (ret)
+			plog_err("\t\t\trte_eth_dev_set_mtu() failed on port %u: error %d\n", port_id, ret);
+
+		if (port_cfg->n_txq == 0) {
+			/* not sending on this port */
+			plog_info("\t\tPort %u had no TX queues, setting to 1\n", port_id);
+			port_cfg->n_txq = 1;
+		}
+	}
+
+	if (port_cfg->n_rxq > 1)  {
+		// Enable RSS if multiple receive queues
+		port_cfg->port_conf.rxmode.mq_mode       		|= ETH_MQ_RX_RSS;
+		port_cfg->port_conf.rx_adv_conf.rss_conf.rss_key 	= toeplitz_init_key;
+		port_cfg->port_conf.rx_adv_conf.rss_conf.rss_key_len 	= TOEPLITZ_KEY_LEN;
+#if RTE_VERSION >= RTE_VERSION_NUM(2,0,0,0)
+		port_cfg->port_conf.rx_adv_conf.rss_conf.rss_hf 	= ETH_RSS_IPV4|ETH_RSS_NONFRAG_IPV4_UDP;
+#else
+		port_cfg->port_conf.rx_adv_conf.rss_conf.rss_hf 	= ETH_RSS_IPV4|ETH_RSS_NONF_IPV4_UDP;
+#endif
+	}
+
 #if RTE_VERSION >= RTE_VERSION_NUM(18,8,0,1)
 	plog_info("\t\tRX offload capa = 0x%lx = ", port_cfg->dev_info.rx_offload_capa);
 	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_VLAN_STRIP)
@@ -604,7 +706,10 @@ static void init_port(struct prox_port_cfg *port_cfg)
 		rte_eth_link_get(port_id, &link);
 
 	port_cfg->link_up = link.link_status;
+#if RTE_VERSION < RTE_VERSION_NUM(16,4,0,0)
 	port_cfg->link_speed = link.link_speed;
+#endif
+
 	if (link.link_status) {
 		plog_info("Link Up - speed %'u Mbps - %s\n",
 			  link.link_speed,
