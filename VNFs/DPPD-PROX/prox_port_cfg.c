@@ -323,6 +323,45 @@ static void init_port(struct prox_port_cfg *port_cfg)
 	plog_info("\t\tPort driver is %s\n", port_cfg->driver_name);
 #if RTE_VERSION >= RTE_VERSION_NUM(16,4,0,0)
 	plog_info("\t\tSupported speed mask = 0x%x\n", port_cfg->dev_info.speed_capa);
+	port_cfg->link_speed = UINT32_MAX;
+
+	// virtio and vmxnet3 reports fake link_speed
+	if (strcmp(port_cfg->short_name, "vmxnet3") && strcmp(port_cfg->short_name, "virtio")) {
+		// Get link_speed from highest capability from the port
+		// This will be used by gen and lat for extrapolation purposes
+		// The negotiated link_speed (as reported by rte_eth_link_get
+		// or rte_eth_link_get_nowait) might be reported too late
+		// and might result in wrong exrapolation, and hence should not be used
+		// for extrapolation purposes
+		if (port_cfg->dev_info.speed_capa & ETH_LINK_SPEED_100G)
+			port_cfg->link_speed = ETH_SPEED_NUM_100G;
+		else if (port_cfg->dev_info.speed_capa & ETH_LINK_SPEED_56G)
+			port_cfg->link_speed = ETH_SPEED_NUM_56G;
+		else if (port_cfg->dev_info.speed_capa & ETH_LINK_SPEED_50G)
+			port_cfg->link_speed = ETH_SPEED_NUM_50G;
+		else if (port_cfg->dev_info.speed_capa & ETH_LINK_SPEED_40G)
+			port_cfg->link_speed = ETH_SPEED_NUM_40G;
+		else if (port_cfg->dev_info.speed_capa & ETH_LINK_SPEED_25G)
+			port_cfg->link_speed = ETH_SPEED_NUM_25G;
+		else if (port_cfg->dev_info.speed_capa & ETH_LINK_SPEED_20G)
+			port_cfg->link_speed = ETH_SPEED_NUM_20G;
+		else if (port_cfg->dev_info.speed_capa & ETH_LINK_SPEED_10G)
+			port_cfg->link_speed = ETH_SPEED_NUM_10G;
+		else if (port_cfg->dev_info.speed_capa & ETH_LINK_SPEED_5G)
+			port_cfg->link_speed = ETH_SPEED_NUM_5G;
+		else if (port_cfg->dev_info.speed_capa & ETH_LINK_SPEED_2_5G)
+			port_cfg->link_speed = ETH_SPEED_NUM_2_5G;
+		else if (port_cfg->dev_info.speed_capa & ETH_LINK_SPEED_1G)
+			port_cfg->link_speed = ETH_SPEED_NUM_1G;
+		else if (port_cfg->dev_info.speed_capa & (ETH_LINK_SPEED_100M_HD | ETH_LINK_SPEED_100M))
+			port_cfg->link_speed = ETH_SPEED_NUM_100M;
+		else if (port_cfg->dev_info.speed_capa & (ETH_LINK_SPEED_10M_HD | ETH_LINK_SPEED_10M))
+			port_cfg->link_speed = ETH_SPEED_NUM_10M;
+
+		if (port_cfg->link_speed != UINT32_MAX) {
+			plog_info("\t\tHighest link speed capa = %d Mbps\n", port_cfg->link_speed);
+		}
+	}
 #endif
 
 	PROX_PANIC(port_cfg->n_rxq == 0 && port_cfg->n_txq == 0,
@@ -606,7 +645,10 @@ static void init_port(struct prox_port_cfg *port_cfg)
 		rte_eth_link_get(port_id, &link);
 
 	port_cfg->link_up = link.link_status;
+#if RTE_VERSION < RTE_VERSION_NUM(16,4,0,0)
 	port_cfg->link_speed = link.link_speed;
+#endif
+
 	if (link.link_status) {
 		plog_info("Link Up - speed %'u Mbps - %s\n",
 			  link.link_speed,
