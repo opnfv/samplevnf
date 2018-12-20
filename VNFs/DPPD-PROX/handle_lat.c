@@ -505,6 +505,7 @@ static void task_lat_store_lat(struct task_lat *task, uint64_t rx_packet_index, 
 static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts)
 {
 	struct task_lat *task = (struct task_lat *)tbase;
+	int rc;
 
 	// If link is down, link_speed is 0
 	if (unlikely(task->link_speed == 0)) {
@@ -662,7 +663,11 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 	task->begin = tbase->aux->tsc_rx.before;
 	task->last_pkts_tsc = tbase->aux->tsc_rx.after;
 
-	return task->base.tx_pkt(&task->base, mbufs, n_pkts, NULL);
+	rc = task->base.tx_pkt(&task->base, mbufs, n_pkts, NULL);
+	// non_dp_count should not be drop-handled, as there are all by definition considered as not handled
+	// RX = DISCARDED + HANDLED + NON_DP + (TX - TX_NON_DP) + TX_FAIL
+	TASK_STATS_ADD_DROP_HANDLED(&tbase->aux->stats, -non_dp_count);
+	return rc;
 }
 
 static void init_task_lat_latency_buffer(struct task_lat *task, uint32_t core_id)
