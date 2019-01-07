@@ -26,10 +26,10 @@ group1cores = not_used
 group2cores = not_used
 group3cores = not_used
 drop_rate_treshold = 0.1
-lat_avg_treshold = 50
+lat_avg_treshold = 200
 lat_max_treshold = 1000
 accuracy = 0.1
-startspeed = 100
+startspeed = 10
 
 
 [TestM1]

@@ -5,7 +5,7 @@
    {
 "type": "openstack",
 "ssh_username": "centos",
-"image_name": "ProxDPDK1802VM",
+"image_name": "PROXffc6be26-DPDK1808VM",
 "source_image": "aa0f8333-d8e1-42db-8210-6b39d9ee7267",
 "flavor": "7aaec028-eccc-4612-8f9b-29a1e039943a",
 "networks": "97bbe96f-ee1b-4789-ace8-e922f76bea3f",

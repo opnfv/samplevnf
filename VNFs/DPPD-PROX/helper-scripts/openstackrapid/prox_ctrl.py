@@ -208,16 +208,18 @@ class prox_sock(object):
         return buckets
 
     def core_stats(self, cores, task=0):
-        rx = tx = drop = tsc = hz = 0
-        self._send('core stats %s %s' % (','.join(map(str, cores)), task))
+        rx = tx = drop = tsc = hz = rx_non_dp = tx_non_dp = 0
+        self._send('dp core stats %s %s' % (','.join(map(str, cores)), task))
         for core in cores:
             stats = self._recv().split(',')
             rx += int(stats[0])
             tx += int(stats[1])
-            drop += int(stats[2])
-            tsc = int(stats[3])
-            hz = int(stats[4])
-        return rx, tx, drop, tsc, hz
+            rx_non_dp += int(stats[2])
+            tx_non_dp += int(stats[3])
+            drop += int(stats[4])
+            tsc = int(stats[5])
+            hz = int(stats[6])
+        return rx-rx_non_dp, tx-tx_non_dp, drop, tsc, hz
 
     def set_random(self, cores, task, offset, mask, length):
         self._send('set random %s %s %s %s %s' % (','.join(map(str, cores)), task, offset, mask, length))

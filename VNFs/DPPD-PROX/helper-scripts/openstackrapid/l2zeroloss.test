@@ -16,7 +16,7 @@
 
 [DEFAULT]
 name = L2BasicSwapTesting
-number_of_tests = 1
+number_of_tests = 3
 total_number_of_test_machines = 2
 init_code=init_test()
 dest_vm = not_used
@@ -26,8 +26,8 @@ group1cores = not_used
 group2cores = not_used
 group3cores = not_used
 drop_rate_treshold = 0
-lat_avg_treshold = 100
-lat_max_treshold = 800
+lat_avg_treshold = 200
+lat_max_treshold = 1000
 accuracy = 0.1
 startspeed = 10
 

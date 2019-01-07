@@ -26,8 +26,8 @@ group1cores = not_used
 group2cores = not_used
 group3cores = not_used
 drop_rate_treshold = 1
-lat_avg_treshold = 100
-lat_max_treshold = 800
+lat_avg_treshold = 200
+lat_max_treshold = 1000
 accuracy = 0.01
 startspeed = 10
 
@@ -35,17 +35,11 @@ startspeed = 10
 name = InterruptTesting
 machine_index = 1
 config_file = irq.cfg
-group1cores = [1,2,3,4,5,6,7]
+group1cores = [1,2,3]
 
 [TestM2]
 name = InterruptTesting
 machine_index = 2
-config_file = irq.cfg
-group1cores = [1,2,3,4,5,6,7]
-
-[TestM3]
-name = InterruptTesting
-machine_index = 3
 config_file = irq.cfg
 group1cores = [1,2,3]
 
@@ -54,6 +48,4 @@ group1cores = [1,2,3]
 cmd=run_irqtest(socks[0])
 [test2]
 cmd=run_irqtest(socks[1])
-[test3]
-cmd=run_irqtest(socks[2])
 

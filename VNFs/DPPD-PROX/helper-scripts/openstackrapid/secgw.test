@@ -26,8 +26,8 @@ group1cores = not_used
 group2cores = not_used
 group3cores = not_used
 drop_rate_treshold = 0.01
-lat_avg_treshold = 100
-lat_max_treshold = 800
+lat_avg_treshold = 200
+lat_max_treshold = 1000
 accuracy = 0.01
 startspeed = 10
 
@@ -57,6 +57,3 @@ group1cores = [1]
 
 [test1]
 cmd=run_speedtest(socks[0],socks[2])
-
-[test2]
-cmd=run_sizetest(socks[0],socks[2])

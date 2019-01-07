@@ -34,7 +34,7 @@ import ast
 import atexit
 import csv
 
-version="18.10.15"
+version="19.1.10"
 env = "rapid" #Default string for environment
 test = "basicrapid" #Default string for test
 loglevel="DEBUG" # sets log level for writing to file
@@ -259,15 +259,15 @@ def get_pps(speed,size):
 	return (speed * 100.0 / (8*(size+24)))
 
 def run_speedtest(gensock,sutsock):
+	maxspeed = speed = STARTSPEED
+	minspeed = 0
+	size=175
+	attempts = 0
         log.info("+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+")
-        log.info("| Generator is sending UDP (1 flow) packets (64 bytes) to SUT. SUT sends packets back                                                                                          |")
+        log.info("| Generator is sending UDP (1 flow) packets ("+ '{:>5}'.format(size+4) +" bytes) to SUT. SUT sends packets back                                                                                       |")
 	log.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+------------+")
 	log.info("| Test   |  Speed requested   | Sent to NIC    |  Sent by Gen   | Forward by SUT |  Rec. by Gen   |  Avg. Latency  |  Max. Latency  |  Packets Lost  | Loss Ratio | Result     |")
 	log.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+------------+")
-	maxspeed = speed = STARTSPEED
-	minspeed = 0
-	size=60
-	attempts = 0
 	endpps_sut_tx_str = 'NO_RESULTS'
 	gensock.set_size(gencores,0,size) # This is setting the frame size
 	gensock.set_value(gencores,0,16,(size-14),2) # 18 is the difference between the frame size and IP size = size of (MAC addresses, ethertype and FCS)
@@ -280,7 +280,7 @@ def run_speedtest(gensock,sutsock):
                 # Start generating packets at requested speed (in % of a 10Gb/s link)
                 gensock.speed(speed, gencores)
                 time.sleep(1)
-                # Get statistics now that the generation is stable and NO ARP messages any more
+                # Get statistics now that the generation is stable and initial ARP messages are dealt with.
 		pps_req_tx,pps_tx,pps_sut_tx_str,pps_rx,lat_avg,lat_max, abs_dropped, abs_tx = run_iteration(gensock,sutsock)
 		drop_rate = 100.0*abs_dropped/abs_tx
         	if ((get_pps(speed,size) - pps_tx)/get_pps(speed,size))<0.001 and ((drop_rate < DROP_RATE_TRESHOLD) or (abs_dropped==DROP_RATE_TRESHOLD ==0)) and (lat_avg< LAT_AVG_TRESHOLD) and (lat_max < LAT_MAX_TRESHOLD):
@@ -315,7 +315,7 @@ def run_speedtest(gensock,sutsock):
 				speed_prefix = bcolors.ENDC
 			else:
 				speed_prefix = bcolors.FAIL
-	                log.info('|{:>7}'.format(str(attempts))+" | " + '{:>5.1f}'.format(speed) + '% '+speed_prefix +'{:>6.3f}'.format(get_pps(speed,size)) + ' Mpps | '+ '{:>9.3f}'.format(pps_req_tx)+' Mpps | '+ bcolors.ENDC + '{:>9.3f}'.format(pps_tx) +' Mpps | ' + '{:>9}'.format(pps_sut_tx_str) +' Mpps | '+ '{:>9.3f}'.format(pps_rx)+' Mpps | '+lat_avg_prefix+ '{:>9.0f}'.format(lat_avg)+' us   | '+lat_max_prefix+ '{:>9.0f}'.format(lat_max)+' us   | '+ abs_drop_rate_prefix + '{:>14d}'.format(abs_dropped)+drop_rate_prefix+ ' |''{:>9.2f}'.format(drop_rate)+bcolors.ENDC+ '%  | FAILED     |')
+	                log.info('|{:>7}'.format(str(attempts))+" | " + '{:>5.1f}'.format(speed) + '% '+speed_prefix +'{:>6.3f}'.format(get_pps(speed,size)) + ' Mpps | '+ '{:>9.3f}'.format(pps_req_tx)+' Mpps | ' + '{:>9.3f}'.format(pps_tx) +' Mpps | '+ bcolors.ENDC  + '{:>9}'.format(pps_sut_tx_str) +' Mpps | '+ '{:>9.3f}'.format(pps_rx)+' Mpps | '+lat_avg_prefix+ '{:>9.0f}'.format(lat_avg)+' us   | '+lat_max_prefix+ '{:>9.0f}'.format(lat_max)+' us   | '+ abs_drop_rate_prefix + '{:>14d}'.format(abs_dropped)+drop_rate_prefix+ ' |''{:>9.2f}'.format(drop_rate)+bcolors.ENDC+ '%  | FAILED     |')
 			success = False 
 		speed,minspeed,maxspeed = new_speed(speed,minspeed,maxspeed,success)
 	if endpps_sut_tx_str <>  'NO_RESULTS':
@@ -340,6 +340,7 @@ def run_flowtest(gensock,sutsock):
 	gensock.set_value(gencores,0,38,(size-34),2) # 38 is the difference between the frame size and UDP size = 18 + size of IP header (=20)
 	# This will only work when using sending UDP packets. For different protocls and ehternet types, we would need a differnt calculation
 	for flow_number in sorted(flows.iterkeys()):
+		attempts = 0
 		gensock.reset_stats()
 		if sutsock!='none':
 			sutsock.reset_stats()
@@ -350,15 +351,17 @@ def run_flowtest(gensock,sutsock):
 		maxspeed = speed = STARTSPEED
 		minspeed = 0
 		while (maxspeed-minspeed > ACCURACY):
+                	attempts += 1
 			print(str(flow_number)+' flows: Measurement ongoing at speed: ' + str(round(speed,2)) + '%      ',end='\r')
 			sys.stdout.flush()
 			# Start generating packets at requested speed (in % of a 10Gb/s link)
 			gensock.speed(speed, gencores)
 			time.sleep(1)
-			# Get statistics now that the generation is stable and NO ARP messages any more
+			# Get statistics now that the generation is stable and initial ARP messages are dealt with
 			pps_req_tx,pps_tx,pps_sut_tx_str,pps_rx,lat_avg,lat_max, abs_dropped, abs_tx = run_iteration(gensock,sutsock)
 			drop_rate = 100.0*abs_dropped/abs_tx
 	        	if ((get_pps(speed,size) - pps_tx)/get_pps(speed,size))<0.001 and ((drop_rate < DROP_RATE_TRESHOLD) or (abs_dropped==DROP_RATE_TRESHOLD ==0)) and (lat_avg< LAT_AVG_TRESHOLD) and (lat_max < LAT_MAX_TRESHOLD):
+	                	log.debug('|{:>7}'.format(str(attempts))+" | " + '{:>5.1f}'.format(speed) + '% ' +'{:>6.3f}'.format(get_pps(speed,size)) + ' Mpps | '+ '{:>9.3f}'.format(pps_req_tx)+' Mpps | '+ '{:>9.3f}'.format(pps_tx) +' Mpps | ' + '{:>9}'.format(pps_sut_tx_str) +' Mpps | '+ '{:>9.3f}'.format(pps_rx)+' Mpps | '+ '{:>9.0f}'.format(lat_avg)+' us   | '+  '{:>9.0f}'.format(lat_max)+' us   | '+ '{:>14d}'.format(abs_dropped)+ ' |''{:>9.2f}'.format(drop_rate)+ '%  | SUCCESS    |')
 				endspeed = speed
 				endpps_req_tx = pps_req_tx
 				endpps_tx = pps_tx
@@ -370,6 +373,26 @@ def run_flowtest(gensock,sutsock):
 				enddrop_rate = drop_rate
 				success = True
 			else:
+				abs_drop_rate_prefix = bcolors.ENDC
+				if ((abs_dropped>0) and (DROP_RATE_TRESHOLD ==0)):
+					abs_drop_rate_prefix = bcolors.FAIL
+				if (drop_rate < DROP_RATE_TRESHOLD):
+					drop_rate_prefix = bcolors.ENDC
+				else:
+					drop_rate_prefix = bcolors.FAIL
+				if (lat_avg< LAT_AVG_TRESHOLD):
+					lat_avg_prefix = bcolors.ENDC
+				else:
+					lat_avg_prefix = bcolors.FAIL
+				if (lat_max< LAT_MAX_TRESHOLD):
+					lat_max_prefix = bcolors.ENDC
+				else:
+					lat_max_prefix = bcolors.FAIL
+				if (((get_pps(speed,size) - pps_tx)/get_pps(speed,size))<0.001):
+					speed_prefix = bcolors.ENDC
+				else:
+					speed_prefix = bcolors.FAIL
+				log.debug('|{:>7}'.format(str(attempts))+" | " + '{:>5.1f}'.format(speed) + '% '+speed_prefix +'{:>6.3f}'.format(get_pps(speed,size)) + ' Mpps | '+ '{:>9.3f}'.format(pps_req_tx)+' Mpps | ' + '{:>9.3f}'.format(pps_tx) +' Mpps | '+ bcolors.ENDC  + '{:>9}'.format(pps_sut_tx_str) +' Mpps | '+ '{:>9.3f}'.format(pps_rx)+' Mpps | '+lat_avg_prefix+ '{:>9.0f}'.format(lat_avg)+' us   | '+lat_max_prefix+ '{:>9.0f}'.format(lat_max)+' us   | '+ abs_drop_rate_prefix + '{:>14d}'.format(abs_dropped)+drop_rate_prefix+ ' |''{:>9.2f}'.format(drop_rate)+bcolors.ENDC+ '%  | FAILED     |')
 				success = False 
 			speed,minspeed,maxspeed = new_speed(speed,minspeed,maxspeed,success)
 		if endpps_sut_tx_str <>  'NO_RESULTS':
@@ -390,6 +413,7 @@ def run_sizetest(gensock,sutsock):
 #	sizes=[1020,508,252,124,60]
 #	sizes=[124,60]
 	for size in sizes:
+		attempts = 0
 		gensock.reset_stats()
 		if sutsock!='none':
 			sutsock.reset_stats()
@@ -401,14 +425,16 @@ def run_sizetest(gensock,sutsock):
 		maxspeed = speed = STARTSPEED
 		minspeed = 0
 		while (maxspeed-minspeed > ACCURACY):
+                	attempts += 1
 			print(str(size+4)+' bytes: Measurement ongoing at speed: ' + str(round(speed,2)) + '%      ',end='\r')
 			sys.stdout.flush()
 			# Start generating packets at requested speed (in % of a 10Gb/s link)
 			gensock.speed(speed, gencores)
-			# Get statistics now that the generation is stable and NO ARP messages any more
+			# Get statistics now that the generation is stable and initial ARP messages are dealt with
 			pps_req_tx,pps_tx,pps_sut_tx_str,pps_rx,lat_avg,lat_max, abs_dropped, abs_tx = run_iteration(gensock,sutsock)
 			drop_rate = 100.0*abs_dropped/abs_tx
 	        	if ((get_pps(speed,size) - pps_tx)/get_pps(speed,size))<0.001 and ((drop_rate < DROP_RATE_TRESHOLD) or (abs_dropped==DROP_RATE_TRESHOLD ==0)) and (lat_avg< LAT_AVG_TRESHOLD) and (lat_max < LAT_MAX_TRESHOLD):
+	                	log.debug('|{:>7}'.format(str(attempts))+" | " + '{:>5.1f}'.format(speed) + '% ' +'{:>6.3f}'.format(get_pps(speed,size)) + ' Mpps | '+ '{:>9.3f}'.format(pps_req_tx)+' Mpps | '+ '{:>9.3f}'.format(pps_tx) +' Mpps | ' + '{:>9}'.format(pps_sut_tx_str) +' Mpps | '+ '{:>9.3f}'.format(pps_rx)+' Mpps | '+ '{:>9.0f}'.format(lat_avg)+' us   | '+  '{:>9.0f}'.format(lat_max)+' us   | '+ '{:>14d}'.format(abs_dropped)+ ' |''{:>9.2f}'.format(drop_rate)+ '%  | SUCCESS    |')
 				endspeed = speed
 				endpps_req_tx = pps_req_tx
 				endpps_tx = pps_tx
@@ -420,6 +446,26 @@ def run_sizetest(gensock,sutsock):
 				enddrop_rate = drop_rate
 				success = True
 			else:
+				abs_drop_rate_prefix = bcolors.ENDC
+				if ((abs_dropped>0) and (DROP_RATE_TRESHOLD ==0)):
+					abs_drop_rate_prefix = bcolors.FAIL
+				if (drop_rate < DROP_RATE_TRESHOLD):
+					drop_rate_prefix = bcolors.ENDC
+				else:
+					drop_rate_prefix = bcolors.FAIL
+				if (lat_avg< LAT_AVG_TRESHOLD):
+					lat_avg_prefix = bcolors.ENDC
+				else:
+					lat_avg_prefix = bcolors.FAIL
+				if (lat_max< LAT_MAX_TRESHOLD):
+					lat_max_prefix = bcolors.ENDC
+				else:
+					lat_max_prefix = bcolors.FAIL
+				if (((get_pps(speed,size) - pps_tx)/get_pps(speed,size))<0.001):
+					speed_prefix = bcolors.ENDC
+				else:
+					speed_prefix = bcolors.FAIL
+				log.debug('|{:>7}'.format(str(attempts))+" | " + '{:>5.1f}'.format(speed) + '% '+speed_prefix +'{:>6.3f}'.format(get_pps(speed,size)) + ' Mpps | '+ '{:>9.3f}'.format(pps_req_tx)+' Mpps | ' + '{:>9.3f}'.format(pps_tx) +' Mpps | '+ bcolors.ENDC  + '{:>9}'.format(pps_sut_tx_str) +' Mpps | '+ '{:>9.3f}'.format(pps_rx)+' Mpps | '+lat_avg_prefix+ '{:>9.0f}'.format(lat_avg)+' us   | '+lat_max_prefix+ '{:>9.0f}'.format(lat_max)+' us   | '+ abs_drop_rate_prefix + '{:>14d}'.format(abs_dropped)+drop_rate_prefix+ ' |''{:>9.2f}'.format(drop_rate)+bcolors.ENDC+ '%  | FAILED     |')
 				success = False 
 			speed,minspeed,maxspeed = new_speed(speed,minspeed,maxspeed,success)
 		if endpps_sut_tx_str <>  'NO_RESULTS':
@@ -465,7 +511,7 @@ def run_irqtest(sock):
 				irq[i][j] = str(round(diff/float(runtime), 2))
 	log.info('\n'.join([''.join(['{:>12}'.format(item) for item in row]) for row in irq]))
 
-def run_impairtest(gensock,sutsock,speed):
+def run_impairtest(gensock,sutsock):
         log.info("+-----------------------------------------------------------------------------------------------------------------------------------------------------------------+")
         log.info("| Generator is sending UDP (1 flow) packets (64 bytes) to SUT via GW dropping and delaying packets. SUT sends packets back. Use ctrl-c to stop the test           |")
 	log.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+")
@@ -477,6 +523,7 @@ def run_impairtest(gensock,sutsock,speed):
 	gensock.set_value(gencores,0,16,(size-14),2) # 18 is the difference between the frame size and IP size = size of (MAC addresses, ethertype and FCS)
 	gensock.set_value(gencores,0,38,(size-34),2) # 38 is the difference between the frame size and UDP size = 18 + size of IP header (=20)
 	# This will only work when using sending UDP packets. For different protocols and ethernet types, we would need a different calculation
+	speed = STARTSPEED
         gensock.speed(speed, gencores)
         while True:
                 attempts += 1

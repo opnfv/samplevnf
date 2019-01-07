@@ -19,7 +19,10 @@
 # That file could contain DNS information coming from the dataplane which might be wrong. A solution is to confire the correct DNS for the dataplne
 # in OpenStack.  DNS might be slowing down ssh access. We don't need that for our dataplane benchmarking purposes
 # sudo sed -i '/#UseDNS yes/c\UseDNS no' /etc/ssh/sshd_config
-
+sudo sh -c '(echo "export RTE_TARGET=\"build\"";echo "export RTE_SDK=\"/root/dpdk\"";echo "export AESNI_MULTI_BUFFER_LIB_PATH=\"/home/centos/intel-ipsec-mb-0.50\"";) >> /root/.bashrc'
+export RTE_TARGET=build
+export RTE_SDK=/home/centos/dpdk
+export AESNI_MULTI_BUFFER_LIB_PATH=/home/centos/intel-ipsec-mb-0.50
 # Mounting huge pages to be used by DPDK
 sudo mkdir -p /mnt/huge
 sudo umount `awk '/hugetlbfs/ { print $2 }' /proc/mounts` >/dev/null 2>&1
@@ -30,18 +33,16 @@ sudo sh -c '(echo "vm.nr_hugepages = 1024") > /etc/sysctl.conf'
 cd /home/centos
 wget https://github.com/01org/intel-ipsec-mb/archive/v0.50.zip
 unzip v0.50.zip
-# AESNI_MULTI_BUFFER_LIB_PATH should be already set in deploycentos1.sh
-export  AESNI_MULTI_BUFFER_LIB_PATH=/home/centos/intel-ipsec-mb-0.50
 cd $AESNI_MULTI_BUFFER_LIB_PATH
 make
 sudo make install
 # Clone and compile DPDK
 cd /home/centos/
 git clone http://dpdk.org/git/dpdk
-cd dpdk
-git checkout v18.05
-export RTE_TARGET=build
-export RTE_SDK=/home/centos/dpdk
+# Runtime scripts are assuming /root as the directory for PROX
+sudo ln -s /home/centos/dpdk /root/dpdk
+cd $RTE_SDK
+git checkout v18.08
 make config T=x86_64-native-linuxapp-gcc
 # The next sed lines make sure that we can compile DPDK 17.11 with a relatively new OS. Using a newer DPDK (18.5) should also resolve this issue
 #sudo sed -i '/CONFIG_RTE_LIBRTE_KNI=y/c\CONFIG_RTE_LIBRTE_KNI=n' /home/centos/dpdk/build/.config
@@ -51,17 +52,13 @@ make config T=x86_64-native-linuxapp-gcc
 # Compile with MB library
 sed -i '/CONFIG_RTE_LIBRTE_PMD_AESNI_MB=n/c\CONFIG_RTE_LIBRTE_PMD_AESNI_MB=y' /home/centos/dpdk/build/.config
 make 
-# Runtime scripts are assuming /root as the directory for PROX
-sudo ln -s /home/centos/dpdk /root/dpdk
 
 # Clone and compile PROX
 cd /home/centos
 git clone https://git.opnfv.org/samplevnf
 cd /home/centos/samplevnf/VNFs/DPPD-PROX
-git checkout 4d59d3530d1c41734f15423142e64eb9c929c717
-# Compiling PROX with the crc=soft option because offloaded CRC calculation causes problems on multiple VIM environments. This will of course slow
-# down the performance of the generator.
-make crc=soft
+git checkout ffc6be26
+make
 sudo ln -s /home/centos/samplevnf/VNFs/DPPD-PROX /root/prox
 
 # Enabling tuned with the realtime-virtual-guest profile

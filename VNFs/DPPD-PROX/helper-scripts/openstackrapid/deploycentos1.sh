@@ -15,7 +15,6 @@
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
 ##
-sudo sh -c '(echo "export RTE_TARGET=\"build\"";echo "export RTE_SDK=\"/root/dpdk\"";echo "export AESNI_MULTI_BUFFER_LIB_PATH=\"/home/centos/intel-ipsec-mb-0.49\"";) >> /root/.bashrc'
 sudo yum install deltarpm -y
 sudo yum update -y
 sudo yum-config-manager --add-repo http://www.nasm.us/nasm.repo
