@@ -170,6 +170,8 @@ static inline void handle_arp_reply(struct task_base *tbase, struct rte_mbuf *mb
 				tx_ring_ip(tbase, ring, UPDATE_FROM_CTRL, mbuf, key);
 			}
 			task->external_ip_table[ret].nb_requests = 0;
+		} else {
+			tx_drop(mbuf);
 		}
 	}
 }
