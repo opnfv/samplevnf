@@ -476,6 +476,103 @@ def run_sizetest(gensock,sutsock):
 			log.debug('|{:>7}'.format(str(size))+" | Speed 0 or close to 0")
 
 
+def run_max_frame_rate(gensock,sutsock):
+	log.info("+-----------------------------------------------------------------------------------------------------------------------------------------------------------+")
+	log.info("| UDP, 1 flow, different packet sizes                                                                                                                       |")
+	log.info("+-----+------------------+-------------+-------------+-------------+-------------+-------------+-------------+-----------+-----------+---------+------------+")
+	log.info("|Pktsz| Speed requested  | Sent to NIC | Sent by Gen | Fwrd by SUT | Rec. by Gen | Avg. Latency| Max. Latency|   Sent    |  Received |  Lost   | Total Lost |")
+	log.info("+-----+------------------+-------------+-------------+-------------+-------------+-------------+-------------+-----------+-----------+---------+------------+")
+	# PROX will use different packet sizes as defined in sizes[]
+	sizes=[1496,1020,508,252,124,60]
+	sleep_time = 3
+	for size in sizes:
+		# Sleep_time is needed to be able to do accurate measurements to check for packet loss. We need to make this time large enough so that we do not take the first measurement while some packets from the previous tests migth still be in flight
+		time.sleep(sleep_time)
+		gensock.reset_stats()
+		if sutsock!='none':
+			sutsock.reset_stats()
+		gensock.set_size(gencores,0,size) # This is setting the frame size
+		gensock.set_value(gencores,0,16,(size-14),2) # 18 is the difference between the frame size and IP size = size of (MAC addresses, ethertype and FCS)
+		gensock.set_value(gencores,0,38,(size-34),2) # 38 is the difference between the frame size and UDP size = 18 + size of IP header (=20)
+		# This will only work when using sending UDP packets. For different protocls and ehternet types, we would need a differnt calculation
+		pps_sut_tx_str = 'NO_RESULTS'
+		speed = STARTSPEED 
+		# Start generating packets at requested speed (in % of a 10Gb/s link)
+		gensock.speed(speed / len(gencores), gencores)
+		duration = float(runtime)
+		first = 1
+		tot_drop = 0
+		if sutsock!='none':
+			old_sut_rx, old_sut_tx, old_sut_drop, old_sut_tsc, sut_tsc_hz = sutsock.core_stats(sutstatcores)
+		old_rx, old_tx, old_drop, old_tsc, tsc_hz = gensock.core_stats(genstatcores)
+		gensock.start(gencores)
+		while (duration > 0):
+			duration = duration - 1
+			time.sleep(1)
+			lat_min, lat_max, lat_avg = gensock.lat_stats(latcores)
+			# Get statistics after some execution time
+			new_rx, new_tx, new_drop, new_tsc, tsc_hz = gensock.core_stats(genstatcores)
+			if sutsock!='none':
+				new_sut_rx, new_sut_tx, new_sut_drop, new_sut_tsc, sut_tsc_hz = sutsock.core_stats(sutstatcores)
+			drop = new_drop-old_drop # drop is all packets dropped by all tasks. This includes packets dropped at the generator task + packets dropped by the nop task. In steady state, this equals to the number of packets received by this VM
+			rx = new_rx - old_rx     # rx is all packets received by the nop task = all packets received in the gen VM
+			tx = new_tx - old_tx     # tx is all generated packets actually accepted by the interface
+			tsc = new_tsc - old_tsc  # time difference between the 2 measurements, expressed in cycles.
+			old_drop = new_drop
+			old_rx = new_rx
+			old_tx = new_tx
+			old_tsc = new_tsc
+			pps_req_tx = (tx+drop-rx)*tsc_hz*1.0/(tsc*1000000)
+			pps_tx = tx*tsc_hz*1.0/(tsc*1000000)
+			pps_rx = rx*tsc_hz*1.0/(tsc*1000000)
+			if sutsock!='none':
+				sut_rx = new_sut_rx - old_sut_rx
+				sut_tx = new_sut_tx - old_sut_tx
+				sut_tsc = new_sut_tsc - old_sut_tsc
+				old_sut_tx = new_sut_tx
+				old_sut_rx = new_sut_rx
+				old_sut_tsc= new_sut_tsc
+				pps_sut_tx = sut_tx*sut_tsc_hz*1.0/(sut_tsc*1000000)
+				pps_sut_tx_str = '{:>7.3f}'.format(pps_sut_tx)
+			else:
+				pps_sut_tx = 0
+				pps_sut_tx_str = 'NO MEAS.'
+			if (tx == 0):
+        			log.critical("TX = 0. Test interrupted since no packet has been sent.")
+				raise Exception("TX = 0")
+			tot_drop = tot_drop + tx - rx
+		
+			if pps_sut_tx_str <>  'NO_RESULTS':
+				# First second mpps are not valid as there is no alignement between time the generator is started and per seconds stats
+				if (first):
+                			log.info('|{:>4}'.format(size+4)+" |" + '{:>5.1f}'.format(speed) + '% ' +'{:>6.3f}'.format(get_pps(speed,size)) + ' Mpps|'+'             |' +'             |'  +'             |'+ '             |'+ '{:>8.0f}'.format(lat_avg)+' us  |'+'{:>8.0f}'.format(lat_max)+' us  | ' + '{:>9.0f}'.format(tx) + ' | '+ '{:>9.0f}'.format(rx) + ' | '+ '{:>7.0f}'.format(tx-rx) + ' | '+'{:>7.0f}'.format(tot_drop) +' |  ')
+                		else:
+					log.info('|{:>4}'.format(size+4)+" |" + '{:>5.1f}'.format(speed) + '% ' +'{:>6.3f}'.format(get_pps(speed,size)) + ' Mpps|'+ '{:>7.3f}'.format(pps_req_tx)+' Mpps |'+ '{:>7.3f}'.format(pps_tx) +' Mpps |' + '{:>7}'.format(pps_sut_tx_str) +' Mpps |'+ '{:>7.3f}'.format(pps_rx)+' Mpps |'+ '{:>8.0f}'.format(lat_avg)+' us  |'+'{:>8.0f}'.format(lat_max)+' us  | ' + '{:>9.0f}'.format(tx) + ' | '+ '{:>9.0f}'.format(rx) + ' | '+ '{:>7.0f}'.format(tx-rx) + ' | '+ '{:>7.0f}'.format(tot_drop) +' |  ')
+			else:
+				log.debug('|{:>7}'.format(str(size))+" | Speed 0 or close to 0")
+			first = 0
+			if (duration <= 0):
+				#Stop generating
+				gensock.stop(gencores)
+				time.sleep(sleep_time)
+				lat_min, lat_max, lat_avg = gensock.lat_stats(latcores)
+				# Get statistics after some execution time
+				new_rx, new_tx, new_drop, new_tsc, tsc_hz = gensock.core_stats(genstatcores)
+				if sutsock!='none':
+					new_sut_rx, new_sut_tx, new_sut_drop, new_sut_tsc, sut_tsc_hz = sutsock.core_stats(sutstatcores)
+				drop = new_drop-old_drop # drop is all packets dropped by all tasks. This includes packets dropped at the generator task + packets dropped by the nop task. In steady state, this equals to the number of packets received by this VM
+				rx = new_rx - old_rx     # rx is all packets received by the nop task = all packets received in the gen VM
+				tx = new_tx - old_tx     # tx is all generated packets actually accepted by the interface
+				tsc = new_tsc - old_tsc  # time difference between the 2 measurements, expressed in cycles.
+				tot_drop = tot_drop + tx - rx
+				if sutsock!='none':
+					sut_rx = new_sut_rx - old_sut_rx
+					sut_tx = new_sut_tx - old_sut_tx
+					sut_tsc = new_sut_tsc - old_sut_tsc
+				if pps_sut_tx_str <>  'NO_RESULTS':
+                			log.info('|{:>4}'.format(size+4)+" |" + '{:>5.1f}'.format(speed) + '% ' +'{:>6.3f}'.format(get_pps(speed,size)) + ' Mpps|'+'             |' +'             |'  +'             |'+ '             |'+ '{:>8.0f}'.format(lat_avg)+' us  |'+'{:>8.0f}'.format(lat_max)+' us  | ' + '{:>9.0f}'.format(tx) + ' | '+ '{:>9.0f}'.format(rx) + ' | '+ '{:>7.0f}'.format(tx-rx) + ' | '+ '{:>7.0f}'.format(tot_drop) +'  | ')
+		log.info("+-----+------------------+-------------+-------------+-------------+-------------+-------------+-------------+-----------+-----------+---------+------------+")
+
 def run_irqtest(sock):
         log.info("+----------------------------------------------------------------------------------------------------------------------------")
         log.info("| Measuring time probably spent dealing with an interrupt. Interrupting DPDK cores for more than 50us might be problematic   ")
