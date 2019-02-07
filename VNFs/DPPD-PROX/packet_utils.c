@@ -247,7 +247,7 @@ void task_start_l3(struct task_base *tbase, struct task_args *targ)
 	const int NB_CACHE_ARP_MBUF = 256;
 
 	struct prox_port_cfg *port = find_reachable_port(targ);
-        if (port) {
+        if (port && (tbase->l3.arp_pool == NULL)) {
 		static char name[] = "arp0_pool";
                 tbase->l3.reachable_port_id = port - prox_port_cfg;
 		if (targ->local_ipv4) {
