@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1a622d24_4f1b551b",
+        "filename": "VNFs/DPPD-PROX/main.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1028,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-02-07T18:15:12Z",
+      "side": 1,
+      "message": "We might have a problem here:\ninit_lcores() calls check_cfg_consistent(), which calls new check_nb_mbuf(), which checks n_txd for all TX ports.\nBut later, init_port_all() calls init_port(), which might adjust n_txd on https://git.opnfv.org/samplevnf/tree/VNFs/DPPD-PROX/prox_port_cfg.c#n556\nI guess the easy fix would be to call new check_nb_mbuf() here after calling init_port_all()\nIf that\u0027s not clean enough, then check_cfg_consistent() should first call some new early_adjust_port_all() in prox_port_cfg.c to adjust n_txd before checking is done. But would that be cleaner?",
+      "range": {
+        "startLine": 1026,
+        "startChar": 0,
+        "endLine": 1028,
+        "endChar": 17
+      },
+      "revId": "0eca932897b14ebe0cfa63a5678b81a3146a5121",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
