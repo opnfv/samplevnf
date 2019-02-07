@@ -208,7 +208,7 @@ static size_t init_rx_tx_rings_ports(struct task_args *targ, struct task_base *t
 	if ((targ->nb_txrings != 0) && (!targ->tx_opt_ring) && (!(targ->flags & TASK_ARG_DROP))) {
 		// Transmitting to a ring in NO DROP. We need to make sure the receiving task in not running on the same core.
 		// Otherwise we might end up in a dead lock: trying in a loop to transmit to a task which cannot receive anymore
-		// (as npt being scheduled).
+		// (as not being scheduled).
 		struct core_task ct;
 		struct task_args *dtarg;
 		for (unsigned int j = 0; j < targ->nb_txrings; j++) {
@@ -277,6 +277,7 @@ static size_t init_rx_tx_rings_ports(struct task_args *targ, struct task_base *t
 			prev = prev->tx_opt_ring_task;
 		}
 	}
+
 	if (targ->nb_txrings == 1 || targ->nb_txports == 1 || targ->tx_opt_ring) {
 		if (targ->task_init->flag_features & TASK_FEATURE_NEVER_DISCARDS) {
 			if (targ->tx_opt_ring) {
@@ -350,13 +351,6 @@ struct task_base *init_task_struct(struct task_args *targ)
 	offset = init_rx_tx_rings_ports(targ, tbase, offset);
 	tbase->aux = (struct task_base_aux *)(((uint8_t *)tbase) + offset);
 
-	if (targ->nb_txports != 0) {
-		if (targ->flags & TASK_ARG_L3) {
-			tbase->aux->tx_pkt_l2 = tbase->tx_pkt;
-			tbase->tx_pkt = tx_pkt_l3;
-		}
-	}
-
 	if (targ->task_init->flag_features & TASK_FEATURE_RX_ALL) {
 		task_base_add_rx_pkt_function(tbase, rx_pkt_all);
 		tbase->aux->all_mbufs = prox_zmalloc(MAX_RX_PKT_ALL * sizeof(* tbase->aux->all_mbufs), task_socket);
@@ -372,10 +366,13 @@ struct task_base *init_task_struct(struct task_args *targ)
 	if (targ->flags & TASK_ARG_L3) {
 		plog_info("\tTask configured in L3 mode\n");
 		tbase->l3.ctrl_plane_ring = targ->ctrl_plane_ring;
-	}
-	if (targ->nb_txports != 0) {
-		if (targ->flags & TASK_ARG_L3)
+		if (targ->nb_txports != 0) {
+			tbase->aux->tx_pkt_l2 = tbase->tx_pkt;
+			tbase->tx_pkt = tx_pkt_l3;
+			// Make sure control plane packets such as arp are not dropped
+			tbase->aux->tx_ctrlplane_pkt = targ->nb_txrings ? tx_ctrlplane_sw : tx_ctrlplane_hw;
 			task_init_l3(tbase, targ);
+		}
 	}
 
 	targ->tbase = tbase;

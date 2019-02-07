@@ -762,6 +762,39 @@ int tx_pkt_drop_all(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n
 	}
 	return n_pkts;
 }
+static inline void dump_pkts(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts)
+{
+	uint32_t n_dump = tbase->aux->task_rt_dump.n_print_tx;
+	uint32_t n_trace = tbase->aux->task_rt_dump.n_trace;
+
+	if (unlikely(n_dump)) {
+		n_dump = n_pkts < n_dump? n_pkts : n_dump;
+		for (uint32_t i = 0; i < n_dump; ++i) {
+			plogdx_info(mbufs[i], "TX: ");
+		}
+		tbase->aux->task_rt_dump.n_print_tx -= n_dump;
+	} else if (unlikely(n_trace)) {
+		n_trace = n_pkts < n_trace? n_pkts : n_trace;
+		for (uint32_t i = 0; i < n_trace; ++i) {
+			plogdx_info(mbufs[i], "TX: ");
+		}
+		tbase->aux->task_rt_dump.n_trace - n_trace;
+	}
+}
+
+// ctrlplane packets are slow path, hence cost of checking if dump ortrace is needed in not too important
+// easier to have this implementation than an implementation similar to dataplane tx
+int tx_ctrlplane_hw(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts, __attribute__((unused)) uint8_t *out)
+{
+	dump_pkts(tbase, mbufs, n_pkts);
+	return txhw_no_drop(&tbase->tx_params_hw.tx_port_queue[0], mbufs, n_pkts, tbase);
+}
+
+int tx_ctrlplane_sw(struct task_base *tbase, struct rte_mbuf **mbufs, const uint16_t n_pkts, __attribute__((unused)) uint8_t *out)
+{
+	dump_pkts(tbase, mbufs, n_pkts);
+        return ring_enq_no_drop(tbase->tx_params_sw.tx_rings[0], mbufs, n_pkts, tbase);
+}
 
 static inline int tx_ring_all(struct task_base *tbase, struct rte_ring *ring, uint16_t command,  struct rte_mbuf *mbuf, uint8_t core_id, uint8_t task_id, uint32_t ip)
 {
