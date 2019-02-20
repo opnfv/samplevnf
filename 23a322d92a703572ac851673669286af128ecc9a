@@ -1,0 +1,67 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "fafc7978_989f9d50",
+        "filename": "VNFs/DPPD-PROX/handle_gen.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 1217,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-02-20T13:56:24Z",
+      "side": 1,
+      "message": "link max speed",
+      "range": {
+        "startLine": 1217,
+        "startChar": 25,
+        "endLine": 1217,
+        "endChar": 35
+      },
+      "revId": "23a322d92a703572ac851673669286af128ecc9a",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fafc7978_f8ace98e",
+        "filename": "VNFs/DPPD-PROX/handle_lat.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 748,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-02-20T13:56:24Z",
+      "side": 1,
+      "message": "link max speed",
+      "range": {
+        "startLine": 748,
+        "startChar": 25,
+        "endLine": 748,
+        "endChar": 35
+      },
+      "revId": "23a322d92a703572ac851673669286af128ecc9a",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fafc7978_b8c9c15c",
+        "filename": "VNFs/DPPD-PROX/prox_port_cfg.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 328,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-02-20T13:56:24Z",
+      "side": 1,
+      "message": "Useless duplicate of L468",
+      "revId": "23a322d92a703572ac851673669286af128ecc9a",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
