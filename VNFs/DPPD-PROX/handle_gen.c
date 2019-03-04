@@ -85,7 +85,6 @@ struct task_gen_pcap {
 struct task_gen {
 	struct task_base base;
 	uint64_t hz;
-	uint64_t link_speed;
 	struct token_time token_time;
 	struct local_mbuf local_mbuf;
 	struct pkt_template *pkt_template; /* packet templates used at runtime */
@@ -123,6 +122,7 @@ struct task_gen {
 	uint8_t flags;
 	uint8_t cksum_offload;
 	struct prox_port_cfg *port;
+	uint64_t *bytes_to_tsc;
 } __rte_cache_aligned;
 
 static inline uint8_t ipv4_get_hdr_len(struct ipv4_hdr *ip)
@@ -261,15 +261,9 @@ static int handle_gen_pcap_bulk(struct task_base *tbase, struct rte_mbuf **mbuf,
 	return task->base.tx_pkt(&task->base, new_pkts, send_bulk, NULL);
 }
 
-static uint64_t bytes_to_tsc(struct task_gen *task, uint32_t bytes)
+static inline uint64_t bytes_to_tsc(struct task_gen *task, uint32_t bytes)
 {
-	const uint64_t hz = task->hz;
-	const uint64_t bytes_per_hz = task->link_speed;
-
-	if (bytes_per_hz == UINT64_MAX)
-		return 0;
-
-	return hz * bytes / bytes_per_hz;
+	return task->bytes_to_tsc[bytes];
 }
 
 static uint32_t task_gen_next_pkt_idx(const struct task_gen *task, uint32_t pkt_idx)
@@ -439,8 +433,12 @@ static uint64_t task_gen_calc_bulk_duration(struct task_gen *task, uint32_t coun
 	uint32_t pkt_idx = task_gen_offset_pkt_idx(task, - 1);
 	struct pkt_template *last_pkt_template = &task->pkt_template[pkt_idx];
 	uint32_t last_pkt_len = pkt_len_to_wire_size(last_pkt_template->len);
+#ifdef NO_EXTRAPOLATION
+	uint64_t bulk_duration = task->pkt_tsc_offset[count - 1];
+#else
 	uint64_t last_pkt_duration = bytes_to_tsc(task, last_pkt_len);
 	uint64_t bulk_duration = task->pkt_tsc_offset[count - 1] + last_pkt_duration;
+#endif
 
 	return bulk_duration;
 }
@@ -475,6 +473,14 @@ static uint64_t task_gen_write_latency(struct task_gen *task, uint8_t **pkt_hdr,
 	   simply sleeping until delta_t is zero would leave a period
 	   of silence on the line. The error has been introduced
 	   earlier, but the packets have already been sent. */
+
+	/* This happens typically if previous bulk was delayed
+	   by an interrupt e.g.  (with Time in nsec)
+	   Time x: sleep 4 microsec
+	   Time x+4000: send 64 packets (64 packets as 4000 nsec, w/ 10Gbps 64 bytes)
+	   Time x+5000: send 16 packets (16 packets as 1000 nsec)
+	   When we send the 16 packets, the 64 ealier packets are not yet
+	   fully sent */
 	if (tx_tsc < task->earliest_tsc_next_pkt)
 		delta_t = task->earliest_tsc_next_pkt - tx_tsc;
 	else
@@ -483,12 +489,10 @@ static uint64_t task_gen_write_latency(struct task_gen *task, uint8_t **pkt_hdr,
 	for (uint16_t i = 0; i < count; ++i) {
 		uint32_t *pos = (uint32_t *)(pkt_hdr[i] + task->lat_pos);
 		const uint64_t pkt_tsc = tx_tsc + delta_t + task->pkt_tsc_offset[i];
-
 		*pos = pkt_tsc >> LATENCY_ACCURACY;
 	}
 
 	uint64_t bulk_duration = task_gen_calc_bulk_duration(task, count);
-
 	task->earliest_tsc_next_pkt = tx_tsc + delta_t + bulk_duration;
 	write_tsc_after = rte_rdtsc();
 	task->write_duration_estimate = write_tsc_after - write_tsc_before;
@@ -498,6 +502,7 @@ static uint64_t task_gen_write_latency(struct task_gen *task, uint8_t **pkt_hdr,
 	do {
 		tsc_before_tx = rte_rdtsc();
 	} while (tsc_before_tx < tx_tsc);
+
 	return tsc_before_tx;
 }
 
@@ -537,7 +542,11 @@ static void task_gen_build_packets(struct task_gen *task, struct rte_mbuf **mbuf
 		mbufs[i]->udata64 = task->pkt_idx & TEMPLATE_INDEX_MASK;
 		struct ether_hdr *hdr = (struct ether_hdr *)pkt_hdr[i];
 		if (task->lat_enabled) {
+#ifdef NO_EXTRAPOLATION
+			task->pkt_tsc_offset[i] = 0;
+#else
 			task->pkt_tsc_offset[i] = bytes_to_tsc(task, will_send_bytes);
+#endif
 			will_send_bytes += pkt_len_to_wire_size(pkt_template->len);
 		}
 		task->pkt_idx = task_gen_next_pkt_idx(task, task->pkt_idx);
@@ -632,19 +641,6 @@ static int handle_gen_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 	int ret;
 
 	int i, j;
-
-#if RTE_VERSION < RTE_VERSION_NUM(16,4,0,0)
-	// On more recent DPDK, we use the speed_capa of the port, and not the negotiated speed
-	// If link is down, link_speed is 0
-	if (unlikely(task->link_speed == 0)) {
-		if (task->port && task->port->link_speed != 0) {
-			task->link_speed = task->port->link_speed * 125000L;
-			plog_info("\tPort %u: link speed is %ld Mbps\n",
-				(uint8_t)(task->port - prox_port_cfg), 8 * task->link_speed / 1000000);
-		} else
-			return 0;
-	}
-#endif
 
 	task_gen_update_config(task);
 
@@ -1188,28 +1184,7 @@ static void start(struct task_base *tbase)
 	if (tbase->l3.tmaster) {
 		register_all_ip_to_ctrl_plane(task);
 	}
-	if (task->port) {
-		// task->port->link_speed reports the link speed in Mbps e.g. 40k for a 40 Gbps NIC.
-		// task->link_speed reports link speed in Bytes per sec.
-#if RTE_VERSION < RTE_VERSION_NUM(16,4,0,0)
-		// It can be 0 if link is down, and must hence be updated in fast path.
-		task->link_speed = task->port->link_speed * 125000L;
-		if (task->link_speed)
-			plog_info("\tPort %u: link speed is %ld Mbps\n",
-				(uint8_t)(task->port - prox_port_cfg), 8 * task->link_speed / 1000000);
-		else
-			plog_info("\tPort %u: link speed is %ld Mbps - link might be down\n",
-				(uint8_t)(task->port - prox_port_cfg), 8 * task->link_speed / 1000000);
-#else
-		if (task->port->link_speed == UINT32_MAX)
-			task->link_speed = UINT64_MAX;
-		else {
-			task->link_speed = task->port->link_speed * 125000L;
-			plog_info("\tPort %u: link max speed is %ld Mbps\n",
-				(uint8_t)(task->port - prox_port_cfg), 8 * task->link_speed / 1000000);
-		}
-#endif
-	}
+
 	/* TODO
 	   Handle the case when two tasks transmit to the same port
 	   and one of them is stopped. In that case ARP (requests or replies)
@@ -1295,7 +1270,26 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 
 	task->generator_id = targ->generator_id;
 	plog_info("\tGenerator id = %d\n", task->generator_id);
-	task->link_speed = UINT64_MAX;
+
+	// Allocate array holding bytes to tsc for supported frame sizes
+	task->bytes_to_tsc = prox_zmalloc(task->max_frame_size * MAX_PKT_BURST * sizeof(task->bytes_to_tsc[0]), rte_lcore_to_socket_id(targ->lconf->id));
+	PROX_PANIC(task->bytes_to_tsc == NULL,
+		"Failed to allocate %u bytes (in huge pages) for bytes_to_tsc\n", task->max_frame_size);
+
+	// task->port->max_link_speed reports the maximum, non negotiated ink speed in Mbps e.g. 40k for a 40 Gbps NIC.
+	// It can be UINT32_MAX (virtual devices or not supported by DPDK < 16.04)
+	uint64_t bytes_per_hz = UINT64_MAX;
+	if ((task->port) && (task->port->max_link_speed != UINT32_MAX)) {
+		bytes_per_hz = task->port->max_link_speed * 125000L;
+		plog_info("\tPort %u: max link speed is %ld Mbps\n",
+			(uint8_t)(task->port - prox_port_cfg), 8 * bytes_per_hz / 1000000);
+	}
+	for (unsigned int i = 0; i < task->max_frame_size * MAX_PKT_BURST ; i++) {
+		if (bytes_per_hz == UINT64_MAX)
+			task->bytes_to_tsc[i] = 0;
+		else
+			task->bytes_to_tsc[i] = (task->hz * i) / bytes_per_hz;
+	}
 
 	if (!strcmp(targ->pcap_file, "")) {
 		plog_info("\tUsing inline definition of a packet\n");

@@ -109,12 +109,12 @@ struct task_lat {
 	uint16_t min_pkt_len;
 	struct early_loss_detect *eld;
 	struct rx_pkt_meta_data *rx_pkt_meta;
-	uint64_t link_speed;
 	// Following fields are only used when starting or stopping, not in general runtime
 	uint64_t *prev_tx_packet_index;
 	FILE *fp_rx;
 	FILE *fp_tx;
 	struct prox_port_cfg *port;
+	uint64_t *bytes_to_tsc;
 };
 /* This function calculate the difference between rx and tx_time
  * Both values are uint32_t (see handle_lat_bulk)
@@ -435,9 +435,13 @@ static uint32_t task_lat_early_loss_detect(struct task_lat *task, uint32_t packe
 	return early_loss_detect_add(eld, packet_id);
 }
 
-static uint64_t tsc_extrapolate_backward(uint64_t link_speed, uint64_t tsc_from, uint64_t bytes, uint64_t tsc_minimum)
+static uint64_t tsc_extrapolate_backward(struct task_lat *task, uint64_t tsc_from, uint64_t bytes, uint64_t tsc_minimum)
 {
-	uint64_t tsc = tsc_from - (rte_get_tsc_hz()*bytes)/link_speed;
+#ifdef NO_EXTRAPOLATION
+	uint64_t tsc = tsc_from;
+#else
+	uint64_t tsc = tsc_from - task->bytes_to_tsc[bytes];
+#endif
 	if (likely(tsc > tsc_minimum))
 		return tsc;
 	else
@@ -507,21 +511,6 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 	struct task_lat *task = (struct task_lat *)tbase;
 	int rc;
 
-#if RTE_VERSION < RTE_VERSION_NUM(16,4,0,0)
-	// On more recent DPDK, we use the speed_capa of the port, and not the negotiated speed
-	// If link is down, link_speed is 0
-	if (unlikely(task->link_speed == 0)) {
-		if (task->port && task->port->link_speed != 0) {
-			task->link_speed = task->port->link_speed * 125000L;
-			plog_info("\tPort %u: link speed is %ld Mbps\n",
-				(uint8_t)(task->port - prox_port_cfg), 8 * task->link_speed / 1000000);
-		} else if (n_pkts) {
-			return task->base.tx_pkt(&task->base, mbufs, n_pkts, NULL);
-		} else {
-			return 0;
-		}
-	}
-#endif
 	if (n_pkts == 0) {
 		task->begin = tbase->aux->tsc_rx.before;
 		return 0;
@@ -531,10 +520,10 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 
 	// Remember those packets with bad length or bad signature
 	uint32_t non_dp_count = 0;
-	uint64_t pkt_bad_len_sig[(MAX_RX_PKT_ALL + 63) / 64];
-#define BIT64_SET(a64, bit)	a64[bit / 64] |=  (((uint64_t)1) << (bit & 63))
-#define BIT64_CLR(a64, bit)	a64[bit / 64] &= ~(((uint64_t)1) << (bit & 63))
-#define BIT64_TEST(a64, bit)	a64[bit / 64]  &  (((uint64_t)1) << (bit & 63))
+	uint64_t pkt_bad_len_sig = 0;
+#define BIT64_SET(a64, bit)	a64 |=  (((uint64_t)1) << (bit & 63))
+#define BIT64_CLR(a64, bit)	a64 &= ~(((uint64_t)1) << (bit & 63))
+#define BIT64_TEST(a64, bit)	a64  &  (((uint64_t)1) << (bit & 63))
 
 	/* Go once through all received packets and read them.  If
 	   packet has just been modified by another core, the cost of
@@ -583,7 +572,7 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 	const uint64_t rx_tsc = tbase->aux->tsc_rx.after;
 
 	uint64_t rx_time_err;
-	uint64_t pkt_rx_time64 = tsc_extrapolate_backward(task->link_speed, rx_tsc, task->rx_pkt_meta[0].bytes_after_in_bulk, task->last_pkts_tsc) >> LATENCY_ACCURACY;
+	uint64_t pkt_rx_time64 = tsc_extrapolate_backward(task, rx_tsc, task->rx_pkt_meta[0].bytes_after_in_bulk, task->last_pkts_tsc) >> LATENCY_ACCURACY;
 	if (unlikely((task->begin >> LATENCY_ACCURACY) > pkt_rx_time64)) {
 		// Extrapolation went up to BEFORE begin => packets were stuck in the NIC but we were not seeing them
 		rx_time_err = pkt_rx_time64 - (task->last_pkts_tsc >> LATENCY_ACCURACY);
@@ -603,7 +592,7 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 		struct rx_pkt_meta_data *rx_pkt_meta = &task->rx_pkt_meta[j];
 		uint8_t *hdr = rx_pkt_meta->hdr;
 
-		uint32_t pkt_rx_time = tsc_extrapolate_backward(task->link_speed, rx_tsc, rx_pkt_meta->bytes_after_in_bulk, task->last_pkts_tsc) >> LATENCY_ACCURACY;
+		uint32_t pkt_rx_time = tsc_extrapolate_backward(task, rx_tsc, rx_pkt_meta->bytes_after_in_bulk, task->last_pkts_tsc) >> LATENCY_ACCURACY;
 		uint32_t pkt_tx_time = rx_pkt_meta->pkt_tx_time;
 
 		uint8_t generator_id;
@@ -662,7 +651,8 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 		task->rx_packet_index++;
 	}
 
-	task->begin = tbase->aux->tsc_rx.before;
+	if (n_pkts < MAX_PKT_BURST)
+		task->begin = tbase->aux->tsc_rx.before;
 	task->last_pkts_tsc = tbase->aux->tsc_rx.after;
 
 	rc = task->base.tx_pkt(&task->base, mbufs, n_pkts, NULL);
@@ -728,28 +718,6 @@ static void lat_start(struct task_base *tbase)
 {
 	struct task_lat *task = (struct task_lat *)tbase;
 
-	if (task->port) {
-		// task->port->link_speed reports the link speed in Mbps e.g. 40k for a 40 Gbps NIC.
-		// task->link_speed reports link speed in Bytes per sec.
-#if RTE_VERSION < RTE_VERSION_NUM(16,4,0,0)
-		// It can be 0 if link is down, and must hence be updated in fast path.
-		task->link_speed = task->port->link_speed * 125000L;
-		if (task->link_speed)
-			plog_info("\tPort %u: link speed is %ld Mbps\n",
-				(uint8_t)(task->port - prox_port_cfg), 8 * task->link_speed / 1000000);
-		else
-			plog_info("\tPort %u: link speed is %ld Mbps - link might be down\n",
-				(uint8_t)(task->port - prox_port_cfg), 8 * task->link_speed / 1000000);
-#else
-		if (task->port->link_speed == UINT32_MAX)
-			task->link_speed = UINT64_MAX;
-		else {
-			task->link_speed = task->port->link_speed * 125000L;
-			plog_info("\tPort %u: link max speed is %ld Mbps\n",
-				(uint8_t)(task->port - prox_port_cfg), 8 * task->link_speed / 1000000);
-		}
-#endif
-	}
 }
 
 static void init_task_lat(struct task_base *tbase, struct task_args *targ)
@@ -815,15 +783,32 @@ static void init_task_lat(struct task_base *tbase, struct task_args *targ)
 	task->lat_test = &task->lt[task->using_lt];
 
 	task_lat_set_accuracy_limit(task, targ->accuracy_limit_nsec);
-	task->rx_pkt_meta = prox_zmalloc(MAX_RX_PKT_ALL * sizeof(*task->rx_pkt_meta), socket_id);
+	task->rx_pkt_meta = prox_zmalloc(MAX_PKT_BURST * sizeof(*task->rx_pkt_meta), socket_id);
 	PROX_PANIC(task->rx_pkt_meta == NULL, "unable to allocate memory to store RX packet meta data");
 
-	task->link_speed = UINT64_MAX;
+	uint32_t max_frame_size = MAX_PKT_SIZE;
+	uint64_t bytes_per_hz = UINT64_MAX;
 	if (targ->nb_rxports) {
-		// task->port structure is only used while starting handle_lat to get the link_speed.
-		// link_speed can not be quiried at init as the port has not been initialized yet.
 		struct prox_port_cfg *port = &prox_port_cfg[targ->rx_port_queue[0].port];
-		task->port = port;
+		max_frame_size = port->mtu + ETHER_HDR_LEN + ETHER_CRC_LEN + 2 * PROX_VLAN_TAG_SIZE;
+
+		// port->max_link_speed reports the maximum, non negotiated ink speed in Mbps e.g. 40k for a 40 Gbps NIC.
+		// It can be UINT32_MAX (virtual devices or not supported by DPDK < 16.04)
+		if (port->max_link_speed != UINT32_MAX) {
+			bytes_per_hz = port->max_link_speed * 125000L;
+			plog_info("\tPort %u: max link speed is %ld Mbps\n",
+				(uint8_t)(port - prox_port_cfg), 8 * bytes_per_hz / 1000000);
+		}
+	}
+	task->bytes_to_tsc = prox_zmalloc(max_frame_size * sizeof(task->bytes_to_tsc[0]) * MAX_PKT_BURST, rte_lcore_to_socket_id(targ->lconf->id));
+	PROX_PANIC(task->bytes_to_tsc == NULL,
+		"Failed to allocate %u bytes (in huge pages) for bytes_to_tsc\n", max_frame_size);
+
+	for (unsigned int i = 0; i < max_frame_size * MAX_PKT_BURST ; i++) {
+		if (bytes_per_hz == UINT64_MAX)
+			task->bytes_to_tsc[i] = 0;
+		else
+			task->bytes_to_tsc[i] = (rte_get_tsc_hz() * i) / bytes_per_hz;
 	}
 }
 
@@ -833,7 +818,7 @@ static struct task_init task_init_lat = {
 	.handle = handle_lat_bulk,
 	.start = lat_start,
 	.stop = lat_stop,
-	.flag_features = TASK_FEATURE_TSC_RX | TASK_FEATURE_RX_ALL | TASK_FEATURE_ZERO_RX | TASK_FEATURE_NEVER_DISCARDS,
+	.flag_features = TASK_FEATURE_TSC_RX | TASK_FEATURE_ZERO_RX | TASK_FEATURE_NEVER_DISCARDS,
 	.size = sizeof(struct task_lat)
 };
 

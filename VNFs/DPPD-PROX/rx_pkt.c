@@ -508,36 +508,3 @@ uint16_t rx_pkt_tsc(struct task_base *tbase, struct rte_mbuf ***mbufs)
 
 	return ret;
 }
-
-uint16_t rx_pkt_all(struct task_base *tbase, struct rte_mbuf ***mbufs)
-{
-	uint16_t tot = 0;
-	uint16_t ret = 0;
-	struct rte_mbuf **new_mbufs;
-	struct rte_mbuf **dst = tbase->aux->all_mbufs;
-
-	/* In case we receive less than MAX_PKT_BURST packets in one
-	   iteration, do no perform any copying of mbuf pointers. Use
-	   the buffer itself instead. */
-	ret = call_prev_rx_pkt(tbase, &new_mbufs);
-	if (ret < MAX_PKT_BURST/2) {
-		*mbufs = new_mbufs;
-		return ret;
-	}
-
-	memcpy(dst + tot, new_mbufs, ret * sizeof(*dst));
-	tot += ret;
-	*mbufs = dst;
-
-	do {
-		ret = call_prev_rx_pkt(tbase, &new_mbufs);
-		memcpy(dst + tot, new_mbufs, ret * sizeof(*dst));
-		tot += ret;
-	} while (ret == MAX_PKT_BURST/2 && tot < MAX_RX_PKT_ALL - MAX_PKT_BURST);
-
-	if (tot >= MAX_RX_PKT_ALL - MAX_PKT_BURST) {
-		plog_err("Could not receive all packets - buffer full\n");
-	}
-
-	return tot;
-}
