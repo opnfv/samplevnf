@@ -57,7 +57,6 @@ struct pkt_template {
 
 #define MAX_TEMPLATE_INDEX	65536
 #define TEMPLATE_INDEX_MASK	(MAX_TEMPLATE_INDEX - 1)
-#define MBUF_ARP		MAX_TEMPLATE_INDEX
 
 #define IP4(x) x & 0xff, (x >> 8) & 0xff, (x >> 16) & 0xff, x >> 24
 
@@ -374,10 +373,8 @@ static void task_gen_apply_all_accur_pos(struct task_gen *task, struct rte_mbuf 
 	   packet task->pkt_queue_index. The ID modulo 64 is the
 	   same. */
 	for (uint16_t j = 0; j < count; ++j) {
-		if ((mbufs[j]->udata64 & MBUF_ARP) == 0) {
-			uint32_t accuracy = task->accur[(task->pkt_queue_index + j) & 63];
-			task_gen_apply_accur_pos(task, pkt_hdr[j], accuracy);
-		}
+		uint32_t accuracy = task->accur[(task->pkt_queue_index + j) & 63];
+		task_gen_apply_accur_pos(task, pkt_hdr[j], accuracy);
 	}
 }
 
@@ -387,9 +384,7 @@ static void task_gen_apply_all_sig(struct task_gen *task, struct rte_mbuf **mbuf
 		return;
 
 	for (uint16_t j = 0; j < count; ++j) {
-		if ((mbufs[j]->udata64 & MBUF_ARP) == 0) {
-			task_gen_apply_sig(task, pkt_hdr[j]);
-		}
+		task_gen_apply_sig(task, pkt_hdr[j]);
 	}
 }
 
@@ -406,11 +401,9 @@ static void task_gen_apply_all_unique_id(struct task_gen *task, struct rte_mbuf 
 		return;
 
 	for (uint16_t i = 0; i < count; ++i) {
-		if ((mbufs[i]->udata64 & MBUF_ARP) == 0) {
-			struct unique_id id;
-			unique_id_init(&id, task->generator_id, task->pkt_queue_index++);
-			task_gen_apply_unique_id(task, pkt_hdr[i], &id);
-		}
+		struct unique_id id;
+		unique_id_init(&id, task->generator_id, task->pkt_queue_index++);
+		task_gen_apply_unique_id(task, pkt_hdr[i], &id);
 	}
 }
 
@@ -424,11 +417,9 @@ static void task_gen_checksum_packets(struct task_gen *task, struct rte_mbuf **m
 
 	uint32_t pkt_idx = task_gen_offset_pkt_idx(task, - count);
 	for (uint16_t i = 0; i < count; ++i) {
-		if ((mbufs[i]->udata64 & MBUF_ARP) == 0) {
-			struct pkt_template *pkt_template = &task->pkt_template[pkt_idx];
-			checksum_packet(pkt_hdr[i], mbufs[i], pkt_template, task->cksum_offload);
-			pkt_idx = task_gen_next_pkt_idx(task, pkt_idx);
-		}
+		struct pkt_template *pkt_template = &task->pkt_template[pkt_idx];
+		checksum_packet(pkt_hdr[i], mbufs[i], pkt_template, task->cksum_offload);
+		pkt_idx = task_gen_next_pkt_idx(task, pkt_idx);
 	}
 }
 
