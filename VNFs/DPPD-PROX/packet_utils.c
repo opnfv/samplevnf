@@ -183,7 +183,6 @@ int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_d
 			} else if (tsc > l3->arp_table[ret].arp_update_time) {
 				// ARP not sent since a long time, send ARP
 				l3->arp_table[ret].arp_update_time = tsc + l3->arp_update_time * hz / 1000;
-				l3->arp_table[ret].arp_update_time = tsc + hz;
 				if (tsc < l3->arp_table[ret].arp_timeout) {
 					// MAC still valid => send also MBUF
 					memcpy(mac, &l3->arp_table[ret].mac, sizeof(struct ether_addr));
