@@ -127,11 +127,33 @@ static void check_zero_rx(void)
 	}
 }
 
+static void check_nb_mbuf(void)
+{
+	struct lcore_cfg *lconf = NULL;
+	struct task_args *targ = NULL;
+	uint8_t port_id;
+	int n_txd = 0, n_rxd = 0;
+
+	while (core_targ_next(&lconf, &targ, 0) == 0) {
+		for (uint8_t i = 0; i < targ->nb_txports; ++i) {
+			port_id = targ->tx_port_queue[i].port;
+			n_txd = prox_port_cfg[port_id].n_txd;
+		}
+		for (uint8_t i = 0; i < targ->nb_rxports; ++i) {
+			port_id = targ->rx_port_queue[i].port;
+			n_rxd = prox_port_cfg[port_id].n_rxd;
+		}
+		if (targ->nb_mbuf <= n_rxd + n_txd + targ->nb_cache_mbuf + MAX_PKT_BURST) {
+			plog_warn("Core %d, task %d might not have enough mbufs (%d) to support %d txd, %d rxd and %d cache_mbuf\n",
+				lconf->id, targ->id, targ->nb_mbuf, n_txd, n_rxd, targ->nb_cache_mbuf);
+		}
+	}
+}
+
 static void check_missing_rx(void)
 {
 	struct lcore_cfg *lconf = NULL, *rx_lconf = NULL, *tx_lconf = NULL;
 	struct task_args *targ, *rx_targ = NULL, *tx_targ = NULL;
-	struct prox_port_cfg *port;
 	uint8_t port_id, rx_port_id, ok;
 
 	while (core_targ_next(&lconf, &targ, 0) == 0) {
@@ -192,6 +214,7 @@ static void check_missing_rx(void)
 
 static void check_cfg_consistent(void)
 {
+	check_nb_mbuf();
 	check_missing_rx();
 	check_zero_rx();
 	check_mixed_normal_pipeline();
