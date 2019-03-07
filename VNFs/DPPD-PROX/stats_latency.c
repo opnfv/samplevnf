@@ -142,6 +142,7 @@ static void stats_latency_add_task(struct lcore_cfg *lconf, struct task_args *ta
 	new_entry->task = (struct task_lat *)targ->tbase;
 	new_entry->lcore_id = lconf->id;
 	new_entry->task_id = targ->id;
+	new_entry->tot_lat_test.min_lat = -1;
 	slm->n_latency++;
 }
 
