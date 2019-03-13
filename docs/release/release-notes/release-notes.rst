@@ -17,7 +17,7 @@ The *SampleVNFs*, the *SampleVNF test cases* are opensource software,
 licensed under the terms of the Apache License, Version 2.0.
 
 ==========================================
-OPNFV Gambia Release Note for SampleVNF
+OPNFV Hunter Release Note for SampleVNF
 ==========================================
 
 .. toctree::
@@ -43,7 +43,7 @@ Version History
 | *Date*         | *Version*          | *Comment*                       |
 |                |                    |                                 |
 +----------------+--------------------+---------------------------------+
-| "Jan 17 2019"  |  7.2.0             | SampleVNF for Gambia release    |
+| "May 10 2019"  |  8.0             | SampleVNF for Hunter release    |
 |                |                    |                                 |
 +----------------+--------------------+---------------------------------+
 
@@ -56,10 +56,10 @@ The software delivered in the OPNFV SampleVNF_ Project, comprising the
 Project is a realization of the methodology in ETSI-ISG NFV-TST001_.
 
 
-OPNFV Gambia Release
+OPNFV Hunter Release
 ======================
 
-This Gambia release provides *SampleVNF* as a approx VNF repository for
+This Hunter release provides *SampleVNF* as a approx VNF repository for
 VNF/NFVI testing, characterization and OPNFV feature testing, automated on
 OPNFV platform, including:
 
@@ -77,7 +77,7 @@ OPNFV platform, including:
 
 * SampleVNF source code
 
-For Gambia release, the *SampleVNF* supported:
+For Hunter release, the *SampleVNF* supported:
 
 +----------------+---------------------------------------------------------+-------------------+
 | *VNF*          |                 *Name*                                  |    *version*      |
@@ -97,7 +97,7 @@ For Gambia release, the *SampleVNF* supported:
 .. note:: Highlevel Desgin and features supported by each of the VNFs is described in Developer
           and user guide.
 
-For Gambia release, the *SampleVNF* is used for the following
+For Hunter release, the *SampleVNF* is used for the following
 testing:
 
 * OPNFV platform testing - generic test cases to measure the categories:
@@ -127,19 +127,19 @@ Release Data
 | **Project**                          | SampleVNF                            |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
-| **Repo/tag**                         | opnfv-7.2.0                          |
+| **Repo/tag**                         | opnfv-8.0                            |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
-| **SampleVNF Docker image tag**       | Gambia 7.2                           |
+| **SampleVNF Docker image tag**       | Hunter 8.0                           |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
-| **Release designation**              | Gambia 7.2                           |
+| **Release designation**              | Hunter 8.0                           |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
-| **Release date**                     | "Dec 14 2018"                        |
+| **Release date**                     | "May 10 2019"                        |
 |                                      |                                      |
 +--------------------------------------+--------------------------------------+
-| **Purpose of the delivery**          | Gambia alignment to Released         |
+| **Purpose of the delivery**          | Hunter alignment to Released         |
 |                                      | bug-fixes for the following:         |
 |                                      | - Memory leak                        |
 |                                      | - minimum latency                    |
@@ -234,7 +234,7 @@ Known Issues/Faults
 Corrected Faults
 ----------------
 
-Gambia 7.2:
+Hunter 8.2:
 
 +----------------------------+-------------------------------------------------------------------+
 | **JIRA REFERENCE**         | **DESCRIPTION**                                                   |
@@ -285,7 +285,7 @@ Bug Fix Jira:
 | SAMPLEVNF-146              |  Fix potential crash when shuffling mbufs                         |
 +----------------------------+-------------------------------------------------------------------+
 
-Gambia known restrictions/issues
+Hunter known restrictions/issues
 ====================================
 +-----------+-----------+----------------------------------------------+
 | Installer | Scenario  |  Issue                                       |
@@ -311,7 +311,7 @@ Useful links
 
  - wiki project page: https://wiki.opnfv.org/display/SAM
 
- - wiki SampleVNF Gambia release planing page: https://wiki.opnfv.org/display/SAM/G+-+Release+SampleVNF+planning
+ - wiki SampleVNF Hunter release planing page: https://wiki.opnfv.org/display/SAM/G+-+Release+SampleVNF+planning
 
  - SampleVNF repo: https://git.opnfv.org/cgit/samplevnf
 
@@ -332,7 +332,7 @@ Bug Fix Jira:
 | SAMPLEVNF-                 |  Fix samplevnf perf issues          |
 +----------------------------+-------------------------------------------------------------------+
 
-Gambia known restrictions/issues
+Hunter known restrictions/issues
 ====================================
 +-----------+-----------+----------------------------------------------+
 | Installer | Scenario  |  Issue                                       |
@@ -358,7 +358,7 @@ Useful links
 
  - wiki project page: https://wiki.opnfv.org/display/SAM
 
- - wiki SampleVNF Gambia release planing page: https://wiki.opnfv.org/display/SAM/G+-+Release+SampleVNF+planning
+ - wiki SampleVNF Hunter release planing page: https://wiki.opnfv.org/display/SAM/G+-+Release+SampleVNF+planning
 
  - SampleVNF repo: https://git.opnfv.org/cgit/samplevnf
 
@@ -375,7 +375,7 @@ Bug Fix Jira:
 | SAMPLEVNF-                 |  Fix samplevnf perf issues          |
 +----------------------------+-------------------------------------------------------------------+
 
-Gambia known restrictions/issues
+Hunter known restrictions/issues
 ====================================
 +-----------+-----------+----------------------------------------------+
 | Installer | Scenario  |  Issue                                       |
@@ -401,7 +401,7 @@ Useful links
 
  - wiki project page: https://wiki.opnfv.org/display/SAM
 
- - wiki SampleVNF Gambia release planing page: https://wiki.opnfv.org/display/SAM/G+-+Release+SampleVNF+planning
+ - wiki SampleVNF Hunter release planing page: https://wiki.opnfv.org/display/SAM/G+-+Release+SampleVNF+planning
 
  - SampleVNF repo: https://git.opnfv.org/cgit/samplevnf
 
@@ -418,7 +418,7 @@ Bug Fix Jira:
 | SAMPLEVNF-                 |  Fix samplevnf perf issues          |
 +----------------------------+-------------------------------------------------------------------+
 
-Gambia known restrictions/issues
+Hunter known restrictions/issues
 ====================================
 +-----------+-----------+----------------------------------------------+
 | Installer | Scenario  |  Issue                                       |
@@ -444,7 +444,7 @@ Useful links
 
  - wiki project page: https://wiki.opnfv.org/display/SAM
 
- - wiki SampleVNF Gambia release planing page: https://wiki.opnfv.org/display/SAM/G+-+Release+SampleVNF+planning
+ - wiki SampleVNF Hunter release planing page: https://wiki.opnfv.org/display/SAM/G+-+Release+SampleVNF+planning
 
  - SampleVNF repo: https://git.opnfv.org/cgit/samplevnf
 
@@ -461,7 +461,7 @@ Bug Fix Jira:
 | SAMPLEVNF-                 |  Fix samplevnf perf issues          |
 +----------------------------+-------------------------------------------------------------------+
 
-Gambia known restrictions/issues
+Hunter known restrictions/issues
 ====================================
 +-----------+-----------+----------------------------------------------+
 | Installer | Scenario  |  Issue                                       |
@@ -487,7 +487,7 @@ Useful links
 
  - wiki project page: https://wiki.opnfv.org/display/SAM
 
- - wiki SampleVNF Gambia release planing page: https://wiki.opnfv.org/display/SAM/G+-+Release+SampleVNF+planning
+ - wiki SampleVNF Hunter release planing page: https://wiki.opnfv.org/display/SAM/G+-+Release+SampleVNF+planning
 
  - SampleVNF repo: https://git.opnfv.org/cgit/samplevnf
 
@@ -504,7 +504,7 @@ Bug Fix Jira:
 | SAMPLEVNF-                 |  Fix samplevnf perf issues          |
 +----------------------------+-------------------------------------------------------------------+
 
-Gambia known restrictions/issues
+Hunter known restrictions/issues
 ====================================
 +-----------+-----------+----------------------------------------------+
 | Installer | Scenario  |  Issue                                       |
@@ -530,7 +530,7 @@ Useful links
 
  - wiki project page: https://wiki.opnfv.org/display/SAM
 
- - wiki SampleVNF Gambia release planing page: https://wiki.opnfv.org/display/SAM/G+-+Release+SampleVNF+planning
+ - wiki SampleVNF Hunter release planing page: https://wiki.opnfv.org/display/SAM/G+-+Release+SampleVNF+planning
 
  - SampleVNF repo: https://git.opnfv.org/cgit/samplevnf
 
@@ -547,7 +547,7 @@ Bug Fix Jira:
 | SAMPLEVNF-                 |  Fix samplevnf perf issues          |
 +----------------------------+-------------------------------------------------------------------+
 
-Gambia known restrictions/issues
+Hunter known restrictions/issues
 ====================================
 +-----------+-----------+----------------------------------------------+
 | Installer | Scenario  |  Issue                                       |
@@ -573,7 +573,7 @@ Useful links
 
  - wiki project page: https://wiki.opnfv.org/display/SAM
 
- - wiki SampleVNF Gambia release planing page: https://wiki.opnfv.org/display/SAM/G+-+Release+SampleVNF+planning
+ - wiki SampleVNF Hunter release planing page: https://wiki.opnfv.org/display/SAM/H+-++Release+SampleVNF+planning
 
  - SampleVNF repo: https://git.opnfv.org/cgit/samplevnf
 

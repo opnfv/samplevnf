@@ -7,8 +7,8 @@ Results listed by scenario
 ==========================
 
 The following sections describe the yardstick results as evaluated for the
-Gambia release. Each section describes the determined state of the specific
-test case in Gambia release.
+Hunter release. Each section describes the determined state of the specific
+test case in Hunter release.
 
 Feature Test Results
 ====================
