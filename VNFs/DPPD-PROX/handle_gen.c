@@ -353,9 +353,10 @@ static void task_gen_apply_accur_pos(struct task_gen *task, uint8_t *pkt_hdr, ui
 	*(uint32_t *)(pkt_hdr + task->accur_pos) = accuracy;
 }
 
-static void task_gen_apply_sig(struct task_gen *task, uint8_t *pkt_hdr)
+static void task_gen_apply_sig(struct task_gen *task, struct pkt_template *dst)
 {
-	*(uint32_t *)(pkt_hdr + task->sig_pos) = task->sig;
+	if (task->sig_pos)
+		*(uint32_t *)(dst->buf + task->sig_pos) = task->sig;
 }
 
 static void task_gen_apply_all_accur_pos(struct task_gen *task, struct rte_mbuf **mbufs, uint8_t **pkt_hdr, uint32_t count)
@@ -369,16 +370,6 @@ static void task_gen_apply_all_accur_pos(struct task_gen *task, struct rte_mbuf 
 	for (uint16_t j = 0; j < count; ++j) {
 		uint32_t accuracy = task->accur[(task->pkt_queue_index + j) & 63];
 		task_gen_apply_accur_pos(task, pkt_hdr[j], accuracy);
-	}
-}
-
-static void task_gen_apply_all_sig(struct task_gen *task, struct rte_mbuf **mbufs, uint8_t **pkt_hdr, uint32_t count)
-{
-	if (!task->sig_pos)
-		return;
-
-	for (uint16_t j = 0; j < count; ++j) {
-		task_gen_apply_sig(task, pkt_hdr[j]);
 	}
 }
 
@@ -670,7 +661,6 @@ static int handle_gen_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 	task_gen_build_packets(task, new_pkts, pkt_hdr, send_bulk);
 	task_gen_apply_all_random_fields(task, pkt_hdr, send_bulk);
 	task_gen_apply_all_accur_pos(task, new_pkts, pkt_hdr, send_bulk);
-	task_gen_apply_all_sig(task, new_pkts, pkt_hdr, send_bulk);
 	task_gen_apply_all_unique_id(task, new_pkts, pkt_hdr, send_bulk);
 
 	uint64_t tsc_before_tx;
@@ -908,6 +898,7 @@ static void task_gen_reset_pkt_templates_content(struct task_gen *task)
 		src = &task->pkt_template_orig[i];
 		dst = &task->pkt_template[i];
 		memcpy(dst->buf, src->buf, dst->len);
+		task_gen_apply_sig(task, dst);
 	}
 }
 
