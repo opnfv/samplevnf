@@ -351,10 +351,6 @@ struct task_base *init_task_struct(struct task_args *targ)
 	offset = init_rx_tx_rings_ports(targ, tbase, offset);
 	tbase->aux = (struct task_base_aux *)(((uint8_t *)tbase) + offset);
 
-	if (targ->task_init->flag_features & TASK_FEATURE_RX_ALL) {
-		task_base_add_rx_pkt_function(tbase, rx_pkt_all);
-		tbase->aux->all_mbufs = prox_zmalloc(MAX_RX_PKT_ALL * sizeof(* tbase->aux->all_mbufs), task_socket);
-	}
 	if (targ->task_init->flag_features & TASK_FEATURE_TSC_RX) {
 		task_base_add_rx_pkt_function(tbase, rx_pkt_tsc);
 	}

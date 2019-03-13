@@ -845,6 +845,7 @@ void cmd_portinfo(int port_id, char *dst, size_t max_len)
 	dst += snprintf(dst, end - dst, "\tDriver: %s\n", port_cfg->driver_name);
 	dst += snprintf(dst, end - dst, "\tMac address: "MAC_BYTES_FMT"\n", MAC_BYTES(port_cfg->eth_addr.addr_bytes));
 	dst += snprintf(dst, end - dst, "\tLink speed: %u Mbps\n", port_cfg->link_speed);
+	dst += snprintf(dst, end - dst, "\tLink max speed: %u Mbps\n", port_cfg->max_link_speed);
 	dst += snprintf(dst, end - dst, "\tLink status: %s\n", port_cfg->link_up? "up" : "down");
 	dst += snprintf(dst, end - dst, "\tSocket: %u\n", port_cfg->socket);
 	dst += snprintf(dst, end - dst, "\tPCI address: %s\n", port_cfg->pci_addr);

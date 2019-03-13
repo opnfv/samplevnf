@@ -78,10 +78,7 @@ static void update_link_states(void)
 
 		port_cfg  = &prox_port_cfg[portid];
 		rte_eth_link_get_nowait(portid, &link);
-#if RTE_VERSION < RTE_VERSION_NUM(16,4,0,0)
-		// On more recent DPDK, we use the speed_capa of the port, and not the negotiated speed
 		port_cfg->link_speed = link.link_speed;
-#endif
 		if (port_cfg->link_up != link.link_status) {
 			port_cfg->link_up = link.link_status;
 			plog_info("port %d: Link speed now %d Mbps\n", portid, link.link_speed);

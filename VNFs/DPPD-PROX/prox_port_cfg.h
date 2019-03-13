@@ -49,6 +49,7 @@ struct prox_port_cfg {
 	uint32_t n_txd;
 	uint8_t  link_up;
 	uint32_t  link_speed;
+	uint32_t  max_link_speed;
 	uint32_t  mtu;
 	enum addr_type    type;
 	struct ether_addr eth_addr;    /* port MAC address */
