@@ -774,6 +774,8 @@ static void init_task_lat(struct task_base *tbase, struct task_args *targ)
 		}
 	}
 
+	task->lt[0].min_lat = -1;
+	task->lt[1].min_lat = -1;
 	task->lt[0].bucket_size = targ->bucket_size - LATENCY_ACCURACY;
 	task->lt[1].bucket_size = targ->bucket_size - LATENCY_ACCURACY;
         if (task->unique_id_pos) {
