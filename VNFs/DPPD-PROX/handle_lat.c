@@ -437,7 +437,7 @@ static uint32_t task_lat_early_loss_detect(struct task_lat *task, uint32_t packe
 
 static uint64_t tsc_extrapolate_backward(struct task_lat *task, uint64_t tsc_from, uint64_t bytes, uint64_t tsc_minimum)
 {
-#ifdef NO_EXTRAPOLATION
+#ifdef NO_LAT_EXTRAPOLATION
 	uint64_t tsc = tsc_from;
 #else
 	uint64_t tsc = tsc_from - task->bytes_to_tsc[bytes];
@@ -806,11 +806,14 @@ static void init_task_lat(struct task_base *tbase, struct task_args *targ)
 	PROX_PANIC(task->bytes_to_tsc == NULL,
 		"Failed to allocate %u bytes (in huge pages) for bytes_to_tsc\n", max_frame_size);
 
+        // There are cases where hz estimate might be slighly over-estimated
+        // This results in too much extrapolation
+        // Only account for 99% of extrapolation to handle cases with up to 1% error clocks
 	for (unsigned int i = 0; i < max_frame_size * MAX_PKT_BURST ; i++) {
 		if (bytes_per_hz == UINT64_MAX)
 			task->bytes_to_tsc[i] = 0;
 		else
-			task->bytes_to_tsc[i] = (rte_get_tsc_hz() * i) / bytes_per_hz;
+			task->bytes_to_tsc[i] = (rte_get_tsc_hz() * i * 0.99) / bytes_per_hz;
 	}
 }
 

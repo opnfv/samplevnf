@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
-
 #include <rte_mbuf.h>
 #include <pcap.h>
 #include <string.h>
@@ -669,6 +668,20 @@ static int handle_gen_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 	task_gen_checksum_packets(task, new_pkts, pkt_hdr, send_bulk);
 	ret = task->base.tx_pkt(&task->base, new_pkts, send_bulk, out);
 	task_gen_store_accuracy(task, send_bulk, tsc_before_tx);
+
+	// If we failed to send some packets, we need to do some clean-up:
+
+	if (unlikely(ret)) {
+		// We need re-use the packets indexes not being sent
+		// Hence non-sent packets will not be considered as lost by the receiver when it looks at
+		// packet ids. This should also increase the percentage of packets used for latency measurements
+		task->pkt_queue_index -= ret;
+
+		// In case of failures, the estimate about when we can send next packet (earliest_tsc_next_pkt) is wrong
+		// This would result in under-estimated latency (up to 0 or negative)
+		uint64_t bulk_duration = task_gen_calc_bulk_duration(task, ret);
+		task->earliest_tsc_next_pkt -= bulk_duration;
+	}
 	return ret;
 }
 
@@ -1275,11 +1288,14 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 		plog_info("\tPort %u: max link speed is %ld Mbps\n",
 			(uint8_t)(task->port - prox_port_cfg), 8 * bytes_per_hz / 1000000);
 	}
+	// There are cases where hz estimate might be slighly over-estimated
+	// This results in too much extrapolation
+	// Only account for 99% of extrapolation to handle cases with up to 1% error clocks
 	for (unsigned int i = 0; i < task->max_frame_size * MAX_PKT_BURST ; i++) {
 		if (bytes_per_hz == UINT64_MAX)
 			task->bytes_to_tsc[i] = 0;
 		else
-			task->bytes_to_tsc[i] = (task->hz * i) / bytes_per_hz;
+			task->bytes_to_tsc[i] = (task->hz * i * 0.99) / bytes_per_hz;
 	}
 
 	if (!strcmp(targ->pcap_file, "")) {
