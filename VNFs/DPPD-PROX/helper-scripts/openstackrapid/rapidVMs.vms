@@ -17,13 +17,13 @@
 
 [DEFAULT]
 total_number_of_vms=3
-flavor_info=--ram 4096 --disk 20 --vcpus 4
+flavor_info=--ram 4096 --disk 40 --vcpus 4
 ;flavor_meta_data=--property hw:mem_page_size=large --property hw:cpu_policy=dedicated --property hw:cpu_thread_policy=isolate --property hw:numa_nodes=1 --property hw:numa_cpus.0=0,1,2,3 --property hw:numa_mempolicy=strict --property hw:numa_mem.0=4096
 ;flavor_meta_data=--property hw:mem_page_size=large --property hw:cpu_policy=dedicated --property hw:cpu_thread_policy=isolate
-;flavor_meta_data=--property hw:mem_page_size=large --property hw:cpu_policy=dedicated
-flavor_meta_data=--property hw:mem_page_size=large --property hw:cpu_policy=dedicated --property hw:cpu_realtime=yes --property hw:cpu_realtime_mask=^0
+flavor_meta_data=--property hw:mem_page_size=large --property hw:cpu_policy=dedicated
+;flavor_meta_data=--property hw:mem_page_size=large --property hw:cpu_policy=dedicated --property hw:cpu_realtime=yes --property hw:cpu_realtime_mask=^0
 ;boot_info=--availability-zone nova --security-group default
-boot_info=--availability-zone L27 --security-group default
+boot_info=--availability-zone nova --security-group prox
 SRIOV_port=NO
 
 [VM1]

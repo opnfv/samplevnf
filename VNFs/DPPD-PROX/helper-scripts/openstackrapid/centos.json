@@ -5,13 +5,13 @@
    {
 "type": "openstack",
 "ssh_username": "centos",
-"image_name": "PROXffc6be26-DPDK1808VM",
-"source_image": "aa0f8333-d8e1-42db-8210-6b39d9ee7267",
-"flavor": "7aaec028-eccc-4612-8f9b-29a1e039943a",
-"networks": "97bbe96f-ee1b-4789-ace8-e922f76bea3f",
+"image_name": "rapidVM",
+"source_image": "06101dd4-f162-49c0-a072-2fe32ac446a9",
+"flavor": "3ea20ea9-855c-4a6e-b454-63ad6e8e0db9",
+"networks": "451a030a-eb1e-4c74-85b8-782ef8a6ad38",
 "use_floating_ip": true,
-"floating_ip_pool": "1f564356-8c23-41e2-8292-7696ffd98adf",
-"security_groups": "8fd498fc-5bd8-4be6-94e4-a2cc3b02d151"
+"floating_ip_pool": "d629619f-8f96-4f32-9b90-1b62e5ea3809",
+"security_groups": "460b7929-c6de-4b1c-ae83-901c2042a894"
    }
 ],
 "provisioners": [
@@ -27,13 +27,7 @@
    },
    {
    "type": "shell",
-   "script": "deploycentos1.sh",
-   "expect_disconnect": true
-   },
-   {
-   "type": "shell",
-   "script": "deploycentos2.sh",
-   "pause_before": "20s"
+   "script": "deploycentos.sh"
    }
 ]
 }

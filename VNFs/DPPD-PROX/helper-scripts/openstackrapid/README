@@ -21,19 +21,18 @@ rapid is a set of files offering an easy way to do a sanity check of the
 dataplane performance of an OpenStack environment.
 
 Copy the files in a directory on a machine that can run the OpenStack CLI
-commands and that can reach the OpenStack public network.
+commands and that can reach the OpenStack networks to connect to the VMs.
 
 You will need an image that has the PROX tool installed.
-The best way to do this is to use the packer tool to build an image for a target of your choice.
-You can also build this image manually by executing all the commands described in the deploycentos1.sh
-and deploycentos2.sh file.
-The default name of the qcow2 file should is rapidVM.qcow2
+A good way to do this is to use the packer tool to build an image for a target of your choice.
+You can also build this image manually by executing all the commands described in the deploycentos.sh.
+The default name of the qcow2 file is rapidVM.qcow2
 
 When using the packer tool, the first step is to upload an
-existing CentOs cloud image from the internet into OpenStack.
+existing CentOS cloud image from the internet into OpenStack.
 Check out: https://cloud.centos.org/centos/7/images/
 You should now source the proper .rc file so Packer can connect to your OpenStack.
-There are 3 files: centos.json, deploycentos1.sh and deploycentos2.sh, allowing you to create
+There are 2 files: centos.json and deploycentos.sh, allowing you to create
 an image automatically. Run
   # packer build centos.json
 Edit centos.json to reflect the settings of your environment: The following fields need to
@@ -47,7 +46,7 @@ be the ID's of your system:
   - "security_groups": ID of the security group being used
 
 Note that this procedure is not only installing the necessary tools to run PROX,
-but also does some system optimizations (tuned).
+but also does some system optimizations (tuned). Check deploycentos.sh for more details.
 
 Now you can run the createrapid.py file. Use help for more info on the usage:
   # ./createrapid.py --help
@@ -58,12 +57,11 @@ It will create a <STACK>.env file containing all info that will be used by runra
 to actually run the tests. Logging can be found in the CREATE<STACK>.log file
 You can use floating IP addresses by specifying the floating IP network
 --floating_network NETWORK
-or directly connect throught the INTERNAL_NETWORK by using the following parameter:
+or directly connect through the INTERNAL_NETWORK by using the following parameter:
 --floating_network NO
 /etc/resolv.conf will contain DNS info from the "best" interface. Since we are
 deploying VMs with multiple interface on different networks, this info might be
-taken from the "wrong" network (e.g. the dataplane network). It is good to provide
-also a working DNS on that network.
+taken from the "wrong" network (e.g. the dataplane network).
 
 Now you can run the runrapid.py file. Use help for more info on the usage:
   # ./runrapid.py --help
@@ -71,6 +69,7 @@ The script will connect to all machines that have been instantiated and it will 
 PROX in all machines. This will be done through the admin IP assigned to the machines.
 Once that is done it will connect to the PROX tcp socket and start sending
 commands to run the actual test.
+Make sure the security groups allow for tcp access (ssh & prox port).
 It will print test results on the screen while running.
 The actual test that is running is described in <TEST>.test.
 
@@ -114,35 +113,37 @@ achieved using createrapid.py. Fields needed for runrapid are:
 admin_ip = none
 
 [M1]
-admin_ip = 192.168.4.130
-dp_ip = 10.10.10.6
-dp_mac = fa:16:3e:3c:1e:12
+name = rapid-VM1
+admin_ip = 10.25.1.116
+dp_ip = 10.10.10.7
+dp_mac = fa:16:3e:59:b8:28
 
 [M2]
-admin_ip = 192.168.4.140
-dp_ip = 10.10.10.9
-dp_mac = fa:16:3e:2a:00:5d
+name = rapid-VM2
+admin_ip = 10.25.1.126
+dp_ip = 10.10.10.11
+dp_mac = fa:16:3e:c9:54:c7
 
 [M3]
-admin_ip = 192.168.4.138
-dp_ip = 10.10.10.11
-dp_mac = fa:16:3e:ae:fa:86
+name = rapid-VM3
+admin_ip = 10.25.1.108
+dp_ip = 10.10.10.15
+dp_mac = fa:16:3e:72:90:3e
 
 [OpenStack]
 stack = rapid
-yaml = 3VMrapid.yaml
+vms = rapidVMs
 key = prox
-flavor = prox_flavor
 image = rapidVM
 image_file = rapidVM.qcow2
 dataplane_network = dataplane-network
 subnet = dpdk-subnet
 subnet_cidr = 10.10.10.0/24
 internal_network = admin_internal_net
-floating_network = admin_floating_net
+floating_network = floating-ip-net
 
 [rapid]
 loglevel = DEBUG
-version = 17.10.25
-total_number_of_vms = 3
+version = 19.4.15
+total_number_of_machines = 3
 

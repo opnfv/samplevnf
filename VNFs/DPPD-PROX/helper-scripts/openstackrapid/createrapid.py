@@ -31,7 +31,7 @@ from logging import handlers
 from prox_ctrl import prox_ctrl
 import ConfigParser
 
-version="19.1.10"
+version="19.4.15"
 stack = "rapid" #Default string for stack. This is not an OpenStack Heat stack, just a group of VMs
 vms = "rapidVMs" #Default string for vms file
 key = "prox" # default name for kay
@@ -56,7 +56,7 @@ def usage():
 	print("                   [--subnet DP_SUBNET]")
 	print("                   [--subnet_cidr SUBNET_CIDR]")
 	print("                   [--internal_network ADMIN_NETWORK]")
-	print("                   [--floating_network ADMIN_NETWORK]")
+	print("                   [--floating_network FLOATING_NETWORK]")
 	print("                   [--log DEBUG|INFO|WARNING|ERROR|CRITICAL]")
 	print("                   [-h] [--help]")
 	print("")
@@ -363,21 +363,23 @@ for vm in range(1, int(total_number_of_VMs)+1):
 if floating_network <> 'NO':
 	for vm in range(0, int(total_number_of_VMs)):
 		if ServerToBeCreated[vm] =="yes":
-			log.info('Creating floating IP ...')
-			cmd = 'openstack floating ip create  ' + floating_network
-			log.debug(cmd)
-			cmd = cmd + ' |grep "floating_ip_address " | tr -s " " | cut -d"|" -f 3'
-			vmAdminIP = subprocess.check_output(cmd , shell=True).strip()
-			log.info('Associating floating IP ...')
-			cmd = 'openstack server add floating ip %s %s'%(ServerName[vm],vmAdminIP)
-			log.debug(cmd)
-			output = subprocess.check_output(cmd , shell=True).strip()
+                        log.info('Creating & Associating floating IP for ('+ServerName[vm]+')...')
+                        cmd = 'openstack server show %s -c addresses -f value |grep -Eo "%s=[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*" | cut -d"=" -f2'%(ServerName[vm],internal_network)
+                        log.debug(cmd)
+                        vmportIP = subprocess.check_output(cmd , shell=True).strip()
+                        cmd = 'openstack port list -c ID -c "Fixed IP Addresses" | grep %s' %(vmportIP)
+                        cmd = cmd + ' | cut -d" " -f 2 '
+                        log.debug(cmd)
+                        vmportID = subprocess.check_output(cmd , shell=True).strip()
+                        cmd = 'openstack floating ip create --port %s %s'%(vmportID,floating_network)
+                        log.debug(cmd)
+                        output = subprocess.check_output(cmd , shell=True).strip()
 		
 for vm in range(1, int(total_number_of_VMs)+1):
 	cmd = 'openstack server show %s'%(ServerName[vm-1])
 	log.debug(cmd)
 	output = subprocess.check_output(cmd , shell=True).strip()
-        searchString = '.*%s.*?([0-9]*\.[0-9]*\.[0-9]*\.[0-9]*)' %(dataplane_network)
+        searchString = '.*%s=([0-9]*\.[0-9]*\.[0-9]*\.[0-9]*)' %(dataplane_network)
         matchObj = re.search(searchString, output, re.DOTALL)
 	vmDPIP = matchObj.group(1)
         searchString = '.*%s=([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+),*\s*([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)*' %(internal_network)

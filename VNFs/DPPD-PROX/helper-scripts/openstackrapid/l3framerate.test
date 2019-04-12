@@ -1,7 +1,5 @@
-#!/bin/bash
-
 ##
-## Copyright (c) 2010-2018 Intel Corporation
+## Copyright (c) 2010-2019 Intel Corporation
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
 ## you may not use this file except in compliance with the License.
@@ -15,11 +13,30 @@
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
 ##
-sudo yum install deltarpm -y
-sudo yum update -y
-sudo yum-config-manager --add-repo http://www.nasm.us/nasm.repo
-sudo yum install git wget gcc unzip libpcap-devel ncurses-devel libedit-devel lua-devel kernel-devel iperf3 pciutils numactl-devel vim tuna openssl-devel nasm -y
-# Enabling root ssh access
-sudo sed -i '/disable_root: 1/c\disable_root: 0' /etc/cloud/cloud.cfg
-# Reboot, before continuing with deploycentos2.sh
-sudo reboot
+
+[DEFAULT]
+name = L3FrameRateTesting
+number_of_tests = 2
+total_number_of_test_machines = 2
+prox_socket = true
+prox_launch_exit = true
+
+[TestM1]
+name = Generator
+config_file = gen.cfg
+dest_vm = 2
+gencores = [1]
+latcores = [3]
+startspeed = 10
+
+[TestM2]
+name = Swap
+config_file = swap.cfg
+swapcores = [1]
+
+[test1]
+test=inittest
+
+[test2]
+test=max_frame_rate
+packetsizes=[256]

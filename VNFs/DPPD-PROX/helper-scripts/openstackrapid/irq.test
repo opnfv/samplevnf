@@ -16,36 +16,17 @@
 
 [DEFAULT]
 name = BasicSwapTesting
-number_of_tests = 2
-total_number_of_test_machines = 2
-init_code= not_used
-dest_vm = not_used
-gw_vm = not_used
-script_control = false
-group1cores = not_used
-group2cores = not_used
-group3cores = not_used
-drop_rate_treshold = 1
-lat_avg_treshold = 200
-lat_max_treshold = 1000
-accuracy = 0.01
-startspeed = 10
+number_of_tests = 1
+total_number_of_test_machines = 1
+prox_socket = true
+prox_launch_exit = true
 
 [TestM1]
 name = InterruptTesting
-machine_index = 1
 config_file = irq.cfg
-group1cores = [1,2,3]
-
-[TestM2]
-name = InterruptTesting
-machine_index = 2
-config_file = irq.cfg
-group1cores = [1,2,3]
+irqcores = [1,2,3]
 
 
 [test1]
-cmd=run_irqtest(socks[0])
-[test2]
-cmd=run_irqtest(socks[1])
+test=irqtest
 

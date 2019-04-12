@@ -16,44 +16,40 @@
 
 [DEFAULT]
 name = GWTesting
-number_of_tests = 1
+number_of_tests = 2
 total_number_of_test_machines = 3
-init_code=init_test()
-dest_vm = not_used
-gw_vm = not_used
-script_control = false
-group1cores = not_used
-group2cores = not_used
-group3cores = not_used
-drop_rate_treshold = 0.01
-lat_avg_treshold = 200
-lat_max_treshold = 1000
-accuracy = 0.01
-startspeed = 10
+prox_socket = true
+prox_launch_exit = true
 
 [TestM1]
 name = Generator
-machine_index = 1
 config_file = gen_gw.cfg
 dest_vm = 3
 gw_vm = 2
-script_control = true
-group1cores = [1]
-group2cores = [3]
-group3cores = [1,3]
+gencores = [1]
+latcores = [3]
+startspeed = 10
 
 [TestM2]
 name = GW1
-machine_index = 2
 config_file = secgw1.cfg
 dest_vm = 3
-group1cores = [1]
+secgwcores = [1]
 
 [TestM3]
 name = GW2
-machine_index = 3
 config_file = secgw2.cfg
-group1cores = [1]
+secgwcores = [1]
+
+[BinarySearchParams]
+drop_rate_threshold = 0.1
+lat_avg_threshold = 500
+lat_max_threshold = 1000
+accuracy = 0.1
 
 [test1]
-cmd=run_speedtest(socks[0],socks[2])
+test=inittest
+
+[test2]
+test=speedtest
+packetsize=64

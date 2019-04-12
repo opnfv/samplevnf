@@ -40,8 +40,8 @@ class prox_ctrl(object):
 
     def close(self):
         """Must be called before program termination."""
-        for prox in self._proxsock:
-            prox.quit()
+#        for prox in self._proxsock:
+#            prox.quit()
         children = len(self._children)
         if children == 0:
             return
@@ -193,7 +193,11 @@ class prox_sock(object):
             max_lat = max(int(stats[1]),max_lat)
             avg_lat += int(stats[2])
         avg_lat = avg_lat/len(cores)
-        return min_lat, max_lat, avg_lat
+        self._send('stats latency(0).used')
+        used = float(self._recv())
+        self._send('stats latency(0).total')
+        total = float(self._recv())
+        return min_lat, max_lat, avg_lat, (used/total)
 
     def irq_stats(self, core, bucket, task=0):
         self._send('stats task.core(%s).task(%s).irq(%s)' % (core, task, bucket))
