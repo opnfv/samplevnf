@@ -541,7 +541,7 @@ static void draw_title(void)
 {
 	char title_str[128];
 
-	snprintf(title_str, sizeof(title_str), "%s %s: %s", PROGRAM_NAME, VERSION_STR, prox_cfg.name);
+	snprintf(title_str, sizeof(title_str), "%s %s: %s", PROGRAM_NAME, VERSION_STR(), prox_cfg.name);
 
 	wbkgd(win_title, COLOR_PAIR(BLACK_ON_GREEN));
 	title_len = strlen(title_str);

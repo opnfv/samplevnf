@@ -1127,7 +1127,7 @@ int main(int argc, char **argv)
 	}
 
 	plog_init(prox_cfg.log_name, prox_cfg.log_name_pid);
-	plog_info("=== " PROGRAM_NAME " " VERSION_STR " ===\n");
+	plog_info("=== " PROGRAM_NAME " %s ===\n", VERSION_STR());
 	plog_info("\tUsing DPDK %s\n", rte_version() + sizeof(RTE_VER_PREFIX));
 	read_rdt_info();
 
