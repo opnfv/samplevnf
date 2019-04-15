@@ -470,6 +470,9 @@ static void init_port(struct prox_port_cfg *port_cfg)
 		plog_info("\t\tPort %u had no RX queues, setting to 1\n", port_id);
 		port_cfg->n_rxq = 1;
 		uint32_t mbuf_size = TX_MBUF_SIZE;
+                if (mbuf_size < port_cfg->min_rx_bufsize)
+                        mbuf_size = port_cfg->min_rx_bufsize + RTE_PKTMBUF_HEADROOM + sizeof(struct rte_mbuf);
+
 		plog_info("\t\tAllocating dummy memory pool on socket %u with %u elements of size %u\n",
 			  port_cfg->socket, port_cfg->n_rxd, mbuf_size);
 		port_cfg->pool[0] = rte_mempool_create(dummy_pool_name, port_cfg->n_rxd, mbuf_size,
