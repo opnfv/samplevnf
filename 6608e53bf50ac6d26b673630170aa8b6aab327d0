@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "da01753e_77874d62",
+        "filename": "VNFs/DPPD-PROX/version.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 27,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-04-15T13:56:48Z",
+      "side": 1,
+      "message": "Few quick notes about this:\n- non-zero major usually suggests a \"production\" version\n- there is a risk that 19.4 \u003e 19.10\n- alternative would be to keep major at 0, and to set minor at 1904, which can be displayed as 0.19.04 using /100 and %100\n- visually 0.19.04 \u003c 0.41, but internally 1904 \u003e 41",
+      "revId": "6608e53bf50ac6d26b673630170aa8b6aab327d0",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
