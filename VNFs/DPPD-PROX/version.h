@@ -17,18 +17,18 @@
 #ifndef _VERSION_H_
 #define _VERSION_H_
 
-#define STRINGIFY(s) #s
-#define SSTR(s) STRINGIFY(s)
-
 /* PROGRAM_NAME defined through Makefile */
-#define VERSION_MAJOR 0
-#define VERSION_MINOR 41
+#define VERSION_MAJOR 0      // Pre-production
+#define VERSION_MINOR 1904   // 19.04 i.e. April 2019
 #define VERSION_REV   0
 
+static inline char *VERSION_STR(void)
+{
+	static char version_buffer[32];
+	snprintf(version_buffer, sizeof(version_buffer), "%02d.%02d", VERSION_MINOR / 100, VERSION_MINOR % 100);
 #if VERSION_REV > 0
-#define VERSION_STR "v" SSTR(VERSION_MAJOR) "." SSTR(VERSION_MINOR) "." SSTR(VERSION_REV)
-#else
-#define VERSION_STR "v" SSTR(VERSION_MAJOR) "." SSTR(VERSION_MINOR)
+	snprintf(version_buffer + strlen(version_buffer), sizeof(version_buffer) - strlen(version_buffer), ".%02d", VERSION_REV);
 #endif
-
+	return version_buffer;
 #endif /* _VERSION_H_ */
+}
