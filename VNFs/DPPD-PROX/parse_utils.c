@@ -897,7 +897,7 @@ int parse_list_set(uint32_t *list, const char *str2, uint32_t max_list)
 				effective_core = cur_core;
 
 			if (list_count >= max_list) {
-				set_errf("Too many elements in list\n");
+				set_errf("Too many elements in list");
 				return -1;
 			}
 			list[list_count++] = effective_core;

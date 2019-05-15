@@ -76,19 +76,8 @@ static int cores_task_are_valid(unsigned int *lcores, int task_id, unsigned int 
 	unsigned int lcore_id;
 	for (unsigned int i = 0; i < nb_cores; i++) {
 		lcore_id = lcores[i];
-		if (lcore_id >= RTE_MAX_LCORE) {
-			plog_err("Invalid core id %u (lcore ID above %d)\n", lcore_id, RTE_MAX_LCORE);
+		if (core_task_is_valid(lcore_id, task_id) == 0)
 			return 0;
-		}
-		else if (!prox_core_active(lcore_id, 0)) {
-			plog_err("Invalid core id %u (lcore is not active)\n", lcore_id);
-			return 0;
-		}
-		else if (task_id >= lcore_cfg[lcore_id].n_tasks_all) {
-			plog_err("Invalid task id (valid task IDs for core %u are below %u)\n",
-			 	lcore_id, lcore_cfg[lcore_id].n_tasks_all);
-			return 0;
-		}
 	}
 	return 1;
 }
@@ -106,6 +95,28 @@ static int parse_core_task(const char *str, uint32_t *lcore_id, uint32_t *task_i
 		return -1;
 	}
 	*nb_cores = ret;
+
+	return 0;
+}
+
+static int parse_core_tasks(const char *str, uint32_t *lcore_id, uint32_t *task_id, unsigned int *nb_cores, unsigned int *nb_tasks)
+{
+	char str_lcore_id[128], str_task_id[128];
+	int ret;
+
+	if (2 != sscanf(str, "%s %s", str_lcore_id, str_task_id))
+		return -1;
+
+	if ((ret = parse_list_set(lcore_id, str_lcore_id, RTE_MAX_LCORE)) <= 0) {
+		plog_err("Invalid core while parsing command (%s)\n", get_parse_err());
+		return -1;
+	}
+	*nb_cores = ret;
+	if ((ret = parse_list_set(task_id, str_task_id, MAX_TASKS_PER_CORE)) <= 0) {
+		plog_err("Invalid task while parsing command (%s)\n", get_parse_err());
+		return -1;
+	}
+	*nb_tasks = ret;
 
 	return 0;
 }
@@ -1658,14 +1669,32 @@ static int parse_cmd_core_stats(const char *str, struct input *input)
 
 static int parse_cmd_dp_core_stats(const char *str, struct input *input)
 {
-	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
+	unsigned lcores[RTE_MAX_LCORE], tasks[MAX_TASKS_PER_CORE], lcore_id, task_id, nb_cores, nb_tasks;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_core_tasks(str, lcores, tasks, &nb_cores, &nb_tasks)) {
+		if (input->reply) {
+			char buf[128];
+			snprintf(buf, sizeof(buf), "error: invalid syntax\n");
+			input->reply(input, buf, strlen(buf));
+		}
 		return -1;
+	}
 
-	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
-		for (unsigned int i = 0; i < nb_cores; i++) {
+	// This function does not return when ** somme ** tasks are invalid
+	// It will return one output per core/task pair.
+	for (unsigned int i = 0; i < nb_cores; i++) {
+		for (unsigned int j = 0; j < nb_tasks; j++) {
 			lcore_id = lcores[i];
+			task_id = tasks[j];
+			if (core_task_is_valid(lcore_id, task_id) == 0) {
+				if (input->reply) {
+					char buf[128];
+					snprintf(buf, sizeof(buf), "error: invalid core %d, task %d\n", lcore_id, task_id);
+					input->reply(input, buf, strlen(buf));
+				} else {
+					plog_info("error: invalid core %d, task %d\n", lcore_id, task_id);
+				}
+			}
 			uint64_t tot_rx = stats_core_task_tot_rx(lcore_id, task_id);
 			uint64_t tot_tx = stats_core_task_tot_tx(lcore_id, task_id);
 			uint64_t tot_rx_non_dp = stats_core_task_tot_rx_non_dp(lcore_id, task_id);
@@ -1676,13 +1705,13 @@ static int parse_cmd_dp_core_stats(const char *str, struct input *input)
 			if (input->reply) {
 				char buf[128];
 				snprintf(buf, sizeof(buf),
-				 	"%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64"\n",
-				 	tot_rx, tot_tx, tot_rx_non_dp, tot_tx_non_dp, tot_drop, last_tsc, rte_get_tsc_hz());
+				 	"%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64", %d, %d\n",
+				 	tot_rx, tot_tx, tot_rx_non_dp, tot_tx_non_dp, tot_drop, last_tsc, rte_get_tsc_hz(), lcore_id, task_id);
 				input->reply(input, buf, strlen(buf));
 			}
 			else {
-				plog_info("RX: %"PRIu64", TX: %"PRIu64", RX_NON_DP:  %"PRIu64", TX_NON_DP: %"PRIu64", DROP: %"PRIu64"\n",
-				  	tot_rx, tot_tx, tot_rx_non_dp, tot_tx_non_dp, tot_drop);
+				plog_info("RX: %"PRIu64", TX: %"PRIu64", RX_NON_DP:  %"PRIu64", TX_NON_DP: %"PRIu64", DROP: %"PRIu64", core: %d, task: %d\n",
+				  	tot_rx, tot_tx, tot_rx_non_dp, tot_tx_non_dp, tot_drop, lcore_id, task_id);
 			}
 		}
 	}
