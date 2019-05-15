@@ -1670,14 +1670,35 @@ static int parse_cmd_core_stats(const char *str, struct input *input)
 
 static int parse_cmd_dp_core_stats(const char *str, struct input *input)
 {
-	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
+	unsigned lcores[RTE_MAX_LCORE], tasks[MAX_TASKS_PER_CORE], lcore_id, task_id, nb_cores, nb_tasks;
 
-	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
+	// This function either outputs a single line, in case of syntax error on the lists of cores and/or tasks
+	if (parse_cores_tasks(str, lcores, tasks, &nb_cores, &nb_tasks)) {
+		if (input->reply) {
+			char buf[128];
+			snprintf(buf, sizeof(buf), "error: invalid syntax\n");
+			input->reply(input, buf, strlen(buf));
+		}
 		return -1;
+	}
 
-	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
-		for (unsigned int i = 0; i < nb_cores; i++) {
+	// or outputs (nb_cores * nb_tasks) lines, one line for each core/task pair:
+	// - if the core/task pair is invalid, the output line reports an error
+	// - otherwise, the output line provides the dataplane statistics for the core/task pair
+	for (unsigned int i = 0; i < nb_cores; i++) {
+		for (unsigned int j = 0; j < nb_tasks; j++) {
 			lcore_id = lcores[i];
+			task_id = tasks[j];
+			if (core_task_is_valid(lcore_id, task_id) == 0) {
+				if (input->reply) {
+					char buf[128];
+					snprintf(buf, sizeof(buf), "error: invalid core %u, task %u\n", lcore_id, task_id);
+					input->reply(input, buf, strlen(buf));
+				} else {
+					plog_info("error: invalid core %u, task %u\n", lcore_id, task_id);
+				}
+				continue;
+			}
 			uint64_t tot_rx = stats_core_task_tot_rx(lcore_id, task_id);
 			uint64_t tot_tx = stats_core_task_tot_tx(lcore_id, task_id);
 			uint64_t tot_tx_fail = stats_core_task_tot_tx_fail(lcore_id, task_id);
@@ -1689,13 +1710,13 @@ static int parse_cmd_dp_core_stats(const char *str, struct input *input)
 			if (input->reply) {
 				char buf[128];
 				snprintf(buf, sizeof(buf),
-				 	"%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64"\n",
-				 	tot_rx, tot_tx, tot_rx_non_dp, tot_tx_non_dp, tot_drop, tot_tx_fail, last_tsc, rte_get_tsc_hz());
+					"%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%u,%u\n",
+					tot_rx, tot_tx, tot_rx_non_dp, tot_tx_non_dp, tot_drop, tot_tx_fail, last_tsc, rte_get_tsc_hz(), lcore_id, task_id);
 				input->reply(input, buf, strlen(buf));
 			}
 			else {
-				plog_info("RX: %"PRIu64", TX: %"PRIu64", RX_NON_DP: %"PRIu64", TX_NON_DP: %"PRIu64", DROP: %"PRIu64", TX_FAIL: %"PRIu64"\n",
-				  	tot_rx, tot_tx, tot_rx_non_dp, tot_tx_non_dp, tot_drop, tot_tx_fail);
+				plog_info("core: %u, task: %u, RX: %"PRIu64", TX: %"PRIu64", RX_NON_DP: %"PRIu64", TX_NON_DP: %"PRIu64", DROP: %"PRIu64", TX_FAIL: %"PRIu64"\n",
+					lcore_id, task_id, tot_rx, tot_tx, tot_rx_non_dp, tot_tx_non_dp, tot_drop, tot_tx_fail);
 			}
 		}
 	}
