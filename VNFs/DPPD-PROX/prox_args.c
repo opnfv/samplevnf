@@ -1351,6 +1351,8 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 		return 0;
 	}
 	if (STR_EQ(str, "gateway ipv4")) { /* Gateway IP address used when generating */
+		if ((targ->flags & TASK_ARG_L3) == 0)
+			plog_warn("gateway ipv4 configured but L3 sub mode not enabled\n");
 		return parse_ip(&targ->gateway_ipv4, pkey);
 	}
 	if (STR_EQ(str, "local ipv4")) { /* source IP address to be used for packets */
