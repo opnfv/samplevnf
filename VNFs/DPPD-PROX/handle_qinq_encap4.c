@@ -163,6 +163,8 @@ static void init_task_qinq_encap4(struct task_base *tbase, struct task_args *tar
 	}
 
 	/* task->src_mac[entry->port_idx] = *(uint64_t*)&prox_port_cfg[entry->port_idx].eth_addr; */
+	if (targ->runtime_flags & TASK_CLASSIFY)
+		init_port_sched(&task->sched_port, targ);
 }
 
 static void arp_msg(struct task_base *tbase, void **data, uint16_t n_msgs)
@@ -541,7 +543,11 @@ static inline uint8_t handle_qinq_encap4(struct task_qinq_encap4 *task, struct c
 		uint8_t queue = task->dscp[cpe_pkt->ipv4_hdr.type_of_service >> 2] & 0x3;
 		uint8_t tc = task->dscp[cpe_pkt->ipv4_hdr.type_of_service >> 2] >> 2;
 
+#if RTE_VERSION >= RTE_VERSION_NUM(19,2,0,0)
+		rte_sched_port_pkt_write(task->sched_port, mbuf, 0, entry->user, tc, queue, 0);
+#else
 		rte_sched_port_pkt_write(mbuf, 0, entry->user, tc, queue, 0);
+#endif
 	}
 #ifdef ENABLE_EXTRA_USER_STATISTICS
 	task->stats_per_user[entry->user]++;
