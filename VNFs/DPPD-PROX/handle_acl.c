@@ -34,6 +34,8 @@
 #include "lconf.h"
 #include "prefetch.h"
 #include "etypes.h"
+#include "prox_compat.h"
+#include "handle_sched.h"
 
 struct task_acl {
 	struct task_base base;
@@ -46,18 +48,20 @@ struct task_acl {
 	void           *field_defs;
 	size_t         field_defs_size;
 	uint32_t       n_field_defs;
+	struct rte_sched_port *sched_port;
 };
 
-static void set_tc(struct rte_mbuf *mbuf, uint32_t tc)
+static void set_tc(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t tc)
 {
+	struct task_acl *task = (struct task_acl *)tbase;
 #if RTE_VERSION >= RTE_VERSION_NUM(1,8,0,0)
 	uint32_t subport, pipe, traffic_class, queue;
-	enum rte_meter_color color;
+	enum prox_rte_color color;
 
-	rte_sched_port_pkt_read_tree_path(mbuf, &subport, &pipe, &traffic_class, &queue);
+	prox_rte_sched_port_pkt_read_tree_path(task->sched_port, mbuf, &subport, &pipe, &traffic_class, &queue);
 	color = rte_sched_port_pkt_read_color(mbuf);
 
-	rte_sched_port_pkt_write(mbuf, subport, pipe, tc, queue, color);
+	prox_rte_sched_port_pkt_write(task->sched_port, mbuf, subport, pipe, tc, queue, color);
 #else
 	struct rte_sched_port_hierarchy *sched =
 		(struct rte_sched_port_hierarchy *) &mbuf->pkt.hash.sched;
@@ -109,7 +113,7 @@ static int handle_acl_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 		case ACL_ALLOW:
 			out[i] = 0;
 		case ACL_RATE_LIMIT:
-			set_tc(mbufs[i], 3);
+			set_tc(tbase, mbufs[i], 3);
 			break;
 		};
 	}
@@ -209,6 +213,14 @@ static void init_task_acl(struct task_base *tbase, struct task_args *targ)
 
 	targ->lconf->ctrl_timeout = freq_to_tsc(targ->ctrl_freq);
 	targ->lconf->ctrl_func_m[targ->task] = acl_msg;
+
+	// If rate limiting is used tc will be set, sched_port must be initialized, and tc will be used by a following policing or qos task
+	int rc = init_port_sched(&task->sched_port, targ);
+
+	// ACL can be used to accept/drop packets and/or to set rate limiting. If using rate limiting, then sched_port must be defined
+	// TODO: check whether rate limiting is configured, and, if yes, check that QoS or policing task configures the qos_conf.params.
+	if (rc)
+		plog_info("Did not find any QoS or Policing task to transmit to => setting tc will not work\n");
 }
 
 int str_to_rule(struct acl4_rule *rule, char** fields, int n_rules, int use_qinq)

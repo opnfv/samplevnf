@@ -22,18 +22,26 @@ endif
 RTE_TARGET ?= x86_64-native-linuxapp-gcc
 
 rte_version_h := $(RTE_SDK)/$(RTE_TARGET)/include/rte_version.h
+rte_config_h := $(RTE_SDK)/$(RTE_TARGET)/include/rte_config.h
 rte_ver_part = $(shell sed -n -e 's/^\#define\s*$1\s*\(.*\)$$/\1/p' $(rte_version_h))
+rte_config_part = $(shell sed -n -e 's/^\#define\s*$1\s*\(.*\)$$/\1/p' $(rte_config_h))
 rte_ver_eval = $(shell printf '%u' $$(printf '0x%02x%02x%02x%02x' $1 $2 $3 $4))
 rte_ver_MMLR = $(call rte_ver_eval,$(call \
 	rte_ver_part,RTE_VER_MAJOR),$(call \
 	rte_ver_part,RTE_VER_MINOR),$(call \
 	rte_ver_part,RTE_VER_PATCH_LEVEL),$(call \
 	rte_ver_part,RTE_VER_PATCH_RELEASE))
-rte_ver_YMMR = $(call rte_ver_eval,$(call \
+rte_version_YMMR = $(call rte_ver_eval,$(call \
 	rte_ver_part,RTE_VER_YEAR),$(call \
 	rte_ver_part,RTE_VER_MONTH),$(call \
 	rte_ver_part,RTE_VER_MINOR),$(call \
 	rte_ver_part,RTE_VER_RELEASE))
+rte_config_YMMR = $(call rte_ver_eval,$(call \
+	rte_config_part,RTE_VER_YEAR),$(call \
+	rte_config_part,RTE_VER_MONTH),$(call \
+	rte_config_part,RTE_VER_MINOR),$(call \
+	rte_config_part,RTE_VER_RELEASE))
+rte_ver_YMMR = $(if $(shell test $(rte_config_YMMR) -gt 0 && echo 'y'),$(rte_config_YMMR),$(rte_version_YMMR))
 rte_ver_dpdk := $(if $(call rte_ver_part,RTE_VER_MAJOR),$(rte_ver_MMLR),$(rte_ver_YMMR))
 rte_ver_comp = $(shell test $(rte_ver_dpdk) $5 $(call rte_ver_eval,$1,$2,$3,$4) && echo 'y')
 rte_ver_EQ = $(call rte_ver_comp,$1,$2,$3,$4,-eq)

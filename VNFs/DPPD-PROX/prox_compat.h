@@ -13,6 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
+
+#ifndef _PROX_COMPAT_H_
+#define _PROX_COMPAT_H_
 #include <rte_common.h>
 #include <rte_table_hash.h>
 #include <rte_hash_crc.h>
@@ -128,3 +131,17 @@ static void *prox_rte_table_create(struct prox_rte_table_params *params, int soc
 #ifndef DEV_RX_OFFLOAD_JUMBO_FRAME
 #define DEV_RX_OFFLOAD_JUMBO_FRAME 0x00000800
 #endif
+
+#if RTE_VERSION < RTE_VERSION_NUM(19,2,0,0)
+#define RTE_COLOR_GREEN e_RTE_METER_GREEN
+#define RTE_COLOR_YELLOW e_RTE_METER_YELLOW
+#define RTE_COLOR_RED e_RTE_METER_RED
+#define prox_rte_color rte_meter_color
+#define prox_rte_sched_port_pkt_read_tree_path(A,B,C,D,E,F) rte_sched_port_pkt_read_tree_path(B,C,D,E,F)
+#define prox_rte_sched_port_pkt_write(A,B,C,D,E,F,G) rte_sched_port_pkt_write(B,C,D,E,F,G);
+#else
+#define prox_rte_color rte_color
+#define prox_rte_sched_port_pkt_read_tree_path(A,B,C,D,E,F) rte_sched_port_pkt_read_tree_path(A,B,C,D,E,F)
+#define prox_rte_sched_port_pkt_write(A,B,C,D,E,F,G) rte_sched_port_pkt_write(A,B,C,D,E,F,G);
+#endif
+#endif // _PROX_COMPAT_H
