@@ -59,7 +59,7 @@ struct qos_cfg {
 };
 
 enum task_mode {NOT_SET, MASTER, QINQ_DECAP4, QINQ_DECAP6,
-		QINQ_ENCAP4, QINQ_ENCAP6, GRE_DECAP, GRE_ENCAP,CGNAT, ESP_ENC, ESP_DEC,
+		QINQ_ENCAP4, QINQ_ENCAP6, GRE_DECAP, GRE_ENCAP,CGNAT, ESP_ENC, ESP_DEC, QOS,
 };
 
 struct task_args;
@@ -89,9 +89,15 @@ static int task_init_flag_set(struct task_init *task_init, uint64_t flag)
 }
 
 enum police_action {
+#if RTE_VERSION < RTE_VERSION_NUM(19,2,0,1)
         ACT_GREEN = e_RTE_METER_GREEN,
         ACT_YELLOW = e_RTE_METER_YELLOW,
         ACT_RED = e_RTE_METER_RED,
+#else
+        ACT_GREEN = RTE_COLOR_GREEN,
+        ACT_YELLOW = RTE_COLOR_YELLOW,
+        ACT_RED = RTE_COLOR_RED,
+#endif
         ACT_DROP = 3,
 	ACT_INVALID = 4
 };

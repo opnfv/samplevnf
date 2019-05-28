@@ -46,10 +46,21 @@ struct task_acl {
 	void           *field_defs;
 	size_t         field_defs_size;
 	uint32_t       n_field_defs;
+	struct rte_sched_port *sched_port;
 };
 
-static void set_tc(struct rte_mbuf *mbuf, uint32_t tc)
+static void set_tc(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t tc)
 {
+	struct task_acl *task = (struct task_acl *)tbase;
+#if RTE_VERSION >= RTE_VERSION_NUM(19,2,0,0)
+	uint32_t subport, pipe, traffic_class, queue;
+	enum rte_color color;
+
+	rte_sched_port_pkt_read_tree_path(task->sched_port, mbuf, &subport, &pipe, &traffic_class, &queue);
+	color = rte_sched_port_pkt_read_color(mbuf);
+
+	rte_sched_port_pkt_write(task->sched_port, mbuf, subport, pipe, tc, queue, color);
+#else
 #if RTE_VERSION >= RTE_VERSION_NUM(1,8,0,0)
 	uint32_t subport, pipe, traffic_class, queue;
 	enum rte_meter_color color;
@@ -62,6 +73,7 @@ static void set_tc(struct rte_mbuf *mbuf, uint32_t tc)
 	struct rte_sched_port_hierarchy *sched =
 		(struct rte_sched_port_hierarchy *) &mbuf->pkt.hash.sched;
 	sched->traffic_class = tc;
+#endif
 #endif
 }
 
@@ -109,7 +121,7 @@ static int handle_acl_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 		case ACL_ALLOW:
 			out[i] = 0;
 		case ACL_RATE_LIMIT:
-			set_tc(mbufs[i], 3);
+			set_tc(tbase, mbufs[i], 3);
 			break;
 		};
 	}

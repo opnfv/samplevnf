@@ -83,8 +83,11 @@ static inline int handle_qos_bulk(struct task_base *tbase, struct rte_mbuf **mbu
 					queue = 0;
 					tc = 0;
 				}
-
+#if RTE_VERSION >= RTE_VERSION_NUM(19,2,0,0)
+				rte_sched_port_pkt_write(task->sched_port, mbufs[j], 0, task->user_table[qinq], tc, queue, 0);
+#else
 				rte_sched_port_pkt_write(mbufs[j], 0, task->user_table[qinq], tc, queue, 0);
+#endif
 			}
 #ifdef PROX_PREFETCH_OFFSET
 			prefetch_nta(rte_pktmbuf_mtod(mbufs[n_pkts - 1], void *));
@@ -101,7 +104,11 @@ static inline int handle_qos_bulk(struct task_base *tbase, struct rte_mbuf **mbu
 					tc = 0;
 				}
 
+#if RTE_VERSION >= RTE_VERSION_NUM(19,2,0,0)
+				rte_sched_port_pkt_write(task->sched_port, mbufs[j], 0, task->user_table[qinq], tc, queue, 0);
+#else
 				rte_sched_port_pkt_write(mbufs[j], 0, task->user_table[qinq], tc, queue, 0);
+#endif
 			}
 #endif
 		}
@@ -166,6 +173,7 @@ static void init_task_qos(struct task_base *tbase, struct task_args *targ)
 }
 
 static struct task_init task_init_qos = {
+	.mode = QOS,
 	.mode_str = "qos",
 	.init = init_task_qos,
 	.handle = handle_qos_bulk,
