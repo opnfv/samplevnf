@@ -32,11 +32,13 @@
 #include "log.h"
 #include "quit.h"
 #include "prox_shared.h"
+#include "handle_sched.h"
 
 struct task_classify {
 	struct task_base    base;
 	uint16_t           *user_table;
 	uint8_t             *dscp;
+	struct rte_sched_port *sched_port;
 };
 
 static inline void handle_classify(struct task_classify *task, struct rte_mbuf *mbuf)
@@ -50,12 +52,17 @@ static inline void handle_classify(struct task_classify *task, struct rte_mbuf *
 	   traffic class that had been set. */
 
 	uint32_t prev_tc;
+#if RTE_VERSION >= RTE_VERSION_NUM(19,2,0,0)
+	uint32_t dummy;
+	rte_sched_port_pkt_read_tree_path(task->sched_port, mbuf, &dummy, &dummy, &prev_tc, &dummy);
+#else
 #if RTE_VERSION >= RTE_VERSION_NUM(1,8,0,0)
 	uint32_t dummy;
 	rte_sched_port_pkt_read_tree_path(mbuf, &dummy, &dummy, &prev_tc, &dummy);
 #else
 	struct rte_sched_port_hierarchy *sched = (struct rte_sched_port_hierarchy *) &mbuf->pkt.hash.sched;
 	prev_tc = sched->traffic_class;
+#endif
 #endif
 
 	const struct ipv4_hdr *ipv4_hdr = (const struct ipv4_hdr *)(pqinq + 1);
@@ -64,7 +71,11 @@ static inline void handle_classify(struct task_classify *task, struct rte_mbuf *
 	uint8_t queue = dscp & 0x3;
 	uint8_t tc = prev_tc? prev_tc : dscp >> 2;
 
+#if RTE_VERSION >= RTE_VERSION_NUM(19,2,0,0)
+	rte_sched_port_pkt_write(task->sched_port, mbuf, 0, task->user_table[qinq], tc, queue, 0);
+#else
 	rte_sched_port_pkt_write(mbuf, 0, task->user_table[qinq], tc, queue, 0);
+#endif
 }
 
 static int handle_classify_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts)
@@ -117,6 +128,7 @@ static void init_task_classify(struct task_base *tbase, struct task_args *targ)
 		PROX_PANIC(ret, "Failed to create dscp table from config\n");
 		prox_sh_add_socket(socket_id, targ->dscp, task->dscp);
 	}
+	init_port_sched(&task->sched_port, targ);
 }
 
 static struct task_init task_init_classify = {

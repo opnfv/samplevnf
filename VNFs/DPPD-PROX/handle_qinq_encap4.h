@@ -25,6 +25,8 @@
 #include "etypes.h"
 #include "mpls.h"
 #include "task_init.h"
+#include "lconf.h"
+#include "handle_sched.h"
 
 struct task_qinq_encap4 {
         struct task_base base;
@@ -41,6 +43,7 @@ struct task_qinq_encap4 {
         uint32_t        *stats_per_user;
 	uint32_t 	n_users;
 #endif
+	struct rte_sched_port *sched_port;
 };
 
 struct qinq_gre_entry {

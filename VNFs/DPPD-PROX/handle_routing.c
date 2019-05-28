@@ -192,8 +192,11 @@ static void set_l2_mpls(struct task_routing *task, struct rte_mbuf *mbuf, uint8_
 	struct mpls_hdr *mpls = (struct mpls_hdr *)(peth + 1);
 
 	if (task->runtime_flags & TASK_MARK) {
+#if RTE_VERSION >= RTE_VERSION_NUM(19,2,0,0)
+                  enum rte_color color = rte_sched_port_pkt_read_color(mbuf);
+#else
                   enum rte_meter_color color = rte_sched_port_pkt_read_color(mbuf);
-
+#endif
                 *(uint32_t *)mpls = task->next_hops[nh_idx].mpls | task->marking[color] | 0x00010000; // Set BoS to 1
 	}
 	else {
