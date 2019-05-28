@@ -16,6 +16,7 @@
 
 #include <rte_cycles.h>
 #include <rte_ether.h>
+#include <rte_ethdev.h> // required by rte_eth_ctrl.h in 19.05
 #include <rte_eth_ctrl.h>
 
 #include "log.h"

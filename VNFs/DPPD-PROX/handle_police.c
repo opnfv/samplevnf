@@ -33,6 +33,7 @@
 #include "qinq.h"
 #include "prox_cfg.h"
 #include "prox_shared.h"
+#include "prox_compat.h"
 
 #if RTE_VERSION < RTE_VERSION_NUM(1,8,0,0)
 #define RTE_CACHE_LINE_SIZE CACHE_LINE_SIZE
@@ -54,14 +55,20 @@ struct task_police {
 	enum police_action police_act[3][3];
 	uint16_t overhead;
 	uint8_t runtime_flags;
+	struct rte_sched_port *sched_port;
 };
 
 typedef uint8_t (*hp) (struct task_police *task, struct rte_mbuf *mbuf, uint64_t tsc, uint32_t user);
 
 static uint8_t handle_police(struct task_police *task, struct rte_mbuf *mbuf, uint64_t tsc, uint32_t user)
 {
+#if RTE_VERSION < RTE_VERSION_NUM(19,2,0,0)
 	enum rte_meter_color in_color = e_RTE_METER_GREEN;
 	enum rte_meter_color out_color;
+#else
+	enum rte_color in_color = RTE_COLOR_GREEN;
+	enum rte_color out_color;
+#endif
 	uint32_t pkt_len = rte_pktmbuf_pkt_len(mbuf) + task->overhead;
 
 #if RTE_VERSION < RTE_VERSION_NUM(18,5,0,0)
@@ -74,8 +81,13 @@ static uint8_t handle_police(struct task_police *task, struct rte_mbuf *mbuf, ui
 
 static uint8_t handle_police_tr(struct task_police *task, struct rte_mbuf *mbuf, uint64_t tsc, uint32_t user)
 {
+#if RTE_VERSION < RTE_VERSION_NUM(19,2,0,0)
 	enum rte_meter_color in_color = e_RTE_METER_GREEN;
 	enum rte_meter_color out_color;
+#else
+	enum rte_color in_color = RTE_COLOR_GREEN;
+	enum rte_color out_color;
+#endif
 	uint32_t pkt_len = rte_pktmbuf_pkt_len(mbuf) + task->overhead;
 #if RTE_VERSION < RTE_VERSION_NUM(18,5,0,0)
 	out_color = rte_meter_trtcm_color_aware_check(&task->tr_flows[user], tsc, pkt_len, in_color);
@@ -86,12 +98,12 @@ static uint8_t handle_police_tr(struct task_police *task, struct rte_mbuf *mbuf,
 	if (task->runtime_flags  & TASK_MARK) {
 #if RTE_VERSION >= RTE_VERSION_NUM(1,8,0,0)
 		uint32_t subport, pipe, traffic_class, queue;
-		enum rte_meter_color color;
+		enum prox_rte_color color;
 
-		rte_sched_port_pkt_read_tree_path(mbuf, &subport, &pipe, &traffic_class, &queue);
+		prox_rte_sched_port_pkt_read_tree_path(task->sched_port, mbuf, &subport, &pipe, &traffic_class, &queue);
 		color = task->police_act[in_color][out_color];
 
-		rte_sched_port_pkt_write(mbuf, subport, pipe, traffic_class, queue, color);
+		prox_rte_sched_port_pkt_write(task->sched_port, mbuf, subport, pipe, traffic_class, queue, color);
 #else
 		struct rte_sched_port_hierarchy *sched =
 			(struct rte_sched_port_hierarchy *) &mbuf->pkt.hash.sched;
@@ -113,7 +125,7 @@ static inline int get_user(struct task_police *task, struct rte_mbuf *mbuf)
 	uint32_t dummy;
 	uint32_t pipe;
 
-	rte_sched_port_pkt_read_tree_path(mbuf, &dummy, &pipe, &dummy, &dummy);
+	prox_rte_sched_port_pkt_read_tree_path(task->sched_port, mbuf, &dummy, &pipe, &dummy, &dummy);
 	return pipe;
 #else
 	struct rte_sched_port_hierarchy *sched =
@@ -215,6 +227,8 @@ static void init_task_police(struct task_base *tbase, struct task_args *targ)
 		prox_sh_add_socket(socket_id, "user_table", task->user_table);
 	}
 
+	task->sched_port = rte_sched_port_config(&targ->qos_conf.port_params);
+
 	if (strcmp(targ->task_init->sub_mode_str, "trtcm")) {
 		task->sr_flows = prox_zmalloc(targ->n_flows * sizeof(*task->sr_flows), socket_id);
 		PROX_PANIC(task->sr_flows == NULL, "Failed to allocate flow contexts\n");
@@ -273,6 +287,7 @@ static void init_task_police(struct task_base *tbase, struct task_args *targ)
 }
 
 static struct task_init task_init_police = {
+	.mode = POLICE,
 	.mode_str = "police",
 	.init = init_task_police,
 	.handle = handle_police_bulk,
@@ -281,6 +296,7 @@ static struct task_init task_init_police = {
 };
 
 static struct task_init task_init_police2 = {
+	.mode = POLICE,
 	.mode_str = "police",
 	.sub_mode_str = "trtcm",
 	.init = init_task_police,

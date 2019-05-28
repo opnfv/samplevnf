@@ -30,6 +30,7 @@
 #include "hash_utils.h"
 #include "quit.h"
 #include "prox_compat.h"
+#include "handle_sched.h"
 
 struct task_qinq_encap6 {
 	struct task_base                    base;
@@ -37,6 +38,7 @@ struct task_qinq_encap6 {
 	uint8_t				    tx_portid;
 	uint8_t                             runtime_flags;
 	struct rte_table_hash               *cpe_table;
+	struct rte_sched_port *sched_port;
 };
 
 static void init_task_qinq_encap6(struct task_base *tbase, struct task_args *targ)
@@ -46,6 +48,10 @@ static void init_task_qinq_encap6(struct task_base *tbase, struct task_args *tar
 	task->qinq_tag = targ->qinq_tag;
 	task->cpe_table = targ->cpe_table;
 	task->runtime_flags = targ->runtime_flags;
+	if (task->runtime_flags & TASK_CLASSIFY) {
+		int rc = init_port_sched(&task->sched_port, targ);
+		PROX_PANIC(rc, "Did not find any QoS task to transmit to => undefined sched_port parameters\n");
+	}
 }
 
 /* Encapsulate IPv6 packet in QinQ where the QinQ is derived from the IPv6 address */
@@ -81,7 +87,7 @@ static inline uint8_t handle_qinq_encap6(struct rte_mbuf *mbuf, struct task_qinq
 
 		/* classification can only be done from this point */
 		if (task->runtime_flags & TASK_CLASSIFY) {
-			rte_sched_port_pkt_write(mbuf, 0, entries[0]->user, 0, 0, 0);
+			prox_rte_sched_port_pkt_write(task->sched_port, mbuf, 0, entries[0]->user, 0, 0, 0);
 		}
 		return 0;
 	}

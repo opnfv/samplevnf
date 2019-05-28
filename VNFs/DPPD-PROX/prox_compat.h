@@ -128,3 +128,13 @@ static void *prox_rte_table_create(struct prox_rte_table_params *params, int soc
 #ifndef DEV_RX_OFFLOAD_JUMBO_FRAME
 #define DEV_RX_OFFLOAD_JUMBO_FRAME 0x00000800
 #endif
+
+#if RTE_VERSION < RTE_VERSION_NUM(19,2,0,0)
+#define prox_rte_color rte_meter_color
+#define prox_rte_sched_port_pkt_read_tree_path(A,B,C,D,E,F) rte_sched_port_pkt_read_tree_path(B,C,D,E,F)
+#define prox_rte_sched_port_pkt_write(A,B,C,D,E,F,G) rte_sched_port_pkt_write(B,C,D,E,F,G);
+#else
+#define prox_rte_color rte_color
+#define prox_rte_sched_port_pkt_read_tree_path(A,B,C,D,E,F) rte_sched_port_pkt_read_tree_path(A,B,C,D,E,F)
+#define prox_rte_sched_port_pkt_write(A,B,C,D,E,F,G) rte_sched_port_pkt_write(A,B,C,D,E,F,G);
+#endif
