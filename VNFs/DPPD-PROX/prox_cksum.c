@@ -20,13 +20,23 @@
 #include "log.h"
 
 /* compute IP 16 bit checksum */
+/* The hdr_checksum field must be set to 0 by the caller. */
 inline void prox_ip_cksum_sw(struct ipv4_hdr *buf)
 {
 	const uint16_t size = sizeof(struct ipv4_hdr);
 	uint32_t cksum = 0;
 	uint32_t nb_dwords;
 	uint32_t tail, mask;
-	uint32_t *pdwd = (uint32_t *)buf;
+	/* Defining pdwd as (uint32_t *) causes some optimization issues (gcc -O2).
+	 In prox_ip_cksum(), hdr_checksum is set to 0, as expected by the code below,
+	 but when *pdwd is plain uint32_t, GCC does not see the pointer aliasing on
+	 the IPv4 header, optimizes this hdr_checksum initialization away, and hence
+	 breaks the expectations of the checksum computation loop below.
+	 The following typedef tells GCC that the IPv4 header may be aliased by
+	 pdwd, which prevents GCC from removing the hdr_checksum = 0 assignment.
+	*/
+	typedef uint32_t __attribute__((__may_alias__)) uint32_may_alias;
+	uint32_may_alias *pdwd = (uint32_may_alias *)buf;
 
 	/* compute 16 bit checksum using hi and low parts of 32 bit integers */
 	for (nb_dwords = (size >> 2); nb_dwords > 0; --nb_dwords) {
