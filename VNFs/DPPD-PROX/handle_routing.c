@@ -41,6 +41,7 @@
 #include "prox_shared.h"
 #include "prox_cksum.h"
 #include "mbuf_utils.h"
+#include "prox_compat.h"
 
 struct task_routing {
 	struct task_base                base;
@@ -192,8 +193,7 @@ static void set_l2_mpls(struct task_routing *task, struct rte_mbuf *mbuf, uint8_
 	struct mpls_hdr *mpls = (struct mpls_hdr *)(peth + 1);
 
 	if (task->runtime_flags & TASK_MARK) {
-                  enum rte_meter_color color = rte_sched_port_pkt_read_color(mbuf);
-
+                  enum prox_rte_color color = rte_sched_port_pkt_read_color(mbuf);
                 *(uint32_t *)mpls = task->next_hops[nh_idx].mpls | task->marking[color] | 0x00010000; // Set BoS to 1
 	}
 	else {
