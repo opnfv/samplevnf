@@ -1689,14 +1689,16 @@ static int parse_cmd_dp_core_stats(const char *str, struct input *input)
 			if (core_task_is_valid(lcore_id, task_id) == 0) {
 				if (input->reply) {
 					char buf[128];
-					snprintf(buf, sizeof(buf), "error: invalid core %d, task %d\n", lcore_id, task_id);
+					snprintf(buf, sizeof(buf), "error: invalid core %u, task %u\n", lcore_id, task_id);
 					input->reply(input, buf, strlen(buf));
 				} else {
-					plog_info("error: invalid core %d, task %d\n", lcore_id, task_id);
+					plog_info("error: invalid core %u, task %u\n", lcore_id, task_id);
 				}
+				continue;
 			}
 			uint64_t tot_rx = stats_core_task_tot_rx(lcore_id, task_id);
 			uint64_t tot_tx = stats_core_task_tot_tx(lcore_id, task_id);
+			uint64_t tot_tx_fail = stats_core_task_tot_tx_fail(lcore_id, task_id);
 			uint64_t tot_rx_non_dp = stats_core_task_tot_rx_non_dp(lcore_id, task_id);
 			uint64_t tot_tx_non_dp = stats_core_task_tot_tx_non_dp(lcore_id, task_id);
 			uint64_t tot_drop = stats_core_task_tot_drop(lcore_id, task_id);
@@ -1705,13 +1707,13 @@ static int parse_cmd_dp_core_stats(const char *str, struct input *input)
 			if (input->reply) {
 				char buf[128];
 				snprintf(buf, sizeof(buf),
-				 	"%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64", %d, %d\n",
-				 	tot_rx, tot_tx, tot_rx_non_dp, tot_tx_non_dp, tot_drop, last_tsc, rte_get_tsc_hz(), lcore_id, task_id);
+				 	"%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64", %"PRIu64", %d, %d\n",
+				 	tot_rx, tot_tx, tot_rx_non_dp, tot_tx_non_dp, tot_drop, tot_tx_fail, last_tsc, rte_get_tsc_hz(), lcore_id, task_id);
 				input->reply(input, buf, strlen(buf));
 			}
 			else {
-				plog_info("RX: %"PRIu64", TX: %"PRIu64", RX_NON_DP:  %"PRIu64", TX_NON_DP: %"PRIu64", DROP: %"PRIu64", core: %d, task: %d\n",
-				  	tot_rx, tot_tx, tot_rx_non_dp, tot_tx_non_dp, tot_drop, lcore_id, task_id);
+				plog_info("RX: %"PRIu64", TX: %"PRIu64", RX_NON_DP:  %"PRIu64", TX_NON_DP: %"PRIu64", DROP: %"PRIu64", TX FAIL: %"PRIu64", core: %d, task: %d\n",
+				  	tot_rx, tot_tx, tot_rx_non_dp, tot_tx_non_dp, tot_drop, tot_tx_fail, lcore_id, task_id);
 			}
 		}
 	}
@@ -1720,16 +1722,39 @@ static int parse_cmd_dp_core_stats(const char *str, struct input *input)
 
 static int parse_cmd_lat_stats(const char *str, struct input *input)
 {
-	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
+	unsigned lcores[RTE_MAX_LCORE], tasks[MAX_TASKS_PER_CORE], lcore_id, task_id, nb_cores, nb_tasks;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_core_tasks(str, lcores, tasks, &nb_cores, &nb_tasks)) {
+		if (input->reply) {
+			char buf[128];
+			snprintf(buf, sizeof(buf), "error: invalid syntax\n");
+			input->reply(input, buf, strlen(buf));
+		}
 		return -1;
+	}
 
-	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
-		for (unsigned int i = 0; i < nb_cores; i++) {
+	// This function does not return when ** somme ** tasks are invalid
+	// It will return one output per core/task pa
+	for (unsigned int i = 0; i < nb_cores; i++) {
+		for (unsigned int j = 0; j < nb_tasks; j++) {
 			lcore_id = lcores[i];
-			if (!task_is_mode(lcore_id, task_id, "lat")) {
-				plog_err("Core %u task %u is not measuring latency\n", lcore_id, task_id);
+			task_id = tasks[j];
+			if (core_task_is_valid(lcore_id, task_id) == 0) {
+				if (input->reply) {
+					char buf[128];
+					snprintf(buf, sizeof(buf), "error: invalid core %u, task %u\n", lcore_id, task_id);
+					input->reply(input, buf, strlen(buf));
+				} else {
+					plog_info("error: invalid core %u, task %u\n", lcore_id, task_id);
+				}
+			} else if (!task_is_mode(lcore_id, task_id, "lat")) {
+				if (input->reply) {
+					char buf[128];
+					snprintf(buf, sizeof(buf), "error: Core %u task %u is not measuring latency\n", lcore_id, task_id);
+					input->reply(input, buf, strlen(buf));
+				} else {
+					plog_info("error: core %u task %u is not measuring latency\n", lcore_id, task_id);
+				}
 			}
 			else {
 				struct stats_latency *stats = stats_latency_find(lcore_id, task_id);
@@ -1745,23 +1770,27 @@ static int parse_cmd_lat_stats(const char *str, struct input *input)
 				if (input->reply) {
 					char buf[128];
 					snprintf(buf, sizeof(buf),
-					 	"%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64"\n",
+					 	"%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%u,%u\n",
 						 lat_min_usec,
 						 lat_max_usec,
 						 lat_avg_usec,
 						 tot_lat_min_usec,
 						 tot_lat_max_usec,
 						 last_tsc,
-						 rte_get_tsc_hz());
+						 rte_get_tsc_hz(),
+						 lcore_id,
+						 task_id);
 					input->reply(input, buf, strlen(buf));
 				}
 				else {
-					plog_info("min: %"PRIu64", max: %"PRIu64", avg: %"PRIu64", min since reset: %"PRIu64", max since reset: %"PRIu64"\n",
+					plog_info("min: %"PRIu64", max: %"PRIu64", avg: %"PRIu64", min since reset: %"PRIu64", max since reset: %"PRIu64", core: %u, task: %u\n",
 						  lat_min_usec,
 						  lat_max_usec,
 						  lat_avg_usec,
 						  tot_lat_min_usec,
-						  tot_lat_max_usec);
+						  tot_lat_max_usec,
+						  lcore_id,
+						  task_id);
 				}
 			}
 		}
