@@ -35,7 +35,7 @@
 #include "prox_port_cfg.h"
 
 #define DEFAULT_BUCKET_SIZE	10
-#define ACCURACY_BUFFER_SIZE	64
+#define ACCURACY_BUFFER_SIZE	(2 * ACCURACY_WINDOW)
 
 struct lat_info {
 	uint32_t rx_packet_index;
@@ -344,9 +344,9 @@ static void lat_write_latency_to_file(struct task_lat *task)
 		uint64_t rx_tsc = lat_info_get_rx_tsc(lat_info);
 		uint64_t tx_tsc = lat_info_get_tx_tsc(lat_info);
 
-		/* Packet n + ACCURACY_BUFFER_SIZE delivers the TX error for packet n,
-		   hence the last ACCURACY_BUFFER_SIZE packets do no have TX error. */
-		if (i + ACCURACY_BUFFER_SIZE >= task->latency_buffer_idx) {
+		/* Packet n + ACCURACY_WINDOW delivers the TX error for packet n,
+		   hence the last ACCURACY_WINDOW packets do no have TX error. */
+		if (i + ACCURACY_WINDOW >= task->latency_buffer_idx) {
 			tx_err_tsc = 0;
 		}
 
@@ -616,14 +616,14 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 		}
 
 		/* If accuracy is enabled, latency is reported with a
-		   delay of ACCURACY_BUFFER_SIZE packets since the generator puts the
-		   accuracy for packet N into packet N + ACCURACY_BUFFER_SIZE. The delay
+		   delay of ACCURACY_WINDOW packets since the generator puts the
+		   accuracy for packet N into packet N + ACCURACY_WINDOW. The delay
 		   ensures that all reported latencies have both rx
 		   and tx error. */
 		if (task->accur_pos) {
 			uint32_t tx_time_err = *(uint32_t *)(hdr + task->accur_pos);
 
-			struct delayed_latency_entry *delayed_latency_entry = delayed_latency_get(task->delayed_latency_entries, generator_id, packet_id - ACCURACY_BUFFER_SIZE);
+			struct delayed_latency_entry *delayed_latency_entry = delayed_latency_get(task->delayed_latency_entries, generator_id, packet_id - ACCURACY_WINDOW);
 
 			if (delayed_latency_entry) {
 				task_lat_store_lat(task,
@@ -764,11 +764,11 @@ static void init_task_lat(struct task_base *tbase, struct task_args *targ)
 			PROX_PANIC(task->delayed_latency_entries[i] == NULL, "Failed to allocate array for storing delayed latency entries\n");
 		}
 		if (task->unique_id_pos == 0) {
-			/* When using accuracy feature, the accuracy from TX is written ACCURACY_BUFFER_SIZE packets later
+			/* When using accuracy feature, the accuracy from TX is written ACCURACY_WINDOW packets later
 			* We can only retrieve the good packet if a packet id is written to it.
-			* Otherwise we will use the packet RECEIVED ACCURACY_BUFFER_SIZE packets ago which is OK if
+			* Otherwise we will use the packet RECEIVED ACCURACY_WINDOW packets ago which is OK if
 			* packets are not re-ordered. If packets are re-ordered, then the matching between
-			* the tx accuracy znd the latency is wrong.
+			* the TX accuracy and the latency is wrong.
 			*/
 			plog_warn("\tWhen accuracy feature is used, a unique id should ideally also be used\n");
 		}
