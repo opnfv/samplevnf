@@ -1707,12 +1707,12 @@ static int parse_cmd_dp_core_stats(const char *str, struct input *input)
 			if (input->reply) {
 				char buf[128];
 				snprintf(buf, sizeof(buf),
-				 	"%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64", %"PRIu64", %d, %d\n",
+				 	"%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64", %"PRIu64",%u,%u\n",
 				 	tot_rx, tot_tx, tot_rx_non_dp, tot_tx_non_dp, tot_drop, tot_tx_fail, last_tsc, rte_get_tsc_hz(), lcore_id, task_id);
 				input->reply(input, buf, strlen(buf));
 			}
 			else {
-				plog_info("RX: %"PRIu64", TX: %"PRIu64", RX_NON_DP:  %"PRIu64", TX_NON_DP: %"PRIu64", DROP: %"PRIu64", TX FAIL: %"PRIu64", core: %d, task: %d\n",
+				plog_info("RX: %"PRIu64", TX: %"PRIu64", RX_NON_DP:  %"PRIu64", TX_NON_DP: %"PRIu64", DROP: %"PRIu64", TX FAIL: %"PRIu64", core: %u, task: %u\n",
 				  	tot_rx, tot_tx, tot_rx_non_dp, tot_tx_non_dp, tot_drop, tot_tx_fail, lcore_id, task_id);
 			}
 		}
@@ -1734,7 +1734,7 @@ static int parse_cmd_lat_stats(const char *str, struct input *input)
 	}
 
 	// This function does not return when ** somme ** tasks are invalid
-	// It will return one output per core/task pa
+	// It will return one output per core/task pair.
 	for (unsigned int i = 0; i < nb_cores; i++) {
 		for (unsigned int j = 0; j < nb_tasks; j++) {
 			lcore_id = lcores[i];
