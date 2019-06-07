@@ -25,6 +25,10 @@
 #include "clock.h"
 
 #define LATENCY_ACCURACY	1
+// If ACCURACY_WINDOW is too small, the accuracy for packet N can be received by lat BEFORE
+// packet N is received (re-ordering) resulting in accuracy being unused
+// 8192 packets is equivallent to 500 micro-seconds at 10Gbps for 64 bytes packets
+#define ACCURACY_WINDOW                8192
 
 struct lat_test {
 	uint64_t tot_all_pkts;

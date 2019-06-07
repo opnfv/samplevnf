@@ -114,7 +114,7 @@ struct task_gen {
 		uint16_t rand_offset; /* each random has an offset*/
 		uint8_t rand_len; /* # bytes to take from random (no bias introduced) */
 	} rand[64];
-	uint64_t accur[64];
+	uint64_t accur[ACCURACY_WINDOW];
 	uint64_t pkt_tsc_offset[64];
 	struct pkt_template *pkt_template_orig; /* packet templates (from inline or from pcap) */
 	struct ether_addr  src_mac;
@@ -363,11 +363,11 @@ static void task_gen_apply_all_accur_pos(struct task_gen *task, struct rte_mbuf 
 	if (!task->accur_pos)
 		return;
 
-	/* The accuracy of task->pkt_queue_index - 64 is stored in
-	   packet task->pkt_queue_index. The ID modulo 64 is the
+	/* The accuracy of task->pkt_queue_index - ACCURACY_WINDOW is stored in
+	   packet task->pkt_queue_index. The ID modulo ACCURACY_WINDOW is the
 	   same. */
 	for (uint16_t j = 0; j < count; ++j) {
-		uint32_t accuracy = task->accur[(task->pkt_queue_index + j) & 63];
+		uint32_t accuracy = task->accur[(task->pkt_queue_index + j) & (ACCURACY_WINDOW - 1)];
 		task_gen_apply_accur_pos(task, pkt_hdr[j], accuracy);
 	}
 }
@@ -505,7 +505,7 @@ static void task_gen_store_accuracy(struct task_gen *task, uint32_t count, uint6
 	uint64_t first_accuracy_idx = task->pkt_queue_index - count;
 
 	for (uint32_t i = 0; i < count; ++i) {
-		uint32_t accuracy_idx = (first_accuracy_idx + i) & 63;
+		uint32_t accuracy_idx = (first_accuracy_idx + i) & (ACCURACY_WINDOW - 1);
 
 		task->accur[accuracy_idx] = accur;
 	}
