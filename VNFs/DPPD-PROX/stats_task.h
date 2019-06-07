@@ -153,6 +153,7 @@ void stats_task_get_host_rx_tx_packets(uint64_t *rx, uint64_t *tx, uint64_t *tsc
 
 uint64_t stats_core_task_tot_rx(uint8_t lcore_id, uint8_t task_id);
 uint64_t stats_core_task_tot_tx(uint8_t lcore_id, uint8_t task_id);
+uint64_t stats_core_task_tot_tx_fail(uint8_t lcore_id, uint8_t task_id);
 uint64_t stats_core_task_tot_drop(uint8_t lcore_id, uint8_t task_id);
 uint64_t stats_core_task_last_tsc(uint8_t lcore_id, uint8_t task_id);
 uint64_t stats_core_task_tot_rx_non_dp(uint8_t lcore_id, uint8_t task_id);
