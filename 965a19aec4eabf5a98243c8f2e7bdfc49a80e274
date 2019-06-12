@@ -22,6 +22,30 @@
       "revId": "965a19aec4eabf5a98243c8f2e7bdfc49a80e274",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9fb1c2ea_fa1a547c",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 13,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-06-12T12:45:49Z",
+      "side": 1,
+      "message": "Sorry, my mistake.\nAll PROX socket scripts using \"dp core stats\" command must be updated, because tot_tx_fail is now reported before last_tsc",
+      "parentUuid": "e37f32b5_70deed03",
+      "range": {
+        "startLine": 11,
+        "startChar": 0,
+        "endLine": 13,
+        "endChar": 15
+      },
+      "revId": "965a19aec4eabf5a98243c8f2e7bdfc49a80e274",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
     }
   ]
 }
