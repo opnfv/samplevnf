@@ -76,19 +76,8 @@ static int cores_task_are_valid(unsigned int *lcores, int task_id, unsigned int 
 	unsigned int lcore_id;
 	for (unsigned int i = 0; i < nb_cores; i++) {
 		lcore_id = lcores[i];
-		if (lcore_id >= RTE_MAX_LCORE) {
-			plog_err("Invalid core id %u (lcore ID above %d)\n", lcore_id, RTE_MAX_LCORE);
+		if (core_task_is_valid(lcore_id, task_id) == 0)
 			return 0;
-		}
-		else if (!prox_core_active(lcore_id, 0)) {
-			plog_err("Invalid core id %u (lcore is not active)\n", lcore_id);
-			return 0;
-		}
-		else if (task_id >= lcore_cfg[lcore_id].n_tasks_all) {
-			plog_err("Invalid task id (valid task IDs for core %u are below %u)\n",
-			 	lcore_id, lcore_cfg[lcore_id].n_tasks_all);
-			return 0;
-		}
 	}
 	return 1;
 }
