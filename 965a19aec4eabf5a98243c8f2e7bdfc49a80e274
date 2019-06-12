@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "e37f32b5_70deed03",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 13,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-06-12T12:33:18Z",
+      "side": 1,
+      "message": "I guess this only relates to the previous commit for \"dp core stats\" command.\nSince I am reworking the previous commit, which has not been merged yet (so only \"transient\" scripts might be affected), I will also rework this commit message.",
+      "range": {
+        "startLine": 11,
+        "startChar": 0,
+        "endLine": 13,
+        "endChar": 15
+      },
+      "revId": "965a19aec4eabf5a98243c8f2e7bdfc49a80e274",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
