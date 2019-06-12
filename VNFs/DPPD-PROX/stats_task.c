@@ -73,6 +73,11 @@ uint64_t stats_core_task_tot_tx(uint8_t lcore_id, uint8_t task_id)
 	return lcore_task_stats_all[lcore_id].task_stats[task_id].tot_tx_pkt_count;
 }
 
+uint64_t stats_core_task_tot_tx_fail(uint8_t lcore_id, uint8_t task_id)
+{
+	return lcore_task_stats_all[lcore_id].task_stats[task_id].tot_drop_tx_fail;
+}
+
 uint64_t stats_core_task_tot_drop(uint8_t lcore_id, uint8_t task_id)
 {
 	return lcore_task_stats_all[lcore_id].task_stats[task_id].tot_drop_tx_fail +

@@ -1657,6 +1657,7 @@ static int parse_cmd_dp_core_stats(const char *str, struct input *input)
 			lcore_id = lcores[i];
 			uint64_t tot_rx = stats_core_task_tot_rx(lcore_id, task_id);
 			uint64_t tot_tx = stats_core_task_tot_tx(lcore_id, task_id);
+			uint64_t tot_tx_fail = stats_core_task_tot_tx_fail(lcore_id, task_id);
 			uint64_t tot_rx_non_dp = stats_core_task_tot_rx_non_dp(lcore_id, task_id);
 			uint64_t tot_tx_non_dp = stats_core_task_tot_tx_non_dp(lcore_id, task_id);
 			uint64_t tot_drop = stats_core_task_tot_drop(lcore_id, task_id);
@@ -1665,13 +1666,13 @@ static int parse_cmd_dp_core_stats(const char *str, struct input *input)
 			if (input->reply) {
 				char buf[128];
 				snprintf(buf, sizeof(buf),
-				 	"%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64"\n",
-				 	tot_rx, tot_tx, tot_rx_non_dp, tot_tx_non_dp, tot_drop, last_tsc, rte_get_tsc_hz());
+				 	"%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64"\n",
+				 	tot_rx, tot_tx, tot_rx_non_dp, tot_tx_non_dp, tot_drop, tot_tx_fail, last_tsc, rte_get_tsc_hz());
 				input->reply(input, buf, strlen(buf));
 			}
 			else {
-				plog_info("RX: %"PRIu64", TX: %"PRIu64", RX_NON_DP:  %"PRIu64", TX_NON_DP: %"PRIu64", DROP: %"PRIu64"\n",
-				  	tot_rx, tot_tx, tot_rx_non_dp, tot_tx_non_dp, tot_drop);
+				plog_info("RX: %"PRIu64", TX: %"PRIu64", RX_NON_DP: %"PRIu64", TX_NON_DP: %"PRIu64", DROP: %"PRIu64", TX_FAIL: %"PRIu64"\n",
+				  	tot_rx, tot_tx, tot_rx_non_dp, tot_tx_non_dp, tot_drop, tot_tx_fail);
 			}
 		}
 	}
