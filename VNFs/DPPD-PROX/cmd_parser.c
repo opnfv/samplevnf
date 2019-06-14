@@ -1764,6 +1764,19 @@ static int parse_cmd_lat_stats(const char *str, struct input *input)
 			else {
 				struct stats_latency *stats = stats_latency_find(lcore_id, task_id);
 				struct stats_latency *tot = stats_latency_tot_find(lcore_id, task_id);
+				if (!stats || !tot) {
+					if (input->reply) {
+						char buf[128];
+						snprintf(buf, sizeof(buf),
+							 "error: core %u task %u stats = %p tot = %p\n",
+							 lcore_id, task_id, stats, tot);
+						input->reply(input, buf, strlen(buf));
+					} else {
+						plog_info("error: core %u task %u stats = %p tot = %p\n",
+							  lcore_id, task_id, stats, tot);
+					}
+					continue;
+				}
 
 				uint64_t last_tsc = stats_core_task_last_tsc(lcore_id, task_id);
 				uint64_t lat_min_usec = time_unit_to_usec(&stats->min.time);
