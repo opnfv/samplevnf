@@ -104,11 +104,11 @@ struct stats_latency *stats_latency_find(uint32_t lcore_id, uint32_t task_id)
 
 static int task_runs_observable_latency(struct task_args *targ)
 {
-	/* TODO: make this work with multiple ports and with
-	   rings. Currently, only showing lat tasks which have 1 RX
-	   port. */
+	/* Note that multiple ports or rings are inly supported
+	   if they all receive packets configured in the same way
+	   e.g. same timestamp pos. */
 	return !strcmp(targ->task_init->mode_str, "lat") &&
-		(targ->nb_rxports == 1 || targ->nb_rxrings == 1);
+		(targ->nb_rxports >= 1 || targ->nb_rxrings >= 1);
 }
 
 static struct stats_latency_manager *alloc_stats_latency_manager(void)
