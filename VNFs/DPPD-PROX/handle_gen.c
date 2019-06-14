@@ -59,6 +59,8 @@ struct pkt_template {
 
 #define IP4(x) x & 0xff, (x >> 8) & 0xff, (x >> 16) & 0xff, x >> 24
 
+#define TASK_OVERWRITE_SRC_MAC_WITH_PORT_MAC 1
+
 static void pkt_template_init_mbuf(struct pkt_template *pkt_template, struct rte_mbuf *mbuf, uint8_t *pkt)
 {
 	const uint32_t pkt_size = pkt_template->len;
@@ -910,7 +912,7 @@ static void task_gen_reset_pkt_templates_content(struct task_gen *task)
 	for (size_t i = 0; i < task->n_pkts; ++i) {
 		src = &task->pkt_template_orig[i];
 		dst = &task->pkt_template[i];
-		memcpy(dst->buf, src->buf, dst->len);
+		memcpy(dst->buf, src->buf, RTE_MAX(src->len, dst->len));
 		task_gen_apply_sig(task, dst);
 	}
 }
@@ -1076,6 +1078,11 @@ void task_gen_reset_values(struct task_base *tbase)
 	struct task_gen *task = (struct task_gen *)tbase;
 
 	task_gen_reset_pkt_templates_content(task);
+	if (task->flags & TASK_OVERWRITE_SRC_MAC_WITH_PORT_MAC) {
+		for (uint32_t i = 0; i < task->n_pkts; ++i) {
+			rte_memcpy(&task->pkt_template[i].buf[sizeof(struct ether_addr)], &task->src_mac, sizeof(struct ether_addr));
+		}
+	}
 }
 
 uint32_t task_gen_get_n_randoms(struct task_base *tbase)
@@ -1308,12 +1315,12 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 
 	PROX_PANIC(((targ->nb_txrings == 0) && (targ->nb_txports == 0)), "Gen mode requires a tx ring or a tx port");
 	if ((targ->flags & DSF_KEEP_SRC_MAC) == 0) {
-		uint8_t *src_addr = prox_port_cfg[tbase->tx_params_hw.tx_port_queue->port].eth_addr.addr_bytes;
+		task->flags |= TASK_OVERWRITE_SRC_MAC_WITH_PORT_MAC;
+		memcpy(&task->src_mac, &prox_port_cfg[task->base.tx_params_hw.tx_port_queue->port].eth_addr, sizeof(struct ether_addr));
 		for (uint32_t i = 0; i < task->n_pkts; ++i) {
-			rte_memcpy(&task->pkt_template[i].buf[6], src_addr, 6);
+			rte_memcpy(&task->pkt_template[i].buf[sizeof(struct ether_addr)], &task->src_mac, sizeof(struct ether_addr));
 		}
 	}
-	memcpy(&task->src_mac, &prox_port_cfg[task->base.tx_params_hw.tx_port_queue->port].eth_addr, sizeof(struct ether_addr));
 	for (uint32_t i = 0; i < targ->n_rand_str; ++i) {
 		PROX_PANIC(task_gen_add_rand(tbase, targ->rand_str[i], targ->rand_offset[i], UINT32_MAX),
 			   "Failed to add random\n");
