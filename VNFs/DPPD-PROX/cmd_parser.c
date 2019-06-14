@@ -82,7 +82,7 @@ static int cores_task_are_valid(unsigned int *lcores, int task_id, unsigned int 
 	return 1;
 }
 
-static int parse_core_task(const char *str, uint32_t *lcore_id, uint32_t *task_id, unsigned int *nb_cores)
+static int parse_cores_task(const char *str, uint32_t *lcore_id, uint32_t *task_id, unsigned *nb_cores)
 {
 	char str_lcore_id[128];
 	int ret;
@@ -95,6 +95,29 @@ static int parse_core_task(const char *str, uint32_t *lcore_id, uint32_t *task_i
 		return -1;
 	}
 	*nb_cores = ret;
+
+	return 0;
+}
+
+static int parse_cores_tasks(const char *str, uint32_t *lcore_id, uint32_t *task_id, unsigned *nb_cores, unsigned *nb_tasks)
+{
+	char str_lcore_id[128], str_task_id[128];
+	int ret;
+
+	if (2 != sscanf(str, "%s %s", str_lcore_id, str_task_id))
+		return -1;
+
+	if ((ret = parse_list_set(lcore_id, str_lcore_id, RTE_MAX_LCORE)) <= 0) {
+		plog_err("Invalid core while parsing command (%s)\n", get_parse_err());
+		return -1;
+	}
+	*nb_cores = ret;
+
+	if ((ret = parse_list_set(task_id, str_task_id, MAX_TASKS_PER_CORE)) <= 0) {
+		plog_err("Invalid task while parsing command (%s)\n", get_parse_err());
+		return -1;
+	}
+	*nb_tasks = ret;
 
 	return 0;
 }
@@ -196,7 +219,7 @@ static int parse_cmd_trace(const char *str, struct input *input)
 {
 	unsigned lcores[RTE_MAX_LCORE], task_id, nb_packets, nb_cores;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 	if (!(str = strchr_skip_twice(str, ' ')))
 		return -1;
@@ -215,7 +238,7 @@ static int parse_cmd_dump_rx(const char *str, struct input *input)
 {
 	unsigned lcores[RTE_MAX_LCORE], task_id, nb_packets, nb_cores;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 	if (!(str = strchr_skip_twice(str, ' ')))
 		return -1;
@@ -262,7 +285,7 @@ static int parse_cmd_dump_tx(const char *str, struct input *input)
 {
 	unsigned lcores[RTE_MAX_LCORE], task_id, nb_packets, nb_cores;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 	if (!(str = strchr_skip_twice(str, ' ')))
 		return -1;
@@ -349,7 +372,7 @@ static int parse_cmd_count(const char *str, struct input *input)
 {
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, count, nb_cores;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 	if (!(str = strchr_skip_twice(str, ' ')))
 		return -1;
@@ -378,7 +401,7 @@ static int parse_cmd_set_probability(const char *str, struct input *input)
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
 	float probability;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 	if (!(str = strchr_skip_twice(str, ' ')))
 		return -1;
@@ -403,7 +426,7 @@ static int parse_cmd_delay_us(const char *str, struct input *input)
 {
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, delay_us, nb_cores;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 	if (!(str = strchr_skip_twice(str, ' ')))
 		return -1;
@@ -428,7 +451,7 @@ static int parse_cmd_random_delay_us(const char *str, struct input *input)
 {
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, delay_us, nb_cores;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 	if (!(str = strchr_skip_twice(str, ' ')))
 		return -1;
@@ -453,7 +476,7 @@ static int parse_cmd_bypass(const char *str, struct input *input)
 {
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, pkt_size, nb_cores;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 	if ((prox_cfg.flags & DSF_ENABLE_BYPASS) == 0) {
 		plog_err("enable bypass not set => command not supported\n");
@@ -474,7 +497,7 @@ static int parse_cmd_reconnect(const char *str, struct input *input)
 {
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, pkt_size, nb_cores;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
 		for (unsigned int i = 0; i < nb_cores; i++) {
@@ -490,7 +513,7 @@ static int parse_cmd_pkt_size(const char *str, struct input *input)
 {
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, pkt_size, nb_cores;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 	if (!(str = strchr_skip_twice(str, ' ')))
 		return -1;
@@ -517,7 +540,7 @@ static int parse_cmd_speed(const char *str, struct input *input)
 	float speed;
 	unsigned i;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 	if (!(str = strchr_skip_twice(str, ' ')))
 		return -1;
@@ -554,7 +577,7 @@ static int parse_cmd_speed_byte(const char *str, struct input *input)
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
 	uint64_t bps;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 	if (!(str = strchr_skip_twice(str, ' ')))
 		return -1;
@@ -627,7 +650,7 @@ static int parse_cmd_reset_values(const char *str, struct input *input)
 {
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 
 	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
@@ -653,7 +676,7 @@ static int parse_cmd_set_value(const char *str, struct input *input)
 	unsigned short offset;
 	uint8_t value_len;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 	if (!(str = strchr_skip_twice(str, ' ')))
 		return -1;
@@ -694,7 +717,7 @@ static int parse_cmd_set_random(const char *str, struct input *input)
 	char rand_str[64];
 	int16_t rand_id = -1;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 	if (!(str = strchr_skip_twice(str, ' ')))
 		return -1;
@@ -729,7 +752,7 @@ static int parse_cmd_thread_info(const char *str, struct input *input)
 {
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 	for (unsigned int i = 0; i < nb_cores; i++) {
 		cmd_thread_info(lcores[i], task_id);
@@ -758,7 +781,7 @@ static int parse_cmd_arp_add(const char *str, struct input *input)
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
 	struct rte_ring *ring;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 	if (!(str = strchr_skip_twice(str, ' ')))
 		return -1;
@@ -792,7 +815,7 @@ static int parse_cmd_rule_add(const char *str, struct input *input)
 	struct rte_ring *ring;
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 	if (!(str = strchr_skip_twice(str, ' ')))
 		return -1;
@@ -836,7 +859,7 @@ static int parse_cmd_gateway_ip(const char *str, struct input *input)
 {
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, ip[4], nb_cores, i;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 	if (!(str = strchr_skip_twice(str, ' ')))
 		return -1;
@@ -865,7 +888,7 @@ static int parse_cmd_local_ip(const char *str, struct input *input)
 {
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, ip[4], nb_cores, i;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 	if (!(str = strchr_skip_twice(str, ' ')))
 		return -1;
@@ -897,7 +920,7 @@ static int parse_cmd_route_add(const char *str, struct input *input)
 {
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, prefix, next_hop_idx, ip[4], nb_cores;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 	if (!(str = strchr_skip_twice(str, ' ')))
 		return -1;
@@ -1530,7 +1553,7 @@ static int parse_cmd_ring_info(const char *str, struct input *input)
 {
 	unsigned lcores[RTE_MAX_LCORE], task_id, nb_cores;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 
 	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
@@ -1618,7 +1641,7 @@ static int parse_cmd_core_stats(const char *str, struct input *input)
 {
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 
 	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
@@ -1649,7 +1672,7 @@ static int parse_cmd_dp_core_stats(const char *str, struct input *input)
 {
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 
 	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
@@ -1683,7 +1706,7 @@ static int parse_cmd_lat_stats(const char *str, struct input *input)
 {
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 
 	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
@@ -1736,7 +1759,7 @@ static int parse_cmd_show_irq_buckets(const char *str, struct input *input)
 	unsigned int i, c;
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 
 	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
@@ -1757,7 +1780,7 @@ static int parse_cmd_irq(const char *str, struct input *input)
 	unsigned int i, c;
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 
 	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
@@ -1805,7 +1828,7 @@ static int parse_cmd_lat_packets(const char *str, struct input *input)
 {
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 
 	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
@@ -1826,7 +1849,7 @@ static int parse_cmd_cgnat_public_hash(const char *str, struct input *input)
 {
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 
 	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
@@ -1850,7 +1873,7 @@ static int parse_cmd_cgnat_private_hash(const char *str, struct input *input)
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
 	uint32_t val;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 
 	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
@@ -1874,7 +1897,7 @@ static int parse_cmd_accuracy(const char *str, struct input *input)
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
 	uint32_t val;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 	if (!(str = strchr_skip_twice(str, ' ')))
 		return -1;
