@@ -21,19 +21,27 @@
 #include "task_base.h"
 #include "lconf.h"
 #include "log.h"
-#include "arp.h"
-#include "handle_swap.h"
 #include "prox_port_cfg.h"
 #include "mpls.h"
 #include "qinq.h"
 #include "gre.h"
 #include "prefetch.h"
+#include "igmp.h"
+#include "prox_cksum.h"
 
 struct task_swap {
 	struct task_base base;
-	uint8_t src_dst_mac[12];
+	struct rte_mempool *igmp_pool;
 	uint32_t runtime_flags;
+	uint32_t igmp_address;
+	uint8_t src_dst_mac[12];
+	uint32_t local_ipv4;
+	int offload_crc;
 };
+
+#define NB_IGMP_MBUF  		1024
+#define IGMP_MBUF_SIZE 		2048
+#define NB_CACHE_IGMP_MBUF  	256
 
 static void write_src_and_dst_mac(struct task_swap *task, struct rte_mbuf *mbuf)
 {
@@ -63,29 +71,46 @@ static void write_src_and_dst_mac(struct task_swap *task, struct rte_mbuf *mbuf)
 		}
 	}
 }
-static inline int handle_arp_request(struct task_swap *task, struct ether_hdr_arp *hdr_arp, struct ether_addr *s_addr, uint32_t ip)
+
+static inline void build_mcast_mac(uint32_t ip, struct ether_addr *dst_mac)
 {
-	if ((hdr_arp->arp.data.tpa == ip) || (ip == 0)) {
-		build_arp_reply(hdr_arp, s_addr);
-		return 0;
-	} else if (task->runtime_flags & TASK_MULTIPLE_MAC) {
-		struct ether_addr tmp_s_addr;
-		create_mac(hdr_arp, &tmp_s_addr);
-		build_arp_reply(hdr_arp, &tmp_s_addr);
-		return 0;
-	} else {
-		plogx_dbg("Received ARP on unexpected IP %x, expecting %x\n", rte_be_to_cpu_32(hdr_arp->arp.data.tpa), rte_be_to_cpu_32(ip));
-		return OUT_DISCARD;
-	}
+	// MAC address is 01:00:5e followed by 23 LSB of IP address
+	uint64_t mac = 0x0000005e0001L | ((ip & 0xFFFF7F00L) << 16);
+	memcpy(dst_mac, &mac, sizeof(struct ether_addr));
 }
 
-/*
- * swap mode does not send arp requests, so does not expect arp replies
- * Need to understand later whether we must send arp requests
- */
-static inline int handle_arp_replies(struct task_swap *task, struct ether_hdr_arp *hdr_arp)
+static inline void build_igmp_message(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t ip, uint8_t igmp_message)
 {
-	return OUT_DISCARD;
+	struct task_swap *task = (struct task_swap *)tbase;
+	struct ether_hdr *hdr = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
+	struct ether_addr dst_mac;
+	build_mcast_mac(ip, &dst_mac);
+
+        rte_pktmbuf_pkt_len(mbuf) = 46;
+        rte_pktmbuf_data_len(mbuf) = 46;
+        init_mbuf_seg(mbuf);
+
+        ether_addr_copy(&dst_mac, &hdr->d_addr);
+	ether_addr_copy((struct ether_addr *)&task->src_dst_mac[6], &hdr->s_addr);
+	hdr->ether_type = ETYPE_IPv4;
+
+	struct ipv4_hdr *ip_hdr = (struct ipv4_hdr *)(hdr + 1);
+	ip_hdr->version_ihl = 0x45;		/**< version and header length */
+	ip_hdr->type_of_service = 0;	/**< type of service */
+	ip_hdr->total_length = rte_cpu_to_be_16(32);		/**< length of packet */
+	ip_hdr->packet_id = 0;		/**< packet ID */
+	ip_hdr->fragment_offset = 0;	/**< fragmentation offset */
+	ip_hdr->time_to_live = 1;		/**< time to live */
+	ip_hdr->next_proto_id = IPPROTO_IGMP;		/**< protocol ID */
+	ip_hdr->hdr_checksum = 0;		/**< header checksum */
+	ip_hdr->src_addr = task->local_ipv4;		/**< source address */
+	ip_hdr->dst_addr = ip;	/**< destination address */
+	struct igmpv2_hdr *pigmp = (struct igmpv2_hdr *)(ip_hdr + 1);
+	pigmp->type = igmp_message;
+	pigmp->max_resp_time = 0;
+	pigmp->checksum = 0;
+	pigmp->group_address = ip;
+	prox_ip_udp_cksum(mbuf, ip_hdr, sizeof(struct ether_hdr), sizeof(struct ipv4_hdr), task->offload_crc);
 }
 
 static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts)
@@ -95,6 +120,8 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 	struct ether_addr mac;
 	struct ipv4_hdr *ip_hdr;
 	struct udp_hdr *udp_hdr;
+	struct gre_hdr *pgre;
+	struct ipv4_hdr *inner_ip_hdr;
 	uint32_t ip;
 	uint16_t port;
 	uint8_t out[64] = {0};
@@ -102,8 +129,9 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 	uint32_t mpls_len = 0;
 	struct qinq_hdr *qinq;
 	struct vlan_hdr *vlan;
-	struct ether_hdr_arp *hdr_arp;
 	uint16_t j;
+	struct igmpv2_hdr *pigmp;
+	uint8_t type;
 
 	for (j = 0; j < n_pkts; ++j) {
 		PREFETCH0(mbufs[j]);
@@ -112,12 +140,14 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 		PREFETCH0(rte_pktmbuf_mtod(mbufs[j], void *));
 	}
 
+	// TODO 1: check packet is long enough for Ethernet + IP + UDP = 42 bytes
 	for (uint16_t j = 0; j < n_pkts; ++j) {
 		hdr = rte_pktmbuf_mtod(mbufs[j], struct ether_hdr *);
 		switch (hdr->ether_type) {
 		case ETYPE_MPLSU:
 			mpls = (struct mpls_hdr *)(hdr + 1);
 			while (!(mpls->bytes & 0x00010000)) {
+				// TODO: verify pcket length
 				mpls++;
 				mpls_len += sizeof(struct mpls_hdr);
 			}
@@ -173,28 +203,109 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 			out[j] = OUT_DISCARD;
 			continue;
 		}
-		udp_hdr = (struct udp_hdr *)(ip_hdr + 1);
+		// TODO 2 : check packet is long enough for Ethernet + IP + UDP + extra header (VLAN, MPLS, ...)
 		ip = ip_hdr->dst_addr;
-		ip_hdr->dst_addr = ip_hdr->src_addr;
-		ip_hdr->src_addr = ip;
-		if (ip_hdr->next_proto_id == IPPROTO_GRE) {
-			struct gre_hdr *pgre = (struct gre_hdr *)(ip_hdr + 1);
-			struct ipv4_hdr *inner_ip_hdr = ((struct ipv4_hdr *)(pgre + 1));
+
+		switch (ip_hdr->next_proto_id) {
+		case IPPROTO_GRE:
+			ip_hdr->dst_addr = ip_hdr->src_addr;
+			ip_hdr->src_addr = ip;
+
+			pgre = (struct gre_hdr *)(ip_hdr + 1);
+			inner_ip_hdr = ((struct ipv4_hdr *)(pgre + 1));
 			ip = inner_ip_hdr->dst_addr;
 			inner_ip_hdr->dst_addr = inner_ip_hdr->src_addr;
 			inner_ip_hdr->src_addr = ip;
+
 			udp_hdr = (struct udp_hdr *)(inner_ip_hdr + 1);
+			// TODO 3.1 : verify proto is UPD or TCP
 			port = udp_hdr->dst_port;
 			udp_hdr->dst_port = udp_hdr->src_port;
 			udp_hdr->src_port = port;
-		} else {
+			write_src_and_dst_mac(task, mbufs[j]);
+			break;
+		case IPPROTO_UDP:
+		case IPPROTO_TCP:
+			if (task->igmp_address && IS_IPV4_MCAST(rte_be_to_cpu_32(ip))) {
+				out[j] = OUT_DISCARD;
+				continue;
+			}
+			udp_hdr = (struct udp_hdr *)(ip_hdr + 1);
+			ip_hdr->dst_addr = ip_hdr->src_addr;
+			ip_hdr->src_addr = ip;
+
 			port = udp_hdr->dst_port;
 			udp_hdr->dst_port = udp_hdr->src_port;
 			udp_hdr->src_port = port;
+			write_src_and_dst_mac(task, mbufs[j]);
+			break;
+		case IPPROTO_IGMP:
+			pigmp = (struct igmpv2_hdr *)(ip_hdr + 1);
+			// TODO: check packet len
+			type = pigmp->type;
+			if (type == IGMP_MEMBERSHIP_QUERY) {
+				if (task->igmp_address) {
+					// We have an address registered
+					if ((task->igmp_address == pigmp->group_address) || (pigmp->group_address == 0)) {
+						// We get a request for the registered address, or to 0.0.0.0
+						build_igmp_message(tbase, mbufs[j], task->igmp_address, IGMP_MEMBERSHIP_REPORT);	// replace Membership query packet with a response
+					} else {
+						// Discard as either we are not registered or this is a query for a different group
+						out[j] = OUT_DISCARD;
+						continue;
+					}
+				} else {
+					// Discard as either we are not registered
+					out[j] = OUT_DISCARD;
+					continue;
+				}
+			} else {
+				// Do not forward other IGMP packets back
+				out[j] = OUT_DISCARD;
+				continue;
+			}
+			break;
+		default:
+			plog_warn("Unsupported IP protocol 0x%x\n", ip_hdr->next_proto_id);
+			out[j] = OUT_DISCARD;
+			continue;
 		}
-		write_src_and_dst_mac(task, mbufs[j]);
 	}
 	return task->base.tx_pkt(&task->base, mbufs, n_pkts, out);
+}
+
+void igmp_join_group(struct task_base *tbase, uint32_t igmp_address)
+{
+	struct task_swap *task = (struct task_swap *)tbase;
+	struct rte_mbuf *igmp_mbuf;
+	uint8_t out[64] = {0};
+	int ret;
+
+	task->igmp_address = igmp_address;
+	ret = rte_mempool_get(task->igmp_pool, (void **)&igmp_mbuf);
+	if (ret != 0) {
+		plog_err("Unable to allocate igmp mbuf\n");
+		return;
+	}
+	build_igmp_message(tbase, igmp_mbuf, task->igmp_address, IGMP_MEMBERSHIP_REPORT);
+	task->base.tx_pkt(&task->base, &igmp_mbuf, 1, out);
+}
+
+void igmp_leave_group(struct task_base *tbase)
+{
+	struct task_swap *task = (struct task_swap *)tbase;
+	struct rte_mbuf *igmp_mbuf;
+	uint8_t out[64] = {0};
+	int ret;
+
+	task->igmp_address = 0;
+	ret = rte_mempool_get(task->igmp_pool, (void **)&igmp_mbuf);
+	if (ret != 0) {
+		plog_err("Unable to allocate igmp mbuf\n");
+		return;
+	}
+	build_igmp_message(tbase, igmp_mbuf, task->igmp_address, IGMP_LEAVE_GROUP);
+	task->base.tx_pkt(&task->base, &igmp_mbuf, 1, out);
 }
 
 static void init_task_swap(struct task_base *tbase, struct task_args *targ)
@@ -240,27 +351,36 @@ static void init_task_swap(struct task_base *tbase, struct task_args *targ)
 		}
 	}
 	task->runtime_flags = targ->flags;
+	task->igmp_address =  rte_cpu_to_be_32(targ->igmp_address);
+	if (task->igmp_pool == NULL) {
+		static char name[] = "igmp0_pool";
+		name[4]++;
+		struct rte_mempool *ret = rte_mempool_create(name, NB_IGMP_MBUF, IGMP_MBUF_SIZE, NB_CACHE_IGMP_MBUF,
+			sizeof(struct rte_pktmbuf_pool_private), rte_pktmbuf_pool_init, NULL, rte_pktmbuf_init, 0,
+			rte_socket_id(), 0);
+		PROX_PANIC(ret == NULL, "Failed to allocate IGMP memory pool on socket %u with %u elements\n",
+			rte_socket_id(), NB_IGMP_MBUF);
+		plog_info("\t\tMempool %p (%s) size = %u * %u cache %u, socket %d\n", ret, name, NB_IGMP_MBUF,
+			IGMP_MBUF_SIZE, NB_CACHE_IGMP_MBUF, rte_socket_id());
+		task->igmp_pool = ret;
+	}
+	task->local_ipv4 = rte_cpu_to_be_32(targ->local_ipv4);
+
+	struct prox_port_cfg *port = find_reachable_port(targ);
+	if (port) {
+		task->offload_crc = port->requested_tx_offload & (DEV_TX_OFFLOAD_IPV4_CKSUM | DEV_TX_OFFLOAD_UDP_CKSUM);
+	}
 }
 
 static struct task_init task_init_swap = {
 	.mode_str = "swap",
 	.init = init_task_swap,
 	.handle = handle_swap_bulk,
-	.flag_features = TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS,
-	.size = sizeof(struct task_swap),
-};
-
-static struct task_init task_init_swap_arp = {
-	.mode_str = "swap",
-	.sub_mode_str = "l3",
-	.init = init_task_swap,
-	.handle = handle_swap_bulk,
-	.flag_features = TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS,
+	.flag_features = 0,
 	.size = sizeof(struct task_swap),
 };
 
 __attribute__((constructor)) static void reg_task_swap(void)
 {
 	reg_task(&task_init_swap);
-	reg_task(&task_init_swap_arp);
 }
