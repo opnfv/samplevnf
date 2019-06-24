@@ -18,6 +18,7 @@
 #define _COMMANDS_H_
 
 #include <inttypes.h>
+#include <rte_ether.h>
 
 struct input;
 
@@ -64,6 +65,7 @@ void cmd_set_cache_class(uint32_t lcore_id, uint32_t set);
 void cmd_cache_reset(void);
 
 void cmd_reset_port(uint8_t port_id);
+void cmd_multicast(uint8_t port_id, unsigned int val, struct ether_addr *mac);
 int reconnect_task(uint32_t lcore_id, uint32_t task_id);
 int bypass_task(uint32_t lcore_id, uint32_t task_id);
 
