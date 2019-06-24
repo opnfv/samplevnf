@@ -169,6 +169,7 @@ void set_port_defaults(void)
 {
 	for (uint8_t i = 0; i < PROX_MAX_PORTS; ++i ) {
 		prox_port_cfg[i].promiscuous = 1;
+		prox_port_cfg[i].nb_mc_addr = 0;
 		prox_port_cfg[i].n_rxd = NB_RX_RING_DESC;
 		prox_port_cfg[i].n_txd = NB_TX_RING_DESC;
 		prox_port_cfg[i].port_conf = default_port_conf;
