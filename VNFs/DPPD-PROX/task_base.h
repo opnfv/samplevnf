@@ -53,7 +53,6 @@
 #define TASK_FEATURE_LUT_QINQ_RSS              0x2000
 #define TASK_FEATURE_LUT_QINQ_HASH             0x4000
 #define TASK_FEATURE_RX_ALL                    0x8000
-#define TASK_MULTIPLE_MAC                      0x10000
 #define TASK_FEATURE_TXQ_FLAGS_MULTIPLE_MEMPOOL	0x20000
 
 #define FLAG_TX_FLUSH                  0x01
