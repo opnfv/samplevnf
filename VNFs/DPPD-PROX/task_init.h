@@ -232,6 +232,7 @@ struct task_args {
 	uint				irq_debug;
 	struct task_base *tmaster;
 	char sub_mode_str[PROX_MODE_LEN];
+	uint32_t               igmp_address;
 };
 
 /* Return the first port that is reachable through the task. If the

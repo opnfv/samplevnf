@@ -531,6 +531,17 @@ static int get_port_cfg(unsigned sindex, char *str, void *data)
 		}
 		cfg->promiscuous = val;
 	}
+	else if (STR_EQ(str, "multicast")) {
+		uint32_t val;
+		if (cfg->nb_mc_addr >= NB_MCAST_ADDR) {
+			plog_err("too many multicast addresses\n");
+			return -1;
+		}
+		if (parse_mac(&cfg->mc_addr[cfg->nb_mc_addr], pkey)) {
+			return -1;
+		}
+		cfg->nb_mc_addr++ ;
+	}
 	else if (STR_EQ(str, "lsc")) {
 		cfg->lsc_set_explicitely = 1;
 		uint32_t val;
@@ -1349,6 +1360,9 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 		}
 		targ->flags |= TASK_ARG_SRC_MAC_SET;
 		return 0;
+	}
+	if (STR_EQ(str, "igmp ipv4")) { /* IGMP Group */
+		return parse_ip(&targ->igmp_address, pkey);
 	}
 	if (STR_EQ(str, "gateway ipv4")) { /* Gateway IP address used when generating */
 		return parse_ip(&targ->gateway_ipv4, pkey);

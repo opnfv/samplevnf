@@ -25,6 +25,7 @@
 #include <rte_udp.h>
 #include <rte_tcp.h>
 #include <rte_mbuf.h>
+#include "igmp.h"
 
 #if RTE_VERSION >= RTE_VERSION_NUM(1,8,0,0)
 #define CALC_TX_OL(l2_len, l3_len) ((uint64_t)(l2_len) | (uint64_t)(l3_len) << 7)
@@ -64,5 +65,6 @@ void prox_ip_udp_cksum(struct rte_mbuf *mbuf, struct ipv4_hdr *buf, uint16_t l2_
 /* src_ip_addr/dst_ip_addr are in network byte order */
 void prox_udp_cksum_sw(struct udp_hdr *udp, uint16_t len, uint32_t src_ip_addr, uint32_t dst_ip_addr);
 void prox_tcp_cksum_sw(struct tcp_hdr *tcp, uint16_t len, uint32_t src_ip_addr, uint32_t dst_ip_addr);
+void prox_igmp_cksum_sw(struct igmpv2_hdr *igmp, uint16_t len);
 
 #endif /* _PROX_CKSUM_H_ */

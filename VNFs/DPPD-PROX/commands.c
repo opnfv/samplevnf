@@ -238,6 +238,61 @@ static struct size_unit to_size_unit(uint64_t bytes)
 	return ret;
 }
 
+static void add_multicast_addr(uint8_t port_id, struct ether_addr *addr)
+{
+        unsigned int i;
+	int rc;
+
+	if (port_id > PROX_MAX_PORTS) {
+		plog_err("requested port is higher than highest supported port ID (%u)\n", PROX_MAX_PORTS);
+		return;
+	}
+	struct prox_port_cfg* port_cfg = &prox_port_cfg[port_id];
+
+        for (i = 0; i < port_cfg->nb_mc_addr; i++) {
+                if (is_same_ether_addr(addr, &port_cfg->mc_addr[i])) {
+                        plog_info("multicast address already added to port\n");
+                        return;
+                }
+        }
+
+	port_cfg->nb_mc_addr++;
+	if (port_cfg->nb_mc_addr > NB_MCAST_ADDR) {
+		plog_err("Too many mcast addr on port %u\n", port_id);
+		return;
+	}
+	ether_addr_copy(addr, &port_cfg->mc_addr[port_cfg->nb_mc_addr-1]);
+	if ((rc = rte_eth_dev_set_mc_addr_list(port_id, port_cfg->mc_addr, port_cfg->nb_mc_addr)) != 0) {
+		plog_err("rte_eth_dev_set_mc_addr_list returns %d on port %u\n", rc, port_id);
+	} else
+		plog_info("rte_eth_dev_set_mc_addr_list(%d addr) on port %u\n", port_cfg->nb_mc_addr, port_id);
+}
+
+static void del_multicast_addr(uint8_t port_id, struct ether_addr *addr)
+{
+        unsigned int i;
+	int rc;
+
+	if (port_id > PROX_MAX_PORTS) {
+		plog_err("requested port is higher than highest supported port ID (%u)\n", PROX_MAX_PORTS);
+		return;
+	}
+	struct prox_port_cfg* port_cfg = &prox_port_cfg[port_id];
+
+        for (i = 0; i < port_cfg->nb_mc_addr; i++) {
+                if (is_same_ether_addr(addr, &port_cfg->mc_addr[i])) {
+			// Copy last address to the slot to be deleted
+			ether_addr_copy(&port_cfg->mc_addr[i], &port_cfg->mc_addr[port_cfg->nb_mc_addr-1]);
+			port_cfg->nb_mc_addr--;
+			if ((rc = rte_eth_dev_set_mc_addr_list(port_id, port_cfg->mc_addr, port_cfg->nb_mc_addr)) != 0) {
+				plog_err("rte_eth_dev_set_mc_addr_list returns %d on port %u\n", rc, port_id);
+			} else
+				plog_info("rte_eth_dev_set_mc_addr_list(%d addr) on port %u\n", port_cfg->nb_mc_addr, port_id);
+                       	return;
+                }
+        }
+	plog_err("multicast address not found on port %u\n", port_id);
+}
 void cmd_mem_stats(void)
 {
 	struct rte_malloc_socket_stats sock_stats;
@@ -850,6 +905,9 @@ void cmd_portinfo(int port_id, char *dst, size_t max_len)
 	dst += snprintf(dst, end - dst, "\tSocket: %u\n", port_cfg->socket);
 	dst += snprintf(dst, end - dst, "\tPCI address: %s\n", port_cfg->pci_addr);
 	dst += snprintf(dst, end - dst, "\tPromiscuous: %s\n", port_cfg->promiscuous? "yes" : "no");
+	for (unsigned int i = 0; i < port_cfg->nb_mc_addr; i++) {
+		dst += snprintf(dst, end - dst, "\tmcast address: "MAC_BYTES_FMT"\n", MAC_BYTES(port_cfg->mc_addr[i].addr_bytes));
+	}
 	dst += snprintf(dst, end - dst, "\tNumber of RX/TX descriptors: %u/%u\n", port_cfg->n_rxd, port_cfg->n_txd);
 	dst += snprintf(dst, end - dst, "\tNumber of RX/TX queues: %u/%u (max: %u/%u)\n", port_cfg->n_rxq, port_cfg->n_txq, port_cfg->max_rxq, port_cfg->max_txq);
 	dst += snprintf(dst, end - dst, "\tMemory pools:\n");
@@ -890,6 +948,24 @@ void cmd_reset_port(uint8_t portid)
 		plog_warn("Failed to restart port %d\n", portid);
 	}
 }
+
+void cmd_multicast(uint8_t portid, unsigned int val, struct ether_addr *mac)
+{
+	if (!prox_port_cfg[portid].active) {
+		plog_info("port not active \n");
+		return;
+	}
+	if (val == 1) {
+		rte_eth_allmulticast_enable(portid);
+		add_multicast_addr(portid, mac);
+	} else if (val == 0) {
+		rte_eth_allmulticast_disable(portid);
+		del_multicast_addr(portid, mac);
+	} else {
+		plog_err("Unexpected value in cmd_multicast on port %d\n", portid);
+	}
+}
+
 void cmd_write_reg(uint8_t port_id, unsigned int id, unsigned int val)
 {
 	if (!port_is_active(port_id)) {
