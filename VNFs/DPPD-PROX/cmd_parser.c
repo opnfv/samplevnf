@@ -52,6 +52,7 @@
 #include "handle_cgnat.h"
 #include "handle_impair.h"
 #include "rx_pkt.h"
+#include "igmp.h"
 
 static int core_task_is_valid(int lcore_id, int task_id)
 {
@@ -1241,6 +1242,31 @@ static int parse_cmd_tot_imissed_tot(const char *str, struct input *input)
 	return 0;
 }
 
+static int parse_cmd_enable_multicast(const char *str, struct input *input)
+{
+	uint32_t port_id;
+	struct ether_addr mac;
+
+	if (sscanf(str, "%u %hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &port_id, mac.addr_bytes, mac.addr_bytes + 1, mac.addr_bytes + 2, mac.addr_bytes + 3, mac.addr_bytes + 4, mac.addr_bytes + 5 ) != 7) {
+                return -1;
+        }
+	cmd_multicast(port_id, 1, &mac);
+	return 0;
+}
+
+static int parse_cmd_disable_multicast(const char *str, struct input *input)
+{
+	uint32_t port_id;
+	struct ether_addr mac;
+
+	if (sscanf(str, "%u %hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &port_id, mac.addr_bytes, mac.addr_bytes + 1, mac.addr_bytes + 2, mac.addr_bytes + 3, mac.addr_bytes + 4, mac.addr_bytes + 5 ) != 7) {
+                return -1;
+        }
+
+	cmd_multicast(port_id, 0, &mac);
+	return 0;
+}
+
 static int parse_cmd_reset_port(const char *str, struct input *input)
 {
 	uint32_t port_id;
@@ -1908,6 +1934,60 @@ static int parse_cmd_accuracy(const char *str, struct input *input)
 	return 0;
 }
 
+static int parse_cmd_leave_igmp(const char *str, struct input *input)
+{
+	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
+	uint32_t val;
+
+	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+		return -1;
+	if (!(str = strchr_skip_twice(str, ' ')))
+		return -1;
+
+	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
+		for (unsigned int i = 0; i < nb_cores; i++) {
+			lcore_id = lcores[i];
+
+			if (!task_is_mode(lcore_id, task_id, "swap")) {
+				plog_err("Core %u task %u is not running swap\n", lcore_id, task_id);
+			}
+			else {
+				struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
+				igmp_leave_group(tbase);
+			}
+		}
+	}
+	return 0;
+}
+
+static int parse_cmd_join_igmp(const char *str, struct input *input)
+{
+	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores, ip[4];
+
+	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+		return -1;
+	if (!(str = strchr_skip_twice(str, ' ')))
+		return -1;
+	if (sscanf(str, "%u.%u.%u.%u", ip, ip + 1, ip + 2, ip + 3) != 4) {
+		return -1;
+	}
+	uint32_t igmp_ip = ((ip[3] & 0xFF) << 24) | ((ip[2] & 0xFF) << 16) | ((ip[1] & 0xFF) << 8) | ((ip[0] & 0xFF) << 0);
+	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
+		for (unsigned int i = 0; i < nb_cores; i++) {
+			lcore_id = lcores[i];
+
+			if (!task_is_mode(lcore_id, task_id, "swap")) {
+				plog_err("Core %u task %u is not running swap\n", lcore_id, task_id);
+			}
+			else {
+				struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
+				igmp_join_group(tbase, igmp_ip);
+			}
+		}
+	}
+	return 0;
+}
+
 static int parse_cmd_rx_tx_info(const char *str, struct input *input)
 {
 	if (strcmp(str, "") != 0) {
@@ -2022,6 +2102,8 @@ static struct cmd_str cmd_strings[] = {
 	{"get cache class", "<core id>", "Get cache class", parse_cmd_get_cache_class},
 	{"get cache mask", "<core id>", "Get cache mask", parse_cmd_get_cache_mask},
 	{"reset port", "", "Reset port", parse_cmd_reset_port},
+	{"enable multicast", "", "Enable multicast", parse_cmd_enable_multicast},
+	{"disable multicast", "", "Disable multicast", parse_cmd_disable_multicast},
 	{"ring info all", "", "Get information about ring, such as ring size and number of elements in the ring", parse_cmd_ring_info_all},
 	{"ring info", "<core id> <task id>", "Get information about ring on core <core id> in task <task id>, such as ring size and number of elements in the ring", parse_cmd_ring_info},
 	{"port info", "<port id> [brief?]", "Get port related information, such as MAC address, socket, number of descriptors..., . Adding \"brief\" after command prints short version of output.", parse_cmd_port_info},
@@ -2036,6 +2118,8 @@ static struct cmd_str cmd_strings[] = {
 	{"random delay_us", "<core_id> <task_id> <random delay_us>", "Set the delay in usec for the impair mode to <random delay_us>", parse_cmd_random_delay_us},
 	{"probability", "<core_id> <task_id> <probability>", "Set the percent of forwarded packets for the impair mode", parse_cmd_set_probability},
 	{"version", "", "Show version", parse_cmd_version},
+	{"join igmp", "<core_id> <task_id> <ip>", "Send igmp membership report for group <ip>", parse_cmd_join_igmp},
+	{"leave igmp", "<core_id> <task_id> <ip>", "Send igmp leave group <ip>", parse_cmd_leave_igmp},
 	{0,0,0,0},
 };
 

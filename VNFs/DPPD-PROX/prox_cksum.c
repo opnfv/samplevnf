@@ -112,6 +112,10 @@ inline void prox_ip_udp_cksum(struct rte_mbuf *mbuf, struct ipv4_hdr *pip, uint1
 		} else
 #endif
 		prox_tcp_cksum_sw(tcp, l4_len, pip->src_addr, pip->dst_addr);
+	} else if (pip->next_proto_id == IPPROTO_IGMP) {
+		struct igmpv2_hdr *igmp = (struct igmpv2_hdr *)(((uint8_t*)pip) + l3_len);
+		// Not sure NIC can offload IGMP checkum => do it in software
+		prox_igmp_cksum_sw(igmp, l4_len);
 	}
 }
 
@@ -152,4 +156,10 @@ inline void prox_tcp_cksum_sw(struct tcp_hdr *tcp, uint16_t len, uint32_t src_ip
 
 	uint16_t csum = checksum_byte_seq((uint16_t *)tcp, len);
 	tcp->cksum = csum;
+}
+
+inline void prox_igmp_cksum_sw(struct igmpv2_hdr *igmp, uint16_t len)
+{
+	uint16_t csum = checksum_byte_seq((uint16_t *)igmp, len);
+	igmp->checksum = csum;
 }

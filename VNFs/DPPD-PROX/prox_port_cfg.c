@@ -41,6 +41,7 @@
 #include "prox_cksum.h"
 #include "stats_irq.h"
 #include "prox_compat.h"
+#include "rte_ethdev.h"
 
 struct prox_port_cfg prox_port_cfg[PROX_MAX_PORTS];
 rte_atomic32_t lsc;
@@ -518,7 +519,7 @@ static void init_port(struct prox_port_cfg *port_cfg)
 #if RTE_VERSION >= RTE_VERSION_NUM(2,0,0,0)
 	port_cfg->port_conf.rx_adv_conf.rss_conf.rss_hf &= port_cfg->dev_info.flow_type_rss_offloads;
 #endif
-	plog_info("\t\t Enabling RSS rss_hf = 0x%lx (requested 0x%llx)\n", port_cfg->port_conf.rx_adv_conf.rss_conf.rss_hf, ETH_RSS_IP|ETH_RSS_UDP);
+	plog_info("\t\t Enabling RSS rss_hf = 0x%lx (requested 0x%llx, supported 0x%lx)\n", port_cfg->port_conf.rx_adv_conf.rss_conf.rss_hf, ETH_RSS_IP|ETH_RSS_UDP, port_cfg->dev_info.flow_type_rss_offloads);
 
 	// rxmode such as hw src strip
 #if RTE_VERSION >= RTE_VERSION_NUM(18,8,0,1)
@@ -686,6 +687,15 @@ static void init_port(struct prox_port_cfg *port_cfg)
 				plog_info("\t\trte_eth_dev_set_tx_queue_stats_mapping() failed: error %d\n", ret);
 			}
 		}
+	}
+	if (port_cfg->nb_mc_addr) {
+		rte_eth_allmulticast_enable(port_id);
+		if ((ret = rte_eth_dev_set_mc_addr_list(port_id, port_cfg->mc_addr, port_cfg->nb_mc_addr)) != 0) {
+			plog_err("\t\trte_eth_dev_set_mc_addr_list returns %d on port %u\n", ret, port_id);
+		} else {
+			plog_info("\t\trte_eth_dev_set_mc_addr_list(%d addr) on port %u\n", port_cfg->nb_mc_addr, port_id);
+		}
+		plog_info("\t\tport %u in multicast mode\n", port_id);
 	}
 }
 

@@ -32,6 +32,7 @@ enum addr_type {PROX_PORT_MAC_HW, PROX_PORT_MAC_SET, PROX_PORT_MAC_RAND};
 
 #define IPV4_CKSUM	1
 #define UDP_CKSUM	2
+#define NB_MCAST_ADDR	16
 
 struct prox_port_cfg {
 	struct rte_mempool *pool[32];  /* Rx/Tx mempool */
@@ -71,6 +72,8 @@ struct prox_port_cfg {
 	} capabilities;
 	uint32_t max_rx_pkt_len;
 	uint32_t min_rx_bufsize;
+	uint32_t nb_mc_addr;
+	struct ether_addr mc_addr[NB_MCAST_ADDR];
 };
 
 extern rte_atomic32_t lsc;
