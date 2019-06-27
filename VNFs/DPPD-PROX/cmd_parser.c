@@ -1752,7 +1752,9 @@ static int parse_cmd_lat_stats(const char *str, struct input *input)
 				} else {
 					plog_info("error: invalid core %u, task %u\n", lcore_id, task_id);
 				}
-			} else if (!task_is_mode(lcore_id, task_id, "lat")) {
+				continue;
+			}
+			if (!task_is_mode(lcore_id, task_id, "lat")) {
 				if (input->reply) {
 					char buf[128];
 					snprintf(buf, sizeof(buf), "error: core %u task %u is not measuring latency\n", lcore_id, task_id);
@@ -1760,56 +1762,56 @@ static int parse_cmd_lat_stats(const char *str, struct input *input)
 				} else {
 					plog_info("error: core %u task %u is not measuring latency\n", lcore_id, task_id);
 				}
+				continue;
 			}
-			else {
-				struct stats_latency *stats = stats_latency_find(lcore_id, task_id);
-				struct stats_latency *tot = stats_latency_tot_find(lcore_id, task_id);
-				if (!stats || !tot) {
-					if (input->reply) {
-						char buf[128];
-						snprintf(buf, sizeof(buf),
-							 "error: core %u task %u stats = %p tot = %p\n",
-							 lcore_id, task_id, stats, tot);
-						input->reply(input, buf, strlen(buf));
-					} else {
-						plog_info("error: core %u task %u stats = %p tot = %p\n",
-							  lcore_id, task_id, stats, tot);
-					}
-					continue;
-				}
 
-				uint64_t last_tsc = stats_core_task_last_tsc(lcore_id, task_id);
-				uint64_t lat_min_usec = time_unit_to_usec(&stats->min.time);
-				uint64_t lat_max_usec = time_unit_to_usec(&stats->max.time);
-				uint64_t tot_lat_min_usec = time_unit_to_usec(&tot->min.time);
-				uint64_t tot_lat_max_usec = time_unit_to_usec(&tot->max.time);
-				uint64_t lat_avg_usec = time_unit_to_usec(&stats->avg.time);
-
+			struct stats_latency *stats = stats_latency_find(lcore_id, task_id);
+			struct stats_latency *tot = stats_latency_tot_find(lcore_id, task_id);
+			if (!stats || !tot) {
 				if (input->reply) {
 					char buf[128];
 					snprintf(buf, sizeof(buf),
-						 "%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%u,%u\n",
-						 lat_min_usec,
-						 lat_max_usec,
-						 lat_avg_usec,
-						 tot_lat_min_usec,
-						 tot_lat_max_usec,
-						 last_tsc,
-						 rte_get_tsc_hz(),
-						 lcore_id,
-						 task_id);
+						 "error: core %u task %u stats = %p tot = %p\n",
+						 lcore_id, task_id, stats, tot);
 					input->reply(input, buf, strlen(buf));
+				} else {
+					plog_info("error: core %u task %u stats = %p tot = %p\n",
+						  lcore_id, task_id, stats, tot);
 				}
-				else {
-					plog_info("core: %u, task: %u, min: %"PRIu64", max: %"PRIu64", avg: %"PRIu64", min since reset: %"PRIu64", max since reset: %"PRIu64"\n",
-						  lcore_id,
-						  task_id,
-						  lat_min_usec,
-						  lat_max_usec,
-						  lat_avg_usec,
-						  tot_lat_min_usec,
-						  tot_lat_max_usec);
-				}
+				continue;
+			}
+
+			uint64_t last_tsc = stats_core_task_last_tsc(lcore_id, task_id);
+			uint64_t lat_min_usec = time_unit_to_usec(&stats->min.time);
+			uint64_t lat_max_usec = time_unit_to_usec(&stats->max.time);
+			uint64_t tot_lat_min_usec = time_unit_to_usec(&tot->min.time);
+			uint64_t tot_lat_max_usec = time_unit_to_usec(&tot->max.time);
+			uint64_t lat_avg_usec = time_unit_to_usec(&stats->avg.time);
+
+			if (input->reply) {
+				char buf[128];
+				snprintf(buf, sizeof(buf),
+					 "%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%u,%u\n",
+					 lat_min_usec,
+					 lat_max_usec,
+					 lat_avg_usec,
+					 tot_lat_min_usec,
+					 tot_lat_max_usec,
+					 last_tsc,
+					 rte_get_tsc_hz(),
+					 lcore_id,
+					 task_id);
+				input->reply(input, buf, strlen(buf));
+			}
+			else {
+				plog_info("core: %u, task: %u, min: %"PRIu64", max: %"PRIu64", avg: %"PRIu64", min since reset: %"PRIu64", max since reset: %"PRIu64"\n",
+					  lcore_id,
+					  task_id,
+					  lat_min_usec,
+					  lat_max_usec,
+					  lat_avg_usec,
+					  tot_lat_min_usec,
+					  tot_lat_max_usec);
 			}
 		}
 	}
