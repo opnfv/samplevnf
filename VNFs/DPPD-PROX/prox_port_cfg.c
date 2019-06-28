@@ -352,8 +352,14 @@ static void print_port_capa(struct prox_port_cfg *port_cfg)
 		plog_info("VLAN EXTEND | ");
 	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_JUMBO_FRAME)
 		plog_info("JUMBO FRAME | ");
+#if defined(DEV_RX_OFFLOAD_CRC_STRIP)
 	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_CRC_STRIP)
 		plog_info("CRC STRIP | ");
+#endif
+#if defined(DEV_RX_OFFLOAD_KEEP_CRC)
+	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_KEEP_CRC)
+		plog_info("KEEP CRC | ");
+#endif
 	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_SCATTER)
 		plog_info("SCATTER | ");
 	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_TIMESTAMP)
@@ -523,7 +529,12 @@ static void init_port(struct prox_port_cfg *port_cfg)
 
 	// rxmode such as hw src strip
 #if RTE_VERSION >= RTE_VERSION_NUM(18,8,0,1)
+#if defined (DEV_RX_OFFLOAD_CRC_STRIP)
 	CONFIGURE_RX_OFFLOAD(DEV_RX_OFFLOAD_CRC_STRIP);
+#endif
+#if defined (DEV_RX_OFFLOAD_KEEP_CRC)
+	CONFIGURE_RX_OFFLOAD(DEV_RX_OFFLOAD_KEEP_CRC);
+#endif
 	CONFIGURE_RX_OFFLOAD(DEV_RX_OFFLOAD_JUMBO_FRAME);
 	CONFIGURE_RX_OFFLOAD(DEV_RX_OFFLOAD_VLAN_STRIP);
 #else

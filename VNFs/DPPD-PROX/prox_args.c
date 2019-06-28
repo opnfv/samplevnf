@@ -568,10 +568,20 @@ static int get_port_cfg(unsigned sindex, char *str, void *data)
 		if (parse_bool(&val, pkey)) {
 			return -1;
 		}
+#if defined(DEV_RX_OFFLOAD_CRC_STRIP)
 		if (val)
 			cfg->requested_rx_offload |= DEV_RX_OFFLOAD_CRC_STRIP;
 		else
 			cfg->requested_rx_offload &= ~DEV_RX_OFFLOAD_CRC_STRIP;
+#else
+#if defined (DEV_RX_OFFLOAD_KEEP_CRC)
+		if (val)
+			cfg->requested_rx_offload &= ~DEV_RX_OFFLOAD_KEEP_CRC;
+		else
+#endif
+			cfg->requested_rx_offload |= DEV_RX_OFFLOAD_KEEP_CRC;
+#endif
+
 	}
 	else if (STR_EQ(str, "vlan")) {
 #if RTE_VERSION >= RTE_VERSION_NUM(18,8,0,1)
