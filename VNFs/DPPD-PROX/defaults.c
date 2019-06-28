@@ -177,7 +177,12 @@ void set_port_defaults(void)
 		prox_port_cfg[i].rx_ring[0] = '\0';
 		prox_port_cfg[i].tx_ring[0] = '\0';
 		prox_port_cfg[i].mtu = PROX_MTU;
+
+		// CRC_STRIP becoming the default behavior in DPDK 18.08, and
+		// DEV_RX_OFFLOAD_CRC_STRIP define has been deleted
+#if defined (DEV_RX_OFFLOAD_CRC_STRIP)
 		prox_port_cfg[i].requested_rx_offload = DEV_RX_OFFLOAD_CRC_STRIP;
+#endif
 		prox_port_cfg[i].requested_tx_offload = DEV_TX_OFFLOAD_IPV4_CKSUM | DEV_TX_OFFLOAD_UDP_CKSUM;
 	}
 }
