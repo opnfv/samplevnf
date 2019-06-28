@@ -1262,6 +1262,9 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 		return parse_int(&targ->byte_offset, pkey);
 	}
 
+	if (STR_EQ(str, "realtime scheduling")) {
+		return parse_flag(&lconf->flags, LCONF_FLAG_SCHED_RR, pkey);
+	}
 	if (STR_EQ(str, "name")) {
 		return parse_str(lconf->name, pkey, sizeof(lconf->name));
 	}
