@@ -286,12 +286,23 @@ static void nic_read_stats(uint8_t port_id)
 			   dropped by the nic". Note that in case CRC
 			   is stripped on ixgbe, the CRC bytes are not
 			   counted. */
+#if defined (DEV_RX_OFFLOAD_CRC_STRIP)
 			if (prox_port_cfg[port_id].requested_rx_offload & DEV_RX_OFFLOAD_CRC_STRIP)
 				stats->rx_bytes = eth_stat.ibytes +
 					(24 * eth_stat.ipackets - 20 * (eth_stat.ierrors + eth_stat.imissed));
 			else
 				stats->rx_bytes = eth_stat.ibytes +
 					(20 * eth_stat.ipackets - 20 * (eth_stat.ierrors + eth_stat.imissed));
+#else
+#if defined (DEV_RX_OFFLOAD_KEEP_CRC)
+			if (prox_port_cfg[port_id].requested_rx_offload & DEV_RX_OFFLOAD_KEEP_CRC)
+				stats->rx_bytes = eth_stat.ibytes +
+					(20 * eth_stat.ipackets - 20 * (eth_stat.ierrors + eth_stat.imissed));
+			else
+				stats->rx_bytes = eth_stat.ibytes +
+					(24 * eth_stat.ipackets - 20 * (eth_stat.ierrors + eth_stat.imissed));
+#endif
+#endif
 		}
 	} else if (strcmp(prox_port_cfg[port_id].short_name, "i40e_vf") == 0) {
 		// For I40E VF, imissed already part of received packets
