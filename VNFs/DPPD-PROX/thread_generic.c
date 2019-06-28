@@ -14,6 +14,7 @@
 // limitations under the License.
 */
 
+#include <pthread.h>
 #include <rte_cycles.h>
 #include <rte_table_hash.h>
 
@@ -83,6 +84,26 @@ static uint64_t tsc_ctrl(struct lcore_cfg *lconf)
 	return lconf->ctrl_timeout;
 }
 
+static void set_thread_policy(int policy)
+{
+	struct sched_param p;
+	int ret, old_policy, old_priority;
+
+	memset(&p, 0, sizeof(p));
+	ret = pthread_getschedparam(pthread_self(), &old_policy, &p);
+	if (ret) {
+		plog_err("Failed getting thread policy: %d\n", ret);
+		return;
+	}
+	old_priority = p.sched_priority;
+	p.sched_priority = sched_get_priority_max(policy);
+	ret = pthread_setschedparam(pthread_self(), policy, &p);
+	if (ret) {
+		plog_err("Failed setting thread priority: %d", ret);
+	} else
+		plog_info("Thread policy/priority changed from %d/%d to %d/%d\n", old_policy, old_priority, policy, p.sched_priority);
+}
+
 int thread_generic(struct lcore_cfg *lconf)
 {
 	struct task_base *tasks[MAX_TASKS_PER_CORE];
@@ -98,6 +119,9 @@ int thread_generic(struct lcore_cfg *lconf)
 		{.tsc = -1},
 	};
 	uint8_t n_tasks_run = lconf->n_tasks_run;
+
+	if (lconf->flags & LCONF_FLAG_SCHED_RR)
+		set_thread_policy(SCHED_RR);
 
 	if (lconf->period_func) {
 		tsc_tasks[2].tsc = cur_tsc + lconf->period_timeout;
