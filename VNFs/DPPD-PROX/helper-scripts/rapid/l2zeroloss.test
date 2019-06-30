@@ -16,10 +16,11 @@
 
 [DEFAULT]
 name = L2BasicSwapTesting
-number_of_tests = 4
+number_of_tests = 2
 total_number_of_test_machines = 2
 prox_socket = true
 prox_launch_exit = true
+tasks=[0]
 
 [TestM1]
 name = Generator
@@ -27,7 +28,6 @@ config_file = l2gen.cfg
 dest_vm = 2
 gencores = [1]
 latcores = [3]
-startspeed = 10
 
 [TestM2]
 name = Swap
@@ -39,18 +39,20 @@ drop_rate_threshold = 0
 lat_avg_threshold = 500
 lat_max_threshold = 1000
 accuracy = 0.1
-
+startspeed = 10
 
 [test1]
-test=inittest
+test=warmuptest
+flowsize=1024
+packetsize=64
+warmupspeed=1
+warmuptime=2
 
 [test2]
-test=speedtest
-packetsize=64
-
-[test3]
-test=sizetest
-
-[test4]
-test=flowtest
-packetsize=64
+test=flowsizetest
+packetsizes=[64]
+# the number of flows in the list need to be powers of 2, max 2^20
+# # Select from following numbers: 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65535, 131072, 262144, 524280, 1048576
+# flows=[1,512]
+#
+#

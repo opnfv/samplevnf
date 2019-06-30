@@ -9,3 +9,4 @@ ExecStart=/usr/local/libexec/check_prox_system_setup.sh
 
 [Install]
 WantedBy=multi-user.target
+

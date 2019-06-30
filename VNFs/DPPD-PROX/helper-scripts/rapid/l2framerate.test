@@ -20,6 +20,7 @@ number_of_tests = 2
 total_number_of_test_machines = 2
 prox_socket = true
 prox_launch_exit = true
+tasks=[0]
 
 [TestM1]
 name = Generator
@@ -35,8 +36,14 @@ config_file = l2swap.cfg
 swapcores = [1]
 
 [test1]
-test=inittest
+test=warmuptest
+flowsize=1024
+packetsize=64
+warmupspeed=10
+warmuptime=2
+
 
 [test2]
-test=max_frame_rate
+test=fixed_rate
 packetsizes=[256]
+speed=10

@@ -16,9 +16,9 @@
 ##
 
 BUILD_DIR="/opt/openstackrapid"
-COPY_DIR="/home/centos" # Directory where the packer tool has copied some files
+COPY_DIR="/home/centos" # Directory where the packer tool has copied some files (e.g. check_prox_system_setup.sh)
 DPDK_VERSION="18.08"
-PROX_COMMIT="af95b812"
+PROX_COMMIT="c8e9e6bb696363a397b2e718eb4d3e5f38a8ef22"
 export RTE_SDK="${BUILD_DIR}/dpdk-${DPDK_VERSION}"
 export RTE_TARGET="x86_64-native-linuxapp-gcc"
 
@@ -31,7 +31,7 @@ function os_pkgs_install()
 	sudo yum update -y
 	sudo yum install -y git wget gcc unzip libpcap-devel ncurses-devel \
 			 libedit-devel lua-devel kernel-devel iperf3 pciutils \
-			 numactl-devel vim tuna openssl-devel nasm
+			 numactl-devel vim tuna openssl-devel nasm wireshark
 }
 
 function os_cfg()
@@ -39,10 +39,7 @@ function os_cfg()
 	# Enabling root ssh access
 	sudo sed -i '/disable_root: 1/c\disable_root: 0' /etc/cloud/cloud.cfg
 
-	# Mounting huge pages to be used by DPDK, mounting already done by CentOS
-	# sudo mkdir -p /mnt/huge
-	# sudo umount `awk '/hugetlbfs/ { print $2 }' /proc/mounts` >/dev/null 2>&1
-	# sudo mount -t hugetlbfs nodev /mnt/huge/
+	# huge pages to be used by DPDK
 	sudo sh -c '(echo "vm.nr_hugepages = 1024") > /etc/sysctl.conf'
 
 	# Enabling tuned with the realtime-virtual-guest profile
@@ -115,25 +112,37 @@ function dpdk_install()
 	popd > /dev/null 2>&1
 }
 
+function prox_compile()
+{
+	# Compile PROX
+	pushd ${BUILD_DIR}/samplevnf/VNFs/DPPD-PROX
+	make -j`getconf _NPROCESSORS_ONLN`
+	popd > /dev/null 2>&1
+}
+
 function prox_install()
 {
 	# Clone and compile PROX
 	pushd ${BUILD_DIR} > /dev/null 2>&1
 	git clone https://git.opnfv.org/samplevnf
 	pushd ${BUILD_DIR}/samplevnf/VNFs/DPPD-PROX
-#	git checkout ffc6be26
 	git checkout ${PROX_COMMIT}
-	make -j`getconf _NPROCESSORS_ONLN`
-	sudo ln -s ${BUILD_DIR}/samplevnf/VNFs/DPPD-PROX /root/prox
 	popd > /dev/null 2>&1
+	prox_compile
+	sudo ln -s ${BUILD_DIR}/samplevnf/VNFs/DPPD-PROX /root/prox
 	popd > /dev/null 2>&1
 }
 
-[ ! -d ${BUILD_DIR} ] && sudo mkdir -p ${BUILD_DIR}
-sudo chmod 0777 ${BUILD_DIR}
+if [ "$1" == "compile" ]; then
+	prox_compile
+else
+	echo "Positional parameter 1 is empty"
+	[ ! -d ${BUILD_DIR} ] && sudo mkdir -p ${BUILD_DIR}
+	sudo chmod 0777 ${BUILD_DIR}
 
-os_pkgs_install
-os_cfg
-mblib_install
-dpdk_install
-prox_install
+	os_pkgs_install
+	os_cfg
+	mblib_install
+	dpdk_install
+	prox_install
+fi
