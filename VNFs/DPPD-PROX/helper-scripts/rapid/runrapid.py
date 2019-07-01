@@ -326,6 +326,7 @@ def run_flow_size_test(gensock,sutsock):
 			minspeed = 0
 			while (maxspeed-minspeed > ACCURACY):
 				attempts += 1
+				endwarning =''
 				print(str(flow_number)+' flows: Measurement ongoing at speed: ' + str(round(speed,2)) + '%      ',end='\r')
 				sys.stdout.flush()
 				# Start generating packets at requested speed (in % of a 10Gb/s link)
@@ -361,7 +362,8 @@ def run_flow_size_test(gensock,sutsock):
 					endlat_max = lat_max 
 					endabs_dropped = abs_dropped
 					enddrop_rate = drop_rate
-					endwarning = '|        |' + lat_warning + gen_warning
+					if lat_warning or gen_warning:
+						endwarning = '|        | {:167.167} |'.format(lat_warning + gen_warning)
 					success = True
 					success_message='%  | SUCCESS'
 				else:
