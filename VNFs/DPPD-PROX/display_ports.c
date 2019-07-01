@@ -179,10 +179,10 @@ static void display_ports_draw_per_sec_stats(void)
 		/* Take 20 bytes overhead (or 24 if crc strip is enabled) into accound */
 		struct percent rx_percent;
 		struct percent tx_percent;
-		if (strcmp(prox_port_cfg[port_id].short_name, "i40e") == 0) {
+		if (strcmp(prox_port_cfg[port_id].short_name, "i40e_vf") == 0) {
 #if defined (DEV_RX_OFFLOAD_CRC_STRIP)
 			if (prox_port_cfg[port_id].requested_rx_offload & DEV_RX_OFFLOAD_CRC_STRIP) {
-				rx_percent = calc_percent(last->rx_bytes - prev->rx_bytes + 24 * (last->rx_tot - prev->rx_tot), delta_t);
+				rx_percent = calc_percent(last->rx_bytes - prev->rx_bytes + 20 * (last->rx_tot - prev->rx_tot), delta_t);
 				tx_percent = calc_percent(last->tx_bytes - prev->tx_bytes + 24 * (last->tx_tot - prev->tx_tot), delta_t);
 			} else {
 				rx_percent = calc_percent(last->rx_bytes - prev->rx_bytes + 20 * (last->rx_tot - prev->rx_tot), delta_t);
@@ -203,7 +203,7 @@ static void display_ports_draw_per_sec_stats(void)
 				rx_percent = calc_percent(last->rx_bytes - prev->rx_bytes + 20 * (last->rx_tot - prev->rx_tot), delta_t);
 				tx_percent = calc_percent(last->tx_bytes - prev->tx_bytes + 20 * (last->tx_tot - prev->tx_tot), delta_t);
 			} else {
-				rx_percent = calc_percent(last->rx_bytes - prev->rx_bytes + 24 * (last->rx_tot - prev->rx_tot), delta_t);
+				rx_percent = calc_percent(last->rx_bytes - prev->rx_bytes + 20 * (last->rx_tot - prev->rx_tot), delta_t);
 				tx_percent = calc_percent(last->tx_bytes - prev->tx_bytes + 24 * (last->tx_tot - prev->tx_tot), delta_t);
 			}
 		} else {
