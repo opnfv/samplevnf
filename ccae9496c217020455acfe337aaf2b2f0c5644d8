@@ -1,0 +1,72 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1f23699e_f4a82184",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/bare.test",
+        "patchSetId": 1
+      },
+      "lineNbr": 46,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-07-02T09:47:53Z",
+      "side": 1,
+      "message": "You do a warmup with 1024 flows, but the real tests only use 512 flows. Any reason?",
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "526b0d6e_bf519908",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/basicrapid.test",
+        "patchSetId": 1
+      },
+      "lineNbr": 56,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-07-02T09:47:53Z",
+      "side": 1,
+      "message": "same question as for bare.test - why 512 flows while 1024 in warmup?",
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "812ada64_c226fbb3",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/l2gen_bare.cfg",
+        "patchSetId": 1
+      },
+      "lineNbr": 2,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-07-02T09:47:53Z",
+      "side": 1,
+      "message": "date",
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3ccdbb93_efd1bd91",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/sharkproxlog.sh",
+        "patchSetId": 1
+      },
+      "lineNbr": 1,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-07-02T09:47:53Z",
+      "side": 1,
+      "message": "Missing Header",
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
