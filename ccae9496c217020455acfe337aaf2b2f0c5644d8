@@ -2,6 +2,29 @@
   "comments": [
     {
       "key": {
+        "uuid": "e499234d_4ec38084",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/bare.test",
+        "patchSetId": 1
+      },
+      "lineNbr": 2,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-02T12:52:15Z",
+      "side": 1,
+      "message": "2019",
+      "range": {
+        "startLine": 2,
+        "startChar": 22,
+        "endLine": 2,
+        "endChar": 26
+      },
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "1f23699e_f4a82184",
         "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/bare.test",
         "patchSetId": 1
@@ -36,6 +59,80 @@
     },
     {
       "key": {
+        "uuid": "d9c1ff8f_5d2360fc",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/createrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 215,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-02T12:52:15Z",
+      "side": 1,
+      "message": "Now this checks and creates the dataplane subnet, only when dataplane netwok did not exist and has been created.\nThat\u0027s fine as long as there is no possibility that the network already exists while the subnet does not.",
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "8840b380_37ff1b9f",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/createrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 326,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-02T12:52:15Z",
+      "side": 1,
+      "message": "Don\u0027t you need to append to nic_info in the loop, instead of replacing it with each iteration?",
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "12be7d90_d8b0296f",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/deploycentostools.sh",
+        "patchSetId": 1
+      },
+      "lineNbr": 21,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-02T12:52:15Z",
+      "side": 1,
+      "message": "Latest is now: 080733bfa5facd0eb457fc3db1c3ee7885f2a438",
+      "range": {
+        "startLine": 21,
+        "startChar": 13,
+        "endLine": 21,
+        "endChar": 53
+      },
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bf9978d3_e53b10b9",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/deploycentostools.sh",
+        "patchSetId": 1
+      },
+      "lineNbr": 139,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-02T12:52:15Z",
+      "side": 1,
+      "message": "Looks like a debugging comment to be removed",
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "812ada64_c226fbb3",
         "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/l2gen_bare.cfg",
         "patchSetId": 1
@@ -47,6 +144,269 @@
       "writtenOn": "2019-07-02T09:47:53Z",
       "side": 1,
       "message": "date",
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7471ffdb_ce6ca781",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/l2zeroloss.test",
+        "patchSetId": 1
+      },
+      "lineNbr": 56,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-02T12:52:15Z",
+      "side": 1,
+      "message": "Looks like this line should not be commented out",
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5e532801_c47b1e67",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/prox_ctrl.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 186,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-02T12:52:15Z",
+      "side": 1,
+      "message": "The syntax used in .test files creates list (array) objects. The curly braces here create a set object as default value. You should use brackets instead, to create a literal list as default value: [0] instead of {0}",
+      "range": {
+        "startLine": 186,
+        "startChar": 37,
+        "endLine": 186,
+        "endChar": 40
+      },
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "2e045d49_32e9f8ba",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/prox_ctrl.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 195,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-02T12:52:15Z",
+      "side": 1,
+      "message": "lat stats",
+      "range": {
+        "startLine": 195,
+        "startChar": 33,
+        "endLine": 195,
+        "endChar": 46
+      },
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a1cb3d1_a1dcac54",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/prox_ctrl.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 196,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-02T12:52:15Z",
+      "side": 1,
+      "message": "lat stats",
+      "range": {
+        "startLine": 196,
+        "startChar": 36,
+        "endLine": 196,
+        "endChar": 49
+      },
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ccfb52f4_c9e62058",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/prox_ctrl.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 201,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-02T12:52:15Z",
+      "side": 1,
+      "message": "This was valid with the previous loop with len(cores) iterations.\nNow there are len(cores) * len(tasks) iterations, and some additions to avg_lat can be skipped by the continue, so you should maintain a counter of how many times avg_lat has been updated in the loop, and divide by this counter here.",
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "4f5ea4f3_88abdf6c",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/prox_ctrl.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 220,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-02T12:52:15Z",
+      "side": 1,
+      "message": "Ditto, this should be [0] instead of {0}",
+      "range": {
+        "startLine": 220,
+        "startChar": 38,
+        "endLine": 220,
+        "endChar": 41
+      },
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ed00ca7e_5ee0c488",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/prox_ctrl.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 240,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-02T12:52:15Z",
+      "side": 1,
+      "message": "This line can be deleted",
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d35ee1c0_13b83d78",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 88,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-02T12:52:15Z",
+      "side": 1,
+      "message": "Does this work as expected?\nBrackets are used to create literal list (array) objects.\nParentheses are used to create literal tuple objects, but when the tuple has one item only, a comma must be provided between this single item and the closing parenthesis, otherwise the parentheses are understood as precedence grouping operators.\nSo I\u0027m afraid that the \"in\" operator applies to the \"--env\" string, considered as an array of characters, and that\u0027s not what we want to test here.\nPlease either add a comma for all single item tuples, e.g. (\"--env\", ) or convert from tuple literals to list literals, e.g. [\"--env\"]",
+      "range": {
+        "startLine": 88,
+        "startChar": 11,
+        "endLine": 88,
+        "endChar": 20
+      },
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6735c4c9_9d2b030f",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 103,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-02T12:52:15Z",
+      "side": 1,
+      "message": "Not sure it\u0027s the right message to be displayed.\nDefault value is set on line 44. If we are here, it\u0027s because --configonly\u003dsomething_not_True was specified on the command line, so it\u0027s not really a default value...\nInstead of requesting a \u0027True\u0027 value to be specified for --configonly, why don\u0027t you make it a value-less command line switch (without the appended \u003d on line 71)?\nIt would then work the same as the --help and --version command line switches: no need to check the arg value, just set configonly to True.",
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7330d09e_513fb9f6",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 226,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-02T12:52:15Z",
+      "side": 1,
+      "message": "Do you really use the same list of tasks for both genstatcores and sutstatcores?",
+      "range": {
+        "startLine": 226,
+        "startChar": 153,
+        "endLine": 226,
+        "endChar": 158
+      },
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9aa1a48c_7a4bdd43",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 248,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-02T12:52:15Z",
+      "side": 1,
+      "message": "Please indent the same as line 249 below, in order to divide only once, when the loop is completed.\nWith this indentation, computed value is meaningless.",
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "18ec8637_9a642f6c",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 341,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-02T12:52:15Z",
+      "side": 1,
+      "message": "Please rework: not obvious what you want to check here",
+      "range": {
+        "startLine": 341,
+        "startChar": 44,
+        "endLine": 341,
+        "endChar": 81
+      },
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1523e4bb_8a287399",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 627,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-02T12:52:15Z",
+      "side": 1,
+      "message": "Never executed, because you don\u0027t (seem to) break out of the infinite loop.",
       "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": false
