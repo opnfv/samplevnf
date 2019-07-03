@@ -174,7 +174,9 @@ SRCS-y += handle_ipv6_tunnel.c
 SRCS-y += handle_read.c
 SRCS-$(CONFIG_RTE_LIBRTE_PMD_AESNI_MB) += handle_esp.c
 ifneq ($(CONFIG_RTE_LIBRTE_PMD_AESNI_MB),y)
+ifeq ($(FIRST_PROX_MAKE),)
 $(warning "Building w/o IPSEC support")
+endif
 endif
 SRCS-y += handle_cgnat.c
 SRCS-y += handle_nat.c
@@ -209,11 +211,33 @@ ifeq ($(FIRST_PROX_MAKE),)
 MAKEFLAGS += --no-print-directory
 FIRST_PROX_MAKE = 1
 export FIRST_PROX_MAKE
-all:
+all:	libedit_autoconf.h
 	@./helper-scripts/trailing.sh
+	@$(MAKE) $@
+clean:
+	$(Q) $(RM) -- 'libedit_autoconf.h'
 	@$(MAKE) $@
 %::
 	@$(MAKE) $@
+
+ifeq ($(call rte_ver_LT,17,2,0,0),y)
+AUTO-CONFIG-SCRIPT = $(RTE_SDK)/scripts/auto-config-h.sh
+else
+AUTO-CONFIG-SCRIPT = $(RTE_SDK)/buildtools/auto-config-h.sh
+endif
+
+# DPDK CFLAGS prevents auto-conf program to properly compile
+export CFLAGS=
+# if el_rfunc_t exists, define HAVE_LIBEDIT_EL_RFUNC_T so that PROX knows it can use it
+libedit_autoconf.h: $(AUTO-CONFIG-SCRIPT)
+	$(Q) $(RM) -- '$@'
+	$(Q) sh -- '$(AUTO-CONFIG-SCRIPT)' '$@' \
+		HAVE_LIBEDIT_EL_RFUNC_T \
+		histedit.h \
+		type 'el_rfunc_t' \
+		> /dev/null
+# auto-conf adds empty line at the end of the file, considered as error by trailing.sh script
+	$(Q) sed -i '$$ d' '$@'
 else
 include $(RTE_SDK)/mk/rte.extapp.mk
 endif
