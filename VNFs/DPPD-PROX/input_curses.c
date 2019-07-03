@@ -27,6 +27,7 @@
 #include "cmd_parser.h"
 #include "input_curses.h"
 #include "histedit.h"
+#include "libedit_autoconf.h"
 
 static EditLine *el;
 static History *hist;
@@ -124,7 +125,11 @@ static int peek_stdin(void)
 	return FD_ISSET(fileno(stdin), &in_fd);
 }
 
+#ifdef HAVE_LIBEDIT_EL_RFUNC_T
+static int do_get_char(EditLine *e, wchar_t *c)
+#else
 static int get_char(EditLine *e, char *c)
+#endif
 {
 	*c = display_getch();
 
@@ -166,6 +171,10 @@ static int get_char(EditLine *e, char *c)
 
 	return 1;
 }
+
+#ifdef HAVE_LIBEDIT_EL_RFUNC_T
+static el_rfunc_t get_char = &do_get_char;
+#endif
 
 static void proc_keyboard(struct input *input)
 {
