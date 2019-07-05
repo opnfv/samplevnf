@@ -1,5 +1,5 @@
 ##
-## Copyright (c) 2010-2018 Intel Corporation
+## Copyright (c) 2010-2019 Intel Corporation
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
 ## you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ number_of_tests = 1
 total_number_of_test_machines = 1
 prox_socket = true
 prox_launch_exit = true
+tasks=[0]
 
 [TestM1]
 name = InterruptTesting

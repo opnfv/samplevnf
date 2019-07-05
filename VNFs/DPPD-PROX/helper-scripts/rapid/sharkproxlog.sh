@@ -13,28 +13,7 @@
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
 ##
+## This code will help in using tshark to decode packets that were dumped
+## in the prox.log file as a result of dump, dump_tx or dump_rx commands
 
-[DEFAULT]
-name = L3FrameRateTesting
-number_of_tests = 1
-total_number_of_test_machines = 2
-prox_socket = true
-prox_launch_exit = true
-tasks=[0]
-
-[TestM1]
-name = Generator
-config_file = gen.cfg
-dest_vm = 2
-gencores = [1]
-latcores = [3]
-
-[TestM2]
-name = Swap
-config_file = swap.cfg
-swapcores = [1]
-
-[test1]
-test=fixed_rate
-packetsizes=[64]
-speed=10
+egrep  '^[0-9]{4}|^[0-9]+\.' prox.log | text2pcap -q - - | tshark -r -

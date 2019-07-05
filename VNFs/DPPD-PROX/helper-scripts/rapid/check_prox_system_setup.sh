@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 ##
-## Copyright (c) 2010-2018 Intel Corporation
+## Copyright (c) 2010-2019 Intel Corporation
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
 ## you may not use this file except in compliance with the License.
@@ -26,16 +26,16 @@ then
                 case $line in
                         isolated_cores=1-$MAXCOREID*)
                                 echo "Isolated CPU(s) OK, no reboot: $line">>$logfile
-				modprobe uio
-				insmod /root/dpdk/build/kmod/igb_uio.ko
+                                modprobe uio
+                                insmod /root/dpdk/build/kmod/igb_uio.ko
                                 exit 0
                         ;;
                         isolated_cores=*)
                                 echo "Isolated CPU(s) NOK, change the config and reboot: $line">>$logfile
                                 sed -i "/^isolated_cores=.*/c\isolated_cores=1-$MAXCOREID" $filename
-				tuned-adm profile realtime-virtual-guest
+                                tuned-adm profile realtime-virtual-guest
                                 reboot
-				exit 0
+                                exit 0
                         ;;
                         *)
                                 echo "$line"
@@ -43,9 +43,10 @@ then
                 esac
         done < "$filename"
         echo "isolated_cores=1-$MAXCOREID" >> $filename
-	echo "No Isolated CPU(s) defined in config, line added: $line">>$logfile
-	tuned-adm profile realtime-virtual-guest
+        echo "No Isolated CPU(s) defined in config, line added: $line">>$logfile
+        tuned-adm profile realtime-virtual-guest
         reboot
 else
         echo "$filename not found.">>$logfile
 fi
+

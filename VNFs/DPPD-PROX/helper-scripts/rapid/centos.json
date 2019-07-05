@@ -1,17 +1,19 @@
 {
-"_Copyright": "Copyright (c) 2010-2018 Intel Corporation",
+"_Copyright": "Copyright (c) 2010-2019 Intel Corporation",
 "_License":   "SPDX-License-Identifier: Apache-2.0",
 "builders": [
    {
 "type": "openstack",
 "ssh_username": "centos",
 "image_name": "rapidVM",
-"source_image": "06101dd4-f162-49c0-a072-2fe32ac446a9",
-"flavor": "3ea20ea9-855c-4a6e-b454-63ad6e8e0db9",
-"networks": "451a030a-eb1e-4c74-85b8-782ef8a6ad38",
+"source_image": "09ada6c0-21aa-49aa-ad7b-d364f279ee92",
+"flavor": "2d198ea9-7cbc-4211-9983-531493b07a96",
+"networks": "2d2bb4ec-58ae-47a4-8af9-f58f14533337",
 "use_floating_ip": true,
-"floating_ip_pool": "d629619f-8f96-4f32-9b90-1b62e5ea3809",
-"security_groups": "460b7929-c6de-4b1c-ae83-901c2042a894"
+"floating_ip_pool": "ff966059-9dd2-4ed1-ad9a-5fae516eb0fa",
+"security_groups": "1da93e77-29c2-42d7-b611-f2ae094aa8df",
+"ssh_timeout":"1000s",
+"ssh_pty":"true"
    }
 ],
 "provisioners": [
@@ -26,8 +28,18 @@
    "destination": "/home/centos/"
    },
    {
+   "type": "file",
+   "source": "./sharkproxlog.sh",
+   "destination": "/home/centos/"
+   },
+   {
+   "type": "file",
+   "source": "./deploycentostools.sh",
+   "destination": "/home/centos/"
+   },
+   {
    "type": "shell",
-   "script": "deploycentos.sh"
+   "script": "deploycentostools.sh"
    }
 ]
 }

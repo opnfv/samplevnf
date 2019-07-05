@@ -1,5 +1,5 @@
 ##
-## Copyright (c) 2010-2018 Intel Corporation
+## Copyright (c) 2010-2019 Intel Corporation
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
 ## you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ number_of_tests = 2
 total_number_of_test_machines = 3
 prox_socket = true
 prox_launch_exit = true
+tasks=[0]
 
 [TestM1]
 name = Generator
@@ -28,7 +29,6 @@ dest_vm = 3
 gw_vm = 2
 gencores = [1]
 latcores = [3]
-startspeed = 10
 
 [TestM2]
 name = GW1
@@ -46,10 +46,18 @@ drop_rate_threshold = 0.1
 lat_avg_threshold = 500
 lat_max_threshold = 1000
 accuracy = 0.1
+startspeed = 10
 
 [test1]
-test=inittest
+test=warmuptest
+flowsize=512
+packetsize=64
+warmupspeed=1
+warmuptime=2
 
 [test2]
-test=speedtest
-packetsize=64
+test=flowsizetest
+packetsizes=[64]
+# the number of flows in the list need to be powers of 2, max 2^20
+# Select from following numbers: 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65535, 131072, 262144, 524280, 1048576
+flows=[512]
