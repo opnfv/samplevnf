@@ -25,6 +25,30 @@
     },
     {
       "key": {
+        "uuid": "e216a552_1e6c0475",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/bare.test",
+        "patchSetId": 1
+      },
+      "lineNbr": 2,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-05T12:25:00Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "e499234d_4ec38084",
+      "range": {
+        "startLine": 2,
+        "startChar": 22,
+        "endLine": 2,
+        "endChar": 26
+      },
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "1f23699e_f4a82184",
         "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/bare.test",
         "patchSetId": 1
@@ -36,6 +60,24 @@
       "writtenOn": "2019-07-02T09:47:53Z",
       "side": 1,
       "message": "You do a warmup with 1024 flows, but the real tests only use 512 flows. Any reason?",
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3e7b5e27_fe251193",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/bare.test",
+        "patchSetId": 1
+      },
+      "lineNbr": 46,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-05T12:25:00Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "1f23699e_f4a82184",
       "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": false
@@ -59,6 +101,24 @@
     },
     {
       "key": {
+        "uuid": "569848c6_ff7614de",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/basicrapid.test",
+        "patchSetId": 1
+      },
+      "lineNbr": 56,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-05T12:25:00Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "526b0d6e_bf519908",
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "d9c1ff8f_5d2360fc",
         "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/createrapid.py",
         "patchSetId": 1
@@ -76,6 +136,24 @@
     },
     {
       "key": {
+        "uuid": "af51a247_91d36eff",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/createrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 215,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-05T12:25:00Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "d9c1ff8f_5d2360fc",
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "8840b380_37ff1b9f",
         "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/createrapid.py",
         "patchSetId": 1
@@ -87,6 +165,24 @@
       "writtenOn": "2019-07-02T12:52:15Z",
       "side": 1,
       "message": "Don\u0027t you need to append to nic_info in the loop, instead of replacing it with each iteration?",
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "786924b6_9050821c",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/createrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 326,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-05T12:25:00Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "8840b380_37ff1b9f",
       "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": false
@@ -133,6 +229,24 @@
     },
     {
       "key": {
+        "uuid": "662a7cd3_4c48bc60",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/deploycentostools.sh",
+        "patchSetId": 1
+      },
+      "lineNbr": 139,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-05T12:25:00Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "bf9978d3_e53b10b9",
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "812ada64_c226fbb3",
         "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/l2gen_bare.cfg",
         "patchSetId": 1
@@ -150,6 +264,24 @@
     },
     {
       "key": {
+        "uuid": "841866b0_5aa19d03",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/l2gen_bare.cfg",
+        "patchSetId": 1
+      },
+      "lineNbr": 2,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-05T12:25:00Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "812ada64_c226fbb3",
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "7471ffdb_ce6ca781",
         "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/l2zeroloss.test",
         "patchSetId": 1
@@ -161,6 +293,24 @@
       "writtenOn": "2019-07-02T12:52:15Z",
       "side": 1,
       "message": "Looks like this line should not be commented out",
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1296a2f8_eec0f22a",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/l2zeroloss.test",
+        "patchSetId": 1
+      },
+      "lineNbr": 56,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-05T12:25:00Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "7471ffdb_ce6ca781",
       "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": false
@@ -213,6 +363,30 @@
     },
     {
       "key": {
+        "uuid": "c961f68d_30758939",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/prox_ctrl.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 195,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-05T12:25:00Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "2e045d49_32e9f8ba",
+      "range": {
+        "startLine": 195,
+        "startChar": 33,
+        "endLine": 195,
+        "endChar": 46
+      },
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "9a1cb3d1_a1dcac54",
         "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/prox_ctrl.py",
         "patchSetId": 1
@@ -224,6 +398,30 @@
       "writtenOn": "2019-07-02T12:52:15Z",
       "side": 1,
       "message": "lat stats",
+      "range": {
+        "startLine": 196,
+        "startChar": 36,
+        "endLine": 196,
+        "endChar": 49
+      },
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "cf9ccebe_f3f717a2",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/prox_ctrl.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 196,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-05T12:25:00Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "9a1cb3d1_a1dcac54",
       "range": {
         "startLine": 196,
         "startChar": 36,
@@ -253,6 +451,24 @@
     },
     {
       "key": {
+        "uuid": "3458bd7f_b7f76394",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/prox_ctrl.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 201,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-05T12:25:00Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "ccfb52f4_c9e62058",
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "4f5ea4f3_88abdf6c",
         "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/prox_ctrl.py",
         "patchSetId": 1
@@ -264,6 +480,30 @@
       "writtenOn": "2019-07-02T12:52:15Z",
       "side": 1,
       "message": "Ditto, this should be [0] instead of {0}",
+      "range": {
+        "startLine": 220,
+        "startChar": 38,
+        "endLine": 220,
+        "endChar": 41
+      },
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c9fa8de9_3fbd9d6b",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/prox_ctrl.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 220,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-05T12:25:00Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "4f5ea4f3_88abdf6c",
       "range": {
         "startLine": 220,
         "startChar": 38,
@@ -293,6 +533,24 @@
     },
     {
       "key": {
+        "uuid": "22b8e6e6_9b1d9a9f",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/prox_ctrl.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 240,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-05T12:25:00Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "ed00ca7e_5ee0c488",
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "d35ee1c0_13b83d78",
         "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
         "patchSetId": 1
@@ -316,6 +574,30 @@
     },
     {
       "key": {
+        "uuid": "a2cb2595_d20c2a20",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 88,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-05T12:25:00Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "d35ee1c0_13b83d78",
+      "range": {
+        "startLine": 88,
+        "startChar": 11,
+        "endLine": 88,
+        "endChar": 20
+      },
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "6735c4c9_9d2b030f",
         "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
         "patchSetId": 1
@@ -327,6 +609,24 @@
       "writtenOn": "2019-07-02T12:52:15Z",
       "side": 1,
       "message": "Not sure it\u0027s the right message to be displayed.\nDefault value is set on line 44. If we are here, it\u0027s because --configonly\u003dsomething_not_True was specified on the command line, so it\u0027s not really a default value...\nInstead of requesting a \u0027True\u0027 value to be specified for --configonly, why don\u0027t you make it a value-less command line switch (without the appended \u003d on line 71)?\nIt would then work the same as the --help and --version command line switches: no need to check the arg value, just set configonly to True.",
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "4e600ad6_2a44c13f",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 103,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-05T12:25:00Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "6735c4c9_9d2b030f",
       "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": false
@@ -367,6 +667,24 @@
       "writtenOn": "2019-07-02T12:52:15Z",
       "side": 1,
       "message": "Please indent the same as line 249 below, in order to divide only once, when the loop is completed.\nWith this indentation, computed value is meaningless.",
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfe7c462_73c05082",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 248,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-05T12:25:00Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "9aa1a48c_7a4bdd43",
       "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": false
@@ -419,6 +737,30 @@
     },
     {
       "key": {
+        "uuid": "da85d4e6_18a36e29",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 341,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-05T12:25:00Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "d1a54761_7801a6ab",
+      "range": {
+        "startLine": 341,
+        "startChar": 45,
+        "endLine": 341,
+        "endChar": 80
+      },
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "1523e4bb_8a287399",
         "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
         "patchSetId": 1
@@ -436,6 +778,24 @@
     },
     {
       "key": {
+        "uuid": "125b57ab_61363ffa",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 627,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-05T12:25:00Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "1523e4bb_8a287399",
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "3ccdbb93_efd1bd91",
         "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/sharkproxlog.sh",
         "patchSetId": 1
@@ -447,6 +807,24 @@
       "writtenOn": "2019-07-02T09:47:53Z",
       "side": 1,
       "message": "Missing Header",
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "00827a20_df8945e2",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/sharkproxlog.sh",
+        "patchSetId": 1
+      },
+      "lineNbr": 1,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-05T12:25:00Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "3ccdbb93_efd1bd91",
       "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": false
