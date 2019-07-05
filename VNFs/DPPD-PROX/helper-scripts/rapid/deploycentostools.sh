@@ -136,7 +136,6 @@ function prox_install()
 if [ "$1" == "compile" ]; then
 	prox_compile
 else
-	echo "Positional parameter 1 is empty"
 	[ ! -d ${BUILD_DIR} ] && sudo mkdir -p ${BUILD_DIR}
 	sudo chmod 0777 ${BUILD_DIR}
 
