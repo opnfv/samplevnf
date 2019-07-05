@@ -396,6 +396,29 @@
     },
     {
       "key": {
+        "uuid": "d1a54761_7801a6ab",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 341,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-05T10:49:40Z",
+      "side": 1,
+      "message": "OK, that\u0027s valid Python code, that tests what you want to check, but it\u0027s not obvious for C developers, so I thought it was some typo ;-)\nSo in Python, this is the same as:\n((abs_dropped \u003d\u003d 0) and (DROP_RATE_TRESHOLD \u003d\u003d 0))\nand that\u0027s what you are looking for.\n\nNote that (0 \u003d\u003d 0 \u003d\u003d 0) is true in Python, but false in C.",
+      "range": {
+        "startLine": 341,
+        "startChar": 45,
+        "endLine": 341,
+        "endChar": 80
+      },
+      "revId": "ccae9496c217020455acfe337aaf2b2f0c5644d8",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "1523e4bb_8a287399",
         "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
         "patchSetId": 1
