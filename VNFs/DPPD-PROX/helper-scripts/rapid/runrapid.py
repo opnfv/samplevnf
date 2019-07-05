@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ##
-## Copyright (c) 2010-2017 Intel Corporation
+## Copyright (c) 2010-2019 Intel Corporation
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
 ## you may not use this file except in compliance with the License.
@@ -61,14 +61,14 @@ def usage():
 	print("  --test TEST_NAME       	Test cases will be read from TEST_NAME. Default is %s."%test_file)
 	print("  --map MACHINE_MAP_FILE	Machine mapping will be read from MACHINE_MAP_FILE. Default is %s."%machine_map_file)
 	print("  --runtime			Specify time in seconds for 1 test run")
-	print("  --configonly			If True, only upload all config files to the VMs, do not run the tests. Default is %s."%configonly)
+	print("  --configonly			If this option is specified, only upload all config files to the VMs, do not run the tests")
 	print("  --log				Specify logging level for log file output, default is DEBUG")
 	print("  --screenlog			Specify logging level for screen output, default is INFO")
 	print("  -h, --help               	Show help message and exit.")
 	print("")
 
 try:
-	opts, args = getopt.getopt(sys.argv[1:], "vh", ["version","help", "env=", "test=", "map=", "runtime=","configonly=","log=","screenlog="])
+	opts, args = getopt.getopt(sys.argv[1:], "vh", ["version","help", "env=", "test=", "map=", "runtime=","configonly","log=","screenlog="])
 except getopt.GetoptError as err:
 	print("===========================================")
 	print(str(err))
@@ -79,32 +79,27 @@ if args:
 	usage()
 	sys.exit(2)
 for opt, arg in opts:
-	if opt in ("-h", "--help"):
+	if opt in ["-h", "--help"]:
 		usage()
 		sys.exit()
-	if opt in ("-v", "--version"):
+	if opt in ["-v", "--version"]:
 		print("Rapid Automated Performance Indication for Dataplane "+version)
 		sys.exit()
-	if opt in ("--env"):
+	if opt in ["--env"]:
 		env = arg
-	if opt in ("--test"):
+	if opt in ["--test"]:
 		test_file = arg
-	if opt in ("--map"):
+	if opt in ["--map"]:
 		machine_map_file = arg
-	if opt in ("--runtime"):
+	if opt in ["--runtime"]:
 		runtime = arg
-	if opt in ("--configonly"):
-		configonly = arg
-		if configonly == 'True':
-			configonly = True
-			print('No actual runs, only uploading configuration files')
-		else:
-			configonly = False
-			print('--configonly parameter is defaulted to False')
-	if opt in ("--log"):
+	if opt in ["--configonly"]:
+		configonly = True
+		print('No actual runs, only uploading configuration files')
+	if opt in ["--log"]:
 		loglevel = arg
 		print ("Log level: "+ loglevel)
-	if opt in ("--screenlog"):
+	if opt in ["--screenlog"]:
 		screenloglevel = arg
 		print ("Screen Log level: "+ screenloglevel)
 
@@ -245,7 +240,7 @@ def run_iteration(gensock,sutsock):
 			lat_max = lat_max_sample
 		lat_avg = lat_avg + lat_avg_sample
 		used_avg = used_avg + used_sample
-		lat_avg = lat_avg / n_loops
+	lat_avg = lat_avg / n_loops
 	used_avg = used_avg / n_loops
 	# Get statistics after some execution time
 	new_rx, new_non_dp_rx, new_tx, new_non_dp_tx, new_drop, new_tx_fail, new_tsc, tsc_hz = gensock.core_stats(genstatcores,tasks)
@@ -339,6 +334,9 @@ def run_flow_size_test(gensock,sutsock):
 					lat_warning = bcolors.WARNING + ' Latency accuracy issue?: {:>3.0f}%'.format(lat_used*100) +  bcolors.ENDC
 				else:
 					lat_warning = ''
+				# The following if statement is testing if we pass the success criteria of a certain drop rate, average latenecy and maximum latency below the threshold
+				# The drop rate success can be achieved in 2 ways: either the drop rate is below a treshold, either we want that no packet has been lost during the test
+				# This can be specified by putting 0 in the .test file
 				if ((drop_rate < DROP_RATE_TRESHOLD) or (abs_dropped==DROP_RATE_TRESHOLD ==0)) and (lat_avg< LAT_AVG_TRESHOLD) and (lat_max < LAT_MAX_TRESHOLD):
 					lat_avg_prefix = bcolors.ENDC
 					lat_max_prefix = bcolors.ENDC
@@ -626,7 +624,6 @@ def run_impairtest(gensock,sutsock):
 			lat_warning = ''
 		log.info('|{:>7}'.format(str(attempts))+" | " + '{:>5.1f}'.format(speed) + '% ' +'{:>6.3f}'.format(get_pps(speed,size)) + ' Mpps | '+ '{:>9.3f}'.format(pps_req_tx)+' Mpps | '+ '{:>9.3f}'.format(pps_tx) +' Mpps | ' + '{:>9}'.format(pps_sut_tx_str) +' Mpps | '+ '{:>9.3f}'.format(pps_rx)+' Mpps | '+ '{:>9.0f}'.format(lat_avg)+' us   | '+ '{:>9.0f}'.format(lat_max)+' us   | '+ '{:>14d}'.format(abs_dropped)+ ' |''{:>9.2f}'.format(drop_rate)+ '%  |'+lat_warning)
 		writer.writerow({'flow':'1','size':(size+4),'endspeed':speed,'endspeedpps':get_pps(speed,size),'endpps_req_tx':pps_req_tx,'endpps_tx':pps_tx,'endpps_sut_tx_str':pps_sut_tx_str,'endpps_rx':pps_rx,'endlat_avg':lat_avg,'endlat_max':lat_max,'endabs_dropped':abs_dropped,'enddrop_rate':drop_rate})
-	gensock.stop(latcores)
 
 def run_warmuptest(gensock):
 # Running at low speed to make sure the ARP messages can get through.

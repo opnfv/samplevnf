@@ -1,5 +1,5 @@
 ##
-## Copyright (c) 2010-2017 Intel Corporation
+## Copyright (c) 2010-2019 Intel Corporation
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
 ## you may not use this file except in compliance with the License.
@@ -183,22 +183,24 @@ class prox_sock(object):
     def reset_stats(self):
         self._send('reset stats')
 
-    def lat_stats(self, cores, tasks={0}):
+    def lat_stats(self, cores, tasks=[0]):
         min_lat = 999999999
 	max_lat = avg_lat = 0
+	number_tasks_returning_stats = 0
         self._send('lat stats %s %s' % (','.join(map(str, cores)), ','.join(map(str, tasks))))
         for core in cores:
 	    	for task in tasks:
 	        	stats = self._recv().split(',')
 			if stats[0].startswith('error'):
 				if stats[0].startswith('error: invalid syntax'):
-		                	log.critical("dp core stats error: unexpected invalid syntax (potential incompatibility between scripts and PROX)")
-			                raise Exception("dp core stats error")
+		                	log.critical("lat stats error: unexpected invalid syntax (potential incompatibility between scripts and PROX)")
+			                raise Exception("lat stats error")
 				continue
+			number_tasks_returning_stats += 1
 			min_lat = min(int(stats[0]),min_lat)
 			max_lat = max(int(stats[1]),max_lat)
 			avg_lat += int(stats[2])
-        avg_lat = avg_lat/len(cores)
+        avg_lat = avg_lat/number_tasks_returning_stats
         self._send('stats latency(0).used')
         used = float(self._recv())
         self._send('stats latency(0).total')
@@ -217,7 +219,7 @@ class prox_sock(object):
 	buckets = buckets[:-1]
         return buckets
 
-    def core_stats(self, cores, tasks={0}):
+    def core_stats(self, cores, tasks=[0]):
         rx = tx = drop = tsc = hz = rx_non_dp = tx_non_dp = tx_fail = 0
         self._send('dp core stats %s %s' % (','.join(map(str, cores)), ','.join(map(str, tasks))))
         for core in cores:
@@ -236,8 +238,7 @@ class prox_sock(object):
 			tx_fail += int(stats[5])
 			tsc = int(stats[6])
 			hz = int(stats[7])
-        return rx,rx_non_dp, tx,tx_non_dp, drop, tx_fail, tsc, hz
-        #return rx-rx_non_dp, tx-tx_non_dp, drop, tx_fail, tsc, hz
+        return rx, rx_non_dp, tx, tx_non_dp, drop, tx_fail, tsc, hz
 
     def set_random(self, cores, task, offset, mask, length):
         self._send('set random %s %s %s %s %s' % (','.join(map(str, cores)), task, offset, mask, length))

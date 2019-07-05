@@ -16,7 +16,7 @@
 
 [DEFAULT]
 name = L3FrameRateTesting
-number_of_tests = 2
+number_of_tests = 1
 total_number_of_test_machines = 2
 prox_socket = true
 prox_launch_exit = true
@@ -35,13 +35,6 @@ config_file = swap.cfg
 swapcores = [1]
 
 [test1]
-test=warmuptest
-flowsize=1024
-packetsize=64
-warmupspeed=10
-warmuptime=2
-
-[test2]
 test=fixed_rate
 packetsizes=[64]
 speed=10

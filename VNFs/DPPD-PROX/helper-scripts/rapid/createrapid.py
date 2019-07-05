@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ##
-## Copyright (c) 2010-2017 Intel Corporation
+## Copyright (c) 2010-2019 Intel Corporation
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
 ## you may not use this file except in compliance with the License.
@@ -89,43 +89,43 @@ if args:
 	usage()
 	sys.exit(2)
 for opt, arg in opts:
-	if opt in ("-h", "--help"):
+	if opt in ["-h", "--help"]:
 		usage()
 		sys.exit()
-	if opt in ("-v", "--version"):
+	if opt in ["-v", "--version"]:
 		print("Rapid Automated Performance Indication for Dataplane "+version)
 		sys.exit()
-	if opt in ("--stack"):
+	if opt in ["--stack"]:
 		stack = arg
 		print ("Using '"+stack+"' as name for the stack")
-	elif opt in ("--vms"):
+	elif opt in ["--vms"]:
 		vms = arg
 		print ("Using Virtual Machines Description: "+vms)
-	elif opt in ("--key"):
+	elif opt in ["--key"]:
 		key = arg
 		print ("Using key: "+key)
-	elif opt in ("--image"):
+	elif opt in ["--image"]:
 		image = arg
 		print ("Using image: "+image)
-	elif opt in ("--image_file"):
+	elif opt in ["--image_file"]:
 		image_file = arg
 		print ("Using qcow2 file: "+image_file)
-	elif opt in ("--dataplane_network"):
+	elif opt in ["--dataplane_network"]:
 		dataplane_network = arg
 		print ("Using dataplane network: "+ dataplane_network)
-	elif opt in ("--subnet"):
+	elif opt in ["--subnet"]:
 		subnet = arg
 		print ("Using dataplane subnet: "+ subnet)
-	elif opt in ("--subnet_cidr"):
+	elif opt in ["--subnet_cidr"]:
 		subnet_cidr = arg
 		print ("Using dataplane subnet: "+ subnet_cidr)
-	elif opt in ("--internal_network"):
+	elif opt in ["--internal_network"]:
 		internal_network = arg
 		print ("Using control plane network: "+ internal_network)
-	elif opt in ("--floating_network"):
+	elif opt in ["--floating_network"]:
 		floating_network = arg
 		print ("Using floating ip network: "+ floating_network)
-	elif opt in ("--log"):
+	elif opt in ["--log"]:
 		loglevel = arg
 		print ("Log level: "+ loglevel)
 
@@ -204,6 +204,7 @@ if floating_network !='NO':
 # Checking if the dataplane network already exists, if not create it
 log.debug("Checking dataplane network: " + dataplane_network)
 if dataplane_network in Networks:
+	# If the dataplane already exists, we are assuming that this network is already created before with the proper configuration, hence we do not check if the subnet is created etc...
 	log.info("Dataplane network (" + dataplane_network + ") already active")
 else:
 	log.info('Creating dataplane network ...')
@@ -280,7 +281,9 @@ ServerToBeCreated=[]
 ServerName=[]
 config = ConfigParser.RawConfigParser()
 vmconfig = ConfigParser.RawConfigParser()
-vmconfig.read(vms)
+vmname = os.path.dirname(os.path.realpath(__file__))+'/' + vms
+#vmconfig.read_file(open(vmname))
+vmconfig.readfp(open(vmname))
 total_number_of_VMs = vmconfig.get('DEFAULT', 'total_number_of_vms')
 cmd = 'openstack server list -f value -c Name'
 log.debug (cmd)
@@ -322,8 +325,7 @@ for vm in range(1, int(total_number_of_VMs)+1):
 		if SRIOV_mgmt_port == 'NO':
 			nic_info = '--nic net-id=%s'%(internal_network)
 		else:
-			for port in SRIOV_mgmt_port.split(','):
-				nic_info = '--nic port-id=%s'%(port)
+			nic_info = '--nic port-id=%s'%(SRIOV_mgmt_port)
 		if SRIOV_port == 'NO':
 			nic_info = nic_info + ' --nic net-id=%s'%(dataplane_network)
 		else:

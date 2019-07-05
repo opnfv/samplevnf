@@ -1,5 +1,5 @@
 ##
-## Copyright (c) 2010-2018 Intel Corporation
+## Copyright (c) 2010-2019 Intel Corporation
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
 ## you may not use this file except in compliance with the License.
@@ -50,7 +50,7 @@ startspeed = 10
 
 [test1]
 test=warmuptest
-flowsize=1024
+flowsize=512
 packetsize=64
 warmupspeed=1
 warmuptime=2
