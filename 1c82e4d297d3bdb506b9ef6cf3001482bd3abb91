@@ -1,0 +1,67 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "57f7c3ae_336cf4d4",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 9,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-05T11:17:39Z",
+      "side": 1,
+      "message": "More precisely, it was setting source MAC to whatever is provided in the \"pkt inline\".",
+      "range": {
+        "startLine": 9,
+        "startChar": 29,
+        "endLine": 9,
+        "endChar": 49
+      },
+      "revId": "1c82e4d297d3bdb506b9ef6cf3001482bd3abb91",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "834adbbb_33c6bd66",
+        "filename": "VNFs/DPPD-PROX/handle_gen.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 913,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-05T11:17:39Z",
+      "side": 1,
+      "message": "TODO for myself: understand which of src-\u003elen or dst-\u003elen is the most appropriate here. Possibly src-\u003elen, after a memset of dst-\u003ebuf on its full allocated size.\nCurrently, the final contents of dst-\u003ebuf depend on the actual sequence of \"set values\", \"pkt_size\" and \"reset values\" commands, so might not be as pristine as the reset keyword suggests.",
+      "range": {
+        "startLine": 913,
+        "startChar": 29,
+        "endLine": 913,
+        "endChar": 37
+      },
+      "revId": "1c82e4d297d3bdb506b9ef6cf3001482bd3abb91",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "4624a808_174d7a74",
+        "filename": "VNFs/DPPD-PROX/handle_gen.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1079,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-07-05T11:17:39Z",
+      "side": 1,
+      "message": "I don\u0027t much like this 64 bits test, because it overlaps with fields after src_mac, i.e. flags and cksum_offload.\nSo when DSF_KEEP_SRC_MAC is set, you might end up resetting the source MAC to 00:00:00:00:00:00, if flags or cksum_offload are not 0.\nIn fact, flags is always 0, because not used anymore, but cksum_offload can still create some issues.\nSo why not reuse flags field to reflect DSF_KEEP_SRC_MAC state, and test it here?\nBeware: DSF_KEEP_SRC_MAC is 0x200 so it will not fit as is in the uint8_t flags field.",
+      "revId": "1c82e4d297d3bdb506b9ef6cf3001482bd3abb91",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
