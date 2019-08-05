@@ -48,6 +48,30 @@
     },
     {
       "key": {
+        "uuid": "71dfa12d_2caf45bb",
+        "filename": "VNFs/DPPD-PROX/handle_gen.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 913,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-05T13:33:36Z",
+      "side": 1,
+      "message": "Agree an \"issue\" in the following case:\n- initial packet size is 256 bytes\n- user change byte 250, then changes packet size to 64, then \"reset value\", then sets back packet size to 256.\nAs a result, byte 250 will not be reset.\n\nIn a similar way, if using src-\u003elen, and if the user increased the packet size (e.g. from 256 to 512), and changes bytes 500, the byte would not been reset. \n\nHence, using max (src-\u003elen, dst-\u003elen)",
+      "parentUuid": "834adbbb_33c6bd66",
+      "range": {
+        "startLine": 913,
+        "startChar": 29,
+        "endLine": 913,
+        "endChar": 37
+      },
+      "revId": "1c82e4d297d3bdb506b9ef6cf3001482bd3abb91",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "4624a808_174d7a74",
         "filename": "VNFs/DPPD-PROX/handle_gen.c",
         "patchSetId": 1
@@ -59,6 +83,24 @@
       "writtenOn": "2019-07-05T11:17:39Z",
       "side": 1,
       "message": "I don\u0027t much like this 64 bits test, because it overlaps with fields after src_mac, i.e. flags and cksum_offload.\nSo when DSF_KEEP_SRC_MAC is set, you might end up resetting the source MAC to 00:00:00:00:00:00, if flags or cksum_offload are not 0.\nIn fact, flags is always 0, because not used anymore, but cksum_offload can still create some issues.\nSo why not reuse flags field to reflect DSF_KEEP_SRC_MAC state, and test it here?\nBeware: DSF_KEEP_SRC_MAC is 0x200 so it will not fit as is in the uint8_t flags field.",
+      "revId": "1c82e4d297d3bdb506b9ef6cf3001482bd3abb91",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bae1b9ff_574546d8",
+        "filename": "VNFs/DPPD-PROX/handle_gen.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1079,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-05T13:33:36Z",
+      "side": 1,
+      "message": "done",
+      "parentUuid": "4624a808_174d7a74",
       "revId": "1c82e4d297d3bdb506b9ef6cf3001482bd3abb91",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": false
