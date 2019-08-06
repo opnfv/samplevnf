@@ -48,7 +48,7 @@
 static const struct rte_eth_conf default_port_conf = {
 	.rxmode = {
 		.mq_mode        = 0,
-		.max_rx_pkt_len = PROX_MTU + ETHER_HDR_LEN + ETHER_CRC_LEN
+		.max_rx_pkt_len = PROX_MTU + PROX_RTE_ETHER_HDR_LEN + PROX_RTE_ETHER_CRC_LEN
 	},
 	.rx_adv_conf = {
 		.rss_conf = {
@@ -146,14 +146,14 @@ void set_task_defaults(struct prox_cfg* prox_cfg, struct lcore_cfg* lcore_cfg_in
 				targ->mapping[i] = i; // identity
 			}
 
-			targ->cbs = ETHER_MAX_LEN;
-			targ->ebs = ETHER_MAX_LEN;
-			targ->pbs = ETHER_MAX_LEN;
+			targ->cbs = PROX_RTE_ETHER_MAX_LEN;
+			targ->ebs = PROX_RTE_ETHER_MAX_LEN;
+			targ->pbs = PROX_RTE_ETHER_MAX_LEN;
 
 			targ->n_max_rules = 1024;
 			targ->ring_size = RING_RX_SIZE;
 			targ->nb_cache_mbuf = MAX_PKT_BURST * 4;
-			targ->overhead = ETHER_CRC_LEN + 20;
+			targ->overhead = PROX_RTE_ETHER_CRC_LEN + 20;
 
 			targ->tunnel_hop_limit = 3;
 			targ->ctrl_freq = 1000;

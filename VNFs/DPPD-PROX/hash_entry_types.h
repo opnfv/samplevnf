@@ -18,9 +18,10 @@
 #define _HASH_ENTRY_TYPES_H_
 
 #include <rte_ether.h>
+#include "prox_compat.h"
 
 struct ether_addr_port {
-	struct ether_addr 	mac;
+	prox_rte_ether_addr 	mac;
 	uint8_t                 pad;
 	uint8_t	                out_idx;
 };

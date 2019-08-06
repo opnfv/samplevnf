@@ -61,7 +61,7 @@ static inline void handle_classify(struct task_classify *task, struct rte_mbuf *
 	prev_tc = sched->traffic_class;
 #endif
 
-	const struct ipv4_hdr *ipv4_hdr = (const struct ipv4_hdr *)(pqinq + 1);
+	const prox_rte_ipv4_hdr *ipv4_hdr = (const prox_rte_ipv4_hdr *)(pqinq + 1);
 	uint8_t dscp = task->dscp[ipv4_hdr->type_of_service >> 2];
 
 	uint8_t queue = dscp & 0x3;

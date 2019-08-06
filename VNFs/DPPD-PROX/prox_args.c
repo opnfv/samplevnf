@@ -610,8 +610,8 @@ static int get_port_cfg(unsigned sindex, char *str, void *data)
 			// A frame of 1526 bytes (1500 bytes mtu, 14 bytes hdr, 4 bytes crc and 8 bytes vlan)
 			// should not be considered as a jumbo frame. However rte_ethdev.c considers that
 			// the max_rx_pkt_len for a non jumbo frame is 1518
-			cfg->port_conf.rxmode.max_rx_pkt_len = cfg->mtu + ETHER_HDR_LEN + ETHER_CRC_LEN;
-			if (cfg->port_conf.rxmode.max_rx_pkt_len > ETHER_MAX_LEN) {
+			cfg->port_conf.rxmode.max_rx_pkt_len = cfg->mtu + PROX_RTE_ETHER_HDR_LEN + PROX_RTE_ETHER_CRC_LEN;
+			if (cfg->port_conf.rxmode.max_rx_pkt_len > PROX_RTE_ETHER_MAX_LEN) {
 				cfg->requested_rx_offload |= DEV_RX_OFFLOAD_JUMBO_FRAME;
 			}
 		}

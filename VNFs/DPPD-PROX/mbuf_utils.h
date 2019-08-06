@@ -22,6 +22,7 @@
 #include <rte_ip.h>
 #include <rte_version.h>
 #include <rte_ether.h>
+#include "prox_compat.h"
 
 static void init_mbuf_seg(struct rte_mbuf *mbuf)
 {
@@ -35,7 +36,7 @@ static void init_mbuf_seg(struct rte_mbuf *mbuf)
 
 static uint16_t pkt_len_to_wire_size(uint16_t pkt_len)
 {
-	return (pkt_len < 60? 60 : pkt_len) + ETHER_CRC_LEN + 20;
+	return (pkt_len < 60? 60 : pkt_len) + PROX_RTE_ETHER_CRC_LEN + 20;
 }
 
 static uint16_t mbuf_wire_size(const struct rte_mbuf *mbuf)
@@ -45,7 +46,7 @@ static uint16_t mbuf_wire_size(const struct rte_mbuf *mbuf)
 	return pkt_len_to_wire_size(pkt_len);
 }
 
-static uint16_t mbuf_calc_padlen(const struct rte_mbuf *mbuf, void *pkt, struct ipv4_hdr *ipv4)
+static uint16_t mbuf_calc_padlen(const struct rte_mbuf *mbuf, void *pkt, prox_rte_ipv4_hdr *ipv4)
 {
 	uint16_t pkt_len = rte_pktmbuf_pkt_len(mbuf);
 	uint16_t ip_offset = (uint8_t *)ipv4 - (uint8_t*)pkt;

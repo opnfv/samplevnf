@@ -93,7 +93,7 @@ int stream_udp_proc(struct stream_ctx *ctx, struct rte_mbuf *mbuf, struct l4_met
 	uint8_t *pkt = rte_pktmbuf_mtod(mbuf, uint8_t *);
 	const struct peer_action *act = &stream_cfg->actions[ctx->cur_action];
 
-	uint16_t pkt_len = stream_cfg->data[act->peer].hdr_len + sizeof(struct udp_hdr) + act->len;
+	uint16_t pkt_len = stream_cfg->data[act->peer].hdr_len + sizeof(prox_rte_udp_hdr) + act->len;
 
 	rte_pktmbuf_pkt_len(mbuf) = pkt_len;
 	rte_pktmbuf_data_len(mbuf) = pkt_len;
@@ -101,19 +101,19 @@ int stream_udp_proc(struct stream_ctx *ctx, struct rte_mbuf *mbuf, struct l4_met
 	/* Construct the packet. The template is used up to L4 header,
 	   a gap of sizeof(l4_hdr) is skipped, followed by the payload. */
 	rte_memcpy(pkt, stream_cfg->data[act->peer].hdr, stream_cfg->data[act->peer].hdr_len);
-	rte_memcpy(pkt + stream_cfg->data[act->peer].hdr_len + sizeof(struct udp_hdr), stream_cfg->data[act->peer].content + act->beg, act->len);
+	rte_memcpy(pkt + stream_cfg->data[act->peer].hdr_len + sizeof(prox_rte_udp_hdr), stream_cfg->data[act->peer].content + act->beg, act->len);
 
-	struct ipv4_hdr *l3_hdr = (struct ipv4_hdr*)&pkt[stream_cfg->data[act->peer].hdr_len - sizeof(struct ipv4_hdr)];
-	struct udp_hdr *l4_hdr = (struct udp_hdr*)&pkt[stream_cfg->data[act->peer].hdr_len];
+	prox_rte_ipv4_hdr *l3_hdr = (prox_rte_ipv4_hdr*)&pkt[stream_cfg->data[act->peer].hdr_len - sizeof(prox_rte_ipv4_hdr)];
+	prox_rte_udp_hdr *l4_hdr = (prox_rte_udp_hdr*)&pkt[stream_cfg->data[act->peer].hdr_len];
 
 	l3_hdr->src_addr = ctx->tuple->dst_addr;
 	l3_hdr->dst_addr = ctx->tuple->src_addr;
 	l3_hdr->next_proto_id = IPPROTO_UDP;
 	l4_hdr->src_port = ctx->tuple->dst_port;
 	l4_hdr->dst_port = ctx->tuple->src_port;
-	l4_hdr->dgram_len = rte_bswap16(sizeof(struct udp_hdr) + act->len);
+	l4_hdr->dgram_len = rte_bswap16(sizeof(prox_rte_udp_hdr) + act->len);
 	/* TODO: UDP checksum calculation */
-	l3_hdr->total_length = rte_bswap16(sizeof(struct ipv4_hdr) + sizeof(struct udp_hdr) + act->len);
+	l3_hdr->total_length = rte_bswap16(sizeof(prox_rte_ipv4_hdr) + sizeof(prox_rte_udp_hdr) + act->len);
 	ctx->cur_pos[ctx->peer] += act->len;
 	ctx->cur_action++;
 
@@ -144,7 +144,7 @@ uint16_t stream_udp_reply_len(struct stream_ctx *ctx)
 	else if (ctx->stream_cfg->actions[ctx->cur_action].peer == ctx->peer)
 		return 0;
 	else
-		return ctx->stream_cfg->data[ctx->stream_cfg->actions[ctx->cur_action].peer].hdr_len + sizeof(struct udp_hdr) +
+		return ctx->stream_cfg->data[ctx->stream_cfg->actions[ctx->cur_action].peer].hdr_len + sizeof(prox_rte_udp_hdr) +
 			ctx->stream_cfg->actions[ctx->cur_action].len;
 }
 
@@ -158,7 +158,7 @@ void stream_udp_calc_len(struct stream_cfg *cfg, uint32_t *n_pkts, uint32_t *n_b
 
 	for (uint32_t i = 0; i < cfg->n_actions; ++i) {
 		const uint32_t send_hdr_len = cfg->actions[i].peer == PEER_CLIENT? client_hdr_len : server_hdr_len;
-		uint32_t len = send_hdr_len + sizeof(struct udp_hdr) + cfg->actions[i].len;
+		uint32_t len = send_hdr_len + sizeof(prox_rte_udp_hdr) + cfg->actions[i].len;
 		*n_bytes += (len < 60? 60 : len) + 24;
 		(*n_pkts)++;
 	}

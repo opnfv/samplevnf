@@ -31,7 +31,7 @@ static const struct gre_hdr gre_hdr_proto = {
 	.bits = GRE_KEY_PRESENT
 };
 
-static const struct ipv4_hdr tunnel_ip_proto = {
+static const prox_rte_ipv4_hdr tunnel_ip_proto = {
 	.version_ihl = 0x45,
 	.type_of_service = 0,
 	.packet_id = 0,

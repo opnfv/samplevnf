@@ -44,10 +44,10 @@
                 (stats)->rx_prio[prio] += ntx;           \
         } while(0)                                      \
 
-static inline uint8_t detect_l4_priority(uint8_t l3_priority, const struct ipv4_hdr *ipv4_hdr)
+static inline uint8_t detect_l4_priority(uint8_t l3_priority, const prox_rte_ipv4_hdr *ipv4_hdr)
 {
 	if (ipv4_hdr->next_proto_id == IPPROTO_UDP) {
-		const struct udp_hdr *udp = (const struct udp_hdr *)((const uint8_t *)ipv4_hdr + sizeof(struct ipv4_hdr));
+		const prox_rte_udp_hdr *udp = (const prox_rte_udp_hdr *)((const uint8_t *)ipv4_hdr + sizeof(prox_rte_ipv4_hdr));
 		if (((udp->src_port == 0x67) && (udp->dst_port == 0x68)) || ((udp->src_port == 0x68) && (udp->dst_port == 0x67))) {
 			return PRIORITY_DHCP;
 		}
@@ -55,7 +55,7 @@ static inline uint8_t detect_l4_priority(uint8_t l3_priority, const struct ipv4_
 	return l3_priority;
 }
 
-static inline uint8_t detect_l3_priority(uint8_t l2_priority, const struct ipv4_hdr *ipv4_hdr)
+static inline uint8_t detect_l3_priority(uint8_t l2_priority, const prox_rte_ipv4_hdr *ipv4_hdr)
 {
 	uint8_t dscp;
 	if ((ipv4_hdr->version_ihl >> 4) == 4) {
@@ -107,10 +107,10 @@ static inline void buffer_packet(struct task_aggregator *task, struct rte_mbuf *
 
 static inline void handle_aggregator(struct task_aggregator *task, struct rte_mbuf *mbuf)
 {
-	struct ether_hdr *peth = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
+	prox_rte_ether_hdr *peth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 	uint8_t priority = 0;
 	const struct qinq_hdr *pqinq;
-	const struct ipv4_hdr *ipv4_hdr;
+	const prox_rte_ipv4_hdr *ipv4_hdr;
 
 	const uint16_t eth_type = peth->ether_type;
 	switch (eth_type) {
@@ -121,7 +121,7 @@ static inline void handle_aggregator(struct task_aggregator *task, struct rte_mb
 		pqinq = rte_pktmbuf_mtod(mbuf, const struct qinq_hdr *);
 		if ((priority = detect_l2_priority(pqinq)) == OUT_DISCARD)
 			break;
-		ipv4_hdr = (const struct ipv4_hdr *)(pqinq + 1);
+		ipv4_hdr = (const prox_rte_ipv4_hdr *)(pqinq + 1);
 		if ((priority = detect_l3_priority(priority, ipv4_hdr)) == OUT_DISCARD)
 			break;
 		if ((priority = detect_l4_priority(priority, ipv4_hdr)) == OUT_DISCARD)
@@ -130,7 +130,7 @@ static inline void handle_aggregator(struct task_aggregator *task, struct rte_mb
 	case ETYPE_VLAN:
 		break;
 	case ETYPE_IPv4:
-		ipv4_hdr = (const struct ipv4_hdr *)(peth+1);
+		ipv4_hdr = (const prox_rte_ipv4_hdr *)(peth+1);
 		if ((priority = detect_l3_priority(LOW_PRIORITY, ipv4_hdr)) == OUT_DISCARD)
 			break;
 		if ((priority = detect_l4_priority(priority, ipv4_hdr)) == OUT_DISCARD)

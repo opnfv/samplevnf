@@ -422,7 +422,7 @@ int parse_ip6(struct ipv6_addr *addr, const char *str2)
 	return 0;
 }
 
-int parse_mac(struct ether_addr *ether_addr, const char *str2)
+int parse_mac(prox_rte_ether_addr *ether_addr, const char *str2)
 {
 	char str[MAX_STR_LEN_PROC];
 	char *addr_parts[7];

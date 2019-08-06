@@ -26,6 +26,7 @@
 #endif
 #include <rte_pci.h>
 
+#include "prox_compat.h"
 #include "prox_globals.h"
 
 enum addr_type {PROX_PORT_MAC_HW, PROX_PORT_MAC_SET, PROX_PORT_MAC_RAND};
@@ -53,7 +54,7 @@ struct prox_port_cfg {
 	uint32_t  max_link_speed;
 	uint32_t  mtu;
 	enum addr_type    type;
-	struct ether_addr eth_addr;    /* port MAC address */
+	prox_rte_ether_addr eth_addr;    /* port MAC address */
 	char name[MAX_NAME_SIZE];
 	char short_name[MAX_NAME_SIZE];
 	char driver_name[MAX_NAME_SIZE];
@@ -73,7 +74,7 @@ struct prox_port_cfg {
 	uint32_t max_rx_pkt_len;
 	uint32_t min_rx_bufsize;
 	uint32_t nb_mc_addr;
-	struct ether_addr mc_addr[NB_MCAST_ADDR];
+	prox_rte_ether_addr mc_addr[NB_MCAST_ADDR];
 };
 
 extern rte_atomic32_t lsc;

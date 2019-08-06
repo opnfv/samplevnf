@@ -57,10 +57,10 @@ static void init_task_qinq_encap6(struct task_base *tbase, struct task_args *tar
 /* Encapsulate IPv6 packet in QinQ where the QinQ is derived from the IPv6 address */
 static inline uint8_t handle_qinq_encap6(struct rte_mbuf *mbuf, struct task_qinq_encap6 *task)
 {
-	struct qinq_hdr *pqinq = (struct qinq_hdr *)rte_pktmbuf_prepend(mbuf, 2 * sizeof(struct vlan_hdr));
+	struct qinq_hdr *pqinq = (struct qinq_hdr *)rte_pktmbuf_prepend(mbuf, 2 * sizeof(prox_rte_vlan_hdr));
 
 	PROX_ASSERT(pqinq);
-	struct ipv6_hdr *pip6 = (struct ipv6_hdr *)(pqinq + 1);
+	prox_rte_ipv6_hdr *pip6 = (prox_rte_ipv6_hdr *)(pqinq + 1);
 
 	if (pip6->hop_limits) {
 		pip6->hop_limits--;

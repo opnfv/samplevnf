@@ -439,9 +439,9 @@ static int handle_gen_scheduled(struct task_gen_server *task)
 			}
 			else {
 
-				struct ether_hdr *eth = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
-				struct ipv4_hdr *ip = (struct ipv4_hdr*)(eth + 1);
-				struct tcp_hdr *tcp = (struct tcp_hdr*)(ip + 1);
+				prox_rte_ether_hdr *eth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
+				prox_rte_ipv4_hdr *ip = (prox_rte_ipv4_hdr*)(eth + 1);
+				prox_rte_tcp_hdr *tcp = (prox_rte_tcp_hdr*)(ip + 1);
 
 				task->out_saved = 0;
 				task->cancelled = 1;
@@ -732,8 +732,8 @@ static int lua_to_stream_cfg(struct lua_State *L, enum lua_place from, const cha
 
 	const uint64_t hz = rte_get_tsc_hz();
 
-	ret->tt_cfg[PEER_CLIENT] = token_time_cfg_create(up, hz, ETHER_MAX_LEN + 20);
-	ret->tt_cfg[PEER_SERVER] = token_time_cfg_create(dn, hz, ETHER_MAX_LEN + 20);
+	ret->tt_cfg[PEER_CLIENT] = token_time_cfg_create(up, hz, PROX_RTE_ETHER_MAX_LEN + 20);
+	ret->tt_cfg[PEER_SERVER] = token_time_cfg_create(dn, hz, PROX_RTE_ETHER_MAX_LEN + 20);
 
 	if (!strcmp(proto, "tcp")) {
 		ret->proto = IPPROTO_TCP;
@@ -946,7 +946,7 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 	struct token_time_cfg tt_cfg = {
 		.bpp = targ->rate_bps,
 		.period = rte_get_tsc_hz(),
-		.bytes_max = n_descriptors * (ETHER_MIN_LEN + 20),
+		.bytes_max = n_descriptors * (PROX_RTE_ETHER_MIN_LEN + 20),
 	};
 
 	token_time_init(&task->token_time, &tt_cfg);
@@ -1025,7 +1025,7 @@ static void init_task_gen_client(struct task_base *tbase, struct task_args *targ
 
 	task->heap = heap_create(targ->n_concur_conn, socket);
 	task->seed = rte_rdtsc();
-	/* task->token_time.bytes_max = MAX_PKT_BURST * (ETHER_MAX_LEN + 20); */
+	/* task->token_time.bytes_max = MAX_PKT_BURST * (PROX_RTE_ETHER_MAX_LEN + 20); */
 
 	/* To avoid overflowing the tx descriptors, the token bucket
 	   size needs to be limited. The descriptors are filled most
@@ -1037,7 +1037,7 @@ static void init_task_gen_client(struct task_base *tbase, struct task_args *targ
 	struct token_time_cfg tt_cfg = {
 		.bpp = targ->rate_bps,
 		.period = rte_get_tsc_hz(),
-		.bytes_max = prox_port_cfg[targ->tx_port_queue[0].port].n_txd * (ETHER_MIN_LEN + 20),
+		.bytes_max = prox_port_cfg[targ->tx_port_queue[0].port].n_txd * (PROX_RTE_ETHER_MIN_LEN + 20),
 	};
 
 	token_time_init(&task->token_time, &tt_cfg);

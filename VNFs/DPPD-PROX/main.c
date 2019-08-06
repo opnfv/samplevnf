@@ -322,7 +322,7 @@ static void configure_if_rx_queues(struct task_args *targ, uint8_t socket)
 		// If the mbuf size (of the rx task) is not big enough, we might receive multiple segments
 		// This is usually the case when setting a big mtu size i.e. enabling jumbo frames.
 		// If the packets get transmitted, then multi segments will have to be enabled on the TX port
-		uint16_t max_frame_size = port->mtu + ETHER_HDR_LEN + ETHER_CRC_LEN + 2 * PROX_VLAN_TAG_SIZE;
+		uint16_t max_frame_size = port->mtu + PROX_RTE_ETHER_HDR_LEN + PROX_RTE_ETHER_CRC_LEN + 2 * PROX_VLAN_TAG_SIZE;
 		if (max_frame_size + sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM > targ->mbuf_size) {
 			targ->task_init->flag_features |= TASK_FEATURE_TXQ_FLAGS_MULTSEGS;
 		}
@@ -686,8 +686,8 @@ static void set_mbuf_size(struct task_args *targ)
 			continue;
 		}
 		port = &prox_port_cfg[if_port];
-		if (max_frame_size < port->mtu + ETHER_HDR_LEN + ETHER_CRC_LEN + 2 * PROX_VLAN_TAG_SIZE)
-			max_frame_size = port->mtu + ETHER_HDR_LEN + ETHER_CRC_LEN + 2 * PROX_VLAN_TAG_SIZE;
+		if (max_frame_size < port->mtu + PROX_RTE_ETHER_HDR_LEN + PROX_RTE_ETHER_CRC_LEN + 2 * PROX_VLAN_TAG_SIZE)
+			max_frame_size = port->mtu + PROX_RTE_ETHER_HDR_LEN + PROX_RTE_ETHER_CRC_LEN + 2 * PROX_VLAN_TAG_SIZE;
 		if (min_buffer_size < port->min_rx_bufsize)
 			min_buffer_size = port->min_rx_bufsize;
 

@@ -178,14 +178,14 @@ static int handle_routing_bulk(struct task_base *tbase, struct rte_mbuf **mbufs,
 
 static void set_l2(struct task_routing *task, struct rte_mbuf *mbuf, uint8_t nh_idx)
 {
-	struct ether_hdr *peth = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
+	prox_rte_ether_hdr *peth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 	*((uint64_t *)(&peth->d_addr)) = task->next_hops[nh_idx].mac_port_8bytes;
 	*((uint64_t *)(&peth->s_addr)) = task->src_mac[task->next_hops[nh_idx].mac_port.out_idx];
 }
 
 static void set_l2_mpls(struct task_routing *task, struct rte_mbuf *mbuf, uint8_t nh_idx)
 {
-	struct ether_hdr *peth = (struct ether_hdr *)rte_pktmbuf_prepend(mbuf, sizeof(struct mpls_hdr));
+	prox_rte_ether_hdr *peth = (prox_rte_ether_hdr *)rte_pktmbuf_prepend(mbuf, sizeof(struct mpls_hdr));
 
 	*((uint64_t *)(&peth->d_addr)) = task->next_hops[nh_idx].mac_port_8bytes;
 	*((uint64_t *)(&peth->s_addr)) = task->src_mac[task->next_hops[nh_idx].mac_port.out_idx];
@@ -203,8 +203,8 @@ static void set_l2_mpls(struct task_routing *task, struct rte_mbuf *mbuf, uint8_
 
 static uint8_t route_ipv4(struct task_routing *task, uint8_t *beg, uint32_t ip_offset, struct rte_mbuf *mbuf)
 {
-	struct ipv4_hdr *ip = (struct ipv4_hdr*)(beg + ip_offset);
-	struct ether_hdr *peth_out;
+	prox_rte_ipv4_hdr *ip = (prox_rte_ipv4_hdr*)(beg + ip_offset);
+	prox_rte_ether_hdr *peth_out;
 	uint8_t tx_port;
 	uint32_t dst_ip;
 
@@ -218,7 +218,7 @@ static uint8_t route_ipv4(struct task_routing *task, uint8_t *beg, uint32_t ip_o
 	switch(ip->next_proto_id) {
 	case IPPROTO_GRE: {
 		struct gre_hdr *pgre = (struct gre_hdr *)(ip + 1);
-		dst_ip = ((struct ipv4_hdr *)(pgre + 1))->dst_addr;
+		dst_ip = ((prox_rte_ipv4_hdr *)(pgre + 1))->dst_addr;
 		break;
 	}
 	case IPPROTO_TCP:
@@ -260,7 +260,7 @@ static uint8_t route_ipv4(struct task_routing *task, uint8_t *beg, uint32_t ip_o
 static inline uint8_t handle_routing(struct task_routing *task, struct rte_mbuf *mbuf)
 {
 	struct qinq_hdr *qinq;
-	struct ether_hdr *peth = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
+	prox_rte_ether_hdr *peth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 
 	switch (peth->ether_type) {
 	case ETYPE_8021ad: {
@@ -277,7 +277,7 @@ static inline uint8_t handle_routing(struct task_routing *task, struct rte_mbuf 
 	case ETYPE_MPLSU: {
 		/* skip MPLS headers if any for routing */
 		struct mpls_hdr *mpls = (struct mpls_hdr *)(peth + 1);
-		uint32_t count = sizeof(struct ether_hdr);
+		uint32_t count = sizeof(prox_rte_ether_hdr);
 		while (!(mpls->bytes & 0x00010000)) {
 			mpls++;
 			count += sizeof(struct mpls_hdr);

@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
-
 #ifndef _PROX_COMPAT_H_
 #define _PROX_COMPAT_H_
 #include <rte_common.h>
@@ -21,6 +20,17 @@
 #include <rte_hash_crc.h>
 #include "hash_utils.h"
 #include "quit.h"
+
+static inline char *prox_strncpy(char * dest, const char * src, size_t count)
+{
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpragmas"
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
+	strncpy(dest, src, count);
+#pragma GCC diagnostic pop
+	PROX_PANIC(dest[count - 1] != 0, "\t\tError in strncpy: buffer overrun (%lu bytes)", count);
+	return dest;
+}
 
 /* This is a copy of the rte_table_hash_params from DPDK 17.11  *
  * So if DPDK decides to change the structure the modifications *
@@ -143,14 +153,29 @@ static void *prox_rte_table_create(struct prox_rte_table_params *params, int soc
 #define prox_rte_sched_port_pkt_write(A,B,C,D,E,F,G) rte_sched_port_pkt_write(A,B,C,D,E,F,G);
 #endif
 
-static inline char *prox_strncpy(char * dest, const char * src, size_t count)
-{
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpragmas"
-#pragma GCC diagnostic ignored "-Wstringop-truncation"
-	strncpy(dest, src, count);
-#pragma GCC diagnostic pop
-	PROX_PANIC(dest[count - 1] != 0, "\t\tError in strncpy: buffer overrun (%lu bytes)", count);
-	return dest;
-}
-#endif // _PROX_COMPAT_H
+#if RTE_VERSION < RTE_VERSION_NUM(19,8,0,0)
+#define PROX_RTE_ETHER_CRC_LEN ETHER_CRC_LEN
+#define PROX_RTE_ETHER_MIN_LEN ETHER_MIN_LEN
+#define PROX_RTE_ETHER_MAX_LEN ETHER_MAX_LEN
+#define PROX_RTE_ETHER_HDR_LEN ETHER_HDR_LEN
+#define PROX_RTE_TCP_SYN_FLAG TCP_SYN_FLAG
+#define PROX_RTE_TCP_FIN_FLAG TCP_FIN_FLAG
+#define PROX_RTE_TCP_RST_FLAG TCP_RST_FLAG
+#define PROX_RTE_TCP_ACK_FLAG TCP_ACK_FLAG
+
+#define prox_rte_ether_addr_copy ether_addr_copy
+#define prox_rte_eth_random_addr eth_random_addr
+
+typedef struct ipv6_hdr prox_rte_ipv6_hdr;
+typedef struct ipv4_hdr prox_rte_ipv4_hdr;
+typedef struct ether_addr prox_rte_ether_addr;
+typedef struct ether_hdr prox_rte_ether_hdr;
+typedef struct vlan_hdr prox_rte_vlan_hdr;
+typedef struct vxlan_gpe_hdr prox_rte_vxlan_gpe_hdr;
+typedef struct udp_hdr prox_rte_udp_hdr;
+typedef struct tcp_hdr prox_rte_tcp_hdr;
+
+#else
+#endif
+
+#endif // _PROX_COMPAT_H_

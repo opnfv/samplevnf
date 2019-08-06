@@ -104,10 +104,10 @@ void prox_pktmbuf_init(struct rte_mempool *mp, void *opaque_arg, void *_m, unsig
 	struct rte_mbuf *mbuf = _m;
 
 #if RTE_VERSION >= RTE_VERSION_NUM(1,8,0,0)
-	mbuf->tx_offload = CALC_TX_OL(sizeof(struct ether_hdr), sizeof(struct ipv4_hdr));
+	mbuf->tx_offload = CALC_TX_OL(sizeof(prox_rte_ether_hdr), sizeof(prox_rte_ipv4_hdr));
 #else
-	mbuf->pkt.vlan_macip.f.l2_len = sizeof(struct ether_hdr);
-	mbuf->pkt.vlan_macip.f.l3_len = sizeof(struct ipv4_hdr);
+	mbuf->pkt.vlan_macip.f.l2_len = sizeof(prox_rte_ether_hdr);
+	mbuf->pkt.vlan_macip.f.l3_len = sizeof(prox_rte_ipv4_hdr);
 #endif
 
 	rte_pktmbuf_init(mp, opaque_arg, mbuf, i);
@@ -181,9 +181,9 @@ void init_rte_dev(int use_dummy_devices)
 		char port_name[32] = "0dummy_dev";
 		for (uint32_t i = 0; i < nb_ports; ++i) {
 #if (RTE_VERSION > RTE_VERSION_NUM(17,5,0,1))
-			rte_vdev_init(port_name, "size=ETHER_MIN_LEN,copy=0");
+			rte_vdev_init(port_name, "size=PROX_RTE_ETHER_MIN_LEN,copy=0");
 #else
-			eth_dev_null_create(port_name, 0, ETHER_MIN_LEN, 0);
+			eth_dev_null_create(port_name, 0, PROX_RTE_ETHER_MIN_LEN, 0);
 #endif
 			port_name[0]++;
 		}
@@ -493,7 +493,7 @@ static void init_port(struct prox_port_cfg *port_cfg)
 		dummy_pool_name[0]++;
 	} else {
 		// Most pmd should now support setting mtu
-		if (port_cfg->mtu + ETHER_HDR_LEN + ETHER_CRC_LEN > port_cfg->max_rx_pkt_len) {
+		if (port_cfg->mtu + PROX_RTE_ETHER_HDR_LEN + PROX_RTE_ETHER_CRC_LEN > port_cfg->max_rx_pkt_len) {
 			plog_info("\t\tMTU is too big for the port, reducing MTU from %d to %d\n", port_cfg->mtu, port_cfg->max_rx_pkt_len);
 			port_cfg->mtu = port_cfg->max_rx_pkt_len;
 		}
@@ -755,7 +755,7 @@ void init_port_addr(void)
 			rte_eth_macaddr_get(port_id, &port_cfg->eth_addr);
 			break;
 		case PROX_PORT_MAC_RAND:
-			eth_random_addr(port_cfg->eth_addr.addr_bytes);
+			prox_rte_eth_random_addr(port_cfg->eth_addr.addr_bytes);
 			break;
 		case PROX_PORT_MAC_SET:
 			if ((rc = rte_eth_dev_default_mac_addr_set(port_id, &port_cfg->eth_addr)) != 0)

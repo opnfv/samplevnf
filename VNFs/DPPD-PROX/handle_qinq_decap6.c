@@ -45,7 +45,7 @@ struct task_qinq_decap6 {
 	struct rte_table_hash           *cpe_table;
 	uint16_t                        *user_table;
 	uint32_t                        bucket_index;
-	struct ether_addr 		edaddr;
+	prox_rte_ether_addr 		edaddr;
 	struct rte_lpm6                 *rte_lpm6;
 	void*                           period_data; /* used if using dual stack*/
 	void (*period_func)(void* data);
@@ -103,7 +103,7 @@ static void early_init(struct task_args *targ)
 static inline uint8_t handle_qinq_decap6(struct task_qinq_decap6 *task, struct rte_mbuf *mbuf)
 {
 	struct qinq_hdr *pqinq = rte_pktmbuf_mtod(mbuf, struct qinq_hdr *);
-	struct ipv6_hdr *pip6 = (struct ipv6_hdr *)(pqinq + 1);
+	prox_rte_ipv6_hdr *pip6 = (prox_rte_ipv6_hdr *)(pqinq + 1);
 
 	uint16_t svlan = pqinq->svlan.vlan_tci & 0xFF0F;
 	uint16_t cvlan = pqinq->cvlan.vlan_tci & 0xFF0F;
@@ -124,11 +124,11 @@ static inline uint8_t handle_qinq_decap6(struct task_qinq_decap6 *task, struct r
 		return OUT_DISCARD;
 	}
 
-	pqinq = (struct qinq_hdr *)rte_pktmbuf_adj(mbuf, 2 * sizeof(struct vlan_hdr));
+	pqinq = (struct qinq_hdr *)rte_pktmbuf_adj(mbuf, 2 * sizeof(prox_rte_vlan_hdr));
 	PROX_ASSERT(pqinq);
 	pqinq->ether_type = ETYPE_IPv6;
 	// Dest MAC addresses
-	ether_addr_copy(&task->edaddr, &pqinq->d_addr);
+	prox_rte_ether_addr_copy(&task->edaddr, &pqinq->d_addr);
 	return 0;
 }
 
