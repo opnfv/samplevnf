@@ -1081,7 +1081,7 @@ void task_gen_reset_values(struct task_base *tbase)
 	task_gen_reset_pkt_templates_content(task);
 	if (task->flags & TASK_OVERWRITE_SRC_MAC_WITH_PORT_MAC) {
 		for (uint32_t i = 0; i < task->n_pkts; ++i) {
-			rte_memcpy(&task->pkt_template[i].buf[sizeof(struct ether_addr)], &task->src_mac, sizeof(prox_rte_ether_addr));
+			rte_memcpy(&task->pkt_template[i].buf[sizeof(prox_rte_ether_addr)], &task->src_mac, sizeof(prox_rte_ether_addr));
 		}
 	}
 }
@@ -1317,7 +1317,7 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 		task->flags |= TASK_OVERWRITE_SRC_MAC_WITH_PORT_MAC;
 		memcpy(&task->src_mac, &prox_port_cfg[task->base.tx_params_hw.tx_port_queue->port].eth_addr, sizeof(prox_rte_ether_addr));
 		for (uint32_t i = 0; i < task->n_pkts; ++i) {
-			rte_memcpy(&task->pkt_template[i].buf[sizeof(struct ether_addr)], &task->src_mac, sizeof(prox_rte_ether_addr));
+			rte_memcpy(&task->pkt_template[i].buf[sizeof(prox_rte_ether_addr)], &task->src_mac, sizeof(prox_rte_ether_addr));
 		}
 	}
 	for (uint32_t i = 0; i < targ->n_rand_str; ++i) {

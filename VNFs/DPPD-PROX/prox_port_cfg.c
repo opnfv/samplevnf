@@ -181,7 +181,7 @@ void init_rte_dev(int use_dummy_devices)
 		char port_name[32] = "0dummy_dev";
 		for (uint32_t i = 0; i < nb_ports; ++i) {
 #if (RTE_VERSION > RTE_VERSION_NUM(17,5,0,1))
-			rte_vdev_init(port_name, "size=PROX_RTE_ETHER_MIN_LEN,copy=0");
+			rte_vdev_init(port_name, "size=64,copy=0");
 #else
 			eth_dev_null_create(port_name, 0, PROX_RTE_ETHER_MIN_LEN, 0);
 #endif
