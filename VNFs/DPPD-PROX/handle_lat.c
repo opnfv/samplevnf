@@ -792,7 +792,7 @@ static void init_task_lat(struct task_base *tbase, struct task_args *targ)
 	uint64_t bytes_per_hz = UINT64_MAX;
 	if (targ->nb_rxports) {
 		struct prox_port_cfg *port = &prox_port_cfg[targ->rx_port_queue[0].port];
-		max_frame_size = port->mtu + ETHER_HDR_LEN + ETHER_CRC_LEN + 2 * PROX_VLAN_TAG_SIZE;
+		max_frame_size = port->mtu + PROX_RTE_ETHER_HDR_LEN + PROX_RTE_ETHER_CRC_LEN + 2 * PROX_VLAN_TAG_SIZE;
 
 		// port->max_link_speed reports the maximum, non negotiated ink speed in Mbps e.g. 40k for a 40 Gbps NIC.
 		// It can be UINT32_MAX (virtual devices or not supported by DPDK < 16.04)

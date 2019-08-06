@@ -441,14 +441,14 @@ static int handle_qinq_encap4_bulk_pe(struct task_base *tbase, struct rte_mbuf *
 	prefetch_pkts(mbufs, n_pkts);
 
 	for (uint16_t j = 0; j < n_pkts; ++j) {
-		struct ipv4_hdr* ip = (struct ipv4_hdr *)(rte_pktmbuf_mtod(mbufs[j], struct ether_hdr *) + 1);
+		prox_rte_ipv4_hdr* ip = (prox_rte_ipv4_hdr *)(rte_pktmbuf_mtod(mbufs[j], prox_rte_ether_hdr *) + 1);
 		task->keys[j] = (uint64_t)ip->dst_addr;
 	}
 	prox_rte_table_key8_lookup(task->cpe_table, task->fake_packets, pkts_mask, &lookup_hit_mask, (void**)entries);
 
 	if (likely(lookup_hit_mask == pkts_mask)) {
 		for (uint16_t j = 0; j < n_pkts; ++j) {
-			struct cpe_pkt* cpe_pkt = (struct cpe_pkt*) rte_pktmbuf_prepend(mbufs[j], sizeof(struct qinq_hdr) - sizeof(struct ether_hdr));
+			struct cpe_pkt* cpe_pkt = (struct cpe_pkt*) rte_pktmbuf_prepend(mbufs[j], sizeof(struct qinq_hdr) - sizeof(prox_rte_ether_hdr));
 			uint16_t padlen = mbuf_calc_padlen(mbufs[j], cpe_pkt, &cpe_pkt->ipv4_hdr);
 
 			if (padlen) {
@@ -464,7 +464,7 @@ static int handle_qinq_encap4_bulk_pe(struct task_base *tbase, struct rte_mbuf *
 				out[j] = OUT_DISCARD;
 				continue;
 			}
-			struct cpe_pkt* cpe_pkt = (struct cpe_pkt*) rte_pktmbuf_prepend(mbufs[j], sizeof(struct qinq_hdr) - sizeof(struct ether_hdr));
+			struct cpe_pkt* cpe_pkt = (struct cpe_pkt*) rte_pktmbuf_prepend(mbufs[j], sizeof(struct qinq_hdr) - sizeof(prox_rte_ether_hdr));
 			uint16_t padlen = mbuf_calc_padlen(mbufs[j], cpe_pkt, &cpe_pkt->ipv4_hdr);
 
 			if (padlen) {
@@ -552,7 +552,7 @@ static inline uint8_t handle_qinq_encap4(struct task_qinq_encap4 *task, struct c
 	task->stats_per_user[entry->user]++;
 #endif
 	if (task->runtime_flags & TASK_TX_CRC) {
-		prox_ip_cksum(mbuf, &cpe_pkt->ipv4_hdr, sizeof(struct qinq_hdr), sizeof(struct ipv4_hdr), task->offload_crc);
+		prox_ip_cksum(mbuf, &cpe_pkt->ipv4_hdr, sizeof(struct qinq_hdr), sizeof(prox_rte_ipv4_hdr), task->offload_crc);
 	}
 	return entry->mac_port.out_idx;
 }

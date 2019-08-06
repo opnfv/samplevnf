@@ -21,9 +21,9 @@
 
 /* compute IP 16 bit checksum */
 /* The hdr_checksum field must be set to 0 by the caller. */
-inline void prox_ip_cksum_sw(struct ipv4_hdr *buf)
+inline void prox_ip_cksum_sw(prox_rte_ipv4_hdr *buf)
 {
-	const uint16_t size = sizeof(struct ipv4_hdr);
+	const uint16_t size = sizeof(prox_rte_ipv4_hdr);
 	uint32_t cksum = 0;
 	uint32_t nb_dwords;
 	uint32_t tail, mask;
@@ -73,7 +73,7 @@ static inline uint16_t calc_pseudo_checksum(uint8_t ipproto, uint16_t len, uint3
 	return csum;
 }
 
-static inline void prox_write_udp_pseudo_hdr(struct udp_hdr *udp, uint16_t len, uint32_t src_ip_addr, uint32_t dst_ip_addr)
+static inline void prox_write_udp_pseudo_hdr(prox_rte_udp_hdr *udp, uint16_t len, uint32_t src_ip_addr, uint32_t dst_ip_addr)
 {
 	/* Note that the csum is not complemented, while the pseaudo
 	   header checksum is calculated as "... the 16-bit one's
@@ -84,18 +84,18 @@ static inline void prox_write_udp_pseudo_hdr(struct udp_hdr *udp, uint16_t len, 
 	udp->dgram_cksum = calc_pseudo_checksum(IPPROTO_UDP, len, src_ip_addr, dst_ip_addr);
 }
 
-static inline void prox_write_tcp_pseudo_hdr(struct tcp_hdr *tcp, uint16_t len, uint32_t src_ip_addr, uint32_t dst_ip_addr)
+static inline void prox_write_tcp_pseudo_hdr(prox_rte_tcp_hdr *tcp, uint16_t len, uint32_t src_ip_addr, uint32_t dst_ip_addr)
 {
 	tcp->cksum = calc_pseudo_checksum(IPPROTO_TCP, len, src_ip_addr, dst_ip_addr);
 }
 
-inline void prox_ip_udp_cksum(struct rte_mbuf *mbuf, struct ipv4_hdr *pip, uint16_t l2_len, uint16_t l3_len, int cksum_offload)
+inline void prox_ip_udp_cksum(struct rte_mbuf *mbuf, prox_rte_ipv4_hdr *pip, uint16_t l2_len, uint16_t l3_len, int cksum_offload)
 {
 	prox_ip_cksum(mbuf, pip, l2_len, l3_len, cksum_offload & DEV_TX_OFFLOAD_IPV4_CKSUM);
 
 	uint32_t l4_len = rte_bswap16(pip->total_length) - l3_len;
 	if (pip->next_proto_id == IPPROTO_UDP) {
-		struct udp_hdr *udp = (struct udp_hdr *)(((uint8_t*)pip) + l3_len);
+		prox_rte_udp_hdr *udp = (prox_rte_udp_hdr *)(((uint8_t*)pip) + l3_len);
 #ifndef SOFT_CRC
 		if (cksum_offload & DEV_TX_OFFLOAD_UDP_CKSUM) {
 			mbuf->ol_flags |= PKT_TX_UDP_CKSUM;
@@ -104,7 +104,7 @@ inline void prox_ip_udp_cksum(struct rte_mbuf *mbuf, struct ipv4_hdr *pip, uint1
 #endif
 		prox_udp_cksum_sw(udp, l4_len, pip->src_addr, pip->dst_addr);
 	} else if (pip->next_proto_id == IPPROTO_TCP) {
-		struct tcp_hdr *tcp = (struct tcp_hdr *)(((uint8_t*)pip) + l3_len);
+		prox_rte_tcp_hdr *tcp = (prox_rte_tcp_hdr *)(((uint8_t*)pip) + l3_len);
 #ifndef SOFT_CRC
 		if (cksum_offload & DEV_TX_OFFLOAD_TCP_CKSUM) {
 			prox_write_tcp_pseudo_hdr(tcp, l4_len, pip->src_addr, pip->dst_addr);
@@ -139,14 +139,14 @@ static inline uint16_t checksum_byte_seq(uint16_t *buf, uint16_t len)
 	return ~csum;
 }
 
-inline void prox_udp_cksum_sw(struct udp_hdr *udp, uint16_t len, uint32_t src_ip_addr, uint32_t dst_ip_addr)
+inline void prox_udp_cksum_sw(prox_rte_udp_hdr *udp, uint16_t len, uint32_t src_ip_addr, uint32_t dst_ip_addr)
 {
 	prox_write_udp_pseudo_hdr(udp, len, src_ip_addr, dst_ip_addr);
 	uint16_t csum = checksum_byte_seq((uint16_t *)udp, len);
 	udp->dgram_cksum = csum;
 }
 
-inline void prox_tcp_cksum_sw(struct tcp_hdr *tcp, uint16_t len, uint32_t src_ip_addr, uint32_t dst_ip_addr)
+inline void prox_tcp_cksum_sw(prox_rte_tcp_hdr *tcp, uint16_t len, uint32_t src_ip_addr, uint32_t dst_ip_addr)
 {
 	prox_write_tcp_pseudo_hdr(tcp, len, src_ip_addr, dst_ip_addr);
 

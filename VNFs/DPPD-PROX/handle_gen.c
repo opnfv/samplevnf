@@ -117,18 +117,18 @@ struct task_gen {
 	uint64_t accur[ACCURACY_WINDOW];
 	uint64_t pkt_tsc_offset[64];
 	struct pkt_template *pkt_template_orig; /* packet templates (from inline or from pcap) */
-	struct ether_addr  src_mac;
+	prox_rte_ether_addr  src_mac;
 	uint8_t flags;
 	uint8_t cksum_offload;
 	struct prox_port_cfg *port;
 	uint64_t *bytes_to_tsc;
 } __rte_cache_aligned;
 
-static inline uint8_t ipv4_get_hdr_len(struct ipv4_hdr *ip)
+static inline uint8_t ipv4_get_hdr_len(prox_rte_ipv4_hdr *ip)
 {
 	/* Optimize for common case of IPv4 header without options. */
 	if (ip->version_ihl == 0x45)
-		return sizeof(struct ipv4_hdr);
+		return sizeof(prox_rte_ipv4_hdr);
 	if (unlikely(ip->version_ihl >> 4 != 4)) {
 		plog_warn("IPv4 ether_type but IP version = %d != 4", ip->version_ihl >> 4);
 		return 0;
@@ -138,16 +138,16 @@ static inline uint8_t ipv4_get_hdr_len(struct ipv4_hdr *ip)
 
 static void parse_l2_l3_len(uint8_t *pkt, uint16_t *l2_len, uint16_t *l3_len, uint16_t len)
 {
-	*l2_len = sizeof(struct ether_hdr);
+	*l2_len = sizeof(prox_rte_ether_hdr);
 	*l3_len = 0;
-	struct vlan_hdr *vlan_hdr;
-	struct ether_hdr *eth_hdr = (struct ether_hdr*)pkt;
-	struct ipv4_hdr *ip;
+	prox_rte_vlan_hdr *vlan_hdr;
+	prox_rte_ether_hdr *eth_hdr = (prox_rte_ether_hdr*)pkt;
+	prox_rte_ipv4_hdr *ip;
 	uint16_t ether_type = eth_hdr->ether_type;
 
 	// Unstack VLAN tags
-	while (((ether_type == ETYPE_8021ad) || (ether_type == ETYPE_VLAN)) && (*l2_len + sizeof(struct vlan_hdr) < len)) {
-		vlan_hdr = (struct vlan_hdr *)(pkt + *l2_len);
+	while (((ether_type == ETYPE_8021ad) || (ether_type == ETYPE_VLAN)) && (*l2_len + sizeof(prox_rte_vlan_hdr) < len)) {
+		vlan_hdr = (prox_rte_vlan_hdr *)(pkt + *l2_len);
 		*l2_len +=4;
 		ether_type = vlan_hdr->eth_proto;
 	}
@@ -174,7 +174,7 @@ static void parse_l2_l3_len(uint8_t *pkt, uint16_t *l2_len, uint16_t *l3_len, ui
 	}
 
 	if (*l2_len) {
-		struct ipv4_hdr *ip = (struct ipv4_hdr *)(pkt + *l2_len);
+		prox_rte_ipv4_hdr *ip = (prox_rte_ipv4_hdr *)(pkt + *l2_len);
 		*l3_len = ipv4_get_hdr_len(ip);
 	}
 }
@@ -185,7 +185,7 @@ static void checksum_packet(uint8_t *hdr, struct rte_mbuf *mbuf, struct pkt_temp
 	uint16_t l3_len = pkt_template->l3_len;
 
 	if (l2_len) {
-		struct ipv4_hdr *ip = (struct ipv4_hdr*)(hdr + l2_len);
+		prox_rte_ipv4_hdr *ip = (prox_rte_ipv4_hdr*)(hdr + l2_len);
 		prox_ip_udp_cksum(mbuf, ip, l2_len, l3_len, cksum_offload);
 	}
 }
@@ -530,7 +530,7 @@ static void task_gen_build_packets(struct task_gen *task, struct rte_mbuf **mbuf
 		struct pkt_template *pkt_template = &task->pkt_template[task->pkt_idx];
 		pkt_template_init_mbuf(pkt_template, mbufs[i], pkt_hdr[i]);
 		mbufs[i]->udata64 = task->pkt_idx & TEMPLATE_INDEX_MASK;
-		struct ether_hdr *hdr = (struct ether_hdr *)pkt_hdr[i];
+		prox_rte_ether_hdr *hdr = (prox_rte_ether_hdr *)pkt_hdr[i];
 		if (task->lat_enabled) {
 #ifdef NO_EXTRAPOLATION
 			task->pkt_tsc_offset[i] = 0;
@@ -572,16 +572,16 @@ static inline void register_all_ip_to_ctrl_plane(struct task_gen *task)
 		struct pkt_template *pktpl = &task->pkt_template[i];
 		unsigned int ip_src_pos = 0;
 		int maybe_ipv4 = 0;
-		unsigned int l2_len = sizeof(struct ether_hdr);
+		unsigned int l2_len = sizeof(prox_rte_ether_hdr);
 
 		uint8_t *pkt = pktpl->buf;
-		struct ether_hdr *eth_hdr = (struct ether_hdr*)pkt;
+		prox_rte_ether_hdr *eth_hdr = (prox_rte_ether_hdr*)pkt;
 		uint16_t ether_type = eth_hdr->ether_type;
-		struct vlan_hdr *vlan_hdr;
+		prox_rte_vlan_hdr *vlan_hdr;
 
 		// Unstack VLAN tags
-		while (((ether_type == ETYPE_8021ad) || (ether_type == ETYPE_VLAN)) && (l2_len + sizeof(struct vlan_hdr) < pktpl->len)) {
-			vlan_hdr = (struct vlan_hdr *)(pkt + l2_len);
+		while (((ether_type == ETYPE_8021ad) || (ether_type == ETYPE_VLAN)) && (l2_len + sizeof(prox_rte_vlan_hdr) < pktpl->len)) {
+			vlan_hdr = (prox_rte_vlan_hdr *)(pkt + l2_len);
 			l2_len +=4;
 			ether_type = vlan_hdr->eth_proto;
 		}
@@ -592,11 +592,11 @@ static inline void register_all_ip_to_ctrl_plane(struct task_gen *task)
 		if ((ether_type != ETYPE_IPv4) && !maybe_ipv4)
 			continue;
 
-		struct ipv4_hdr *ip = (struct ipv4_hdr *)(pkt + l2_len);
+		prox_rte_ipv4_hdr *ip = (prox_rte_ipv4_hdr *)(pkt + l2_len);
 		PROX_PANIC(ip->version_ihl >> 4 != 4, "IPv4 ether_type but IP version = %d != 4", ip->version_ihl >> 4);
 
 		// Even if IPv4 header contains options, options are after ip src and dst
-		ip_src_pos = l2_len + sizeof(struct ipv4_hdr) - 2 * sizeof(uint32_t);
+		ip_src_pos = l2_len + sizeof(prox_rte_ipv4_hdr) - 2 * sizeof(uint32_t);
 		uint32_t *ip_src = ((uint32_t *)(pktpl->buf + ip_src_pos));
 		plog_info("\tip_src_pos = %d, ip_src = %x\n", ip_src_pos, *ip_src);
 		register_ip_to_ctrl_plane(tbase->l3.tmaster, *ip_src, tbase->l3.reachable_port_id, tbase->l3.core_id, tbase->l3.task_id);
@@ -763,7 +763,7 @@ static int pcap_read_pkts(pcap_t *handle, const char *file_name, uint32_t n_pkts
 
 static int check_pkt_size(struct task_gen *task, uint32_t pkt_size, int do_panic)
 {
-	const uint16_t min_len = sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr);
+	const uint16_t min_len = sizeof(prox_rte_ether_hdr) + sizeof(prox_rte_ipv4_hdr);
 	const uint16_t max_len = task->max_frame_size;
 
 	if (do_panic) {
@@ -852,24 +852,24 @@ static void task_gen_pkt_template_recalc_metadata(struct task_gen *task)
 static void task_gen_pkt_template_recalc_checksum(struct task_gen *task)
 {
 	struct pkt_template *template;
-	struct ipv4_hdr *ip;
+	prox_rte_ipv4_hdr *ip;
 
 	task->runtime_checksum_needed = 0;
 	for (size_t i = 0; i < task->n_pkts; ++i) {
 		template = &task->pkt_template[i];
 		if (template->l2_len == 0)
 			continue;
-		ip = (struct ipv4_hdr *)(template->buf + template->l2_len);
+		ip = (prox_rte_ipv4_hdr *)(template->buf + template->l2_len);
 
 		ip->hdr_checksum = 0;
 		prox_ip_cksum_sw(ip);
 		uint32_t l4_len = rte_bswap16(ip->total_length) - template->l3_len;
 
 		if (ip->next_proto_id == IPPROTO_UDP) {
-			struct udp_hdr *udp = (struct udp_hdr *)(((uint8_t *)ip) + template->l3_len);
+			prox_rte_udp_hdr *udp = (prox_rte_udp_hdr *)(((uint8_t *)ip) + template->l3_len);
 			prox_udp_cksum_sw(udp, l4_len, ip->src_addr, ip->dst_addr);
 		} else if (ip->next_proto_id == IPPROTO_TCP) {
-			struct tcp_hdr *tcp = (struct tcp_hdr *)(((uint8_t *)ip) + template->l3_len);
+			prox_rte_tcp_hdr *tcp = (prox_rte_tcp_hdr *)(((uint8_t *)ip) + template->l3_len);
 			prox_tcp_cksum_sw(tcp, l4_len, ip->src_addr, ip->dst_addr);
 		}
 
@@ -943,7 +943,7 @@ static void task_init_gen_load_pkt_inline(struct task_gen *task, struct task_arg
 		"Failed to allocate %u bytes (in huge pages) for packet\n", task->max_frame_size);
 
 	PROX_PANIC(targ->pkt_size > task->max_frame_size,
-		targ->pkt_size > ETHER_MAX_LEN + 2 * PROX_VLAN_TAG_SIZE - 4 ?
+		targ->pkt_size > PROX_RTE_ETHER_MAX_LEN + 2 * PROX_VLAN_TAG_SIZE - 4 ?
 			"pkt_size too high and jumbo frames disabled" : "pkt_size > mtu");
 
 	rte_memcpy(task->pkt_template_orig[0].buf, targ->pkt_inline, targ->pkt_size);
@@ -964,7 +964,7 @@ static void task_init_gen_load_pcap(struct task_gen *task, struct task_args *tar
 	task->n_pkts = pcap_count_pkts(handle, &max_frame_size);
 	plogx_info("%u packets in pcap file '%s'\n", task->n_pkts, targ->pcap_file);
 	PROX_PANIC(max_frame_size > task->max_frame_size,
-		max_frame_size > ETHER_MAX_LEN + 2 * PROX_VLAN_TAG_SIZE -4 ?
+		max_frame_size > PROX_RTE_ETHER_MAX_LEN + 2 * PROX_VLAN_TAG_SIZE -4 ?
 			"pkt_size too high and jumbo frames disabled" : "pkt_size > mtu");
 
 	if (targ->n_pkts)
@@ -1231,10 +1231,10 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 	if (port) {
 		task->cksum_offload = port->requested_tx_offload & (DEV_TX_OFFLOAD_IPV4_CKSUM | DEV_TX_OFFLOAD_UDP_CKSUM);
 		task->port = port;
-		task->max_frame_size = port->mtu + ETHER_HDR_LEN + 2 * PROX_VLAN_TAG_SIZE;
+		task->max_frame_size = port->mtu + PROX_RTE_ETHER_HDR_LEN + 2 * PROX_VLAN_TAG_SIZE;
 	} else {
 		// Not generating to any port...
-		task->max_frame_size = ETHER_MAX_LEN;
+		task->max_frame_size = PROX_RTE_ETHER_MAX_LEN;
 	}
 	task->local_mbuf.mempool = task_gen_create_mempool(targ, task->max_frame_size);
 	PROX_PANIC(task->local_mbuf.mempool == NULL, "Failed to create mempool\n");
@@ -1313,7 +1313,7 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 			rte_memcpy(&task->pkt_template[i].buf[6], src_addr, 6);
 		}
 	}
-	memcpy(&task->src_mac, &prox_port_cfg[task->base.tx_params_hw.tx_port_queue->port].eth_addr, sizeof(struct ether_addr));
+	memcpy(&task->src_mac, &prox_port_cfg[task->base.tx_params_hw.tx_port_queue->port].eth_addr, sizeof(prox_rte_ether_addr));
 	for (uint32_t i = 0; i < targ->n_rand_str; ++i) {
 		PROX_PANIC(task_gen_add_rand(tbase, targ->rand_str[i], targ->rand_offset[i], UINT32_MAX),
 			   "Failed to add random\n");

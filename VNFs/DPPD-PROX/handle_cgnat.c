@@ -111,9 +111,9 @@ struct task_nat {
 static __m128i proto_ipsrc_portsrc_mask;
 static __m128i proto_ipdst_portdst_mask;
 struct pkt_eth_ipv4 {
-	struct ether_hdr ether_hdr;
-	struct ipv4_hdr  ipv4_hdr;
-	struct udp_hdr  udp_hdr;
+	prox_rte_ether_hdr ether_hdr;
+	prox_rte_ipv4_hdr  ipv4_hdr;
+	prox_rte_udp_hdr  udp_hdr;
 } __attribute__((packed));
 
 void task_cgnat_dump_public_hash(struct task_nat *task)
@@ -128,7 +128,7 @@ void task_cgnat_dump_private_hash(struct task_nat *task)
 
 static void set_l2(struct task_nat *task, struct rte_mbuf *mbuf, uint8_t nh_idx)
 {
-	struct ether_hdr *peth = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
+	prox_rte_ether_hdr *peth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 	*((uint64_t *)(&peth->d_addr)) = task->next_hops[nh_idx].mac_port_8bytes;
 	*((uint64_t *)(&peth->s_addr)) = task->src_mac[task->next_hops[nh_idx].mac_port.out_idx];
 }
@@ -136,8 +136,8 @@ static void set_l2(struct task_nat *task, struct rte_mbuf *mbuf, uint8_t nh_idx)
 static uint8_t route_ipv4(struct task_nat *task, struct rte_mbuf *mbuf)
 {
 	struct pkt_eth_ipv4 *pkt = rte_pktmbuf_mtod(mbuf, struct pkt_eth_ipv4 *);
-	struct ipv4_hdr *ip = &pkt->ipv4_hdr;
-	struct ether_hdr *peth_out;
+	prox_rte_ipv4_hdr *ip = &pkt->ipv4_hdr;
+	prox_rte_ether_hdr *peth_out;
 	uint8_t tx_port;
 	uint32_t dst_ip;
 
@@ -394,7 +394,7 @@ static int handle_nat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 				private_ip_idx = task->private_flow_entries[port_idx].private_ip_idx;
 				if (task->private_ip_info[private_ip_idx].mac_aging_time + tsc_hz < tsc)
 					task->private_ip_info[private_ip_idx].mac_aging_time = tsc;
-				prox_ip_udp_cksum(mbufs[j], &pkt[j]->ipv4_hdr, sizeof(struct ether_hdr), sizeof(struct ipv4_hdr), task->offload_crc);
+				prox_ip_udp_cksum(mbufs[j], &pkt[j]->ipv4_hdr, sizeof(prox_rte_ether_hdr), sizeof(prox_rte_ipv4_hdr), task->offload_crc);
 				out[j] =  route_ipv4(task, mbufs[j]);
 			}
 		}
@@ -486,7 +486,7 @@ static int handle_nat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 				}
 				if (task->private_ip_info[private_ip_idx].mac_aging_time + tsc_hz < tsc)
 					task->private_ip_info[private_ip_idx].mac_aging_time = tsc;
-				prox_ip_udp_cksum(mbufs[j], &pkt[j]->ipv4_hdr, sizeof(struct ether_hdr), sizeof(struct ipv4_hdr), task->offload_crc);
+				prox_ip_udp_cksum(mbufs[j], &pkt[j]->ipv4_hdr, sizeof(prox_rte_ether_hdr), sizeof(prox_rte_ipv4_hdr), task->offload_crc);
 				// TODO: if route fails while just added new key in table, should we delete the key from the table?
 				out[j] =  route_ipv4(task, mbufs[j]);
 				if (out[j] && new_entry) {
@@ -532,7 +532,7 @@ static int handle_nat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 				rte_memcpy(((uint8_t *)(pkt[j])) + 6, &task->src_mac_from_dpdk_port[task->public_entries[port_idx].dpdk_port], 6);
 				out[j] = task->public_entries[port_idx].dpdk_port;
 			}
-			prox_ip_udp_cksum(mbufs[j], &pkt[j]->ipv4_hdr, sizeof(struct ether_hdr), sizeof(struct ipv4_hdr), task->offload_crc);
+			prox_ip_udp_cksum(mbufs[j], &pkt[j]->ipv4_hdr, sizeof(prox_rte_ether_hdr), sizeof(prox_rte_ipv4_hdr), task->offload_crc);
 		}
         	return task->base.tx_pkt(&task->base, mbufs, n_pkts, out);
 	}

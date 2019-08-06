@@ -25,6 +25,7 @@
 #include <rte_udp.h>
 #include <rte_tcp.h>
 #include <rte_mbuf.h>
+#include "prox_compat.h"
 
 #if RTE_VERSION >= RTE_VERSION_NUM(1,8,0,0)
 #define CALC_TX_OL(l2_len, l3_len) ((uint64_t)(l2_len) | (uint64_t)(l3_len) << 7)
@@ -42,9 +43,9 @@ static void prox_ip_cksum_hw(struct rte_mbuf *mbuf, uint16_t l2_len, uint16_t l3
 	mbuf->ol_flags |= PKT_TX_IP_CKSUM;
 }
 
-void prox_ip_cksum_sw(struct ipv4_hdr *buf);
+void prox_ip_cksum_sw(prox_rte_ipv4_hdr *buf);
 
-static inline void prox_ip_cksum(struct rte_mbuf *mbuf, struct ipv4_hdr *buf, uint16_t l2_len, uint16_t l3_len, int offload)
+static inline void prox_ip_cksum(struct rte_mbuf *mbuf, prox_rte_ipv4_hdr *buf, uint16_t l2_len, uint16_t l3_len, int offload)
 {
 	buf->hdr_checksum = 0;
 #ifdef SOFT_CRC
@@ -59,10 +60,10 @@ static inline void prox_ip_cksum(struct rte_mbuf *mbuf, struct ipv4_hdr *buf, ui
 #endif
 }
 
-void prox_ip_udp_cksum(struct rte_mbuf *mbuf, struct ipv4_hdr *buf, uint16_t l2_len, uint16_t l3_len, int cksum_offload);
+void prox_ip_udp_cksum(struct rte_mbuf *mbuf, prox_rte_ipv4_hdr *buf, uint16_t l2_len, uint16_t l3_len, int cksum_offload);
 
 /* src_ip_addr/dst_ip_addr are in network byte order */
-void prox_udp_cksum_sw(struct udp_hdr *udp, uint16_t len, uint32_t src_ip_addr, uint32_t dst_ip_addr);
-void prox_tcp_cksum_sw(struct tcp_hdr *tcp, uint16_t len, uint32_t src_ip_addr, uint32_t dst_ip_addr);
+void prox_udp_cksum_sw(prox_rte_udp_hdr *udp, uint16_t len, uint32_t src_ip_addr, uint32_t dst_ip_addr);
+void prox_tcp_cksum_sw(prox_rte_tcp_hdr *tcp, uint16_t len, uint32_t src_ip_addr, uint32_t dst_ip_addr);
 
 #endif /* _PROX_CKSUM_H_ */

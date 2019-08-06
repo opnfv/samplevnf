@@ -49,7 +49,7 @@
 
 struct ipv6_tun_dest {
         struct ipv6_addr  dst_addr;
-	struct ether_addr dst_mac;
+	prox_rte_ether_addr dst_mac;
 };
 
 typedef enum ipv6_tun_dir_t {
@@ -59,7 +59,7 @@ typedef enum ipv6_tun_dir_t {
 
 struct task_ipv6_tun_base {
 	struct task_base        base;
-	struct ether_addr       src_mac;
+	prox_rte_ether_addr       src_mac;
 	uint8_t                 core_nb;
 	uint64_t                keys[64];
 	struct rte_mbuf*        fake_packets[64];
@@ -71,7 +71,7 @@ struct task_ipv6_tun_base {
 
 struct task_ipv6_decap {
 	struct task_ipv6_tun_base   base;
-        struct ether_addr           dst_mac;
+        prox_rte_ether_addr           dst_mac;
 };
 
 struct task_ipv6_encap {
@@ -131,7 +131,7 @@ static void init_lookup_table(struct task_ipv6_tun_base* ptask, struct task_args
 			struct ipv6_tun_binding_entry* entry = &table->entry[idx];
                         uint64_t key = MAKE_KEY_FROM_FIELDS(rte_cpu_to_be_32(entry->public_ipv4), entry->public_port, ptask->lookup_port_mask);
 			rte_memcpy(&data.dst_addr, &entry->endpoint_addr, sizeof(struct ipv6_addr));
-			rte_memcpy(&data.dst_mac, &entry->next_hop_mac, sizeof(struct ether_addr));
+			rte_memcpy(&data.dst_mac, &entry->next_hop_mac, sizeof(prox_rte_ether_addr));
 
 			int ret = prox_rte_table_key8_add(ptask->lookup_table, &key, &data, &key_found, &entry_in_hash);
 			PROX_PANIC(ret, "Error adding entry (%d) to binding lookup table", idx);
@@ -221,16 +221,16 @@ __attribute__((constructor)) static void reg_task_ipv6_encap(void)
 static inline uint8_t handle_ipv6_decap(struct task_ipv6_decap* ptask, struct rte_mbuf* rx_mbuf, struct ipv6_tun_dest* tun_dest);
 static inline uint8_t handle_ipv6_encap(struct task_ipv6_encap* ptask, struct rte_mbuf* rx_mbuf, struct ipv6_tun_dest* tun_dest);
 
-static inline int extract_key_fields( __attribute__((unused)) struct task_ipv6_tun_base* ptask, struct ipv4_hdr* pip4, ipv6_tun_dir_t dir, uint32_t* pAddr, uint16_t* pPort)
+static inline int extract_key_fields( __attribute__((unused)) struct task_ipv6_tun_base* ptask, prox_rte_ipv4_hdr* pip4, ipv6_tun_dir_t dir, uint32_t* pAddr, uint16_t* pPort)
 {
         *pAddr = (dir == TUNNEL_DIR_DECAP) ? pip4->src_addr : pip4->dst_addr;
 
         if (pip4->next_proto_id == IPPROTO_UDP) {
-                struct udp_hdr* pudp = (struct udp_hdr *)(pip4 + 1);
+                prox_rte_udp_hdr* pudp = (prox_rte_udp_hdr *)(pip4 + 1);
                 *pPort = rte_be_to_cpu_16((dir == TUNNEL_DIR_DECAP) ? pudp->src_port : pudp->dst_port);
         }
         else if (pip4->next_proto_id == IPPROTO_TCP) {
-                struct tcp_hdr* ptcp = (struct tcp_hdr *)(pip4 + 1);
+                prox_rte_tcp_hdr* ptcp = (prox_rte_tcp_hdr *)(pip4 + 1);
                 *pPort = rte_be_to_cpu_16((dir == TUNNEL_DIR_DECAP) ? ptcp->src_port : ptcp->dst_port);
         }
         else {
@@ -242,7 +242,7 @@ static inline int extract_key_fields( __attribute__((unused)) struct task_ipv6_t
         return 0;
 }
 
-static inline void extract_key(struct task_ipv6_tun_base* ptask, struct ipv4_hdr* pip4, ipv6_tun_dir_t dir, uint64_t* pkey)
+static inline void extract_key(struct task_ipv6_tun_base* ptask, prox_rte_ipv4_hdr* pip4, ipv6_tun_dir_t dir, uint64_t* pkey)
 {
         uint32_t lookup_addr;
         uint16_t lookup_port;
@@ -256,19 +256,19 @@ static inline void extract_key(struct task_ipv6_tun_base* ptask, struct ipv4_hdr
         *pkey = MAKE_KEY_FROM_FIELDS(lookup_addr, lookup_port, ptask->lookup_port_mask);
 }
 
-static inline struct ipv4_hdr* get_ipv4_decap(struct rte_mbuf *mbuf)
+static inline prox_rte_ipv4_hdr* get_ipv4_decap(struct rte_mbuf *mbuf)
 {
-        struct ether_hdr* peth = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
-        struct ipv6_hdr* pip6 = (struct ipv6_hdr *)(peth + 1);
-        struct ipv4_hdr* pip4 = (struct ipv4_hdr*) (pip6 + 1);  // TODO - Skip Option headers
+        prox_rte_ether_hdr* peth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
+        prox_rte_ipv6_hdr* pip6 = (prox_rte_ipv6_hdr *)(peth + 1);
+        prox_rte_ipv4_hdr* pip4 = (prox_rte_ipv4_hdr*) (pip6 + 1);  // TODO - Skip Option headers
 
         return pip4;
 }
 
-static inline struct ipv4_hdr* get_ipv4_encap(struct rte_mbuf *mbuf)
+static inline prox_rte_ipv4_hdr* get_ipv4_encap(struct rte_mbuf *mbuf)
 {
-        struct ether_hdr* peth = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
-        struct ipv4_hdr* pip4 = (struct ipv4_hdr *)(peth + 1);
+        prox_rte_ether_hdr* peth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
+        prox_rte_ipv4_hdr* pip4 = (prox_rte_ipv4_hdr *)(peth + 1);
 
         return pip4;
 }
@@ -303,7 +303,7 @@ __attribute__((cold)) static void handle_error(struct task_ipv6_tun_base* ptask,
         uint16_t lookup_port;
         uint64_t key;
 
-        struct ipv4_hdr* pip4 = (dir == TUNNEL_DIR_DECAP) ? get_ipv4_decap(mbuf) : get_ipv4_encap(mbuf);
+        prox_rte_ipv4_hdr* pip4 = (dir == TUNNEL_DIR_DECAP) ? get_ipv4_decap(mbuf) : get_ipv4_encap(mbuf);
         extract_key_fields(ptask, pip4, dir, &lookup_addr, &lookup_port);
         extract_key(ptask, pip4, dir, &key);
 
@@ -381,9 +381,9 @@ static int handle_ipv6_encap_bulk(struct task_base* tbase, struct rte_mbuf** mbu
 
 static inline uint8_t handle_ipv6_decap(struct task_ipv6_decap* ptask, struct rte_mbuf* rx_mbuf, __attribute__((unused)) struct ipv6_tun_dest* tun_dest)
 {
-	struct ether_hdr* peth = rte_pktmbuf_mtod(rx_mbuf, struct ether_hdr *);
+	prox_rte_ether_hdr* peth = rte_pktmbuf_mtod(rx_mbuf, prox_rte_ether_hdr *);
 	struct task_ipv6_tun_base* tun_base = (struct task_ipv6_tun_base*)ptask;
-	struct ipv4_hdr* pip4 = NULL;
+	prox_rte_ipv4_hdr* pip4 = NULL;
 
 	if (unlikely(peth->ether_type != ETYPE_IPv6)) {
 		plog_warn("Received non IPv6 packet on ipv6 tunnel port\n");
@@ -391,8 +391,8 @@ static inline uint8_t handle_ipv6_decap(struct task_ipv6_decap* ptask, struct rt
 		return OUT_DISCARD;
 	}
 
-	struct ipv6_hdr* pip6 = (struct ipv6_hdr *)(peth + 1);
-	int ipv6_hdr_len = sizeof(struct ipv6_hdr);
+	prox_rte_ipv6_hdr* pip6 = (prox_rte_ipv6_hdr *)(peth + 1);
+	int ipv6_hdr_len = sizeof(prox_rte_ipv6_hdr);
 
 	// TODO - Skip over any IPv6 Extension Header:
 	//      If pip6->next_header is in (0, 43, 44, 50, 51, 60, 135), skip ahead pip->hdr_ext_len
@@ -406,18 +406,18 @@ static inline uint8_t handle_ipv6_decap(struct task_ipv6_decap* ptask, struct rt
 
         // Discard IPv6 encapsulation
         rte_pktmbuf_adj(rx_mbuf, ipv6_hdr_len);
-        peth = rte_pktmbuf_mtod(rx_mbuf, struct ether_hdr *);
-	pip4 = (struct ipv4_hdr *)(peth + 1);
+        peth = rte_pktmbuf_mtod(rx_mbuf, prox_rte_ether_hdr *);
+	pip4 = (prox_rte_ipv4_hdr *)(peth + 1);
 
         // Restore Ethernet header
-        ether_addr_copy(&ptask->base.src_mac, &peth->s_addr);
-        ether_addr_copy(&ptask->dst_mac, &peth->d_addr);
+        prox_rte_ether_addr_copy(&ptask->base.src_mac, &peth->s_addr);
+        prox_rte_ether_addr_copy(&ptask->dst_mac, &peth->d_addr);
         peth->ether_type = ETYPE_IPv4;
 
 #ifdef GEN_DECAP_IPV6_TO_IPV4_CKSUM
         // generate an IP checksum for ipv4 packet
         if (tun_base->runtime_flags & TASK_TX_CRC) {
-                prox_ip_cksum(rx_mbuf, pip4, sizeof(struct ether_hdr), sizeof(struct ipv4_hdr), ptask->base.offload_crc);
+                prox_ip_cksum(rx_mbuf, pip4, sizeof(prox_rte_ether_hdr), sizeof(prox_rte_ipv4_hdr), ptask->base.offload_crc);
         }
 #endif
 
@@ -428,8 +428,8 @@ static inline uint8_t handle_ipv6_encap(struct task_ipv6_encap* ptask, struct rt
 {
         //plog_info("Found tunnel endpoint:"IPv6_BYTES_FMT" ("MAC_BYTES_FMT")\n", IPv6_BYTES(tun_dest->dst_addr), MAC_BYTES(tun_dest->dst_mac.addr_bytes));
 
-	struct ether_hdr* peth = (struct ether_hdr *)(rte_pktmbuf_mtod(rx_mbuf, struct ether_hdr *));
-	struct ipv4_hdr* pip4 = (struct ipv4_hdr *)(peth + 1);
+	prox_rte_ether_hdr* peth = (prox_rte_ether_hdr *)(rte_pktmbuf_mtod(rx_mbuf, prox_rte_ether_hdr *));
+	prox_rte_ipv4_hdr* pip4 = (prox_rte_ipv4_hdr *)(peth + 1);
 	uint16_t ipv4_length = rte_be_to_cpu_16(pip4->total_length);
 	struct task_ipv6_tun_base* tun_base = (struct task_ipv6_tun_base*)ptask;
 
@@ -449,22 +449,22 @@ static inline uint8_t handle_ipv6_encap(struct task_ipv6_encap* ptask, struct rt
 	pip4->hdr_checksum = 0;
 
 	// Remove padding if any (we don't want to encapsulate garbage at end of IPv4 packet)
-	int padding = rte_pktmbuf_pkt_len(rx_mbuf) - (ipv4_length + sizeof(struct ether_hdr));
+	int padding = rte_pktmbuf_pkt_len(rx_mbuf) - (ipv4_length + sizeof(prox_rte_ether_hdr));
 	if (unlikely(padding > 0)) {
 	        rte_pktmbuf_trim(rx_mbuf, padding);
 	}
 
 	// Encapsulate
-	const int extra_space = sizeof(struct ipv6_hdr);
-	peth = (struct ether_hdr *)rte_pktmbuf_prepend(rx_mbuf, extra_space);
+	const int extra_space = sizeof(prox_rte_ipv6_hdr);
+	peth = (prox_rte_ether_hdr *)rte_pktmbuf_prepend(rx_mbuf, extra_space);
 
 	// Ethernet Header
-	ether_addr_copy(&ptask->base.src_mac, &peth->s_addr);
-	ether_addr_copy(&tun_dest->dst_mac, &peth->d_addr);
+	prox_rte_ether_addr_copy(&ptask->base.src_mac, &peth->s_addr);
+	prox_rte_ether_addr_copy(&tun_dest->dst_mac, &peth->d_addr);
 	peth->ether_type = ETYPE_IPv6;
 
 	// Set up IPv6 Header
-	struct ipv6_hdr* pip6 = (struct ipv6_hdr *)(peth + 1);
+	prox_rte_ipv6_hdr* pip6 = (prox_rte_ipv6_hdr *)(peth + 1);
 	pip6->vtc_flow = rte_cpu_to_be_32(IPv6_VERSION << 28);
 	pip6->proto = IPPROTO_IPIP;
 	pip6->payload_len = rte_cpu_to_be_16(ipv4_length);
@@ -474,8 +474,8 @@ static inline uint8_t handle_ipv6_encap(struct task_ipv6_encap* ptask, struct rt
 
 	if (tun_base->runtime_flags & TASK_TX_CRC) {
 	// We modified the TTL in the IPv4 header, hence have to recompute the IPv4 checksum
-#define TUNNEL_L2_LEN (sizeof(struct ether_hdr) + sizeof(struct ipv6_hdr))
-		prox_ip_cksum(rx_mbuf, pip4, TUNNEL_L2_LEN, sizeof(struct ipv4_hdr), ptask->base.offload_crc);
+#define TUNNEL_L2_LEN (sizeof(prox_rte_ether_hdr) + sizeof(prox_rte_ipv6_hdr))
+		prox_ip_cksum(rx_mbuf, pip4, TUNNEL_L2_LEN, sizeof(prox_rte_ipv4_hdr), ptask->base.offload_crc);
 	}
 	return 0;
 }
