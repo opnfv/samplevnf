@@ -284,15 +284,17 @@ static void get_hp_sz_string(char *sz_str, uint64_t hp_sz)
 // Unused for now, keep for reference
 static int print_all_segments(const struct rte_memseg_list *memseg_list, const struct rte_memseg *memseg, void *arg)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
-	int memseg_list_idx, memseg_idx;
+	int memseg_list_idx = 0, memseg_idx;
 	int n = (*(int *)arg)++;
 
+#if RTE_VERSION < RTE_VERSION_NUM(19,8,0,0)
+	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	memseg_list_idx = memseg_list - mcfg->memsegs;
 	if ((memseg_list_idx < 0) || (memseg_list_idx >= RTE_MAX_MEMSEG_LISTS)) {
 		plog_err("Invalid memseg_list_idx = %d; memseg_list = %p, mcfg->memsegs = %p\n", memseg_list_idx, memseg_list, mcfg->memsegs);
 		return -1;
 	}
+#endif
 	memseg_idx = rte_fbarray_find_idx(&memseg_list->memseg_arr, memseg);
 	if (memseg_idx < 0) {
 		plog_err("Invalid memseg_idx = %d; memseg_list = %p, memseg = %p\n", memseg_idx, memseg_list, memseg);
@@ -318,15 +320,17 @@ static int print_all_segments(const struct rte_memseg_list *memseg_list, const s
 // Contiguous segments are shown as 1 big segment
 static int print_segments(const struct rte_memseg_list *memseg_list, const struct rte_memseg *memseg, size_t len, void *arg)
 {
-	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
-	int memseg_list_idx, memseg_idx;
+	int memseg_list_idx = 0, memseg_idx;
 	static int n = 0;
 
+#if RTE_VERSION < RTE_VERSION_NUM(19,8,0,0)
+	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	memseg_list_idx = memseg_list - mcfg->memsegs;
 	if ((memseg_list_idx < 0) || (memseg_list_idx >= RTE_MAX_MEMSEG_LISTS)) {
 		plog_err("Invalid memseg_list_idx = %d; memseg_list = %p, mcfg->memsegs = %p\n", memseg_list_idx, memseg_list, mcfg->memsegs);
 		return -1;
 	}
+#endif
 	memseg_idx = rte_fbarray_find_idx(&memseg_list->memseg_arr, memseg);
 	if (memseg_idx < 0) {
 		plog_err("Invalid memseg_idx = %d; memseg_list = %p, memseg = %p\n", memseg_idx, memseg_list, memseg);
@@ -349,6 +353,7 @@ static int print_segments(const struct rte_memseg_list *memseg_list, const struc
 }
 
 #endif
+
 void cmd_mem_layout(void)
 {
 #if RTE_VERSION < RTE_VERSION_NUM(18,5,0,0)

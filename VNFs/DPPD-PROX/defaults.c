@@ -94,7 +94,11 @@ static struct rte_sched_pipe_params pipe_params_default = {
 	.tc_rate = {TEN_GIGABIT / NB_PIPES, TEN_GIGABIT / NB_PIPES, TEN_GIGABIT / NB_PIPES, TEN_GIGABIT / NB_PIPES},
 	.tc_period = 40,
 
+#if RTE_VERSION >= RTE_VERSION_NUM(19,8,0,0)
+	.wrr_weights = {1, 1, 1, 1},
+#else
 	.wrr_weights = {1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1},
+#endif
 };
 
 static struct rte_sched_subport_params subport_params_default = {
