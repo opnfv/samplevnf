@@ -58,7 +58,7 @@ static inline uint8_t get_ipv4_dst_port(struct task_lb_5tuple *task, void *ipv4_
 	int ret = 0;
 	union ipv4_5tuple_host key;
 
-	ipv4_hdr = (uint8_t *)ipv4_hdr + offsetof(struct ipv4_hdr, time_to_live);
+	ipv4_hdr = (uint8_t *)ipv4_hdr + offsetof(prox_rte_ipv4_hdr, time_to_live);
 	__m128i data = _mm_loadu_si128((__m128i*)(ipv4_hdr));
 	/* Get 5 tuple: dst port, src port, dst IP address, src IP address and protocol */
         key.xmm = _mm_and_si128(data, mask0);
@@ -76,15 +76,15 @@ static inline uint8_t get_ipv4_dst_port(struct task_lb_5tuple *task, void *ipv4_
 
 static inline uint8_t handle_lb_5tuple(struct task_lb_5tuple *task, struct rte_mbuf *mbuf)
 {
-	struct ether_hdr *eth_hdr;
-	struct ipv4_hdr *ipv4_hdr;
+	prox_rte_ether_hdr *eth_hdr;
+	prox_rte_ipv4_hdr *ipv4_hdr;
 
-	eth_hdr = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
+	eth_hdr = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 
 	switch (eth_hdr->ether_type) {
 	case ETYPE_IPv4:
 		/* Handle IPv4 headers.*/
-		ipv4_hdr = (struct ipv4_hdr *) (eth_hdr + 1);
+		ipv4_hdr = (prox_rte_ipv4_hdr *) (eth_hdr + 1);
 		return get_ipv4_dst_port(task, ipv4_hdr, OUT_DISCARD, task->lookup_hash);
 	default:
 		return OUT_DISCARD;

@@ -22,6 +22,7 @@
 #include <rte_udp.h>
 #include <rte_byteorder.h>
 
+#include "prox_compat.h"
 #include "gre.h"
 #include "mpls.h"
 #include "qinq.h"
@@ -32,10 +33,10 @@ struct cpe_pkt {
 #ifdef USE_QINQ
 	struct qinq_hdr qinq_hdr;
 #else
-	struct ether_hdr ether_hdr;
+	prox_rte_ether_hdr ether_hdr;
 #endif
-	struct ipv4_hdr ipv4_hdr;
-	struct udp_hdr udp_hdr;
+	prox_rte_ipv4_hdr ipv4_hdr;
+	prox_rte_udp_hdr udp_hdr;
 } __attribute__((packed));
 
 struct cpe_packet_arp {
@@ -47,25 +48,25 @@ struct cpe_packet_arp {
    going to the core netwerk. Payload may follow
    after the headers, but no need to touch that. */
 struct core_net_pkt_m {
-	struct ether_hdr ether_hdr;
+	prox_rte_ether_hdr ether_hdr;
 #ifdef MPLS_ROUTING
 	union {
 		struct mpls_hdr mpls;
 		uint32_t mpls_bytes;
 	};
 #endif
-	struct ipv4_hdr tunnel_ip_hdr;
+	prox_rte_ipv4_hdr tunnel_ip_hdr;
 	struct gre_hdr gre_hdr;
-	struct ipv4_hdr ip_hdr;
-	struct udp_hdr udp_hdr;
+	prox_rte_ipv4_hdr ip_hdr;
+	prox_rte_udp_hdr udp_hdr;
 } __attribute__((packed));
 
 struct core_net_pkt {
-	struct ether_hdr ether_hdr;
-	struct ipv4_hdr tunnel_ip_hdr;
+	prox_rte_ether_hdr ether_hdr;
+	prox_rte_ipv4_hdr tunnel_ip_hdr;
 	struct gre_hdr gre_hdr;
-	struct ipv4_hdr ip_hdr;
-	struct udp_hdr udp_hdr;
+	prox_rte_ipv4_hdr ip_hdr;
+	prox_rte_udp_hdr udp_hdr;
 } __attribute__((packed));
 
 #define UPSTREAM_DELTA   ((uint32_t)(sizeof(struct core_net_pkt) - sizeof(struct cpe_pkt)))
@@ -86,7 +87,7 @@ static inline void extract_key_cpe(struct rte_mbuf *mbuf, uint64_t* key)
 #endif
 }
 
-static inline void key_core(struct gre_hdr* gre, __attribute__((unused)) struct ipv4_hdr* ip, uint64_t* key)
+static inline void key_core(struct gre_hdr* gre, __attribute__((unused)) prox_rte_ipv4_hdr* ip, uint64_t* key)
 {
 	struct cpe_key *cpe_key = (struct cpe_key*)key;
 

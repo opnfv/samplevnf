@@ -37,7 +37,7 @@
 #include "quit.h"
 
 struct cpe_gre_key {
-	struct ether_addr clt_mac;
+	prox_rte_ether_addr clt_mac;
 	uint16_t          pad;
 } __attribute__((__packed__));
 
@@ -219,12 +219,12 @@ void handle_gre_decap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 }
 
 struct gre_packet {
-	struct ether_hdr eth;
-	struct ipv4_hdr ip;
+	prox_rte_ether_hdr eth;
+	prox_rte_ipv4_hdr ip;
 	struct gre_hdr gre;
 	union {
-		struct ether_hdr eth2;
-		struct ipv4_hdr ip2;
+		prox_rte_ether_hdr eth2;
+		prox_rte_ipv4_hdr ip2;
 	};
 } __attribute__((__packed__));
 
@@ -232,26 +232,26 @@ struct gre_packet {
    GRE remove gre and ipv4 header and retain space for ethernet
    header. In case of Eth over GRE remove external eth, gre and ipv4
    headers and return pointer to payload */
-static inline struct ether_hdr *gre_decap(struct gre_hdr *pgre, struct rte_mbuf *mbuf)
+static inline prox_rte_ether_hdr *gre_decap(struct gre_hdr *pgre, struct rte_mbuf *mbuf)
 {
 	int16_t hsize = 0;
 	if (pgre->type == ETYPE_EoGRE) {
-		hsize = sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + sizeof(struct gre_hdr);
+		hsize = sizeof(prox_rte_ether_hdr) + sizeof(prox_rte_ipv4_hdr) + sizeof(struct gre_hdr);
 	}
 	else if (pgre->type == ETYPE_IPv4) {
-		/* retain sizeof(struct ether_hdr) */
-		hsize = sizeof(struct ipv4_hdr) + sizeof(struct gre_hdr);
+		/* retain sizeof(prox_rte_ether_hdr) */
+		hsize = sizeof(prox_rte_ipv4_hdr) + sizeof(struct gre_hdr);
 	}
 	else {
 		return NULL;
 	}
 
-	return (struct ether_hdr *)rte_pktmbuf_adj(mbuf, hsize);
+	return (prox_rte_ether_hdr *)rte_pktmbuf_adj(mbuf, hsize);
 }
 
 static inline uint8_t handle_gre_decap(struct task_gre_decap *task, struct rte_mbuf *mbuf)
 {
-	struct ipv4_hdr *pip = (struct ipv4_hdr *)(rte_pktmbuf_mtod(mbuf, struct ether_hdr *) + 1);
+	prox_rte_ipv4_hdr *pip = (prox_rte_ipv4_hdr *)(rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *) + 1);
 
 	if (pip->next_proto_id != IPPROTO_GRE) {
 		plog_warn("Invalid packet proto_id = 0x%x expect 0x%x\n",
@@ -265,15 +265,15 @@ static inline uint8_t handle_gre_decap(struct task_gre_decap *task, struct rte_m
 	data.gre_id = pgre->gre_id;
 	data.cpe_ip = pip->src_addr;
 
-	struct ether_hdr *peth = gre_decap(pgre, mbuf);
+	prox_rte_ether_hdr *peth = gre_decap(pgre, mbuf);
 	PROX_PANIC(peth != 0, "Failed to gre_decap");
 
-	pip = (struct ipv4_hdr *)(peth + 1);
+	pip = (prox_rte_ipv4_hdr *)(peth + 1);
 
 /* emulate client MAC for test purposes */
 #if 1
 	if (pgre->type == ETYPE_IPv4) {
-		struct ether_hdr eth = {
+		prox_rte_ether_hdr eth = {
 			.d_addr = {.addr_bytes =
 				   {0x0A, 0x02, 0x0A, 0x0A, 0x00, 0x01}},
 			.s_addr = {.addr_bytes =
@@ -285,9 +285,9 @@ static inline uint8_t handle_gre_decap(struct task_gre_decap *task, struct rte_m
 		eth.s_addr.addr_bytes[3] = (hip >> 16) & 0xFF;
 		eth.s_addr.addr_bytes[4] = (hip >> 8) & 0xFF;
 		eth.s_addr.addr_bytes[5] = (hip) & 0xFF;
-		rte_memcpy(peth, &eth, sizeof(struct ether_hdr));
+		rte_memcpy(peth, &eth, sizeof(prox_rte_ether_hdr));
 	}
-	ether_addr_copy(&peth->s_addr, &key.clt_mac);
+	prox_rte_ether_addr_copy(&peth->s_addr, &key.clt_mac);
 #endif
 
 	data.tsc = rte_rdtsc() + task->cpe_timeout;
@@ -303,7 +303,7 @@ static inline uint8_t handle_gre_decap(struct task_gre_decap *task, struct rte_m
 	}
 	rte_memcpy(&task->cpe_gre_data[hash_index], &data, sizeof(data));
 	if (task->runtime_flags & TASK_TX_CRC) {
-		prox_ip_cksum(mbuf, pip, sizeof(struct ether_hdr), sizeof(struct ipv4_hdr), task->offload_crc);
+		prox_ip_cksum(mbuf, pip, sizeof(prox_rte_ether_hdr), sizeof(prox_rte_ipv4_hdr), task->offload_crc);
 	}
 
 	return 0;
@@ -333,8 +333,8 @@ void handle_gre_encap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 static inline void handle_gre_encap16(struct task_gre_decap *task, struct rte_mbuf **mbufs, uint16_t n_pkts, uint8_t *out)
 {
 	for (uint8_t i = 0; i < n_pkts; ++i) {
-		struct ether_hdr *peth = rte_pktmbuf_mtod(mbufs[i], struct ether_hdr *);
-		ether_addr_copy(&peth->d_addr, &task->key[i].clt_mac);
+		prox_rte_ether_hdr *peth = rte_pktmbuf_mtod(mbufs[i], prox_rte_ether_hdr *);
+		prox_rte_ether_addr_copy(&peth->d_addr, &task->key[i].clt_mac);
 	}
 
 	int32_t hash_index[16];
@@ -359,24 +359,24 @@ static inline void handle_gre_encap16(struct task_gre_decap *task, struct rte_mb
 }
 
 #ifdef DO_ENC_ETH_OVER_GRE
-#define PKT_PREPEND_LEN (sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + sizeof(struct gre_hdr))
+#define PKT_PREPEND_LEN (sizeof(prox_rte_ether_hdr) + sizeof(prox_rte_ipv4_hdr) + sizeof(struct gre_hdr))
 #elif DO_ENC_IP_OVER_GRE
-#define PKT_PREPEND_LEN (sizeof(struct ipv4_hdr) + sizeof(struct gre_hdr))
+#define PKT_PREPEND_LEN (sizeof(prox_rte_ipv4_hdr) + sizeof(struct gre_hdr))
 #else
 
 static inline uint8_t handle_gre_encap(struct task_gre_decap *task, struct rte_mbuf *mbuf, struct cpe_gre_data *table)
 {
-	struct ether_hdr *peth = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
-	struct ipv4_hdr *pip = (struct ipv4_hdr *)(peth + 1);
+	prox_rte_ether_hdr *peth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
+	prox_rte_ipv4_hdr *pip = (prox_rte_ipv4_hdr *)(peth + 1);
 	uint16_t ip_len = rte_be_to_cpu_16(pip->total_length);
 
 	struct cpe_gre_key key;
-	ether_addr_copy(&peth->d_addr, &key.clt_mac);
+	prox_rte_ether_addr_copy(&peth->d_addr, &key.clt_mac);
 
 #ifdef GRE_TP
 	/* policing enabled */
 	if (task->cycles_per_byte) {
-		const uint16_t pkt_size = rte_pktmbuf_pkt_len(mbuf) + ETHER_CRC_LEN;
+		const uint16_t pkt_size = rte_pktmbuf_pkt_len(mbuf) + PROX_RTE_ETHER_CRC_LEN;
 		uint64_t tsc_now = rte_rdtsc();
 		if (table->tp_tbsize < pkt_size) {
 			uint64_t cycles_diff = tsc_now - table->tp_tsc;
@@ -399,19 +399,19 @@ static inline uint8_t handle_gre_encap(struct task_gre_decap *task, struct rte_m
 
 	/* reuse ethernet header from payload, retain payload (ip) in
 	   case of DO_ENC_IP_OVER_GRE */
-	peth = (struct ether_hdr *)rte_pktmbuf_prepend(mbuf, PKT_PREPEND_LEN);
+	peth = (prox_rte_ether_hdr *)rte_pktmbuf_prepend(mbuf, PKT_PREPEND_LEN);
 	PREFETCH0(peth);
 	ip_len += PKT_PREPEND_LEN;
 
-	pip = (struct ipv4_hdr *)(peth + 1);
+	pip = (prox_rte_ipv4_hdr *)(peth + 1);
 	struct gre_hdr *pgre = (struct gre_hdr *)(pip + 1);
 
-	struct ether_hdr eth = {
+	prox_rte_ether_hdr eth = {
 		.d_addr = {.addr_bytes = {0x0A, 0x0A, 0x0A, 0xC8, 0x00, 0x02}},
 		.s_addr = {.addr_bytes = {0x0A, 0x0A, 0x0A, 0xC8, 0x00, 0x01}},
 		.ether_type = ETYPE_IPv4
 	};
-	rte_memcpy(peth, &eth, sizeof(struct ether_hdr));
+	rte_memcpy(peth, &eth, sizeof(prox_rte_ether_hdr));
 
 	rte_memcpy(pgre, &gre_hdr_proto, sizeof(struct gre_hdr));
 #if DO_ENC_ETH_OVER_GRE
@@ -421,13 +421,13 @@ static inline uint8_t handle_gre_encap(struct task_gre_decap *task, struct rte_m
 #endif
 	pgre->gre_id = table->gre_id;
 
-	rte_memcpy(pip, &tunnel_ip_proto, sizeof(struct ipv4_hdr));
+	rte_memcpy(pip, &tunnel_ip_proto, sizeof(prox_rte_ipv4_hdr));
 	pip->src_addr = 0x02010a0a;	//emulate port ip
 	pip->dst_addr = table->cpe_ip;
 	pip->total_length = rte_cpu_to_be_16(ip_len);
 
 	if (task->runtime_flags & TASK_TX_CRC) {
-		prox_ip_cksum(mbuf, pip, sizeof(struct ether_hdr), sizeof(struct ipv4_hdr), task->offload_crc);
+		prox_ip_cksum(mbuf, pip, sizeof(prox_rte_ether_hdr), sizeof(prox_rte_ipv4_hdr), task->offload_crc);
 	}
 
 	return 0;

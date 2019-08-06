@@ -37,39 +37,39 @@ struct task_swap {
 
 static void write_src_and_dst_mac(struct task_swap *task, struct rte_mbuf *mbuf)
 {
-	struct ether_hdr *hdr;
-	struct ether_addr mac;
+	prox_rte_ether_hdr *hdr;
+	prox_rte_ether_addr mac;
 
 	if (unlikely((task->runtime_flags & (TASK_ARG_DST_MAC_SET|TASK_ARG_SRC_MAC_SET)) == (TASK_ARG_DST_MAC_SET|TASK_ARG_SRC_MAC_SET))) {
 		/* Source and Destination mac hardcoded */
-		hdr = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
+		hdr = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
               	rte_memcpy(hdr, task->src_dst_mac, sizeof(task->src_dst_mac));
 	} else {
-		hdr = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
+		hdr = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 		if (likely((task->runtime_flags & TASK_ARG_SRC_MAC_SET) == 0)) {
 			/* dst mac will be used as src mac */
-			ether_addr_copy(&hdr->d_addr, &mac);
+			prox_rte_ether_addr_copy(&hdr->d_addr, &mac);
 		}
 
 		if (unlikely(task->runtime_flags & TASK_ARG_DST_MAC_SET))
-			ether_addr_copy((struct ether_addr *)&task->src_dst_mac[0], &hdr->d_addr);
+			prox_rte_ether_addr_copy((prox_rte_ether_addr *)&task->src_dst_mac[0], &hdr->d_addr);
 		else
-			ether_addr_copy(&hdr->s_addr, &hdr->d_addr);
+			prox_rte_ether_addr_copy(&hdr->s_addr, &hdr->d_addr);
 
 		if (unlikely(task->runtime_flags & TASK_ARG_SRC_MAC_SET)) {
-			ether_addr_copy((struct ether_addr *)&task->src_dst_mac[6], &hdr->s_addr);
+			prox_rte_ether_addr_copy((prox_rte_ether_addr *)&task->src_dst_mac[6], &hdr->s_addr);
 		} else {
-			ether_addr_copy(&mac, &hdr->s_addr);
+			prox_rte_ether_addr_copy(&mac, &hdr->s_addr);
 		}
 	}
 }
-static inline int handle_arp_request(struct task_swap *task, struct ether_hdr_arp *hdr_arp, struct ether_addr *s_addr, uint32_t ip)
+static inline int handle_arp_request(struct task_swap *task, struct ether_hdr_arp *hdr_arp, prox_rte_ether_addr *s_addr, uint32_t ip)
 {
 	if ((hdr_arp->arp.data.tpa == ip) || (ip == 0)) {
 		build_arp_reply(hdr_arp, s_addr);
 		return 0;
 	} else if (task->runtime_flags & TASK_MULTIPLE_MAC) {
-		struct ether_addr tmp_s_addr;
+		prox_rte_ether_addr tmp_s_addr;
 		create_mac(hdr_arp, &tmp_s_addr);
 		build_arp_reply(hdr_arp, &tmp_s_addr);
 		return 0;
@@ -91,17 +91,17 @@ static inline int handle_arp_replies(struct task_swap *task, struct ether_hdr_ar
 static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts)
 {
 	struct task_swap *task = (struct task_swap *)tbase;
-	struct ether_hdr *hdr;
-	struct ether_addr mac;
-	struct ipv4_hdr *ip_hdr;
-	struct udp_hdr *udp_hdr;
+	prox_rte_ether_hdr *hdr;
+	prox_rte_ether_addr mac;
+	prox_rte_ipv4_hdr *ip_hdr;
+	prox_rte_udp_hdr *udp_hdr;
 	uint32_t ip;
 	uint16_t port;
 	uint8_t out[64] = {0};
 	struct mpls_hdr *mpls;
 	uint32_t mpls_len = 0;
 	struct qinq_hdr *qinq;
-	struct vlan_hdr *vlan;
+	prox_rte_vlan_hdr *vlan;
 	struct ether_hdr_arp *hdr_arp;
 	uint16_t j;
 
@@ -113,7 +113,7 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 	}
 
 	for (uint16_t j = 0; j < n_pkts; ++j) {
-		hdr = rte_pktmbuf_mtod(mbufs[j], struct ether_hdr *);
+		hdr = rte_pktmbuf_mtod(mbufs[j], prox_rte_ether_hdr *);
 		switch (hdr->ether_type) {
 		case ETYPE_MPLSU:
 			mpls = (struct mpls_hdr *)(hdr + 1);
@@ -122,7 +122,7 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 				mpls_len += sizeof(struct mpls_hdr);
 			}
 			mpls_len += sizeof(struct mpls_hdr);
-			ip_hdr = (struct ipv4_hdr *)(mpls + 1);
+			ip_hdr = (prox_rte_ipv4_hdr *)(mpls + 1);
 			break;
 		case ETYPE_8021ad:
 			qinq = (struct qinq_hdr *)hdr;
@@ -131,16 +131,16 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 				out[j] = OUT_DISCARD;
 				continue;
 			}
-			ip_hdr = (struct ipv4_hdr *)(qinq + 1);
+			ip_hdr = (prox_rte_ipv4_hdr *)(qinq + 1);
 			break;
 		case ETYPE_VLAN:
-			vlan = (struct vlan_hdr *)(hdr + 1);
+			vlan = (prox_rte_vlan_hdr *)(hdr + 1);
 			if (vlan->eth_proto == ETYPE_IPv4) {
-				ip_hdr = (struct ipv4_hdr *)(vlan + 1);
+				ip_hdr = (prox_rte_ipv4_hdr *)(vlan + 1);
 			} else if (vlan->eth_proto == ETYPE_VLAN) {
-				vlan = (struct vlan_hdr *)(vlan + 1);
+				vlan = (prox_rte_vlan_hdr *)(vlan + 1);
 				if (vlan->eth_proto == ETYPE_IPv4) {
-					ip_hdr = (struct ipv4_hdr *)(vlan + 1);
+					ip_hdr = (prox_rte_ipv4_hdr *)(vlan + 1);
 				}
 				else if (vlan->eth_proto == ETYPE_IPv6) {
 					plog_warn("Unsupported IPv6\n");
@@ -159,7 +159,7 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 			}
 			break;
 		case ETYPE_IPv4:
-			ip_hdr = (struct ipv4_hdr *)(hdr + 1);
+			ip_hdr = (prox_rte_ipv4_hdr *)(hdr + 1);
 			break;
 		case ETYPE_IPv6:
 			plog_warn("Unsupported IPv6\n");
@@ -173,17 +173,17 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 			out[j] = OUT_DISCARD;
 			continue;
 		}
-		udp_hdr = (struct udp_hdr *)(ip_hdr + 1);
+		udp_hdr = (prox_rte_udp_hdr *)(ip_hdr + 1);
 		ip = ip_hdr->dst_addr;
 		ip_hdr->dst_addr = ip_hdr->src_addr;
 		ip_hdr->src_addr = ip;
 		if (ip_hdr->next_proto_id == IPPROTO_GRE) {
 			struct gre_hdr *pgre = (struct gre_hdr *)(ip_hdr + 1);
-			struct ipv4_hdr *inner_ip_hdr = ((struct ipv4_hdr *)(pgre + 1));
+			prox_rte_ipv4_hdr *inner_ip_hdr = ((prox_rte_ipv4_hdr *)(pgre + 1));
 			ip = inner_ip_hdr->dst_addr;
 			inner_ip_hdr->dst_addr = inner_ip_hdr->src_addr;
 			inner_ip_hdr->src_addr = ip;
-			udp_hdr = (struct udp_hdr *)(inner_ip_hdr + 1);
+			udp_hdr = (prox_rte_udp_hdr *)(inner_ip_hdr + 1);
 			port = udp_hdr->dst_port;
 			udp_hdr->dst_port = udp_hdr->src_port;
 			udp_hdr->src_port = port;
@@ -200,7 +200,7 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 static void init_task_swap(struct task_base *tbase, struct task_args *targ)
 {
 	struct task_swap *task = (struct task_swap *)tbase;
-	struct ether_addr *src_addr, *dst_addr;
+	prox_rte_ether_addr *src_addr, *dst_addr;
 
 	/*
 	 * The destination MAC of the outgoing packet is based on the config file:

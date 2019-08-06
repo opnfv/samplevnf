@@ -18,12 +18,12 @@
 #define _PARSE_UTILS_H_
 
 #include <inttypes.h>
+#include "prox_compat.h"
 #include "ip_subnet.h"
 
 #define MAX_STR_LEN_PROC  (3 * MAX_PKT_SIZE + 20)
 
 struct ipv6_addr;
-struct ether_addr;
 
 enum ctrl_type {CTRL_TYPE_DP, CTRL_TYPE_MSG, CTRL_TYPE_PKT};
 
@@ -53,7 +53,7 @@ int parse_ip(uint32_t *paddr, const char *saddr);
 
 int parse_ip6(struct ipv6_addr *addr, const char *saddr);
 
-int parse_mac(struct ether_addr *paddr, const char *saddr);
+int parse_mac(prox_rte_ether_addr *paddr, const char *saddr);
 
 /* return error on overflow or invalid suffix*/
 int parse_kmg(uint32_t* val, const char *str);
