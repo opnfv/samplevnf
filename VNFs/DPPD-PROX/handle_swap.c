@@ -226,7 +226,7 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 			break;
 		case IPPROTO_UDP:
 		case IPPROTO_TCP:
-			if (task->igmp_address && IS_IPV4_MCAST(rte_be_to_cpu_32(ip))) {
+			if (task->igmp_address && PROX_RTE_IS_IPV4_MCAST(rte_be_to_cpu_32(ip))) {
 				out[j] = OUT_DISCARD;
 				continue;
 			}

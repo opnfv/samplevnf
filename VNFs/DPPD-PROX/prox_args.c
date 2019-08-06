@@ -1554,6 +1554,10 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 		if (err) {
 			return -1;
 		}
+		if (queue_id >= RTE_SCHED_BE_QUEUES_PER_PIPE) {
+			set_errf("queue_id must be < %d", RTE_SCHED_BE_QUEUES_PER_PIPE);
+			return -1;
+		}
 		targ->qos_conf.pipe_params[0].wrr_weights[queue_id] = val;
 		return 0;
 	}
