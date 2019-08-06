@@ -173,7 +173,38 @@ typedef struct vlan_hdr prox_rte_vlan_hdr;
 typedef struct udp_hdr prox_rte_udp_hdr;
 typedef struct tcp_hdr prox_rte_tcp_hdr;
 
+#ifndef RTE_SCHED_BE_QUEUES_PER_PIPE
+#define RTE_SCHED_BE_QUEUES_PER_PIPE RTE_SCHED_QUEUES_PER_PIPE
+#endif
+
+#define PROX_RTE_IS_IPV4_MCAST IS_IPV4_MCAST
+#define prox_rte_is_same_ether_addr is_same_ether_addr
 #else
+
+#define PROX_RTE_ETHER_CRC_LEN RTE_ETHER_CRC_LEN
+#define PROX_RTE_ETHER_MIN_LEN RTE_ETHER_MIN_LEN
+#define PROX_RTE_ETHER_MAX_LEN RTE_ETHER_MAX_LEN
+#define PROX_RTE_ETHER_HDR_LEN RTE_ETHER_HDR_LEN
+#define PROX_RTE_TCP_SYN_FLAG RTE_TCP_SYN_FLAG
+#define PROX_RTE_TCP_FIN_FLAG RTE_TCP_FIN_FLAG
+#define PROX_RTE_TCP_RST_FLAG RTE_TCP_RST_FLAG
+#define PROX_RTE_TCP_ACK_FLAG RTE_TCP_ACK_FLAG
+
+#define prox_rte_ether_addr_copy rte_ether_addr_copy
+#define prox_rte_eth_random_addr rte_eth_random_addr
+
+typedef struct rte_ipv6_hdr prox_rte_ipv6_hdr;
+typedef struct rte_ipv4_hdr prox_rte_ipv4_hdr;
+typedef struct rte_ether_addr prox_rte_ether_addr;
+typedef struct rte_ether_hdr prox_rte_ether_hdr;
+typedef struct rte_vlan_hdr prox_rte_vlan_hdr;
+typedef struct rte_vxlan_gpe_hdr prox_rte_vxlan_gpe_hdr;
+typedef struct rte_udp_hdr prox_rte_udp_hdr;
+typedef struct rte_tcp_hdr prox_rte_tcp_hdr;
+
+#define PROX_RTE_IS_IPV4_MCAST  RTE_IS_IPV4_MCAST
+#define prox_rte_is_same_ether_addr rte_is_same_ether_addr
+
 #endif
 
 static inline char *prox_strncpy(char * dest, const char * src, size_t count)
@@ -206,14 +237,19 @@ static int prox_rte_cryptodev_queue_pair_setup(uint8_t dev_id, uint16_t queue_pa
 }
 
 #else
-#define prox_esp_hdr esp_hdr
 #define prox_rte_cryptodev_qp_conf rte_cryptodev_qp_conf
-
 static int prox_rte_cryptodev_queue_pair_setup(uint8_t dev_id, uint16_t queue_pair_id, struct prox_rte_cryptodev_qp_conf *qp_conf, int socket_id)
 {
 	return rte_cryptodev_queue_pair_setup(dev_id, queue_pair_id, (struct rte_cryptodev_qp_conf *)qp_conf, socket_id);
 }
 
+#if RTE_VERSION < RTE_VERSION_NUM(19,8,0,0)
+#define prox_esp_hdr esp_hdr
+
+#else	// From DPDK 19.08
+#define prox_esp_hdr rte_esp_hdr
+
+#endif
 #endif
 #endif	// CONFIG_RTE_LIBRTE_PMD_AESNI_MB
 
