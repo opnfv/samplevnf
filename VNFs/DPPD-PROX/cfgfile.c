@@ -195,7 +195,7 @@ static struct cfg_section *cfg_check_section(char *buffer, struct cfg_section *p
 		if (parse_vars(val, sizeof(val), pend))
 			return NULL;
 	} else
-		strncpy(val, pend, sizeof(val));
+		strncpy(val, pend, sizeof(val) - 1);
 
 	for (len = 0; val[len] != '\0'; ++len) {
 		if (strchr(valid, val[len]) == NULL) {

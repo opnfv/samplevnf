@@ -922,10 +922,12 @@ int parse_kmg(uint32_t* val, const char *str2)
 		if (*val >> 22)
 			return -2;
 		*val <<= 10;
+		 __attribute__ ((fallthrough));
 	case 'M':
 		if (*val >> 22)
 			return -2;
 		*val <<= 10;
+		 __attribute__ ((fallthrough));
 	case 'K':
 		if (*val >> 22)
 			return -2;
@@ -1179,7 +1181,10 @@ int add_port_name(uint32_t val, const char *str2)
 	}
 
 	pn = &port_names[nb_port_names];
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
 	strncpy(pn->name, str, sizeof(pn->name));
+#pragma GCC diagnostic pop
 	pn->id = val;
 
 	++nb_port_names;
@@ -1197,7 +1202,7 @@ int set_self_var(const char *str)
 
 	struct var *v = &vars[nb_vars];
 
-	strncpy(v->name, "$self", strlen("$self"));
+	strncpy(v->name, "$self", strlen("$self") + 1);
 	sprintf(v->val, "%s", str);
 	nb_vars++;
 

@@ -823,7 +823,7 @@ static int parse_cmd_rule_add(const char *str, struct input *input)
 		return -1;
 	char *fields[9];
 	char str_cpy[255];
-	strncpy(str_cpy, str, 255);
+	strncpy(str_cpy, str, 255 - 1);
 	// example add rule command: rule add 15 0 1&0x0fff 1&0x0fff 0&0 128.0.0.0/1 128.0.0.0/1 5000-5000 5000-5000 allow
 	int ret = rte_strsplit(str_cpy, 255, fields, 9, ' ');
 	if (ret != 8) {

@@ -30,7 +30,7 @@ struct task_dump {
 	uint32_t n_mbufs;
         struct rte_mbuf **mbufs;
 	uint32_t n_pkts;
-	char pcap_file[128];
+	char pcap_file[256];
 };
 
 static uint16_t buffer_packets(struct task_dump *task, struct rte_mbuf **mbufs, uint16_t n_pkts)

@@ -56,7 +56,10 @@ const char *get_warning(int i)
 
 static void store_warning(const char *warning)
 {
-	strncpy(last_warn[n_warnings % 5], warning, sizeof(last_warn[0]));
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
+	strncpy(last_warn[n_warnings % 5], warning, sizeof(last_warn[0]) - 1);
+#pragma GCC diagnostic pop
 	n_warnings++;
 }
 
@@ -72,7 +75,7 @@ void plog_init(const char *log_name, int log_name_pid)
 			strncpy(buf, "prox.log", sizeof(buf));
 	}
 	else {
-		strncpy(buf, log_name, sizeof(buf));
+		strncpy(buf, log_name, sizeof(buf) - 1);
 	}
 
 	fp = fopen(buf, "w");

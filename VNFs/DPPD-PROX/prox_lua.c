@@ -137,7 +137,7 @@ static int l_mac(lua_State *L)
 	if (lua_isstring(L, -1)) {
 		const char *arg = lua_tostring(L, -1);
 		char arg2[128];
-		strncpy(arg2, arg, sizeof(arg2));
+		strncpy(arg2, arg, sizeof(arg2) - 1);
 
 		char *p = arg2;
 		int count = 0;
@@ -270,7 +270,7 @@ static int l_cidr(lua_State *L)
 	const char *arg = lua_tostring(L, -1);
 
 	char tmp[128];
-	strncpy(tmp, arg, sizeof(tmp));
+	strncpy(tmp, arg, sizeof(tmp) - 1);
 
 	char *slash = strchr(tmp, '/');
 	*slash = 0;
@@ -296,7 +296,7 @@ static int l_cidr6(lua_State *L)
 	const char *arg = lua_tostring(L, -1);
 
 	char tmp[128];
-	strncpy(tmp, arg, sizeof(tmp));
+	strncpy(tmp, arg, sizeof(tmp) - 1);
 
 	char *slash = strchr(tmp, '/');
 	*slash = 0;
