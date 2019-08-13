@@ -92,7 +92,7 @@ uint64_t str_to_tsc(const char *from)
 	uint64_t ret;
 	char str[16];
 
-	strncpy(str, from, sizeof(str));
+	strncpy(str, from, sizeof(str) - 1);
 
 	char *frac = strchr(str, '.');
 

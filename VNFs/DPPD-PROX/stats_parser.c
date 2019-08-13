@@ -910,7 +910,7 @@ uint64_t stats_parser_get(const char *stats_path)
 
 	char stats_path_cpy[128];
 
-	strncpy(stats_path_cpy, stats_path, sizeof(stats_path_cpy));
+	strncpy(stats_path_cpy, stats_path, sizeof(stats_path_cpy) - 1);
 	stats_path_len = strlen(stats_path);
 
 	size_t max_argc = 16;

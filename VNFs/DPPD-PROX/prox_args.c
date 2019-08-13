@@ -263,7 +263,7 @@ static int get_lua_cfg(__attribute__((unused)) unsigned sindex, __attribute__((u
 	struct lua_State *l = prox_lua();
 
 	char str_cpy[1024];
-	strncpy(str_cpy, str, sizeof(str_cpy));
+	strncpy(str_cpy, str, sizeof(str_cpy) -1);
 	uint32_t len = strlen(str_cpy);
 	str_cpy[len++] = '\n';
 	str_cpy[len++] = 0;
@@ -1627,7 +1627,7 @@ int prox_parse_args(int argc, char **argv)
 				}
 			}
 
-			strncpy(prox_cfg.name, cfg_file + offset, MAX_NAME_SIZE);
+			strncpy(prox_cfg.name, cfg_file + offset, MAX_NAME_SIZE - 1);
 			break;
 		case 'v':
 			plog_set_lvl(atoi(optarg));
@@ -1721,7 +1721,7 @@ int prox_parse_args(int argc, char **argv)
 			    (tmp2 = strchr(tmp, '='))) {
 				*tmp2 = 0;
 				tmp3[0] = '$';
-				strncpy(tmp3 + 1, tmp, 63);
+				strncpy(tmp3 + 1, tmp, 62);
 				plog_info("\tAdding variable: %s = %s\n", tmp3, tmp2 + 1);
 				ret = add_var(tmp3, tmp2 + 1, 1);
 				if (ret == -2) {
