@@ -29,6 +29,7 @@
 #include "defaults.h"
 #include "etypes.h"
 #include "prox_cfg.h"
+#include "prox_compat.h"
 
 static pthread_mutex_t file_mtx = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 int log_lvl = PROX_MAX_LOG_LVL;
@@ -56,7 +57,7 @@ const char *get_warning(int i)
 
 static void store_warning(const char *warning)
 {
-	strncpy(last_warn[n_warnings % 5], warning, sizeof(last_warn[0]));
+	prox_strncpy(last_warn[n_warnings % 5], warning, sizeof(last_warn[0]));
 	n_warnings++;
 }
 
@@ -69,10 +70,10 @@ void plog_init(const char *log_name, int log_name_pid)
 		if (log_name_pid)
 			snprintf(buf, sizeof(buf), "%s-%u.log", "prox", getpid());
 		else
-			strncpy(buf, "prox.log", sizeof(buf));
+			prox_strncpy(buf, "prox.log", sizeof(buf));
 	}
 	else {
-		strncpy(buf, log_name, sizeof(buf));
+		prox_strncpy(buf, log_name, sizeof(buf));
 	}
 
 	fp = fopen(buf, "w");

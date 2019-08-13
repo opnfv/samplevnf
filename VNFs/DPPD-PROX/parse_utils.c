@@ -34,6 +34,7 @@
 #include "log.h"
 #include "prox_lua.h"
 #include "prox_lua_types.h"
+#include "prox_compat.h"
 
 #define MAX_NB_PORT_NAMES PROX_MAX_PORTS
 #define MAX_LEN_PORT_NAME 24
@@ -117,7 +118,7 @@ int parse_single_var(char *val, size_t len, const char *name)
 				 match->name, match->val);
 			return -1;
 		}
-		strncpy(val, match->val, len);
+		prox_strncpy(val, match->val, len);
 		return 0;
 	}
 	else {
@@ -174,7 +175,7 @@ int parse_vars(char *val, size_t len, const char *name)
 					return -1;
 				}
 
-				strncpy(&cur_var[1], &name[start_var], var_len);
+				prox_strncpy(&cur_var[1], &name[start_var], var_len);
 				cur_var[1 + var_len] = 0;
 				if (parse_single_var(parsed, sizeof(parsed), cur_var)) {
 					return -1;
@@ -195,7 +196,7 @@ int parse_vars(char *val, size_t len, const char *name)
 			break;
 		}
 	}
-	strncpy(val, result, len);
+	prox_strncpy(val, result, len);
 
 	return 0;
 }
@@ -922,10 +923,12 @@ int parse_kmg(uint32_t* val, const char *str2)
 		if (*val >> 22)
 			return -2;
 		*val <<= 10;
+		 __attribute__ ((fallthrough));
 	case 'M':
 		if (*val >> 22)
 			return -2;
 		*val <<= 10;
+		 __attribute__ ((fallthrough));
 	case 'K':
 		if (*val >> 22)
 			return -2;
@@ -1048,7 +1051,7 @@ int parse_str(char* dst, const char *str2, size_t max_len)
 		return -2;
 	}
 
-	strncpy(dst, str, max_len);
+	prox_strncpy(dst, str, max_len);
 	return 0;
 }
 
@@ -1122,7 +1125,7 @@ int parse_remap(uint8_t *mapping, const char *str)
 		set_errf("String too long (max supported: %d)", MAX_STR_LEN_PROC);
 		return -2;
 	}
-	strncpy(str_cpy, str, MAX_STR_LEN_PROC);
+	prox_strncpy(str_cpy, str, MAX_STR_LEN_PROC);
 
 	ret = rte_strsplit(str_cpy, strlen(str_cpy), elements, PROX_MAX_PORTS + 1, ',');
 	if (ret <= 0) {
@@ -1179,7 +1182,7 @@ int add_port_name(uint32_t val, const char *str2)
 	}
 
 	pn = &port_names[nb_port_names];
-	strncpy(pn->name, str, sizeof(pn->name));
+	prox_strncpy(pn->name, str, sizeof(pn->name));
 	pn->id = val;
 
 	++nb_port_names;
@@ -1197,7 +1200,7 @@ int set_self_var(const char *str)
 
 	struct var *v = &vars[nb_vars];
 
-	strncpy(v->name, "$self", strlen("$self"));
+	prox_strncpy(v->name, "$self", strlen("$self") + 1);
 	sprintf(v->val, "%s", str);
 	nb_vars++;
 
@@ -1245,8 +1248,8 @@ int add_var(const char* name, const char *str2, uint8_t cli)
 	v = &vars[nb_vars];
 	PROX_PANIC(strlen(name) > sizeof(v->name), "\tUnable to parse var %s: too long\n", name);
 	PROX_PANIC(strlen(str) > sizeof(v->val), "\tUnable to parse var %s=%s: too long\n", name,str);
-	strncpy(v->name, name, sizeof(v->name));
-	strncpy(v->val, str, sizeof(v->val));
+	prox_strncpy(v->name, name, sizeof(v->name));
+	prox_strncpy(v->val, str, sizeof(v->val));
 	v->cli = cli;
 
 	++nb_vars;

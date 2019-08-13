@@ -26,6 +26,7 @@
 #include "parse_utils.h"
 #include "log.h"
 #include "quit.h"
+#include "prox_compat.h"
 
 #define UINT32_MAX_STR "4294967295"
 
@@ -195,7 +196,7 @@ static struct cfg_section *cfg_check_section(char *buffer, struct cfg_section *p
 		if (parse_vars(val, sizeof(val), pend))
 			return NULL;
 	} else
-		strncpy(val, pend, sizeof(val));
+		prox_strncpy(val, pend, sizeof(val));
 
 	for (len = 0; val[len] != '\0'; ++len) {
 		if (strchr(valid, val[len]) == NULL) {
@@ -275,7 +276,7 @@ int cfg_parse(struct cfg_file *pcfg, struct cfg_section *psec)
 				ret = fgets(buffer, sizeof(buffer), pcfg->pfile);
 				if (ret && *ret != '[') {
 					size_t l = strlen(buffer);
-					strncpy(lines, buffer, max_len);
+					prox_strncpy(lines, buffer, max_len);
 					max_len -= l;
 					lines += l;
 				}
@@ -299,7 +300,7 @@ int cfg_parse(struct cfg_file *pcfg, struct cfg_section *psec)
 		}
 
 		while (cfg_get_line(pcfg, buffer, MAX_CFG_STRING_LEN, psec->raw_lines) > 0) {
-			strncpy(pcfg->cur_line, buffer, sizeof(pcfg->cur_line));
+			prox_strncpy(pcfg->cur_line, buffer, sizeof(pcfg->cur_line));
 			if (*buffer == '[') {
 				if (index_count + 1 < psec->nbindex) {
 					// Need to loop - go back to recorded postion in file

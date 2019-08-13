@@ -31,6 +31,7 @@
 #include "stats_global.h"
 #include "stats_prio_task.h"
 #include "stats_irq.h"
+#include "prox_compat.h"
 
 struct stats_path_str {
 	const char *str;
@@ -910,7 +911,7 @@ uint64_t stats_parser_get(const char *stats_path)
 
 	char stats_path_cpy[128];
 
-	strncpy(stats_path_cpy, stats_path, sizeof(stats_path_cpy));
+	prox_strncpy(stats_path_cpy, stats_path, sizeof(stats_path_cpy));
 	stats_path_len = strlen(stats_path);
 
 	size_t max_argc = 16;

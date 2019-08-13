@@ -52,6 +52,7 @@
 #include "handle_cgnat.h"
 #include "handle_impair.h"
 #include "rx_pkt.h"
+#include "prox_compat.h"
 
 static int core_task_is_valid(int lcore_id, int task_id)
 {
@@ -823,7 +824,7 @@ static int parse_cmd_rule_add(const char *str, struct input *input)
 		return -1;
 	char *fields[9];
 	char str_cpy[255];
-	strncpy(str_cpy, str, 255);
+	prox_strncpy(str_cpy, str, 255);
 	// example add rule command: rule add 15 0 1&0x0fff 1&0x0fff 0&0 128.0.0.0/1 128.0.0.0/1 5000-5000 5000-5000 allow
 	int ret = rte_strsplit(str_cpy, 255, fields, 9, ' ');
 	if (ret != 8) {
@@ -1491,7 +1492,7 @@ static int parse_cmd_stats(const char *str, struct input *input)
 	char *ret = ret2;
 	int list = 0;
 
-	strncpy(buf, str, sizeof(buf) - 1);
+	prox_strncpy(buf, str, sizeof(buf) - 1);
 	char *tok;
 	uint64_t stat_val;
 
@@ -2157,7 +2158,7 @@ static int parse_cmd_help(const char *str, struct input *input)
 
 		if (strlen(cmd_strings[i].args)) {
 			char tmp[256] = {0};
-			strncpy(tmp, cmd_strings[i].args, 128);
+			prox_strncpy(tmp, cmd_strings[i].args, 128);
 			snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "Arguments: %s\n", tmp);
 			len2 = len;
 			if (strlen(cmd_strings[i].help)) {
@@ -2189,7 +2190,7 @@ static int parse_cmd_help(const char *str, struct input *input)
 						len3 = max_len;
 				}
 
-				strncpy(tmp, h, len3);
+				prox_strncpy(tmp, h, len3);
 				h += len3;
 				while (h[0] == ' ' && strlen(h))
 					h++;

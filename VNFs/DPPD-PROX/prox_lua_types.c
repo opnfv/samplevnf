@@ -39,6 +39,7 @@
 #include "handle_qinq_encap4.h"
 #include "toeplitz.h"
 #include "handle_lb_5tuple.h"
+#include "prox_compat.h"
 
 #if RTE_VERSION < RTE_VERSION_NUM(1,8,0,0)
 #define RTE_CACHE_LINE_SIZE CACHE_LINE_SIZE
@@ -345,7 +346,7 @@ int lua_to_string(struct lua_State *L, enum lua_place from, const char *name, ch
 	}
 	str = lua_tostring(L, -1);
 
-	strncpy(dst, str, size);
+	prox_strncpy(dst, str, size);
 
 	lua_pop(L, pop);
 	return 0;

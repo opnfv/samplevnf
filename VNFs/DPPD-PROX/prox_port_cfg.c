@@ -224,15 +224,15 @@ void init_rte_dev(int use_dummy_devices)
 		port_cfg->max_rx_pkt_len = dev_info.max_rx_pktlen;
 		port_cfg->min_rx_bufsize = dev_info.min_rx_bufsize;
 
-		strncpy(port_cfg->driver_name, dev_info.driver_name, sizeof(port_cfg->driver_name));
+		prox_strncpy(port_cfg->driver_name, dev_info.driver_name, sizeof(port_cfg->driver_name));
 		plog_info("\tPort %u : driver='%s' tx_queues=%d rx_queues=%d\n", port_id, !strcmp(port_cfg->driver_name, "")? "null" : port_cfg->driver_name, port_cfg->max_txq, port_cfg->max_rxq);
 
 		if (strncmp(port_cfg->driver_name, "rte_", 4) == 0) {
-			strncpy(port_cfg->short_name, prox_port_cfg[port_id].driver_name + 4, sizeof(port_cfg->short_name));
+			prox_strncpy(port_cfg->short_name, prox_port_cfg[port_id].driver_name + 4, sizeof(port_cfg->short_name));
 		} else if (strncmp(port_cfg->driver_name, "net_", 4) == 0) {
-			strncpy(port_cfg->short_name, prox_port_cfg[port_id].driver_name + 4, sizeof(port_cfg->short_name));
+			prox_strncpy(port_cfg->short_name, prox_port_cfg[port_id].driver_name + 4, sizeof(port_cfg->short_name));
 		} else {
-			strncpy(port_cfg->short_name, prox_port_cfg[port_id].driver_name, sizeof(port_cfg->short_name));
+			prox_strncpy(port_cfg->short_name, prox_port_cfg[port_id].driver_name, sizeof(port_cfg->short_name));
 		}
 		char *ptr;
 		if ((ptr = strstr(port_cfg->short_name, "_pmd")) != NULL) {

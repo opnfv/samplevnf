@@ -20,6 +20,7 @@
 #include <string.h>
 
 #include <rte_cycles.h>
+#include "prox_compat.h"
 
 /* Calibrate TSC overhead by reading NB_READ times and take the smallest value.
    Bigger values are caused by external influence and can be discarded. The best
@@ -92,7 +93,7 @@ uint64_t str_to_tsc(const char *from)
 	uint64_t ret;
 	char str[16];
 
-	strncpy(str, from, sizeof(str));
+	prox_strncpy(str, from, sizeof(str));
 
 	char *frac = strchr(str, '.');
 

@@ -23,6 +23,7 @@
 #include "log.h"
 #include "prox_shared.h"
 #include "prox_globals.h"
+#include "prox_compat.h"
 
 #define INIT_HASH_TABLE_SIZE 8192
 
@@ -84,7 +85,7 @@ static int prox_sh_add(struct prox_shared *ps, const char *name, void *data)
 	char key[256] = {0};
 	int ret;
 
-	strncpy(key, name, sizeof(key));
+	prox_strncpy(key, name, sizeof(key));
 	if (ps->size == 0) {
 		prox_sh_create_hash(ps, INIT_HASH_TABLE_SIZE);
 	}
@@ -121,7 +122,7 @@ static void *prox_sh_find(struct prox_shared *sh, const char *name)
 	if (!sh->hash)
 		return NULL;
 
-	strncpy(key, name, sizeof(key));
+	prox_strncpy(key, name, sizeof(key));
 	ret = rte_hash_lookup_data(sh->hash, key, &data);
 	if (ret >= 0)
 		return data;

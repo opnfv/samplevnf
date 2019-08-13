@@ -17,6 +17,7 @@
 #include <rte_table_hash.h>
 #include <rte_hash_crc.h>
 #include "hash_utils.h"
+#include "quit.h"
 
 /* This is a copy of the rte_table_hash_params from DPDK 17.11  *
  * So if DPDK decides to change the structure the modifications *
@@ -128,3 +129,13 @@ static void *prox_rte_table_create(struct prox_rte_table_params *params, int soc
 #ifndef DEV_RX_OFFLOAD_JUMBO_FRAME
 #define DEV_RX_OFFLOAD_JUMBO_FRAME 0x00000800
 #endif
+
+static inline char *prox_strncpy(char * dest, const char * src, size_t count)
+{
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
+	strncpy(dest, src, count);
+#pragma GCC diagnostic pop
+	PROX_PANIC(dest[count - 1] != 0, "\t\tError in strncpy: buffer overrun (%lu bytes)", count);
+	return dest;
+}

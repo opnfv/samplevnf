@@ -22,6 +22,7 @@
 
 #include "prox_args.h"
 #include "file_utils.h"
+#include "prox_compat.h"
 
 static char file_error_string[128] = {0};
 
@@ -44,7 +45,7 @@ static void resolve_path_cfg_dir(char *file_name, size_t len, const char *path)
 	if (path[0] != '/')
 		snprintf(file_name, len, "%s/%s", get_cfg_dir(), path);
 	else
-		strncpy(file_name, path, len);
+		prox_strncpy(file_name, path, len);
 }
 
 long file_get_size(const char *path)
