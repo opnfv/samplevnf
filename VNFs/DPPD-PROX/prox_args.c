@@ -242,7 +242,7 @@ const char *get_cfg_dir(void)
 	while (end > 0 && cfg_file[end] != '/')
 		end--;
 
-	strncpy(dir, cfg_file, end);
+	prox_strncpy(dir, cfg_file, end);
 	return dir;
 }
 
@@ -263,7 +263,7 @@ static int get_lua_cfg(__attribute__((unused)) unsigned sindex, __attribute__((u
 	struct lua_State *l = prox_lua();
 
 	char str_cpy[1024];
-	strncpy(str_cpy, str, sizeof(str_cpy));
+	prox_strncpy(str_cpy, str, sizeof(str_cpy));
 	uint32_t len = strlen(str_cpy);
 	str_cpy[len++] = '\n';
 	str_cpy[len++] = 0;
@@ -517,7 +517,7 @@ static int get_port_cfg(unsigned sindex, char *str, void *data)
 	}
 	else if (STR_EQ(str, "name")) {
 		uint32_t val;
-		strncpy(cfg->name, pkey, MAX_NAME_SIZE);
+		prox_strncpy(cfg->name, pkey, MAX_NAME_SIZE);
 		PROX_ASSERT(cur_if < PROX_MAX_PORTS);
 		return add_port_name(cur_if, pkey);
 	}
@@ -1635,14 +1635,14 @@ int prox_parse_args(int argc, char **argv)
 				}
 			}
 
-			strncpy(prox_cfg.name, cfg_file + offset, MAX_NAME_SIZE);
+			prox_strncpy(prox_cfg.name, cfg_file + offset, MAX_NAME_SIZE);
 			break;
 		case 'v':
 			plog_set_lvl(atoi(optarg));
 			break;
 		case 'l':
 			prox_cfg.log_name_pid = 0;
-			strncpy(prox_cfg.log_name, optarg, MAX_NAME_SIZE);
+			prox_strncpy(prox_cfg.log_name, optarg, MAX_NAME_SIZE);
 			break;
 		case 'p':
 			prox_cfg.log_name_pid = 1;
@@ -1664,7 +1664,7 @@ int prox_parse_args(int argc, char **argv)
 		case 'r':
 			if (!str_is_number(optarg) || strlen(optarg) > 11)
 				return -1;
-			strncpy(prox_cfg.update_interval_str, optarg, sizeof(prox_cfg.update_interval_str));
+			prox_strncpy(prox_cfg.update_interval_str, optarg, sizeof(prox_cfg.update_interval_str));
 			break;
 		case 'o':
 			if (prox_cfg.flags & DSF_DAEMON)
@@ -1729,7 +1729,7 @@ int prox_parse_args(int argc, char **argv)
 			    (tmp2 = strchr(tmp, '='))) {
 				*tmp2 = 0;
 				tmp3[0] = '$';
-				strncpy(tmp3 + 1, tmp, 63);
+				prox_strncpy(tmp3 + 1, tmp, 63);
 				plog_info("\tAdding variable: %s = %s\n", tmp3, tmp2 + 1);
 				ret = add_var(tmp3, tmp2 + 1, 1);
 				if (ret == -2) {

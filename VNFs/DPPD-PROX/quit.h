@@ -25,6 +25,7 @@
 
 #include "display.h"
 #include "prox_cfg.h"
+#include "log.h"
 
 /* PROX_PANIC for checks that are possibly hit due to configuration or
    when feature is not implemented. */

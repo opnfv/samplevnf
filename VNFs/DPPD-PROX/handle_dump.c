@@ -24,13 +24,14 @@
 #include "task_init.h"
 #include "task_base.h"
 #include "stats.h"
+#include "prox_compat.h"
 
 struct task_dump {
 	struct task_base base;
 	uint32_t n_mbufs;
         struct rte_mbuf **mbufs;
 	uint32_t n_pkts;
-	char pcap_file[128];
+	char pcap_file[256];
 };
 
 static uint16_t buffer_packets(struct task_dump *task, struct rte_mbuf **mbufs, uint16_t n_pkts)
@@ -69,7 +70,7 @@ static void init_task_dump(struct task_base *tbase, __attribute__((unused)) stru
 	if (!strcmp(targ->pcap_file, "")) {
 		strcpy(targ->pcap_file, "out.pcap");
 	}
-	strncpy(task->pcap_file, targ->pcap_file, sizeof(task->pcap_file));
+	prox_strncpy(task->pcap_file, targ->pcap_file, sizeof(task->pcap_file));
 }
 
 static void stop(struct task_base *tbase)

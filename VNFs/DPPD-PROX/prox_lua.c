@@ -20,6 +20,7 @@
 #include "prox_lua.h"
 #include "lua_compat.h"
 #include "parse_utils.h"
+#include "prox_compat.h"
 
 static struct lua_State *lua_instance;
 
@@ -137,7 +138,7 @@ static int l_mac(lua_State *L)
 	if (lua_isstring(L, -1)) {
 		const char *arg = lua_tostring(L, -1);
 		char arg2[128];
-		strncpy(arg2, arg, sizeof(arg2));
+		prox_strncpy(arg2, arg, sizeof(arg2));
 
 		char *p = arg2;
 		int count = 0;
@@ -223,7 +224,7 @@ static int l_ip6(lua_State *L)
 	int next_str = 1;
 	int ret;
 
-	strncpy(arg2, arg, sizeof(arg2));
+	prox_strncpy(arg2, arg, sizeof(arg2));
 
 	for (size_t i = 0; i < str_len; ++i) {
 		if (next_str) {
@@ -270,7 +271,7 @@ static int l_cidr(lua_State *L)
 	const char *arg = lua_tostring(L, -1);
 
 	char tmp[128];
-	strncpy(tmp, arg, sizeof(tmp));
+	prox_strncpy(tmp, arg, sizeof(tmp));
 
 	char *slash = strchr(tmp, '/');
 	*slash = 0;
@@ -296,7 +297,7 @@ static int l_cidr6(lua_State *L)
 	const char *arg = lua_tostring(L, -1);
 
 	char tmp[128];
-	strncpy(tmp, arg, sizeof(tmp));
+	prox_strncpy(tmp, arg, sizeof(tmp));
 
 	char *slash = strchr(tmp, '/');
 	*slash = 0;
