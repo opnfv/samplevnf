@@ -18,6 +18,7 @@
 #include <locale.h>
 #include <unistd.h>
 #include <signal.h>
+#include <curses.h>
 
 #include <rte_cycles.h>
 #include <rte_atomic.h>
@@ -1117,6 +1118,40 @@ static void sigterm_handler(int signum)
 	quit();
 }
 
+static void set_term_env(void)
+{
+	static const char var[] = "TERM";
+	static char str[] = "TERM=putty";
+	char *old_value, *new_value;
+	int max_ver = 0, min_ver = 0, n;
+
+	old_value = getenv(var);
+
+	const char *ncurses_version = curses_version();
+	n = sscanf(ncurses_version, "ncurses %d.%d", &max_ver, &min_ver);
+	if (n != 2) {
+		plog_info("\tUnable to extract ncurses version from %s. TERM left unchanged to %s\n", ncurses_version, old_value);
+		return;
+	} else {
+		plog_info("\tncurses version = %d.%d (%s)\n", max_ver, min_ver, ncurses_version);
+	}
+
+	if (((max_ver > 6) || ((max_ver == 6) && (min_ver >= 1))) && (strcmp(old_value, "xterm") == 0)) {
+		// On recent OSes such as RHEL 8.0, ncurses(6.1)  introduced support
+		// for ECMA-48 repeat character control.
+		// Some terminal emulators use TERM=xterm but do not support this feature.
+		// In this case, printing repeating character such as "22000000 Hz" might
+		// display as 220 Hz.
+		// Other emulattors, such as tmux, use TERM=screen, and do not exhibit the issue.
+		plog_info("\tChanged TERM from %s ", old_value);
+		putenv(str);
+		new_value = getenv(var);
+		plog_info("to %s\n", new_value);
+	} else {
+		plog_info("\tTERM left unchanged to %s\n", old_value);
+	}
+}
+
 int main(int argc, char **argv)
 {
 	/* set en_US locale to print big numbers with ',' */
@@ -1125,10 +1160,10 @@ int main(int argc, char **argv)
 	if (prox_parse_args(argc, argv) != 0){
 		prox_usage(argv[0]);
 	}
-
 	plog_init(prox_cfg.log_name, prox_cfg.log_name_pid);
 	plog_info("=== " PROGRAM_NAME " %s ===\n", VERSION_STR());
 	plog_info("\tUsing DPDK %s\n", rte_version() + sizeof(RTE_VER_PREFIX));
+	set_term_env();
 	read_rdt_info();
 
 	if (prox_cfg.flags & DSF_LIST_TASK_MODES) {
