@@ -1,0 +1,714 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "889f697a_ae488f5b",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 3
+      },
+      "lineNbr": 9,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "or",
+      "range": {
+        "startLine": 9,
+        "startChar": 47,
+        "endLine": 9,
+        "endChar": 49
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "14352cec_731ae30d",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 3
+      },
+      "lineNbr": 17,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "igmp",
+      "range": {
+        "startLine": 17,
+        "startChar": 42,
+        "endLine": 17,
+        "endChar": 46
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "17e0d6b4_9f92118e",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 3
+      },
+      "lineNbr": 17,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "igmp",
+      "range": {
+        "startLine": 17,
+        "startChar": 7,
+        "endLine": 17,
+        "endChar": 11
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "eb21c539_12cfaf66",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 3
+      },
+      "lineNbr": 23,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "igmp",
+      "range": {
+        "startLine": 23,
+        "startChar": 7,
+        "endLine": 23,
+        "endChar": 11
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "def9e950_6368f65e",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 3
+      },
+      "lineNbr": 23,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "igmp",
+      "range": {
+        "startLine": 23,
+        "startChar": 42,
+        "endLine": 23,
+        "endChar": 46
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "09647f2a_ea997178",
+        "filename": "VNFs/DPPD-PROX/cmd_parser.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 55,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "This new header file is missing from the commit. Please add it.\nAlso, it should clarify that new functions igmp_join_group() and igmp_leave_group() are implemented in handle_swap.c",
+      "range": {
+        "startLine": 55,
+        "startChar": 10,
+        "endLine": 55,
+        "endChar": 16
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "6b6317d9_4e3cce7d",
+        "filename": "VNFs/DPPD-PROX/cmd_parser.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1253,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "Some validation is needed. That\u0027s a general comment for commands that take a port_id.\nHere, port_id is parsed into an uint32_t, then directly provided as an uint8_t to cmd_multicast(), which uses it to index into prox_port_cfg[] with no bound-checking.",
+      "range": {
+        "startLine": 1253,
+        "startChar": 15,
+        "endLine": 1253,
+        "endChar": 22
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "b5ff2aed_755ed512",
+        "filename": "VNFs/DPPD-PROX/cmd_parser.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1266,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "Ditto",
+      "range": {
+        "startLine": 1266,
+        "startChar": 15,
+        "endLine": 1266,
+        "endChar": 22
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "43997984_5261c181",
+        "filename": "VNFs/DPPD-PROX/cmd_parser.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1940,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "Seems unused",
+      "range": {
+        "startLine": 1940,
+        "startChar": 10,
+        "endLine": 1940,
+        "endChar": 13
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "f92555aa_4bf23d93",
+        "filename": "VNFs/DPPD-PROX/cmd_parser.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1942,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "Rename needed after rebase",
+      "range": {
+        "startLine": 1942,
+        "startChar": 5,
+        "endLine": 1942,
+        "endChar": 20
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "a2b8359d_23068478",
+        "filename": "VNFs/DPPD-PROX/cmd_parser.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1944,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "Do we really need this? It seems to require that a space is typed in, after task_id...\nSince nothing needs to be parsed after cores + task:\n- either we don\u0027t check anything more, as done on L1891,\n- or we check that skip-twice fails, i.e. there was nothing typed in after task_id,\n- and when skip-twice succeeds, we check that remaining str is empty, as done on L1433, but that would differ from usual parsing behavior.",
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "f62fc960_b78d0de3",
+        "filename": "VNFs/DPPD-PROX/cmd_parser.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1967,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "Rename needed after rebase",
+      "range": {
+        "startLine": 1967,
+        "startChar": 5,
+        "endLine": 1967,
+        "endChar": 20
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "84b532d8_07908202",
+        "filename": "VNFs/DPPD-PROX/cmd_parser.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1971,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "Why not %hhu here, and direct store into igmp_ip bytes?",
+      "range": {
+        "startLine": 1971,
+        "startChar": 18,
+        "endLine": 1971,
+        "endChar": 20
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "0e61655d_e1a4ccac",
+        "filename": "VNFs/DPPD-PROX/cmd_parser.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 2105,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "Missing online help: \u003cport id\u003e \u003cMAC\u003e",
+      "range": {
+        "startLine": 2105,
+        "startChar": 22,
+        "endLine": 2105,
+        "endChar": 24
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "8b32fcf1_ebfe4bcf",
+        "filename": "VNFs/DPPD-PROX/cmd_parser.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 2106,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "Missing online help: \u003cport id\u003e \u003cMAC\u003e",
+      "range": {
+        "startLine": 2106,
+        "startChar": 23,
+        "endLine": 2106,
+        "endChar": 25
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "42302bc3_1adaba6f",
+        "filename": "VNFs/DPPD-PROX/cmd_parser.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 2122,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "No IP parsed when leaving IGMP group.",
+      "range": {
+        "startLine": 2122,
+        "startChar": 37,
+        "endLine": 2122,
+        "endChar": 41
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "b7b236b0_f6f12e3e",
+        "filename": "VNFs/DPPD-PROX/cmd_parser.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 2122,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "No IP parsed when leaving IGMP group.",
+      "range": {
+        "startLine": 2122,
+        "startChar": 67,
+        "endLine": 2122,
+        "endChar": 71
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "5649be57_987220f9",
+        "filename": "VNFs/DPPD-PROX/commands.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 246,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "Too late! Out-of-bound indexing would already have happened on L954.",
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "86a4235d_86fc4541",
+        "filename": "VNFs/DPPD-PROX/commands.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 260,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "Should be checked (using \u003e\u003d ) before incrementing nb_mc_addr on L259.\nOr nb_mc_addr should be decremented before return on L262.",
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "29023062_dc78a9e8",
+        "filename": "VNFs/DPPD-PROX/commands.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 266,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "Shouldn\u0027t we decrement nb_mc_addr in that case, to reject new multicast address, and return some error code to caller?",
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "3ab326c1_a278ac42",
+        "filename": "VNFs/DPPD-PROX/commands.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 276,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "Too late!",
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "03f38472_66923942",
+        "filename": "VNFs/DPPD-PROX/commands.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 285,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "Prototype is ether_addr_copy(ea_from, ea_to), so this is done in the wrong direction here.\nAnd useless, but harmless, when (i \u003d\u003d port_cfg-\u003enb_mc_addr-1).",
+      "range": {
+        "startLine": 285,
+        "startChar": 3,
+        "endLine": 285,
+        "endChar": 18
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "89d01cae_de8068e4",
+        "filename": "VNFs/DPPD-PROX/commands.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 288,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "What to do here? Are there special meanings for rc?\nIf we assume that failure means that the list of multicast addresses did not change, shouldn\u0027t we push addr back at the end of port_cfg-\u003emc_addr[], and increment port_cfg-\u003enb_mc_addr too?",
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "b0eaee1f_b3bd7686",
+        "filename": "VNFs/DPPD-PROX/commands.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 954,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "Some validation is needed.\nAt least, calling port_is_active() would be better than direct indexing into prox_port_cfg[] with no bound-checking.",
+      "range": {
+        "startLine": 954,
+        "startChar": 20,
+        "endLine": 954,
+        "endChar": 26
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "cd11abbb_85e10194",
+        "filename": "VNFs/DPPD-PROX/commands.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 959,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "Since add_multicast_addr() and del_multicast_addr() manage a list of multicast addresses, rte_eth_allmulticast_enable() should only be called once, when port_cfg-\u003enb_mc_addr changes from 0 to 1.",
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "80ad2ba9_e774ea3b",
+        "filename": "VNFs/DPPD-PROX/commands.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 962,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "Similarly, rte_eth_allmulticast_disable() should only be called once, when port_cfg-\u003enb_mc_addr changes from 1 to 0.",
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "9eaec5b4_e2a40639",
+        "filename": "VNFs/DPPD-PROX/config/mcast.cfg",
+        "patchSetId": 3
+      },
+      "lineNbr": 2,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "Wrong license header. Should be Apache License, Version 2.0.",
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "ac7b5f5b_8e59aebf",
+        "filename": "VNFs/DPPD-PROX/config/mcast.cfg",
+        "patchSetId": 3
+      },
+      "lineNbr": 55,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "Please reflect what\u0027s being done here.",
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "274af1a8_3d803a21",
+        "filename": "VNFs/DPPD-PROX/handle_swap.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 104,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "IPPROTO_IGMP",
+      "range": {
+        "startLine": 104,
+        "startChar": 25,
+        "endLine": 104,
+        "endChar": 26
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "3261b2a6_941a20b1",
+        "filename": "VNFs/DPPD-PROX/handle_swap.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 107,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "Why not use the ip argument here?\nEither use it to make this function generic, or remove the argument and also use task-\u003eigmp_address on L87.",
+      "range": {
+        "startLine": 107,
+        "startChar": 20,
+        "endLine": 107,
+        "endChar": 38
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "9abf6d98_f490f3d3",
+        "filename": "VNFs/DPPD-PROX/handle_swap.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 112,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "Ditto",
+      "range": {
+        "startLine": 112,
+        "startChar": 24,
+        "endLine": 112,
+        "endChar": 42
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "47977c46_5706635f",
+        "filename": "VNFs/DPPD-PROX/handle_swap.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 348,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "Shouldn\u0027t we call igmp_join_group(), or get it called later once init done, when igmp_address is not 0?\nOtherwise we get different behavior, between \"igmp ipv4\u003dx.y.z.t\" line in config file (no IGMP_MEMBERSHIP_REPORT message sent) and \"join igmp core_id task_id x.y.z.t\" runtime command.",
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "729530ad_f4930ff0",
+        "filename": "VNFs/DPPD-PROX/prox_cksum.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 164,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "Should have been initialized to 0, before calling checksum_byte_seq()",
+      "range": {
+        "startLine": 164,
+        "startChar": 1,
+        "endLine": 164,
+        "endChar": 15
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "92b19e98_0a487584",
+        "filename": "VNFs/DPPD-PROX/prox_port_cfg.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 694,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 1,
+      "message": "What to do in this case?\nSet port_cfg-\u003enb_mc_addr to 0, and call rte_eth_allmulticast_disable(), because multicast addresses could not be set?",
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    }
+  ]
+}

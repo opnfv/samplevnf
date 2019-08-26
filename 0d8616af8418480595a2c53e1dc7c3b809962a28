@@ -1,0 +1,61 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "eb9082d2_250d778a",
+        "filename": "VNFs/DPPD-PROX/handle_swap.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 25,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 0,
+      "message": "If never included, even from handle_swap.c, shouldn\u0027t that header file be deleted?",
+      "range": {
+        "startLine": 25,
+        "startChar": 10,
+        "endLine": 25,
+        "endChar": 23
+      },
+      "revId": "0d8616af8418480595a2c53e1dc7c3b809962a28",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "c96f1275_71509d50",
+        "filename": "VNFs/DPPD-PROX/handle_swap.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 255,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 0,
+      "message": "Might be worth mentioning in the commit message that this is not supported anymore, unless it was dead code already...",
+      "revId": "0d8616af8418480595a2c53e1dc7c3b809962a28",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "70d8d32b_cfe9a53b",
+        "filename": "VNFs/DPPD-PROX/prox_args.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 856,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-08-26T17:59:01Z",
+      "side": 0,
+      "message": "Might be worth mentioning in the commit message that this is not supported anymore.",
+      "revId": "0d8616af8418480595a2c53e1dc7c3b809962a28",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    }
+  ]
+}
