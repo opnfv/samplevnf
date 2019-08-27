@@ -25,6 +25,30 @@
     },
     {
       "key": {
+        "uuid": "99a327aa_0f84ec9e",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 3
+      },
+      "lineNbr": 9,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "889f697a_ae488f5b",
+      "range": {
+        "startLine": 9,
+        "startChar": 47,
+        "endLine": 9,
+        "endChar": 49
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "14352cec_731ae30d",
         "filename": "/COMMIT_MSG",
         "patchSetId": 3
@@ -68,6 +92,54 @@
       "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "eee07f98_1502622e",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 3
+      },
+      "lineNbr": 17,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "14352cec_731ae30d",
+      "range": {
+        "startLine": 17,
+        "startChar": 42,
+        "endLine": 17,
+        "endChar": 46
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d8653c92_98c040d2",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 3
+      },
+      "lineNbr": 17,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "17e0d6b4_9f92118e",
+      "range": {
+        "startLine": 17,
+        "startChar": 7,
+        "endLine": 17,
+        "endChar": 11
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
     },
     {
       "key": {
@@ -117,6 +189,54 @@
     },
     {
       "key": {
+        "uuid": "1f70bd26_a9e98f03",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 3
+      },
+      "lineNbr": 23,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "def9e950_6368f65e",
+      "range": {
+        "startLine": 23,
+        "startChar": 42,
+        "endLine": 23,
+        "endChar": 46
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c5547177_c078b6ec",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 3
+      },
+      "lineNbr": 23,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "eb21c539_12cfaf66",
+      "range": {
+        "startLine": 23,
+        "startChar": 7,
+        "endLine": 23,
+        "endChar": 11
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "09647f2a_ea997178",
         "filename": "VNFs/DPPD-PROX/cmd_parser.c",
         "patchSetId": 3
@@ -137,6 +257,30 @@
       "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "76f879be_ea16508e",
+        "filename": "VNFs/DPPD-PROX/cmd_parser.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 55,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "09647f2a_ea997178",
+      "range": {
+        "startLine": 55,
+        "startChar": 10,
+        "endLine": 55,
+        "endChar": 16
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
     },
     {
       "key": {
@@ -163,6 +307,30 @@
     },
     {
       "key": {
+        "uuid": "81278aff_b70aacd8",
+        "filename": "VNFs/DPPD-PROX/cmd_parser.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1253,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "Done for the multicast commands. Other change should fix the other commands such as reset port",
+      "parentUuid": "6b6317d9_4e3cce7d",
+      "range": {
+        "startLine": 1253,
+        "startChar": 15,
+        "endLine": 1253,
+        "endChar": 22
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "b5ff2aed_755ed512",
         "filename": "VNFs/DPPD-PROX/cmd_parser.c",
         "patchSetId": 3
@@ -183,6 +351,30 @@
       "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "2ce71248_9e4a38e2",
+        "filename": "VNFs/DPPD-PROX/cmd_parser.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1266,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "b5ff2aed_755ed512",
+      "range": {
+        "startLine": 1266,
+        "startChar": 15,
+        "endLine": 1266,
+        "endChar": 22
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
     },
     {
       "key": {
@@ -209,6 +401,30 @@
     },
     {
       "key": {
+        "uuid": "77f97790_b8108c9c",
+        "filename": "VNFs/DPPD-PROX/cmd_parser.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1940,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "43997984_5261c181",
+      "range": {
+        "startLine": 1940,
+        "startChar": 10,
+        "endLine": 1940,
+        "endChar": 13
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "f92555aa_4bf23d93",
         "filename": "VNFs/DPPD-PROX/cmd_parser.c",
         "patchSetId": 3
@@ -220,6 +436,30 @@
       "writtenOn": "2019-08-26T17:59:01Z",
       "side": 1,
       "message": "Rename needed after rebase",
+      "range": {
+        "startLine": 1942,
+        "startChar": 5,
+        "endLine": 1942,
+        "endChar": 20
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "fa6318ea_90fbcf52",
+        "filename": "VNFs/DPPD-PROX/cmd_parser.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1942,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "will do when rebasing",
+      "parentUuid": "f92555aa_4bf23d93",
       "range": {
         "startLine": 1942,
         "startChar": 5,
@@ -249,6 +489,24 @@
     },
     {
       "key": {
+        "uuid": "18339836_bc907d34",
+        "filename": "VNFs/DPPD-PROX/cmd_parser.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1944,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "Done (donot check anything). Was not needed - there was initially an additional parameter...",
+      "parentUuid": "a2b8359d_23068478",
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "f62fc960_b78d0de3",
         "filename": "VNFs/DPPD-PROX/cmd_parser.c",
         "patchSetId": 3
@@ -260,6 +518,30 @@
       "writtenOn": "2019-08-26T17:59:01Z",
       "side": 1,
       "message": "Rename needed after rebase",
+      "range": {
+        "startLine": 1967,
+        "startChar": 5,
+        "endLine": 1967,
+        "endChar": 20
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "f900fe17_e36fd30e",
+        "filename": "VNFs/DPPD-PROX/cmd_parser.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1967,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "will do when rebasing",
+      "parentUuid": "f62fc960_b78d0de3",
       "range": {
         "startLine": 1967,
         "startChar": 5,
@@ -295,6 +577,30 @@
     },
     {
       "key": {
+        "uuid": "10a83cec_d26bef55",
+        "filename": "VNFs/DPPD-PROX/cmd_parser.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1971,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "84b532d8_07908202",
+      "range": {
+        "startLine": 1971,
+        "startChar": 18,
+        "endLine": 1971,
+        "endChar": 20
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "0e61655d_e1a4ccac",
         "filename": "VNFs/DPPD-PROX/cmd_parser.c",
         "patchSetId": 3
@@ -318,6 +624,30 @@
     },
     {
       "key": {
+        "uuid": "711a2bb4_326606c4",
+        "filename": "VNFs/DPPD-PROX/cmd_parser.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 2105,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "0e61655d_e1a4ccac",
+      "range": {
+        "startLine": 2105,
+        "startChar": 22,
+        "endLine": 2105,
+        "endChar": 24
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "8b32fcf1_ebfe4bcf",
         "filename": "VNFs/DPPD-PROX/cmd_parser.c",
         "patchSetId": 3
@@ -338,6 +668,30 @@
       "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "bff25808_1700f958",
+        "filename": "VNFs/DPPD-PROX/cmd_parser.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 2106,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "8b32fcf1_ebfe4bcf",
+      "range": {
+        "startLine": 2106,
+        "startChar": 23,
+        "endLine": 2106,
+        "endChar": 25
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
     },
     {
       "key": {
@@ -387,6 +741,54 @@
     },
     {
       "key": {
+        "uuid": "4871b004_a43748ed",
+        "filename": "VNFs/DPPD-PROX/cmd_parser.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 2122,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "42302bc3_1adaba6f",
+      "range": {
+        "startLine": 2122,
+        "startChar": 37,
+        "endLine": 2122,
+        "endChar": 41
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "145c3716_ceefd682",
+        "filename": "VNFs/DPPD-PROX/cmd_parser.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 2122,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "Done... This was the extra param in the initial design...",
+      "parentUuid": "b7b236b0_f6f12e3e",
+      "range": {
+        "startLine": 2122,
+        "startChar": 67,
+        "endLine": 2122,
+        "endChar": 71
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "5649be57_987220f9",
         "filename": "VNFs/DPPD-PROX/commands.c",
         "patchSetId": 3
@@ -401,6 +803,24 @@
       "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "f87f5f5d_b9bb25ef",
+        "filename": "VNFs/DPPD-PROX/commands.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 246,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "5649be57_987220f9",
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
     },
     {
       "key": {
@@ -421,6 +841,24 @@
     },
     {
       "key": {
+        "uuid": "6c4650cc_bd07048b",
+        "filename": "VNFs/DPPD-PROX/commands.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 260,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "86a4235d_86fc4541",
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "29023062_dc78a9e8",
         "filename": "VNFs/DPPD-PROX/commands.c",
         "patchSetId": 3
@@ -438,6 +876,24 @@
     },
     {
       "key": {
+        "uuid": "8ccb0e90_e22c32f3",
+        "filename": "VNFs/DPPD-PROX/commands.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 266,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "Decremented is Done. No error code returned as the caller (a command) and can not do anything with it anyhow (except print another error). We can change this later if needed. The unction is void, so it is clear it does not return an error when failing.",
+      "parentUuid": "29023062_dc78a9e8",
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "3ab326c1_a278ac42",
         "filename": "VNFs/DPPD-PROX/commands.c",
         "patchSetId": 3
@@ -452,6 +908,24 @@
       "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "a734b372_d7ba097d",
+        "filename": "VNFs/DPPD-PROX/commands.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 276,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "3ab326c1_a278ac42",
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
     },
     {
       "key": {
@@ -478,6 +952,30 @@
     },
     {
       "key": {
+        "uuid": "f6d06718_10e773ec",
+        "filename": "VNFs/DPPD-PROX/commands.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 285,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "Done. Fixed the wrong direction. Did not avoid the useless code with additional ifs...",
+      "parentUuid": "03f38472_66923942",
+      "range": {
+        "startLine": 285,
+        "startChar": 3,
+        "endLine": 285,
+        "endChar": 18
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "89d01cae_de8068e4",
         "filename": "VNFs/DPPD-PROX/commands.c",
         "patchSetId": 3
@@ -492,6 +990,24 @@
       "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "0835dfe4_580ab57a",
+        "filename": "VNFs/DPPD-PROX/commands.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 288,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "API does not define the behavior. I have seen implementations where thy first remove all existing addresses, and then add the \"new\" ones...\nI will restore situation as before calling the function",
+      "parentUuid": "89d01cae_de8068e4",
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
     },
     {
       "key": {
@@ -518,6 +1034,30 @@
     },
     {
       "key": {
+        "uuid": "1d62b2a7_41c757b6",
+        "filename": "VNFs/DPPD-PROX/commands.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 954,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "b0eaee1f_b3bd7686",
+      "range": {
+        "startLine": 954,
+        "startChar": 20,
+        "endLine": 954,
+        "endChar": 26
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "cd11abbb_85e10194",
         "filename": "VNFs/DPPD-PROX/commands.c",
         "patchSetId": 3
@@ -532,6 +1072,24 @@
       "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "a54d0aed_a1394fb6",
+        "filename": "VNFs/DPPD-PROX/commands.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 959,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "cd11abbb_85e10194",
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
     },
     {
       "key": {
@@ -552,6 +1110,24 @@
     },
     {
       "key": {
+        "uuid": "92a003a9_a0ba017f",
+        "filename": "VNFs/DPPD-PROX/commands.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 962,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "80ad2ba9_e774ea3b",
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "9eaec5b4_e2a40639",
         "filename": "VNFs/DPPD-PROX/config/mcast.cfg",
         "patchSetId": 3
@@ -569,6 +1145,24 @@
     },
     {
       "key": {
+        "uuid": "ab8f4907_239e338a",
+        "filename": "VNFs/DPPD-PROX/config/mcast.cfg",
+        "patchSetId": 3
+      },
+      "lineNbr": 2,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "9eaec5b4_e2a40639",
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "ac7b5f5b_8e59aebf",
         "filename": "VNFs/DPPD-PROX/config/mcast.cfg",
         "patchSetId": 3
@@ -583,6 +1177,24 @@
       "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "1a7672e0_4ab9adcc",
+        "filename": "VNFs/DPPD-PROX/config/mcast.cfg",
+        "patchSetId": 3
+      },
+      "lineNbr": 55,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "ac7b5f5b_8e59aebf",
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
     },
     {
       "key": {
@@ -609,6 +1221,30 @@
     },
     {
       "key": {
+        "uuid": "26eaf65c_cb5664c6",
+        "filename": "VNFs/DPPD-PROX/handle_swap.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 104,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "274af1a8_3d803a21",
+      "range": {
+        "startLine": 104,
+        "startChar": 25,
+        "endLine": 104,
+        "endChar": 26
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "3261b2a6_941a20b1",
         "filename": "VNFs/DPPD-PROX/handle_swap.c",
         "patchSetId": 3
@@ -629,6 +1265,30 @@
       "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "e8d455db_073e8081",
+        "filename": "VNFs/DPPD-PROX/handle_swap.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 107,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "3261b2a6_941a20b1",
+      "range": {
+        "startLine": 107,
+        "startChar": 20,
+        "endLine": 107,
+        "endChar": 38
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
     },
     {
       "key": {
@@ -655,6 +1315,30 @@
     },
     {
       "key": {
+        "uuid": "5e3197a2_3d6992cb",
+        "filename": "VNFs/DPPD-PROX/handle_swap.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 112,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "9abf6d98_f490f3d3",
+      "range": {
+        "startLine": 112,
+        "startChar": 24,
+        "endLine": 112,
+        "endChar": 42
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "47977c46_5706635f",
         "filename": "VNFs/DPPD-PROX/handle_swap.c",
         "patchSetId": 3
@@ -669,6 +1353,24 @@
       "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "2692a0c7_f206d795",
+        "filename": "VNFs/DPPD-PROX/handle_swap.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 348,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "This was the goal : through config file, we do not send the unsolicited MEMBERSHIP_REPORT, only answers to query. If we want to send a join, we must use the command. The command has to also enable answering the query. The main goal of the command is to generate the unsolicited query.",
+      "parentUuid": "47977c46_5706635f",
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
     },
     {
       "key": {
@@ -695,6 +1397,30 @@
     },
     {
       "key": {
+        "uuid": "34c0e3c3_93289f73",
+        "filename": "VNFs/DPPD-PROX/prox_cksum.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 164,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "Done. Was done when calling function, but better here.",
+      "parentUuid": "729530ad_f4930ff0",
+      "range": {
+        "startLine": 164,
+        "startChar": 1,
+        "endLine": 164,
+        "endChar": 15
+      },
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "92b19e98_0a487584",
         "filename": "VNFs/DPPD-PROX/prox_port_cfg.c",
         "patchSetId": 3
@@ -709,6 +1435,24 @@
       "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "c5a6e7e0_1ff0c376",
+        "filename": "VNFs/DPPD-PROX/prox_port_cfg.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 694,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-08-27T15:08:56Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "92b19e98_0a487584",
+      "revId": "94ed158bbff5420e0e50a58529135a9a64139fed",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
     }
   ]
 }
