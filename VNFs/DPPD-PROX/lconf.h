@@ -52,6 +52,7 @@ struct lconf_msg {
 #define LCONF_FLAG_TX_DISTR_ACTIVE 0x00000004
 #define LCONF_FLAG_RX_BW_ACTIVE    0x00000008
 #define LCONF_FLAG_TX_BW_ACTIVE    0x00000010
+#define LCONF_FLAG_SCHED_RR    0x00000020
 
 struct lcore_cfg {
 	/* All tasks running at the moment. This is empty when the core is stopped. */
