@@ -23,5 +23,6 @@ int reg_input_uds(void);
 
 void unreg_input_tcp(void);
 void unreg_input_uds(void);
+void stop_handling_client(void);
 
 #endif /* _INPUT_CONN_H_ */

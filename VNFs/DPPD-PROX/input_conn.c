@@ -20,10 +20,13 @@
 #include <sys/un.h>
 #include <unistd.h>
 
+#include <rte_cycles.h>
 #include "input_conn.h"
 #include "input.h"
+#include "log.h"
 #include "run.h"
 #include "cmd_parser.h"
+#include "prox_cfg.h"
 
 static struct input tcp_server;
 int tcp_server_started;
@@ -132,6 +135,8 @@ static void handle_client(struct input* client_input)
 		return ;
 	}
 
+	prox_cfg.heartbeat_tsc = rte_rdtsc() + prox_cfg.heartbeat_timeout * rte_get_tsc_hz();
+
 	/* Scan in data until \n (\r skipped if followed by \n) */
 	for (int i = 0; i < ret; ++i) {
 		if (cur[i] == '\r' && i + 1 < ret && cur[i + 1] == '\n')
@@ -147,6 +152,18 @@ static void handle_client(struct input* client_input)
 			c->buf[c->n_buf++] = cur[i];
 		else
 			c->n_buf = 0;
+	}
+}
+
+void stop_handling_client(void)
+{
+	size_t i;
+	for (i = 0; i < sizeof(clients)/sizeof(clients[0]); ++i) {
+		if (clients[i].enabled) {
+			close(clients[i].input.fd);
+			clients[i].enabled = 0;
+			unreg_input(&clients[i].input);
+		}
 	}
 }
 

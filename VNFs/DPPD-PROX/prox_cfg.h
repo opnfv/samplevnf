@@ -66,6 +66,8 @@ struct prox_cfg {
 	uint32_t	logbuf_size;
 	uint32_t	logbuf_pos;
 	char		*logbuf;
+	uint32_t        heartbeat_timeout;
+	uint64_t        heartbeat_tsc;
 };
 
 extern struct prox_cfg prox_cfg;

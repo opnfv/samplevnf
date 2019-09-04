@@ -237,6 +237,13 @@ void __attribute__((noreturn)) run(uint32_t flags)
 			if (stop_tsc && rte_rdtsc() >= stop_tsc) {
 				stop_prox = 1;
 			}
+			if ((prox_cfg.heartbeat_tsc) && (prox_cfg.heartbeat_timeout) && (rte_rdtsc() >= prox_cfg.heartbeat_tsc)) {
+				plog_info("Stopping to handle client as heartbeat timed out\n");
+				stop_core_all(-1);
+				stop_handling_client();
+				req_refresh();
+				prox_cfg.heartbeat_tsc = 0;
+			}
 		}
 	} else {
 		while (stop_prox == 0) {
@@ -253,6 +260,13 @@ void __attribute__((noreturn)) run(uint32_t flags)
 
 			if (stop_tsc && rte_rdtsc() >= stop_tsc) {
 				stop_prox = 1;
+			}
+			if ((prox_cfg.heartbeat_tsc) && (prox_cfg.heartbeat_timeout) && (rte_rdtsc() >= prox_cfg.heartbeat_tsc)) {
+				plog_info("Stopping to handle client as heartbeat timed out\n");
+				stop_core_all(-1);
+				stop_handling_client();
+				req_refresh();
+				prox_cfg.heartbeat_tsc = 0;
 			}
 		}
 	}
