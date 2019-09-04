@@ -64,6 +64,8 @@ static void init_task_dump(struct task_base *tbase, __attribute__((unused)) stru
 	struct task_dump *task = (struct task_dump *)tbase;
 	const int socket_id = rte_lcore_to_socket_id(targ->lconf->id);
 
+	if (targ->n_pkts == 0)
+		targ->n_pkts = 64 * 1024;
 	task->mbufs = prox_zmalloc(sizeof(*task->mbufs) * targ->n_pkts, socket_id);
 	task->n_pkts = targ->n_pkts;
 	if (!strcmp(targ->pcap_file, "")) {

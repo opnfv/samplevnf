@@ -54,9 +54,6 @@ struct pkt_template {
 	uint8_t  *buf;
 };
 
-#define MAX_TEMPLATE_INDEX	65536
-#define TEMPLATE_INDEX_MASK	(MAX_TEMPLATE_INDEX - 1)
-
 #define IP4(x) x & 0xff, (x >> 8) & 0xff, (x >> 16) & 0xff, x >> 24
 
 #define TASK_OVERWRITE_SRC_MAC_WITH_PORT_MAC 1
@@ -531,7 +528,6 @@ static void task_gen_build_packets(struct task_gen *task, struct rte_mbuf **mbuf
 		struct pkt_template *pktpl = &task->pkt_template[task->pkt_idx];
 		struct pkt_template *pkt_template = &task->pkt_template[task->pkt_idx];
 		pkt_template_init_mbuf(pkt_template, mbufs[i], pkt_hdr[i]);
-		mbufs[i]->udata64 = task->pkt_idx & TEMPLATE_INDEX_MASK;
 		struct ether_hdr *hdr = (struct ether_hdr *)pkt_hdr[i];
 		if (task->lat_enabled) {
 #ifdef NO_EXTRAPOLATION
@@ -720,7 +716,7 @@ static uint64_t avg_time_stamp(uint64_t *time_stamp, uint32_t n)
 	return (tot_inter_pkt + n / 2)/n;
 }
 
-static int pcap_read_pkts(pcap_t *handle, const char *file_name, uint32_t n_pkts, struct pkt_template *proto, uint64_t *time_stamp)
+static int pcap_read_pkts(pcap_t *handle, const char *file_name, uint32_t n_pkts, struct pkt_template *proto, uint64_t *time_stamp, uint32_t max_frame_size)
 {
 	struct pcap_pkthdr header;
 	const uint8_t *buf;
@@ -731,7 +727,7 @@ static int pcap_read_pkts(pcap_t *handle, const char *file_name, uint32_t n_pkts
 
 		PROX_PANIC(buf == NULL, "Failed to read packet %d from pcap %s\n", i, file_name);
 		proto[i].len = header.len;
-		len = RTE_MIN(header.len, sizeof(proto[i].buf));
+		len = RTE_MIN(header.len, max_frame_size);
 		if (header.len > len)
 			plogx_warn("Packet truncated from %u to %zu bytes\n", header.len, len);
 
@@ -964,14 +960,13 @@ static void task_init_gen_load_pcap(struct task_gen *task, struct task_args *tar
 	PROX_PANIC(handle == NULL, "Failed to open PCAP file: %s\n", err);
 
 	task->n_pkts = pcap_count_pkts(handle, &max_frame_size);
-	plogx_info("%u packets in pcap file '%s'\n", task->n_pkts, targ->pcap_file);
+	plogx_info("%u packets in pcap file '%s'; max frame size=%d\n", task->n_pkts, targ->pcap_file, max_frame_size);
 	PROX_PANIC(max_frame_size > task->max_frame_size,
 		max_frame_size > ETHER_MAX_LEN + 2 * PROX_VLAN_TAG_SIZE -4 ?
 			"pkt_size too high and jumbo frames disabled" : "pkt_size > mtu");
 
 	if (targ->n_pkts)
 		task->n_pkts = RTE_MIN(task->n_pkts, targ->n_pkts);
-	PROX_PANIC(task->n_pkts > MAX_TEMPLATE_INDEX, "Too many packets specified in pcap - increase MAX_TEMPLATE_INDEX\n");
 	plogx_info("Loading %u packets from pcap\n", task->n_pkts);
 	size_t mem_size = task->n_pkts * sizeof(*task->pkt_template);
 	task->pkt_template = prox_zmalloc(mem_size, socket_id);
@@ -981,15 +976,15 @@ static void task_init_gen_load_pcap(struct task_gen *task, struct task_args *tar
 		   "Failed to allocate %lu bytes (in huge pages) for pcap file\n", mem_size);
 
 	for (uint i = 0; i < task->n_pkts; i++) {
-		task->pkt_template[i].buf = prox_zmalloc(max_frame_size, socket_id);
-		task->pkt_template_orig[i].buf = prox_zmalloc(max_frame_size, socket_id);
+		task->pkt_template[i].buf = prox_zmalloc(task->max_frame_size, socket_id);
+		task->pkt_template_orig[i].buf = prox_zmalloc(task->max_frame_size, socket_id);
 
 		PROX_PANIC(task->pkt_template->buf == NULL ||
 			task->pkt_template_orig->buf == NULL,
 			"Failed to allocate %u bytes (in huge pages) for pcap file\n", task->max_frame_size);
 	}
 
-	pcap_read_pkts(handle, targ->pcap_file, task->n_pkts, task->pkt_template_orig, NULL);
+	pcap_read_pkts(handle, targ->pcap_file, task->n_pkts, task->pkt_template_orig, NULL, max_frame_size);
 	pcap_close(handle);
 	task_gen_reset_pkt_templates(task);
 }
@@ -1030,12 +1025,16 @@ int task_gen_set_pkt_size(struct task_base *tbase, uint32_t pkt_size)
 	struct task_gen *task = (struct task_gen *)tbase;
 	int rc;
 
-	if ((rc = check_pkt_size(task, pkt_size, 0)) != 0)
-		return rc;
-	if ((rc = check_fields_in_bounds(task, pkt_size, 0)) != 0)
-		return rc;
-	task->pkt_template[0].len = pkt_size;
-	return rc;
+	for (size_t i = 0; i < task->n_pkts; ++i) {
+		if ((rc = check_pkt_size(task, pkt_size, 0)) != 0)
+			return rc;
+		if ((rc = check_fields_in_bounds(task, pkt_size, 0)) != 0)
+			return rc;
+	}
+	for (size_t i = 0; i < task->n_pkts; ++i) {
+		task->pkt_template[i].len = pkt_size;
+	}
+	return 0;
 }
 
 void task_gen_set_rate(struct task_base *tbase, uint64_t bps)
@@ -1061,6 +1060,8 @@ int task_gen_set_value(struct task_base *tbase, uint32_t value, uint32_t offset,
 {
 	struct task_gen *task = (struct task_gen *)tbase;
 
+	if (offset + len > task->max_frame_size)
+		return -1;
 	for (size_t i = 0; i < task->n_pkts; ++i) {
 		uint32_t to_write = rte_cpu_to_be_32(value) >> ((4 - len) * 8);
 		uint8_t *dst = task->pkt_template[i].buf;
@@ -1118,8 +1119,6 @@ static void init_task_gen_pcap(struct task_base *tbase, struct task_args *targ)
 		if (task->n_pkts > targ->n_pkts)
 			task->n_pkts = targ->n_pkts;
 	}
-	PROX_PANIC(task->n_pkts > MAX_TEMPLATE_INDEX, "Too many packets specified in pcap - increase MAX_TEMPLATE_INDEX\n");
-
 	plogx_info("Loading %u packets from pcap\n", task->n_pkts);
 
 	size_t mem_size = task->n_pkts * (sizeof(*task->proto) + sizeof(*task->proto_tsc));
@@ -1134,7 +1133,7 @@ static void init_task_gen_pcap(struct task_base *tbase, struct task_args *targ)
 		PROX_PANIC(task->proto[i].buf == NULL, "Failed to allocate %u bytes (in huge pages) for pcap file\n", max_frame_size);
 	}
 
-	pcap_read_pkts(handle, targ->pcap_file, task->n_pkts, task->proto, task->proto_tsc);
+	pcap_read_pkts(handle, targ->pcap_file, task->n_pkts, task->proto, task->proto_tsc, max_frame_size);
 	pcap_close(handle);
 }
 
@@ -1360,6 +1359,7 @@ static struct task_init task_init_gen_l3 = {
 	.size = sizeof(struct task_gen)
 };
 
+/* This mode uses time stamps in the pcap file */
 static struct task_init task_init_gen_pcap = {
 	.mode_str = "gen",
 	.sub_mode_str = "pcap",

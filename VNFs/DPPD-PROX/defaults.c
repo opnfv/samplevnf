@@ -158,7 +158,8 @@ void set_task_defaults(struct prox_cfg* prox_cfg, struct lcore_cfg* lcore_cfg_in
 			targ->tunnel_hop_limit = 3;
 			targ->ctrl_freq = 1000;
 			targ->lb_friend_core = 0xFF;
-			targ->n_pkts = 1024*64;
+			targ->n_pkts = 0;
+
 			targ->runtime_flags |= TASK_TX_CRC;
 			targ->accuracy_limit_nsec = 5000;
 		}
