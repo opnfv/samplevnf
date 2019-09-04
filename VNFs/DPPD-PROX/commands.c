@@ -137,10 +137,14 @@ void start_cores(uint32_t *cores, int count, int task_id)
 					targ = &lconf->targs[tid];
 					start_l3(targ);
 				}
-			} else {
+			} else if (task_id < lconf->n_tasks_all) {
 				targ = &lconf->targs[task_id];
 				start_l3(targ);
+			} else {
+				plog_warn("Invalid task id %d on core %u\n", task_id, cores[i]);
+				continue;
 			}
+			if (wait_command_handled(lconf) == -1) return;
 			lconf->msg.type = LCONF_MSG_START;
 			lconf->msg.task_id = task_id;
 			lconf_set_req(lconf);
@@ -177,6 +181,10 @@ void stop_cores(uint32_t *cores, int count, int task_id)
 
 	for (int i = 0; i < count; ++i) {
 		struct lcore_cfg *lconf = &lcore_cfg[cores[i]];
+		if (task_id >= lconf->n_tasks_all) {
+			plog_warn("Trying to stop invalid task id %d on core %u\n", task_id, cores[i]);
+			continue;
+		}
 		if (lconf->n_tasks_run) {
 			if (wait_command_handled(lconf) == -1) return;
 
@@ -890,6 +898,7 @@ void cmd_reset_port(uint8_t portid)
 		plog_warn("Failed to restart port %d\n", portid);
 	}
 }
+
 void cmd_write_reg(uint8_t port_id, unsigned int id, unsigned int val)
 {
 	if (!port_is_active(port_id)) {
