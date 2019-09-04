@@ -692,9 +692,7 @@ static int parse_cmd_set_value(const char *str, struct input *input)
 			if ((!task_is_mode_and_submode(lcore_id, task_id, "gen", "")) && (!task_is_mode_and_submode(lcore_id, task_id, "gen", "l3"))) {
 				plog_err("Core %u task %u is not generating packets\n", lcore_id, task_id);
 			}
-			else if (offset > ETHER_MAX_LEN) {
-				plog_err("Offset out of range (must be less then %u)\n", ETHER_MAX_LEN);
-			}
+			// do not check offset here - gen knows better than us the maximum frame size
 			else if (value_len > 4) {
 				plog_err("Length out of range (must be less then 4)\n");
 			}
@@ -702,7 +700,7 @@ static int parse_cmd_set_value(const char *str, struct input *input)
 				struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
 
 				if (task_gen_set_value(tbase, value, offset, value_len))
-					plog_info("Unable to set Byte %"PRIu16" to %"PRIu8" - too many value set\n", offset, value);
+					plog_info("Unable to set Byte %"PRIu16" to %"PRIu8" - invalid offset/len\n", offset, value);
 				else
 					plog_info("Setting Byte %"PRIu16" to %"PRIu32"\n", offset, value);
 			}
