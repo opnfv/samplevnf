@@ -137,9 +137,12 @@ void start_cores(uint32_t *cores, int count, int task_id)
 					targ = &lconf->targs[tid];
 					start_l3(targ);
 				}
-			} else {
+			} else if (task_id < lconf->n_tasks_all) {
 				targ = &lconf->targs[task_id];
 				start_l3(targ);
+			} else {
+				plog_warn("Invalid task id %d on core %u\n", task_id, cores[i]);
+				continue;
 			}
 			lconf->msg.type = LCONF_MSG_START;
 			lconf->msg.task_id = task_id;
@@ -890,6 +893,7 @@ void cmd_reset_port(uint8_t portid)
 		plog_warn("Failed to restart port %d\n", portid);
 	}
 }
+
 void cmd_write_reg(uint8_t port_id, unsigned int id, unsigned int val)
 {
 	if (!port_is_active(port_id)) {

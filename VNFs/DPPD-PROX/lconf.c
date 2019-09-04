@@ -127,6 +127,10 @@ static void msg_stop(struct lcore_cfg *lconf)
 				idx++;
 			}
 		}
+		// Check that task id is valid and running
+		if (idx == -1)
+			return;
+
 		lconf->task_is_running[lconf->msg.task_id] = 0;
 
 		t = lconf->tasks_all[lconf->msg.task_id];
@@ -155,8 +159,14 @@ static void msg_start(struct lcore_cfg *lconf)
 				t->aux->start(t);
 		}
 		lconf->n_tasks_run = lconf->n_tasks_all;
+		return;
 	}
-	else if (lconf->n_tasks_run == 0) {
+
+	// Check that task id is valid
+	if (lconf->msg.task_id >= lconf->n_tasks_all)
+		return;
+
+	if (lconf->n_tasks_run == 0) {
 		t = lconf->tasks_run[0] = lconf->tasks_all[lconf->msg.task_id];
 		lconf->n_tasks_run = 1;
 		lconf->task_is_running[lconf->msg.task_id] = 1;
