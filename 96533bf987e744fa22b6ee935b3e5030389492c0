@@ -1,0 +1,55 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "d2fdbafa_d2026557",
+        "filename": "VNFs/DPPD-PROX/commands.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 147,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-09-10T14:21:28Z",
+      "side": 1,
+      "message": "If core is already running (lconf-\u003eflags \u0026 LCONF_FLAG_RUNNING), then we might need to call wait_command_handled() just before L147, in order to allow starting more tasks on an already running core, without breaking things in case another message is waiting to be handled, as done on L184.",
+      "revId": "96533bf987e744fa22b6ee935b3e5030389492c0",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "aeec1273_e83dd807",
+        "filename": "VNFs/DPPD-PROX/commands.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 205,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-09-10T14:21:28Z",
+      "side": 1,
+      "message": "OK, msg_stop() in lconf.c will now properly ignore invalid task_id (either because it\u0027s too high, or because the task is not running).\nNo big deal to print \"Stopped task...\" for a valid task_id that was already stopped. That\u0027s similar to L153 which prints \"Starting core...\" even if the task is already running.\nBut too high task_id should have been eliminated (and possibly reported) between L182 and L183.",
+      "revId": "96533bf987e744fa22b6ee935b3e5030389492c0",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "4327796a_22db7cf5",
+        "filename": "VNFs/DPPD-PROX/lconf.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 183,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-09-10T14:21:28Z",
+      "side": 1,
+      "message": "In case task is already running, I guess we should not call aux-\u003estart() again on L202.\nBut replacing break with return here would not be good enough...\nIf there are other tasks with higher task_id which are also already running, then L186 would have broken tasks_run[] before we return here.\nFor example, if core C has 4 tasks running (out of more), its tasks_run[] could initially contain (struct task_base *) for [0 1 2 3].\nThen the command \"start C 1\" would result in tasks_run[] containing [0 1 2 2 3], considered as [0 1 2 2] because n_tasks_run would still be 4.\nSo either we should restore tasks_run[] before returning here, or we should have a first loop between L179 and L180 to explicitly and only check for already running task.",
+      "revId": "96533bf987e744fa22b6ee935b3e5030389492c0",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    }
+  ]
+}
