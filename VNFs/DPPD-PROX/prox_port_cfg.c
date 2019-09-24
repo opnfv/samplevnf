@@ -676,11 +676,13 @@ static void init_port(struct prox_port_cfg *port_cfg)
 	    strcmp(port_cfg->short_name, "i40e") &&
 	    strcmp(port_cfg->short_name, "i40e_vf") &&
 	    strcmp(port_cfg->short_name, "vmxnet3")) {
-		for (uint8_t i = 0; i < 16; ++i) {
+		for (uint8_t i = 0; i < port_cfg->n_rxq; ++i) {
 			ret = rte_eth_dev_set_rx_queue_stats_mapping(port_id, i, i);
 			if (ret) {
 				plog_info("\t\trte_eth_dev_set_rx_queue_stats_mapping() failed: error %d\n", ret);
 			}
+		}
+		for (uint8_t i = 0; i < port_cfg->n_txq; ++i) {
 			ret = rte_eth_dev_set_tx_queue_stats_mapping(port_id, i, i);
 			if (ret) {
 				plog_info("\t\trte_eth_dev_set_tx_queue_stats_mapping() failed: error %d\n", ret);
