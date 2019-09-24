@@ -716,6 +716,7 @@ void close_ports_atexit(void)
 void init_port_addr(void)
 {
 	struct prox_port_cfg *port_cfg;
+	int rc;
 
 	for (uint8_t port_id = 0; port_id < PROX_MAX_PORTS; ++port_id) {
 		if (!prox_port_cfg[port_id].active) {
@@ -731,6 +732,8 @@ void init_port_addr(void)
 			eth_random_addr(port_cfg->eth_addr.addr_bytes);
 			break;
 		case PROX_PORT_MAC_SET:
+			if ((rc = rte_eth_dev_default_mac_addr_set(port_id, &port_cfg->eth_addr)) != 0)
+				plog_warn("port %u: failed to set mac address. Error = %d\n", port_id, rc);
 			break;
 		}
 	}
