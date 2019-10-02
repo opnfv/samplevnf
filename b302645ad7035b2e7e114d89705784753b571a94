@@ -1,0 +1,95 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "8eb7a873_d8064cce",
+        "filename": "VNFs/DPPD-PROX/cmd_parser.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1966,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-10-02T19:50:16Z",
+      "side": 1,
+      "message": "Any chance that __attribute__((__may_alias__)) would be needed here?",
+      "revId": "b302645ad7035b2e7e114d89705784753b571a94",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "749d1c22_f53a34bc",
+        "filename": "VNFs/DPPD-PROX/commands.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 285,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-10-02T19:50:16Z",
+      "side": 1,
+      "message": "Seems useless: port_cfg-\u003emc_addr[port_cfg-\u003enb_mc_addr-1] has not been altered and does not need to be restored.",
+      "revId": "b302645ad7035b2e7e114d89705784753b571a94",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "214292db_2b6b83e7",
+        "filename": "VNFs/DPPD-PROX/commands.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 955,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-10-02T19:50:16Z",
+      "side": 1,
+      "message": "Seems useless to store return value from add_multicast_addr() and del_multicast_addr() into local variable.",
+      "revId": "b302645ad7035b2e7e114d89705784753b571a94",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "784cb603_c40fbd15",
+        "filename": "VNFs/DPPD-PROX/igmp.h",
+        "patchSetId": 5
+      },
+      "lineNbr": 45,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-10-02T19:50:16Z",
+      "side": 1,
+      "message": "Looks like there is a swap, either between the struct field names, or between the comments.",
+      "range": {
+        "startLine": 45,
+        "startChar": 29,
+        "endLine": 45,
+        "endChar": 37
+      },
+      "revId": "b302645ad7035b2e7e114d89705784753b571a94",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "27cf07a3_806708d8",
+        "filename": "VNFs/DPPD-PROX/igmp.h",
+        "patchSetId": 5
+      },
+      "lineNbr": 52,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-10-02T19:50:16Z",
+      "side": 1,
+      "message": "Please add a comment to clarify that these functions igmp_join_group() and igmp_leave_group() are implemented in handle_swap.c, or move them to some new igmp.c",
+      "revId": "b302645ad7035b2e7e114d89705784753b571a94",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    }
+  ]
+}
