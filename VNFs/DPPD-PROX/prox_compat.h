@@ -133,6 +133,7 @@ static void *prox_rte_table_create(struct prox_rte_table_params *params, int soc
 static inline char *prox_strncpy(char * dest, const char * src, size_t count)
 {
 #pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpragmas"
 #pragma GCC diagnostic ignored "-Wstringop-truncation"
 	strncpy(dest, src, count);
 #pragma GCC diagnostic pop

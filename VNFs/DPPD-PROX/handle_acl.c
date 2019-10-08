@@ -108,7 +108,7 @@ static int handle_acl_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 			break;
 		case ACL_ALLOW:
 			out[i] = 0;
-			 __attribute__ ((fallthrough));
+			// __attribute__ ((fallthrough));
 		case ACL_RATE_LIMIT:
 			set_tc(mbufs[i], 3);
 			break;

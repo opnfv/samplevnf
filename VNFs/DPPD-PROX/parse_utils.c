@@ -923,12 +923,12 @@ int parse_kmg(uint32_t* val, const char *str2)
 		if (*val >> 22)
 			return -2;
 		*val <<= 10;
-		 __attribute__ ((fallthrough));
+		// __attribute__ ((fallthrough));
 	case 'M':
 		if (*val >> 22)
 			return -2;
 		*val <<= 10;
-		 __attribute__ ((fallthrough));
+		// __attribute__ ((fallthrough));
 	case 'K':
 		if (*val >> 22)
 			return -2;
