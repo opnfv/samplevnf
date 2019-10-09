@@ -2272,7 +2272,10 @@ static int parse_cmd_help(const char *str, struct input *input)
 						len3 = max_len;
 				}
 
-				prox_strncpy(tmp, h, len3);
+				// Use strncpy here and not prox_strncpy. The dest (tmp) has been initialized with 0.
+				// The fact that we are copying 80 characters potentially not null terminated is hence not an issue.
+				// Using prox_strncpy here might cause a PROX_PANIC
+				strncpy(tmp, h, len3);
 				h += len3;
 				while (h[0] == ' ' && strlen(h))
 					h++;
