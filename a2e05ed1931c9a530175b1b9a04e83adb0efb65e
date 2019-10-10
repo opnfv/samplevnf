@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "635ff263_831454d6",
+        "filename": "VNFs/DPPD-PROX/display_ports.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 191,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-10-10T11:48:53Z",
+      "side": 1,
+      "message": "Whether i40e or not, instructions seem to be the same in these if and else blocks.",
+      "revId": "a2e05ed1931c9a530175b1b9a04e83adb0efb65e",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "aca80f88_de5b6b29",
+        "filename": "VNFs/DPPD-PROX/display_ports.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 209,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-10-10T11:48:53Z",
+      "side": 1,
+      "message": "Ditto",
+      "revId": "a2e05ed1931c9a530175b1b9a04e83adb0efb65e",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    }
+  ]
+}
