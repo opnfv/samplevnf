@@ -1,5 +1,5 @@
 ##
-## Copyright (c) 2010-2017 Intel Corporation
+## Copyright (c) 2010-2019 Intel Corporation
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
 ## you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ finer grained network functions like QoS, Routing, load-balancing...
 Compiling and running this application
 --------------------------------------
 This application supports DPDK 16.04, 16.11, 16.11.1, 17.02, 17.05, 17.08, 
-17.11, 18.02, 18.05 and 18.08.
+17.11, 18.02, 18.05, 18.08, 18.11, 19.02 and 19.05.
 
 The following commands assume that the following variables have been set:
 
