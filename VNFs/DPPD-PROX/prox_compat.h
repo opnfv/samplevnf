@@ -130,6 +130,12 @@ static void *prox_rte_table_create(struct prox_rte_table_params *params, int soc
 #define DEV_RX_OFFLOAD_JUMBO_FRAME 0x00000800
 #endif
 
+#ifndef DEV_RX_OFFLOAD_KEEP_CRC
+#ifndef DEV_RX_OFFLOAD_CRC_STRIP
+#define DEV_RX_OFFLOAD_CRC_STRIP 0x00001000
+#endif
+#endif
+
 #if RTE_VERSION < RTE_VERSION_NUM(19,2,0,0)
 #define RTE_COLOR_GREEN e_RTE_METER_GREEN
 #define RTE_COLOR_YELLOW e_RTE_METER_YELLOW
