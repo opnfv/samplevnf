@@ -34,8 +34,8 @@
 #define NB_PIPES        32768
 #define NB_MBUF         4096
 #define RING_RX_SIZE    256
-#define NB_RX_RING_DESC 256
-#define NB_TX_RING_DESC 256
+#define NB_RX_RING_DESC 2048
+#define NB_TX_RING_DESC 2048
 
 /* 1500000 milliseconds */
 #define DEFAULT_CPE_TIMEOUT_MS    1500000
