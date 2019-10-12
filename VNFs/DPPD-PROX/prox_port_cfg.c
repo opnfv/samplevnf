@@ -224,9 +224,14 @@ void init_rte_dev(int use_dummy_devices)
 		port_cfg->max_rxq = dev_info.max_rx_queues;
 		port_cfg->max_rx_pkt_len = dev_info.max_rx_pktlen;
 		port_cfg->min_rx_bufsize = dev_info.min_rx_bufsize;
+		port_cfg->min_tx_desc = dev_info.tx_desc_lim.nb_min;
+		port_cfg->max_tx_desc = dev_info.tx_desc_lim.nb_max;
+		port_cfg->min_rx_desc = dev_info.rx_desc_lim.nb_min;
+		port_cfg->max_rx_desc = dev_info.rx_desc_lim.nb_max;
 
 		prox_strncpy(port_cfg->driver_name, dev_info.driver_name, sizeof(port_cfg->driver_name));
 		plog_info("\tPort %u : driver='%s' tx_queues=%d rx_queues=%d\n", port_id, !strcmp(port_cfg->driver_name, "")? "null" : port_cfg->driver_name, port_cfg->max_txq, port_cfg->max_rxq);
+		plog_info("\tPort %u : %d<=tx_desc<=%d %d<=nb_rxdesc<=%d\n", port_id, port_cfg->min_tx_desc, port_cfg->max_tx_desc, port_cfg->min_rx_desc, port_cfg->max_rx_desc);
 
 		if (strncmp(port_cfg->driver_name, "rte_", 4) == 0) {
 			prox_strncpy(port_cfg->short_name, prox_port_cfg[port_id].driver_name + 4, sizeof(port_cfg->short_name));
@@ -612,12 +617,24 @@ static void init_port(struct prox_port_cfg *port_cfg)
 		port_cfg->port_conf.intr_conf.lsc = port_cfg->lsc_val;
 		plog_info("\t\tOverriding link state interrupt configuration to '%s'\n", port_cfg->lsc_val? "enabled" : "disabled");
 	}
-	if (!strcmp(port_cfg->short_name, "vmxnet3")) {
-		if (port_cfg->n_txd < 512) {
-			// Vmxnet3 driver requires minimum 512 tx descriptors
-			plog_info("\t\tNumber of TX descriptors is set to 512 (minimum required for vmxnet3\n");
-			port_cfg->n_txd = 512;
-		}
+	if (port_cfg->n_txd < port_cfg->min_tx_desc) {
+		plog_info("\t\tNumber of TX descriptors is set to %d (minimum required for %s\n", port_cfg->min_tx_desc, port_cfg->short_name);
+		port_cfg->n_txd = port_cfg->min_tx_desc;
+	}
+
+	if (port_cfg->n_rxd < port_cfg->min_rx_desc) {
+		plog_info("\t\tNumber of RX descriptors is set to %d (minimum required for %s\n", port_cfg->min_rx_desc, port_cfg->short_name);
+		port_cfg->n_rxd = port_cfg->min_rx_desc;
+	}
+
+	if (port_cfg->n_txd > port_cfg->max_tx_desc) {
+		plog_info("\t\tNumber of TX descriptors is set to %d (maximum required for %s\n", port_cfg->max_tx_desc, port_cfg->short_name);
+		port_cfg->n_txd = port_cfg->max_tx_desc;
+	}
+
+	if (port_cfg->n_rxd > port_cfg->max_rx_desc) {
+		plog_info("\t\tNumber of RX descriptors is set to %d (maximum required for %s\n", port_cfg->max_rx_desc, port_cfg->short_name);
+		port_cfg->n_rxd = port_cfg->max_rx_desc;
 	}
 
 	ret = rte_eth_dev_configure(port_id, port_cfg->n_rxq,

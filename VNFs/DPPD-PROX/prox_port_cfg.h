@@ -72,6 +72,10 @@ struct prox_port_cfg {
 	} capabilities;
 	uint32_t max_rx_pkt_len;
 	uint32_t min_rx_bufsize;
+	uint16_t min_rx_desc;
+	uint16_t max_rx_desc;
+	uint16_t min_tx_desc;
+	uint16_t max_tx_desc;
 	uint32_t nb_mc_addr;
 	struct ether_addr mc_addr[NB_MCAST_ADDR];
 };
