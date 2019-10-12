@@ -276,6 +276,13 @@ void init_rte_dev(int use_dummy_devices)
 			plog_info("\t\tDisabling UDP cksum on vmxnet3\n");
 			port_cfg->disabled_tx_offload |= DEV_TX_OFFLOAD_UDP_CKSUM;
 		}
+		// Some OVS versions reports that they support UDP offload and no IPv4 offload, but fails when UDP offload is enabled
+		if ((!strcmp(port_cfg->short_name, "virtio")) &&
+			((port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_IPV4_CKSUM) == 0) &&
+			(port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_UDP_CKSUM)) {
+			plog_info("\t\tDisabling UDP cksum on virtio\n");
+			port_cfg->disabled_tx_offload |= DEV_TX_OFFLOAD_UDP_CKSUM;
+		}
 	}
 }
 
