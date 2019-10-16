@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "cb4678e7_36c248d6",
+        "filename": "VNFs/DPPD-PROX/prox_port_cfg.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 227,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-10-16T17:00:40Z",
+      "side": 1,
+      "message": "Looks good, but is this available for all supported DPDK versions?",
+      "range": {
+        "startLine": 227,
+        "startChar": 26,
+        "endLine": 227,
+        "endChar": 53
+      },
+      "revId": "516ed17e6c6c59ab0ed4cd868a1205455cfe47ef",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    }
+  ]
+}
