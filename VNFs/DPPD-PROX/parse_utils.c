@@ -175,7 +175,7 @@ int parse_vars(char *val, size_t len, const char *name)
 					return -1;
 				}
 
-				prox_strncpy(&cur_var[1], &name[start_var], var_len);
+				strncpy(&cur_var[1], &name[start_var], var_len);
 				cur_var[1 + var_len] = 0;
 				if (parse_single_var(parsed, sizeof(parsed), cur_var)) {
 					return -1;

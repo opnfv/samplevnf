@@ -242,7 +242,7 @@ const char *get_cfg_dir(void)
 	while (end > 0 && cfg_file[end] != '/')
 		end--;
 
-	prox_strncpy(dir, cfg_file, end);
+	strncpy(dir, cfg_file, end);
 	return dir;
 }
 
