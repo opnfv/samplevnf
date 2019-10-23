@@ -32,7 +32,7 @@ The following commands assume that the following variables have been set:
 export RTE_SDK=/path/to/dpdk
 export RTE_TARGET=x86_64-native-linuxapp-gcc
 
-IPSec is only supported in PROX starting from DPDK 17.02
+IPSec is only supported in PROX starting from DPDK 17.11
 It will only be compiled if CONFIG_RTE_LIBRTE_PMD_AESNI_MB is
 set in DPDK .config. This also requires AESNI_MULTI_BUFFER_LIB_PATH to point to
 the multi-buffer library which can be downloaded from 
