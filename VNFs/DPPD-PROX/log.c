@@ -144,8 +144,8 @@ static const char* lvl_to_str(int lvl, int always)
 
 static	int dump_pkt(char *dst, size_t dst_size, const struct rte_mbuf *mbuf)
 {
-	const struct ether_hdr *peth = rte_pktmbuf_mtod(mbuf, const struct ether_hdr *);
-	const struct ipv4_hdr *dpip = (const struct ipv4_hdr *)(peth + 1);
+	const prox_rte_ether_hdr *peth = rte_pktmbuf_mtod(mbuf, const prox_rte_ether_hdr *);
+	const prox_rte_ipv4_hdr *dpip = (const prox_rte_ipv4_hdr *)(peth + 1);
 	const uint8_t *pkt_bytes = (const uint8_t *)peth;
 	const uint16_t len = rte_pktmbuf_pkt_len(mbuf);
 	size_t str_len = 0;

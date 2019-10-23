@@ -192,18 +192,18 @@ static int handle_bulk_random_drop(struct task_base *tbase, struct rte_mbuf **mb
 {
 	struct task_impair *task = (struct task_impair *)tbase;
 	uint8_t out[MAX_PKT_BURST];
-	struct ether_hdr * hdr[MAX_PKT_BURST];
+	prox_rte_ether_hdr * hdr[MAX_PKT_BURST];
 	int ret = 0;
 	for (uint16_t i = 0; i < n_pkts; ++i) {
 		PREFETCH0(mbufs[i]);
 	}
 	for (uint16_t i = 0; i < n_pkts; ++i) {
-		hdr[i] = rte_pktmbuf_mtod(mbufs[i], struct ether_hdr *);
+		hdr[i] = rte_pktmbuf_mtod(mbufs[i], prox_rte_ether_hdr *);
 		PREFETCH0(hdr[i]);
 	}
 	if (task->flags & IMPAIR_SET_MAC) {
 		for (uint16_t i = 0; i < n_pkts; ++i) {
-			ether_addr_copy((struct ether_addr *)&task->src_mac[0], &hdr[i]->s_addr);
+			prox_rte_ether_addr_copy((prox_rte_ether_addr *)&task->src_mac[0], &hdr[i]->s_addr);
 			out[i] = rand_r(&task->seed) <= task->tresh? 0 : OUT_DISCARD;
 		}
 	} else {
@@ -224,12 +224,12 @@ static int handle_bulk_impair(struct task_base *tbase, struct rte_mbuf **mbufs, 
 	uint16_t enqueue_failed;
 	uint16_t i;
 	int ret = 0;
-	struct ether_hdr * hdr[MAX_PKT_BURST];
+	prox_rte_ether_hdr * hdr[MAX_PKT_BURST];
 	for (uint16_t i = 0; i < n_pkts; ++i) {
 		PREFETCH0(mbufs[i]);
 	}
 	for (uint16_t i = 0; i < n_pkts; ++i) {
-		hdr[i] = rte_pktmbuf_mtod(mbufs[i], struct ether_hdr *);
+		hdr[i] = rte_pktmbuf_mtod(mbufs[i], prox_rte_ether_hdr *);
 		PREFETCH0(hdr[i]);
 	}
 
@@ -238,7 +238,7 @@ static int handle_bulk_impair(struct task_base *tbase, struct rte_mbuf **mbufs, 
 		/* We know n_pkts fits, no need to check for every packet */
 		for (i = 0; i < n_pkts; ++i) {
 			if (task->flags & IMPAIR_SET_MAC)
-				ether_addr_copy((struct ether_addr *)&task->src_mac[0], &hdr[i]->s_addr);
+				prox_rte_ether_addr_copy((prox_rte_ether_addr *)&task->src_mac[0], &hdr[i]->s_addr);
 			task->queue[task->queue_head].tsc = now + task->delay_time;
 			task->queue[task->queue_head].mbuf = mbufs[i];
 			task->queue_head = (task->queue_head + 1) & task->queue_mask;
@@ -247,7 +247,7 @@ static int handle_bulk_impair(struct task_base *tbase, struct rte_mbuf **mbufs, 
 		for (i = 0; i < n_pkts; ++i) {
 			if (((task->queue_head + 1) & task->queue_mask) != task->queue_tail) {
 				if (task->flags & IMPAIR_SET_MAC)
-					ether_addr_copy((struct ether_addr *)&task->src_mac[0], &hdr[i]->s_addr);
+					prox_rte_ether_addr_copy((prox_rte_ether_addr *)&task->src_mac[0], &hdr[i]->s_addr);
 				task->queue[task->queue_head].tsc = now + task->delay_time;
 				task->queue[task->queue_head].mbuf = mbufs[i];
 				task->queue_head = (task->queue_head + 1) & task->queue_mask;
@@ -336,12 +336,12 @@ static int handle_bulk_impair_random(struct task_base *tbase, struct rte_mbuf **
 	int ret = 0;
 	uint64_t packet_time, idx;
 	uint64_t now_idx = (now >> DELAY_ACCURACY) & DELAY_MAX_MASK;
-	struct ether_hdr * hdr[MAX_PKT_BURST];
+	prox_rte_ether_hdr * hdr[MAX_PKT_BURST];
 	for (uint16_t i = 0; i < n_pkts; ++i) {
 		PREFETCH0(mbufs[i]);
 	}
 	for (uint16_t i = 0; i < n_pkts; ++i) {
-		hdr[i] = rte_pktmbuf_mtod(mbufs[i], struct ether_hdr *);
+		hdr[i] = rte_pktmbuf_mtod(mbufs[i], prox_rte_ether_hdr *);
 		PREFETCH0(hdr[i]);
 	}
 
@@ -352,7 +352,7 @@ static int handle_bulk_impair_random(struct task_base *tbase, struct rte_mbuf **
 			struct queue *queue = &task->buffer[idx];
 			if (((queue->queue_head + 1) & task->queue_mask) != queue->queue_tail) {
 				if (task->flags & IMPAIR_SET_MAC)
-					ether_addr_copy((struct ether_addr *)&task->src_mac[0], &hdr[i]->s_addr);
+					prox_rte_ether_addr_copy((prox_rte_ether_addr *)&task->src_mac[0], &hdr[i]->s_addr);
 				queue->queue_elem[queue->queue_head].mbuf = mbufs[i];
 				queue->queue_head = (queue->queue_head + 1) & task->queue_mask;
 				break;
@@ -450,7 +450,7 @@ static void init_task(struct task_base *tbase, struct task_args *targ)
 	}
 	random_init_seed(&task->state);
 	if (targ->nb_txports) {
-		memcpy(&task->src_mac[0], &prox_port_cfg[tbase->tx_params_hw.tx_port_queue[0].port].eth_addr, sizeof(struct ether_addr));
+		memcpy(&task->src_mac[0], &prox_port_cfg[tbase->tx_params_hw.tx_port_queue[0].port].eth_addr, sizeof(prox_rte_ether_addr));
 		task->flags = IMPAIR_SET_MAC;
 	} else {
 		task->flags = 0;

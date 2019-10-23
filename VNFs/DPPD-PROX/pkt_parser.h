@@ -24,6 +24,7 @@
 #include <rte_tcp.h>
 #include <rte_byteorder.h>
 
+#include "prox_compat.h"
 #include "log.h"
 #include "etypes.h"
 
@@ -69,28 +70,28 @@ static void pkt_tuple_debug(const struct pkt_tuple *pt)
 /* Return 0 on success, i.e. packets parsed without any error. */
 static int parse_pkt(struct rte_mbuf *mbuf, struct pkt_tuple *pt, struct l4_meta *l4_meta)
 {
-	struct ether_hdr *peth = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
+	prox_rte_ether_hdr *peth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 	size_t l2_types_count = 0;
-	struct ipv4_hdr* pip = 0;
+	prox_rte_ipv4_hdr* pip = 0;
 
 	/* L2 */
 	pt->l2_types[l2_types_count++] = peth->ether_type;
 
 	switch (peth->ether_type) {
 	case ETYPE_IPv4:
-			pip = (struct ipv4_hdr *)(peth + 1);
+			pip = (prox_rte_ipv4_hdr *)(peth + 1);
 		break;
 	case ETYPE_VLAN: {
-		struct vlan_hdr *vlan = (struct vlan_hdr *)(peth + 1);
+		prox_rte_vlan_hdr *vlan = (prox_rte_vlan_hdr *)(peth + 1);
 		pt->l2_types[l2_types_count++] = vlan->eth_proto;
 		if (vlan->eth_proto == ETYPE_IPv4) {
-			pip = (struct ipv4_hdr *)(peth + 1);
+			pip = (prox_rte_ipv4_hdr *)(peth + 1);
 		}
 		else if (vlan->eth_proto == ETYPE_VLAN) {
-			struct vlan_hdr *vlan = (struct vlan_hdr *)(peth + 1);
+			prox_rte_vlan_hdr *vlan = (prox_rte_vlan_hdr *)(peth + 1);
 			pt->l2_types[l2_types_count++] = vlan->eth_proto;
 			if (vlan->eth_proto == ETYPE_IPv4) {
-				pip = (struct ipv4_hdr *)(peth + 1);
+				pip = (prox_rte_ipv4_hdr *)(peth + 1);
 			}
 			else if (vlan->eth_proto == ETYPE_IPv6) {
 				return 1;
@@ -103,13 +104,13 @@ static int parse_pkt(struct rte_mbuf *mbuf, struct pkt_tuple *pt, struct l4_meta
 	}
 		break;
 	case ETYPE_8021ad: {
-		struct vlan_hdr *vlan = (struct vlan_hdr *)(peth + 1);
+		prox_rte_vlan_hdr *vlan = (prox_rte_vlan_hdr *)(peth + 1);
 		pt->l2_types[l2_types_count++] = vlan->eth_proto;
 		if (vlan->eth_proto == ETYPE_VLAN) {
-			struct vlan_hdr *vlan = (struct vlan_hdr *)(peth + 1);
+			prox_rte_vlan_hdr *vlan = (prox_rte_vlan_hdr *)(peth + 1);
 			pt->l2_types[l2_types_count++] = vlan->eth_proto;
 			if (vlan->eth_proto == ETYPE_IPv4) {
-				pip = (struct ipv4_hdr *)(peth + 1);
+				pip = (prox_rte_ipv4_hdr *)(peth + 1);
 			}
 			else {
 				return 1;
@@ -148,21 +149,21 @@ static int parse_pkt(struct rte_mbuf *mbuf, struct pkt_tuple *pt, struct l4_meta
 
 	/* L4 parser */
 	if (pt->proto_id == IPPROTO_UDP) {
-		struct udp_hdr *udp = (struct udp_hdr*)(pip + 1);
+		prox_rte_udp_hdr *udp = (prox_rte_udp_hdr*)(pip + 1);
 		l4_meta->l4_hdr = (uint8_t*)udp;
 		pt->src_port = udp->src_port;
 		pt->dst_port = udp->dst_port;
-		l4_meta->payload = ((uint8_t*)udp) + sizeof(struct udp_hdr);
-		l4_meta->len = rte_be_to_cpu_16(udp->dgram_len) - sizeof(struct udp_hdr);
+		l4_meta->payload = ((uint8_t*)udp) + sizeof(prox_rte_udp_hdr);
+		l4_meta->len = rte_be_to_cpu_16(udp->dgram_len) - sizeof(prox_rte_udp_hdr);
 	}
 	else if (pt->proto_id == IPPROTO_TCP) {
-		struct tcp_hdr *tcp = (struct tcp_hdr*)(pip + 1);
+		prox_rte_tcp_hdr *tcp = (prox_rte_tcp_hdr*)(pip + 1);
 		l4_meta->l4_hdr = (uint8_t*)tcp;
 		pt->src_port = tcp->src_port;
 		pt->dst_port = tcp->dst_port;
 
 		l4_meta->payload = ((uint8_t*)tcp) + ((tcp->data_off >> 4)*4);
-		l4_meta->len = rte_be_to_cpu_16(pip->total_length) - sizeof(struct ipv4_hdr) - ((tcp->data_off >> 4)*4);
+		l4_meta->len = rte_be_to_cpu_16(pip->total_length) - sizeof(prox_rte_ipv4_hdr) - ((tcp->data_off >> 4)*4);
 	}
 	else {
 		plog_err("unsupported protocol %d\n", pt->proto_id);

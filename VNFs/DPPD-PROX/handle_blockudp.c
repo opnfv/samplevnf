@@ -35,8 +35,8 @@ static int handle_blockudp_bulk(struct task_base *tbase, struct rte_mbuf **mbufs
 	uint16_t j;
 
 	for (j = 0; j < n_pkts; ++j) {
-		struct ether_hdr *peth = rte_pktmbuf_mtod(mbufs[j], struct ether_hdr *);
-		struct ipv4_hdr *pip = (struct ipv4_hdr *) (peth + 1);
+		prox_rte_ether_hdr *peth = rte_pktmbuf_mtod(mbufs[j], prox_rte_ether_hdr *);
+		prox_rte_ipv4_hdr *pip = (prox_rte_ipv4_hdr *) (peth + 1);
 		out[j] = peth->ether_type == ETYPE_IPv4 && pip->next_proto_id == 0x11 ? OUT_DISCARD : 0;
 	}
 

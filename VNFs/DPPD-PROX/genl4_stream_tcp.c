@@ -68,8 +68,8 @@ struct tcp_option {
 
 void stream_tcp_create_rst(struct rte_mbuf *mbuf, struct l4_meta *l4_meta, struct pkt_tuple *tuple)
 {
-	struct tcp_hdr *tcp = (struct tcp_hdr *)l4_meta->l4_hdr;
-	struct ipv4_hdr *ip = ((struct ipv4_hdr *)tcp) - 1;
+	prox_rte_tcp_hdr *tcp = (prox_rte_tcp_hdr *)l4_meta->l4_hdr;
+	prox_rte_ipv4_hdr *ip = ((prox_rte_ipv4_hdr *)tcp) - 1;
 
 	ip->src_addr = tuple->dst_addr;
 	ip->dst_addr = tuple->src_addr;
@@ -77,9 +77,9 @@ void stream_tcp_create_rst(struct rte_mbuf *mbuf, struct l4_meta *l4_meta, struc
 	tcp->dst_port = tuple->src_port;
 	tcp->src_port = tuple->dst_port;
 
-	ip->total_length = rte_bswap16(sizeof(struct ipv4_hdr) + sizeof(struct tcp_hdr));
-	tcp->tcp_flags = TCP_RST_FLAG;
-	tcp->data_off = ((sizeof(struct tcp_hdr) / 4) << 4);
+	ip->total_length = rte_bswap16(sizeof(prox_rte_ipv4_hdr) + sizeof(prox_rte_tcp_hdr));
+	tcp->tcp_flags = PROX_RTE_TCP_RST_FLAG;
+	tcp->data_off = ((sizeof(prox_rte_tcp_hdr) / 4) << 4);
 	rte_pktmbuf_pkt_len(mbuf) = l4_meta->payload - rte_pktmbuf_mtod(mbuf, uint8_t *);
 	rte_pktmbuf_data_len(mbuf) = l4_meta->payload - rte_pktmbuf_mtod(mbuf, uint8_t *);
 }
@@ -94,8 +94,8 @@ static void create_tcp_pkt(struct stream_ctx *ctx, struct rte_mbuf *mbuf, uint8_
 	pkt = rte_pktmbuf_mtod(mbuf, uint8_t *);
 	rte_memcpy(pkt, stream_cfg->data[act->peer].hdr, stream_cfg->data[act->peer].hdr_len);
 
-	struct ipv4_hdr *l3_hdr = (struct ipv4_hdr*)&pkt[stream_cfg->data[act->peer].hdr_len - sizeof(struct ipv4_hdr)];
-	struct tcp_hdr *l4_hdr = (struct tcp_hdr *)&pkt[stream_cfg->data[act->peer].hdr_len];
+	prox_rte_ipv4_hdr *l3_hdr = (prox_rte_ipv4_hdr*)&pkt[stream_cfg->data[act->peer].hdr_len - sizeof(prox_rte_ipv4_hdr)];
+	prox_rte_tcp_hdr *l4_hdr = (prox_rte_tcp_hdr *)&pkt[stream_cfg->data[act->peer].hdr_len];
 
 	l3_hdr->src_addr = ctx->tuple->dst_addr;
 	l3_hdr->dst_addr = ctx->tuple->src_addr;
@@ -104,17 +104,17 @@ static void create_tcp_pkt(struct stream_ctx *ctx, struct rte_mbuf *mbuf, uint8_
 	l4_hdr->src_port = ctx->tuple->dst_port;
 	l4_hdr->dst_port = ctx->tuple->src_port;
 
-	uint32_t tcp_len = sizeof(struct tcp_hdr);
+	uint32_t tcp_len = sizeof(prox_rte_tcp_hdr);
 	uint32_t tcp_payload_len = 0;
 	uint32_t seq_len = 0;
 	struct tcp_option *tcp_op;
 
-	if (tcp_flags & TCP_RST_FLAG) {
-		tcp_flags |= TCP_RST_FLAG;
+	if (tcp_flags & PROX_RTE_TCP_RST_FLAG) {
+		tcp_flags |= PROX_RTE_TCP_RST_FLAG;
 		seq_len = 1;
 	}
-	else if (tcp_flags & TCP_SYN_FLAG) {
-		tcp_flags |= TCP_SYN_FLAG;
+	else if (tcp_flags & PROX_RTE_TCP_SYN_FLAG) {
+		tcp_flags |= PROX_RTE_TCP_SYN_FLAG;
 		/* Window scaling */
 
 		/* TODO: make options come from the stream. */
@@ -129,14 +129,14 @@ static void create_tcp_pkt(struct stream_ctx *ctx, struct rte_mbuf *mbuf, uint8_
 
 		ctx->seq_first_byte = ctx->ackd_seq + 1;
 	}
-	else if (tcp_flags & TCP_FIN_FLAG) {
-		tcp_flags |= TCP_FIN_FLAG;
+	else if (tcp_flags & PROX_RTE_TCP_FIN_FLAG) {
+		tcp_flags |= PROX_RTE_TCP_FIN_FLAG;
 		seq_len = 1;
 	}
 
-	if (tcp_flags & TCP_ACK_FLAG) {
+	if (tcp_flags & PROX_RTE_TCP_ACK_FLAG) {
 		l4_hdr->recv_ack = rte_bswap32(ctx->recv_seq);
-		tcp_flags |= TCP_ACK_FLAG;
+		tcp_flags |= PROX_RTE_TCP_ACK_FLAG;
 	}
 	else
 		l4_hdr->recv_ack = 0;
@@ -163,13 +163,13 @@ static void create_tcp_pkt(struct stream_ctx *ctx, struct rte_mbuf *mbuf, uint8_
 	rte_pktmbuf_pkt_len(mbuf)  = l4_payload_offset + data_len;
 	rte_pktmbuf_data_len(mbuf) = l4_payload_offset + data_len;
 
-	l3_hdr->total_length = rte_bswap16(sizeof(struct ipv4_hdr) + tcp_len + data_len);
+	l3_hdr->total_length = rte_bswap16(sizeof(prox_rte_ipv4_hdr) + tcp_len + data_len);
 	plogdx_dbg(mbuf, NULL);
 
 	plogx_dbg("put tcp packet with flags: %s%s%s, (len = %d, seq = %d, ack =%d)\n",
-		  tcp_flags & TCP_SYN_FLAG? "SYN ":"",
-		  tcp_flags & TCP_ACK_FLAG? "ACK ":"",
-		  tcp_flags & TCP_FIN_FLAG? "FIN ":"",
+		  tcp_flags & PROX_RTE_TCP_SYN_FLAG? "SYN ":"",
+		  tcp_flags & PROX_RTE_TCP_ACK_FLAG? "ACK ":"",
+		  tcp_flags & PROX_RTE_TCP_FIN_FLAG? "FIN ":"",
 		  data_len, rte_bswap32(l4_hdr->sent_seq), rte_bswap32(l4_hdr->recv_ack));
 }
 
@@ -187,9 +187,9 @@ uint16_t stream_tcp_reply_len(struct stream_ctx *ctx)
 			   the current implementation this packet
 			   contains the TCP option field to set the
 			   MSS. For this, add 4 bytes. */
-			return ctx->stream_cfg->data[!ctx->peer].hdr_len + sizeof(struct tcp_hdr) + 4;
+			return ctx->stream_cfg->data[!ctx->peer].hdr_len + sizeof(prox_rte_tcp_hdr) + 4;
 		}
-		return ctx->stream_cfg->data[!ctx->peer].hdr_len + sizeof(struct tcp_hdr);
+		return ctx->stream_cfg->data[!ctx->peer].hdr_len + sizeof(prox_rte_tcp_hdr);
 	}
 	else if (ctx->stream_cfg->actions[ctx->cur_action].peer == ctx->peer) {
 		/* The reply _could_ (due to races, still possibly
@@ -204,7 +204,7 @@ uint16_t stream_tcp_reply_len(struct stream_ctx *ctx)
 		if (remaining_len == 0) {
 			if (ctx->cur_action + 1 != ctx->stream_cfg->n_actions) {
 				if (ctx->stream_cfg->actions[ctx->cur_action + 1].peer == ctx->peer)
-					return ctx->stream_cfg->data[ctx->peer].hdr_len + sizeof(struct tcp_hdr);
+					return ctx->stream_cfg->data[ctx->peer].hdr_len + sizeof(prox_rte_tcp_hdr);
 				else {
 					uint32_t seq_beg = ctx->recv_seq - ctx->other_seq_first_byte;
 					uint32_t end = ctx->stream_cfg->actions[ctx->cur_action + 1].beg +
@@ -212,15 +212,15 @@ uint16_t stream_tcp_reply_len(struct stream_ctx *ctx)
 					uint32_t remaining = end - seq_beg;
 					uint16_t data_len = remaining > 1460? 1460: remaining;
 
-					return ctx->stream_cfg->data[!ctx->peer].hdr_len + sizeof(struct tcp_hdr) + data_len;
+					return ctx->stream_cfg->data[!ctx->peer].hdr_len + sizeof(prox_rte_tcp_hdr) + data_len;
 				}
 			}
 			else {
-				return ctx->stream_cfg->data[ctx->peer].hdr_len + sizeof(struct tcp_hdr);
+				return ctx->stream_cfg->data[ctx->peer].hdr_len + sizeof(prox_rte_tcp_hdr);
 			}
 		}
 		else {
-			return ctx->stream_cfg->data[ctx->peer].hdr_len + sizeof(struct tcp_hdr);
+			return ctx->stream_cfg->data[ctx->peer].hdr_len + sizeof(prox_rte_tcp_hdr);
 		}
 	}
 	else if (ctx->stream_cfg->actions[ctx->cur_action].peer != ctx->peer) {
@@ -230,10 +230,10 @@ uint16_t stream_tcp_reply_len(struct stream_ctx *ctx)
 		uint32_t remaining = end - seq_beg;
 		uint16_t data_len = remaining > 1460? 1460: remaining;
 
-		return ctx->stream_cfg->data[!ctx->peer].hdr_len + sizeof(struct tcp_hdr) + data_len;
+		return ctx->stream_cfg->data[!ctx->peer].hdr_len + sizeof(prox_rte_tcp_hdr) + data_len;
 	}
 	else
-		return ctx->stream_cfg->data[ctx->peer].hdr_len + sizeof(struct tcp_hdr);
+		return ctx->stream_cfg->data[ctx->peer].hdr_len + sizeof(prox_rte_tcp_hdr);
 }
 
 static void stream_tcp_proc_in_order_data(struct stream_ctx *ctx, struct l4_meta *l4_meta, int *progress_seq)
@@ -294,18 +294,18 @@ static void stream_tcp_proc_in_order_data(struct stream_ctx *ctx, struct l4_meta
 
 static int stream_tcp_proc_in(struct stream_ctx *ctx, struct l4_meta *l4_meta)
 {
-	struct tcp_hdr *tcp = NULL;
+	prox_rte_tcp_hdr *tcp = NULL;
 	int got_syn = 0;
 	int got_ack = 0;
 	int got_fin = 0;
 	int got_rst = 0;
 
-	tcp = (struct tcp_hdr *)l4_meta->l4_hdr;
+	tcp = (prox_rte_tcp_hdr *)l4_meta->l4_hdr;
 
-	got_syn = tcp->tcp_flags & TCP_SYN_FLAG;
-	got_ack = tcp->tcp_flags & TCP_ACK_FLAG;
-	got_fin = tcp->tcp_flags & TCP_FIN_FLAG;
-	got_rst = tcp->tcp_flags & TCP_RST_FLAG;
+	got_syn = tcp->tcp_flags & PROX_RTE_TCP_SYN_FLAG;
+	got_ack = tcp->tcp_flags & PROX_RTE_TCP_ACK_FLAG;
+	got_fin = tcp->tcp_flags & PROX_RTE_TCP_FIN_FLAG;
+	got_rst = tcp->tcp_flags & PROX_RTE_TCP_RST_FLAG;
 	plogx_dbg("TCP, flags: %s%s%s, (len = %d, seq = %d, ack =%d)\n", got_syn? "SYN ":"", got_ack? "ACK ":"", got_fin? "FIN " : "", l4_meta->len, rte_bswap32(tcp->sent_seq), rte_bswap32(tcp->recv_ack));
 
 	if (got_syn)
@@ -400,7 +400,7 @@ static int stream_tcp_proc_in(struct stream_ctx *ctx, struct l4_meta *l4_meta)
 	}
 
 	/* parse options */
-	if (((tcp->data_off >> 4)*4) > sizeof(struct tcp_hdr)) {
+	if (((tcp->data_off >> 4)*4) > sizeof(prox_rte_tcp_hdr)) {
 		struct tcp_option *tcp_op = (struct tcp_option *)(tcp + 1);
 		uint8_t *payload = (uint8_t *)tcp + ((tcp->data_off >> 4)*4);
 
@@ -440,7 +440,7 @@ static int stream_tcp_proc_out_closed(struct stream_ctx *ctx, struct rte_mbuf *m
 	ctx->next_seq = 99;
 	ctx->ackd_seq = 99;
 
-	create_tcp_pkt(ctx, mbuf, TCP_SYN_FLAG, 0, 0);
+	create_tcp_pkt(ctx, mbuf, PROX_RTE_TCP_SYN_FLAG, 0, 0);
 	token_time_take(&ctx->token_time, mbuf_wire_size(mbuf));
 	*next_tsc = tcp_retx_timeout(ctx);
 	return 0;
@@ -461,7 +461,7 @@ static int stream_tcp_proc_out_listen(struct stream_ctx *ctx, struct rte_mbuf *m
 		pkt_tuple_debug(ctx->tuple);
 
 		ctx->flags |= STREAM_CTX_F_TCP_ENDED;
-		create_tcp_pkt(ctx, mbuf, TCP_RST_FLAG, 0, 0);
+		create_tcp_pkt(ctx, mbuf, PROX_RTE_TCP_RST_FLAG, 0, 0);
 		token_time_take(&ctx->token_time, mbuf_wire_size(mbuf));
 		*next_tsc = tcp_retx_timeout(ctx);
 		return 0;
@@ -475,7 +475,7 @@ static int stream_tcp_proc_out_listen(struct stream_ctx *ctx, struct rte_mbuf *m
 
 	ctx->tcp_state = SYN_RECEIVED;
 
-	create_tcp_pkt(ctx, mbuf, TCP_SYN_FLAG | TCP_ACK_FLAG, 0, 0);
+	create_tcp_pkt(ctx, mbuf, PROX_RTE_TCP_SYN_FLAG | PROX_RTE_TCP_ACK_FLAG, 0, 0);
 	token_time_take(&ctx->token_time, mbuf_wire_size(mbuf));
 	*next_tsc = tcp_retx_timeout(ctx);
 	return 0;
@@ -517,7 +517,7 @@ static int stream_tcp_proc_out_syn_sent(struct stream_ctx *ctx, struct rte_mbuf 
 		return -1;
 	}
 	else {
-		create_tcp_pkt(ctx, mbuf, TCP_ACK_FLAG, 0, 0);
+		create_tcp_pkt(ctx, mbuf, PROX_RTE_TCP_ACK_FLAG, 0, 0);
 		token_time_take(&ctx->token_time, mbuf_wire_size(mbuf));
 		*next_tsc = tcp_retx_timeout(ctx);
 	}
@@ -542,7 +542,7 @@ static int stream_tcp_proc_out_syn_recv(struct stream_ctx *ctx, struct rte_mbuf 
 		ctx->same_state = 0;
 		ctx->tcp_state = ESTABLISHED;
 		if (ctx->stream_cfg->actions[ctx->cur_action].peer != ctx->peer) {
-			create_tcp_pkt(ctx, mbuf, TCP_ACK_FLAG, 0, 0);
+			create_tcp_pkt(ctx, mbuf, PROX_RTE_TCP_ACK_FLAG, 0, 0);
 			token_time_take(&ctx->token_time, mbuf_wire_size(mbuf));
 			*next_tsc = tcp_retx_timeout(ctx);
 			return 0;
@@ -562,7 +562,7 @@ static int stream_tcp_proc_out_syn_recv(struct stream_ctx *ctx, struct rte_mbuf 
 			   data.
 			*/
 
-			/* create_tcp_pkt(ctx, mbuf, TCP_ACK_FLAG, 0, 0); */
+			/* create_tcp_pkt(ctx, mbuf, PROX_RTE_TCP_ACK_FLAG, 0, 0); */
 			/* token_time_take(&ctx->token_time, mbuf_wire_size(mbuf)); */
 			*next_tsc = tcp_resched_timeout(ctx);
 			return -1;
@@ -576,7 +576,7 @@ static int stream_tcp_proc_out_syn_recv(struct stream_ctx *ctx, struct rte_mbuf 
 		++ctx->same_state;
 		tcp_set_retransmit(ctx);
 		ctx->next_seq = ctx->ackd_seq;
-		create_tcp_pkt(ctx, mbuf, TCP_SYN_FLAG | TCP_ACK_FLAG, 0, 0);
+		create_tcp_pkt(ctx, mbuf, PROX_RTE_TCP_SYN_FLAG | PROX_RTE_TCP_ACK_FLAG, 0, 0);
 		token_time_take(&ctx->token_time, mbuf_wire_size(mbuf));
 		*next_tsc = tcp_retx_timeout(ctx);
 		return 0;
@@ -603,7 +603,7 @@ static int stream_tcp_proc_out_estab_tx(struct stream_ctx *ctx, struct rte_mbuf 
 		plogx_dbg("Moving to FIN_WAIT\n");
 		ctx->tcp_state = FIN_WAIT;
 		ctx->same_state = 0;
-		create_tcp_pkt(ctx, mbuf, TCP_FIN_FLAG | TCP_ACK_FLAG, 0, 0);
+		create_tcp_pkt(ctx, mbuf, PROX_RTE_TCP_FIN_FLAG | PROX_RTE_TCP_ACK_FLAG, 0, 0);
 		token_time_take(&ctx->token_time, mbuf_wire_size(mbuf));
 		*next_tsc = tcp_retx_timeout(ctx);
 		return 0;
@@ -682,7 +682,7 @@ static int stream_tcp_proc_out_estab_tx(struct stream_ctx *ctx, struct rte_mbuf 
 	else
 		ctx->flags &= ~STREAM_CTX_F_MORE_DATA;
 
-	create_tcp_pkt(ctx, mbuf, TCP_ACK_FLAG, data_beg, data_len);
+	create_tcp_pkt(ctx, mbuf, PROX_RTE_TCP_ACK_FLAG, data_beg, data_len);
 	token_time_take(&ctx->token_time, mbuf_wire_size(mbuf));
 	if (ctx->flags & STREAM_CTX_F_MORE_DATA)
 		*next_tsc = tcp_resched_timeout(ctx);
@@ -705,14 +705,14 @@ static int stream_tcp_proc_out_estab_rx(struct stream_ctx *ctx, struct rte_mbuf 
 		plogx_dbg("Got fin!\n");
 		if (1) {
 			ctx->tcp_state = LAST_ACK;
-			create_tcp_pkt(ctx, mbuf, TCP_FIN_FLAG | TCP_ACK_FLAG, 0, 0);
+			create_tcp_pkt(ctx, mbuf, PROX_RTE_TCP_FIN_FLAG | PROX_RTE_TCP_ACK_FLAG, 0, 0);
 			token_time_take(&ctx->token_time, mbuf_wire_size(mbuf));
 			*next_tsc = tcp_retx_timeout(ctx);
 			return 0;
 		}
 		else {
 			ctx->tcp_state = CLOSE_WAIT;
-			create_tcp_pkt(ctx, mbuf, TCP_FIN_FLAG, 0, 0);
+			create_tcp_pkt(ctx, mbuf, PROX_RTE_TCP_FIN_FLAG, 0, 0);
 			token_time_take(&ctx->token_time, mbuf_wire_size(mbuf));
 			*next_tsc = tcp_resched_timeout(ctx);
 			return 0;
@@ -727,7 +727,7 @@ static int stream_tcp_proc_out_estab_rx(struct stream_ctx *ctx, struct rte_mbuf 
 		plogx_dbg("state++ (ack = %d)\n", ctx->recv_seq);
 	}
 
-	create_tcp_pkt(ctx, mbuf, TCP_ACK_FLAG, 0, 0);
+	create_tcp_pkt(ctx, mbuf, PROX_RTE_TCP_ACK_FLAG, 0, 0);
 	token_time_take(&ctx->token_time, mbuf_wire_size(mbuf));
 	*next_tsc = tcp_retx_timeout(ctx);
 	return 0;
@@ -756,7 +756,7 @@ static int stream_tcp_proc_out_close_wait(struct stream_ctx *ctx, struct rte_mbu
 	   when the FIN is sent after ACK'ing the incoming FIN. In any
 	   case, it does not matter if there was a packet or not. */
 	ctx->tcp_state = LAST_ACK;
-	create_tcp_pkt(ctx, mbuf, TCP_ACK_FLAG | TCP_FIN_FLAG, 0, 0);
+	create_tcp_pkt(ctx, mbuf, PROX_RTE_TCP_ACK_FLAG | PROX_RTE_TCP_FIN_FLAG, 0, 0);
 	token_time_take(&ctx->token_time, mbuf_wire_size(mbuf));
 	*next_tsc = tcp_retx_timeout(ctx);
 	return 0;
@@ -786,7 +786,7 @@ static int stream_tcp_proc_out_last_ack(struct stream_ctx *ctx, struct rte_mbuf 
 		ctx->next_seq = ctx->ackd_seq;
 		ctx->same_state++;
 		tcp_set_retransmit(ctx);
-		create_tcp_pkt(ctx, mbuf, TCP_ACK_FLAG | TCP_FIN_FLAG, 0, 0);
+		create_tcp_pkt(ctx, mbuf, PROX_RTE_TCP_ACK_FLAG | PROX_RTE_TCP_FIN_FLAG, 0, 0);
 		token_time_take(&ctx->token_time, mbuf_wire_size(mbuf));
 		*next_tsc = tcp_retx_timeout(ctx);
 		return 0;
@@ -808,7 +808,7 @@ static int stream_tcp_proc_out_fin_wait(struct stream_ctx *ctx, struct rte_mbuf 
 			ctx->tcp_state = TIME_WAIT;
 			ctx->sched_tsc = rte_rdtsc() + ctx->stream_cfg->tsc_timeout_time_wait;
 			plogx_dbg("from FIN_WAIT to TIME_WAIT\n");
-			create_tcp_pkt(ctx, mbuf, TCP_ACK_FLAG, 0, 0);
+			create_tcp_pkt(ctx, mbuf, PROX_RTE_TCP_ACK_FLAG, 0, 0);
 			token_time_take(&ctx->token_time, mbuf_wire_size(mbuf));
 			*next_tsc = ctx->stream_cfg->tsc_timeout_time_wait;
 			return 0;
@@ -830,7 +830,7 @@ static int stream_tcp_proc_out_fin_wait(struct stream_ctx *ctx, struct rte_mbuf 
 		ctx->same_state++;
 		tcp_set_retransmit(ctx);
 		ctx->next_seq = ctx->ackd_seq;
-		create_tcp_pkt(ctx, mbuf, TCP_FIN_FLAG | TCP_ACK_FLAG, 0, 0);
+		create_tcp_pkt(ctx, mbuf, PROX_RTE_TCP_FIN_FLAG | PROX_RTE_TCP_ACK_FLAG, 0, 0);
 		token_time_take(&ctx->token_time, mbuf_wire_size(mbuf));
 		*next_tsc = tcp_retx_timeout(ctx);
 		return 0;
@@ -853,7 +853,7 @@ static int stream_tcp_proc_out_time_wait(struct stream_ctx *ctx, struct rte_mbuf
 
 	plogx_dbg("Got packet while in TIME_WAIT (pkt ACK reTX)\n");
 	ctx->sched_tsc = rte_rdtsc() + ctx->stream_cfg->tsc_timeout_time_wait;
-	create_tcp_pkt(ctx, mbuf, TCP_ACK_FLAG, 0, 0);
+	create_tcp_pkt(ctx, mbuf, PROX_RTE_TCP_ACK_FLAG, 0, 0);
 	token_time_take(&ctx->token_time, mbuf_wire_size(mbuf));
 	*next_tsc = ctx->stream_cfg->tsc_timeout_time_wait;
 	return 0;
@@ -917,7 +917,7 @@ int stream_tcp_is_ended(struct stream_ctx *ctx)
 
 static void add_pkt_bytes(uint32_t *n_pkts, uint32_t *n_bytes, uint32_t len)
 {
-	len = (len < 60? 60 : len) + 20 + ETHER_CRC_LEN;
+	len = (len < 60? 60 : len) + 20 + PROX_RTE_ETHER_CRC_LEN;
 
 	(*n_pkts)++;
 	*n_bytes += len;
@@ -932,9 +932,9 @@ void stream_tcp_calc_len(struct stream_cfg *cfg, uint32_t *n_pkts, uint32_t *n_b
 	*n_bytes = 0;
 
 	/* Connection setup */
-	add_pkt_bytes(n_pkts, n_bytes, client_hdr_len + sizeof(struct tcp_hdr) + 4); /* SYN */
-	add_pkt_bytes(n_pkts, n_bytes, server_hdr_len + sizeof(struct tcp_hdr) + 4); /* SYN/ACK */
-	add_pkt_bytes(n_pkts, n_bytes, client_hdr_len + sizeof(struct tcp_hdr)); /* ACK */
+	add_pkt_bytes(n_pkts, n_bytes, client_hdr_len + sizeof(prox_rte_tcp_hdr) + 4); /* SYN */
+	add_pkt_bytes(n_pkts, n_bytes, server_hdr_len + sizeof(prox_rte_tcp_hdr) + 4); /* SYN/ACK */
+	add_pkt_bytes(n_pkts, n_bytes, client_hdr_len + sizeof(prox_rte_tcp_hdr)); /* ACK */
 
 	for (uint32_t i = 0; i < cfg->n_actions; ++i) {
 		const uint32_t mss = 1440; /* TODO: should come from peer's own mss. */
@@ -947,11 +947,11 @@ void stream_tcp_calc_len(struct stream_cfg *cfg, uint32_t *n_pkts, uint32_t *n_b
 
 		while (remaining) {
 			uint32_t seg = remaining > mss? mss: remaining;
-			add_pkt_bytes(n_pkts, n_bytes, send_hdr_len + sizeof(struct tcp_hdr) + seg);
+			add_pkt_bytes(n_pkts, n_bytes, send_hdr_len + sizeof(prox_rte_tcp_hdr) + seg);
 			remaining -= seg;
 		}
 
-		add_pkt_bytes(n_pkts, n_bytes, reply_hdr_len + sizeof(struct tcp_hdr));
+		add_pkt_bytes(n_pkts, n_bytes, reply_hdr_len + sizeof(prox_rte_tcp_hdr));
 	}
 
 	/* Connection Tear-down */
@@ -960,7 +960,7 @@ void stream_tcp_calc_len(struct stream_cfg *cfg, uint32_t *n_pkts, uint32_t *n_b
 	const uint32_t init_hdr_len = last_peer == PEER_CLIENT? client_hdr_len : server_hdr_len;
 	const uint32_t resp_hdr_len = last_peer == PEER_CLIENT? server_hdr_len : client_hdr_len;
 
-	add_pkt_bytes(n_pkts, n_bytes, init_hdr_len + sizeof(struct tcp_hdr)); /* FIN */
-	add_pkt_bytes(n_pkts, n_bytes, resp_hdr_len + sizeof(struct tcp_hdr)); /* FIN/ACK */
-	add_pkt_bytes(n_pkts, n_bytes, init_hdr_len + sizeof(struct tcp_hdr)); /* ACK */
+	add_pkt_bytes(n_pkts, n_bytes, init_hdr_len + sizeof(prox_rte_tcp_hdr)); /* FIN */
+	add_pkt_bytes(n_pkts, n_bytes, resp_hdr_len + sizeof(prox_rte_tcp_hdr)); /* FIN/ACK */
+	add_pkt_bytes(n_pkts, n_bytes, init_hdr_len + sizeof(prox_rte_tcp_hdr)); /* ACK */
 }

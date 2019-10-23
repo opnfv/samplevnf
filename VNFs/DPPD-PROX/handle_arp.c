@@ -28,7 +28,7 @@
 
 struct task_arp {
 	struct task_base   base;
-	struct ether_addr  src_mac;
+	prox_rte_ether_addr  src_mac;
 	uint32_t           seed;
 	uint32_t           flags;
 	uint32_t           ip;
@@ -44,7 +44,7 @@ static void task_update_config(struct task_arp *task)
 		task->ip = task->tmp_ip;
 }
 
-static void handle_arp(struct task_arp *task, struct ether_hdr_arp *hdr, struct ether_addr *s_addr)
+static void handle_arp(struct task_arp *task, struct ether_hdr_arp *hdr, prox_rte_ether_addr *s_addr)
 {
 	build_arp_reply(hdr, s_addr);
 }
@@ -56,7 +56,7 @@ static int handle_arp_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 	uint8_t out[MAX_PKT_BURST] = {0};
 	struct rte_mbuf *replies_mbufs[64] = {0}, *arp_pkt_mbufs[64] = {0};
 	int n_arp_reply_pkts = 0, n_other_pkts = 0,n_arp_pkts = 0;
-	struct ether_addr s_addr;
+	prox_rte_ether_addr s_addr;
 
 	for (uint16_t j = 0; j < n_pkts; ++j) {
 		hdr = rte_pktmbuf_mtod(mbufs[j], struct ether_hdr_arp *);
@@ -130,7 +130,7 @@ static void init_task_arp(struct task_base *tbase, struct task_args *targ)
 	task->arp_replies_ring = OUT_DISCARD;
 
 	task->seed = rte_rdtsc();
-	memcpy(&task->src_mac, &prox_port_cfg[task->base.tx_params_hw_sw.tx_port_queue.port].eth_addr, sizeof(struct ether_addr));
+	memcpy(&task->src_mac, &prox_port_cfg[task->base.tx_params_hw_sw.tx_port_queue.port].eth_addr, sizeof(prox_rte_ether_addr));
 
 	task->ip = rte_cpu_to_be_32(targ->local_ipv4);
 	task->tmp_ip = task->ip;

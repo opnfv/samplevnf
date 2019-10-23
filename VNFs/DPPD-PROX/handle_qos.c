@@ -76,7 +76,7 @@ static inline int handle_qos_bulk(struct task_base *tbase, struct rte_mbuf **mbu
 				const struct qinq_hdr *pqinq = rte_pktmbuf_mtod(mbufs[j], const struct qinq_hdr *);
 				uint32_t qinq = PKT_TO_LUTQINQ(pqinq->svlan.vlan_tci, pqinq->cvlan.vlan_tci);
 				if (pqinq->ether_type == ETYPE_IPv4) {
-					const struct ipv4_hdr *ipv4_hdr = (const struct ipv4_hdr *)(pqinq + 1);
+					const prox_rte_ipv4_hdr *ipv4_hdr = (const prox_rte_ipv4_hdr *)(pqinq + 1);
 					queue = task->dscp[ipv4_hdr->type_of_service >> 2] & 0x3;
 					tc = task->dscp[ipv4_hdr->type_of_service >> 2] >> 2;
 				} else {
@@ -92,7 +92,7 @@ static inline int handle_qos_bulk(struct task_base *tbase, struct rte_mbuf **mbu
 				const struct qinq_hdr *pqinq = rte_pktmbuf_mtod(mbufs[j], const struct qinq_hdr *);
 				uint32_t qinq = PKT_TO_LUTQINQ(pqinq->svlan.vlan_tci, pqinq->cvlan.vlan_tci);
 				if (pqinq->ether_type == ETYPE_IPv4) {
-					const struct ipv4_hdr *ipv4_hdr = (const struct ipv4_hdr *)(pqinq + 1);
+					const prox_rte_ipv4_hdr *ipv4_hdr = (const prox_rte_ipv4_hdr *)(pqinq + 1);
 					queue = task->dscp[ipv4_hdr->type_of_service >> 2] & 0x3;
 					tc = task->dscp[ipv4_hdr->type_of_service >> 2] >> 2;
 				} else {

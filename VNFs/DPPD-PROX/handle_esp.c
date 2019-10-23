@@ -62,9 +62,9 @@ struct task_esp_enc {
 	uint8_t cdev_id;
 	uint16_t qp_id;
 	uint32_t local_ipv4;
-	struct ether_addr local_mac;
+	prox_rte_ether_addr local_mac;
 	uint32_t remote_ipv4;
-	struct ether_addr dst_mac;
+	prox_rte_ether_addr dst_mac;
 	struct rte_mempool *crypto_op_pool;
 	struct rte_mempool *session_pool;
 	struct rte_cryptodev_sym_session *sess;
@@ -76,8 +76,8 @@ struct task_esp_dec {
 	uint8_t cdev_id;
 	uint16_t qp_id;
 	uint32_t local_ipv4;
-	struct ether_addr local_mac;
-	struct ether_addr dst_mac;
+	prox_rte_ether_addr local_mac;
+	prox_rte_ether_addr dst_mac;
 	struct rte_mempool *crypto_op_pool;
 	struct rte_mempool *session_pool;
 	struct rte_cryptodev_sym_session *sess;
@@ -242,14 +242,14 @@ static void init_task_esp_enc(struct task_base *tbase, struct task_args *targ)
 
 	task->local_ipv4 = rte_cpu_to_be_32(targ->local_ipv4);
 	task->remote_ipv4 = rte_cpu_to_be_32(targ->remote_ipv4);
-	//memcpy(&task->src_mac, &prox_port_cfg[task->base.tx_params_hw.tx_port_queue->port].eth_addr, sizeof(struct ether_addr));
+	//memcpy(&task->src_mac, &prox_port_cfg[task->base.tx_params_hw.tx_port_queue->port].eth_addr, sizeof(prox_rte_ether_addr));
 	struct prox_port_cfg *port = find_reachable_port(targ);
-	memcpy(&task->local_mac, &port->eth_addr, sizeof(struct ether_addr));
+	memcpy(&task->local_mac, &port->eth_addr, sizeof(prox_rte_ether_addr));
 
 	if (targ->flags & TASK_ARG_DST_MAC_SET){
 		memcpy(&task->dst_mac, &targ->edaddr, sizeof(task->dst_mac));
 		plog_info("TASK_ARG_DST_MAC_SET ("MAC_BYTES_FMT")\n", MAC_BYTES(task->dst_mac.addr_bytes));
-		//ether_addr_copy(&ptask->dst_mac, &peth->d_addr);
+		//prox_rte_ether_addr_copy(&ptask->dst_mac, &peth->d_addr);
 		//rte_memcpy(hdr, task->src_dst_mac, sizeof(task->src_dst_mac));
 	}
 }
@@ -340,14 +340,14 @@ static void init_task_esp_dec(struct task_base *tbase, struct task_args *targ)
 	}
 
 	task->local_ipv4 = rte_cpu_to_be_32(targ->local_ipv4);
-	//memcpy(&task->src_mac, &prox_port_cfg[task->base.tx_params_hw.tx_port_queue->port].eth_addr, sizeof(struct ether_addr));
+	//memcpy(&task->src_mac, &prox_port_cfg[task->base.tx_params_hw.tx_port_queue->port].eth_addr, sizeof(prox_rte_ether_addr));
 	struct prox_port_cfg *port = find_reachable_port(targ);
-	memcpy(&task->local_mac, &port->eth_addr, sizeof(struct ether_addr));
+	memcpy(&task->local_mac, &port->eth_addr, sizeof(prox_rte_ether_addr));
 
 	if (targ->flags & TASK_ARG_DST_MAC_SET){
 		memcpy(&task->dst_mac, &targ->edaddr, sizeof(task->dst_mac));
 		plog_info("TASK_ARG_DST_MAC_SET ("MAC_BYTES_FMT")\n", MAC_BYTES(task->dst_mac.addr_bytes));
-		//ether_addr_copy(&ptask->dst_mac, &peth->d_addr);
+		//prox_rte_ether_addr_copy(&ptask->dst_mac, &peth->d_addr);
 		//rte_memcpy(hdr, task->src_dst_mac, sizeof(task->src_dst_mac));
 	}
 
@@ -356,8 +356,8 @@ static void init_task_esp_dec(struct task_base *tbase, struct task_args *targ)
 static inline uint8_t handle_esp_ah_enc(struct task_esp_enc *task, struct rte_mbuf *mbuf, struct rte_crypto_op *cop)
 {
 	u8 *data;
-	struct ether_hdr *peth = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
-	struct ipv4_hdr* pip4 = (struct ipv4_hdr *)(peth + 1);
+	prox_rte_ether_hdr *peth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
+	prox_rte_ipv4_hdr* pip4 = (prox_rte_ipv4_hdr *)(peth + 1);
 	uint16_t ipv4_length = rte_be_to_cpu_16(pip4->total_length);
 	struct rte_crypto_sym_op *sym_cop = cop->sym;
 
@@ -376,54 +376,54 @@ static inline uint8_t handle_esp_ah_enc(struct task_esp_enc *task, struct rte_mb
 
 	// Remove padding if any (we don't want to encapsulate garbage at end of IPv4 packet)
 	int l1 = rte_pktmbuf_pkt_len(mbuf);
-	int padding = l1 - (ipv4_length + sizeof(struct ether_hdr));
+	int padding = l1 - (ipv4_length + sizeof(prox_rte_ether_hdr));
 	if (unlikely(padding > 0)) {
 		rte_pktmbuf_trim(mbuf, padding);
 	}
 
 	l1 = rte_pktmbuf_pkt_len(mbuf);
-	int encrypt_len = l1 - sizeof(struct ether_hdr) + 2; // According to RFC4303 table 1, encrypt len is ip+tfc_pad(o)+pad+pad len(1) + next header(1)
+	int encrypt_len = l1 - sizeof(prox_rte_ether_hdr) + 2; // According to RFC4303 table 1, encrypt len is ip+tfc_pad(o)+pad+pad len(1) + next header(1)
 	padding = 0;
 	if ((encrypt_len & 0xf) != 0){
 		padding = 16 - (encrypt_len % 16);
 		encrypt_len += padding;
 	}
 
-	const int extra_space = sizeof(struct ipv4_hdr) + sizeof(struct prox_esp_hdr) + CIPHER_IV_LENGTH_AES_CBC;
+	const int extra_space = sizeof(prox_rte_ipv4_hdr) + sizeof(struct prox_esp_hdr) + CIPHER_IV_LENGTH_AES_CBC;
 
-	struct ether_addr src_mac = peth->s_addr;
-	struct ether_addr dst_mac = peth->d_addr;
+	prox_rte_ether_addr src_mac = peth->s_addr;
+	prox_rte_ether_addr dst_mac = peth->d_addr;
 	uint32_t src_addr = pip4->src_addr;
 	uint32_t dst_addr = pip4->dst_addr;
 	uint8_t ttl = pip4->time_to_live;
 	uint8_t version_ihl = pip4->version_ihl;
 
-	peth = (struct ether_hdr *)rte_pktmbuf_prepend(mbuf, extra_space); // encap + prefix
-	peth = (struct ether_hdr *)rte_pktmbuf_append(mbuf, 0 + 1 + 1 + padding + 4 + DIGEST_BYTE_LENGTH_SHA1); // padding + pad_len + next_head + seqn + ICV pad + ICV
-	peth = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
+	peth = (prox_rte_ether_hdr *)rte_pktmbuf_prepend(mbuf, extra_space); // encap + prefix
+	peth = (prox_rte_ether_hdr *)rte_pktmbuf_append(mbuf, 0 + 1 + 1 + padding + 4 + DIGEST_BYTE_LENGTH_SHA1); // padding + pad_len + next_head + seqn + ICV pad + ICV
+	peth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 	l1 = rte_pktmbuf_pkt_len(mbuf);
 	peth->ether_type = ETYPE_IPv4;
 #if 0
 	//send it back
-	ether_addr_copy(&dst_mac, &peth->s_addr);
-	ether_addr_copy(&src_mac, &peth->d_addr);
+	prox_rte_ether_addr_copy(&dst_mac, &peth->s_addr);
+	prox_rte_ether_addr_copy(&src_mac, &peth->d_addr);
 #else
-	ether_addr_copy(&task->local_mac, &peth->s_addr);
-	//ether_addr_copy(&dst_mac, &peth->d_addr);//IS: dstmac should be rewritten by arp
-	ether_addr_copy(&task->dst_mac, &peth->d_addr);
+	prox_rte_ether_addr_copy(&task->local_mac, &peth->s_addr);
+	//prox_rte_ether_addr_copy(&dst_mac, &peth->d_addr);//IS: dstmac should be rewritten by arp
+	prox_rte_ether_addr_copy(&task->dst_mac, &peth->d_addr);
 #endif
 
-	pip4 = (struct ipv4_hdr *)(peth + 1);
+	pip4 = (prox_rte_ipv4_hdr *)(peth + 1);
 	pip4->src_addr = task->local_ipv4;
 	pip4->dst_addr = task->remote_ipv4;
 	pip4->time_to_live = ttl;
 	pip4->next_proto_id = IPPROTO_ESP; // 50 for ESP, ip in ip next proto trailer
 	pip4->version_ihl = version_ihl; // 20 bytes, ipv4
-	pip4->total_length = rte_cpu_to_be_16(ipv4_length + sizeof(struct ipv4_hdr) + sizeof(struct prox_esp_hdr) + CIPHER_IV_LENGTH_AES_CBC + padding + 1 + 1 + DIGEST_BYTE_LENGTH_SHA1); // iphdr+SPI+SN+IV+payload+padding+padlen+next header + crc + auth
+	pip4->total_length = rte_cpu_to_be_16(ipv4_length + sizeof(prox_rte_ipv4_hdr) + sizeof(struct prox_esp_hdr) + CIPHER_IV_LENGTH_AES_CBC + padding + 1 + 1 + DIGEST_BYTE_LENGTH_SHA1); // iphdr+SPI+SN+IV+payload+padding+padlen+next header + crc + auth
 	pip4->packet_id = 0x0101;
 	pip4->type_of_service = 0;
 	pip4->time_to_live = 64;
-	prox_ip_cksum(mbuf, pip4, sizeof(struct ether_hdr), sizeof(struct ipv4_hdr), 1);
+	prox_ip_cksum(mbuf, pip4, sizeof(prox_rte_ether_hdr), sizeof(prox_rte_ipv4_hdr), 1);
 
 	data = (u8*)(pip4 + 1);
 #if 0
@@ -443,12 +443,12 @@ static inline uint8_t handle_esp_ah_enc(struct task_esp_enc *task, struct rte_mb
 	*(padl + 1) = 4; // ipv4 in 4
 
 	sym_cop->auth.digest.data = data + 8 + CIPHER_IV_LENGTH_AES_CBC + encrypt_len;
-	//sym_cop->auth.digest.phys_addr = rte_pktmbuf_mtophys_offset(mbuf, (sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + 8 + CIPHER_IV_LENGTH_AES_CBC + encrypt_len));
-	sym_cop->auth.digest.phys_addr = rte_pktmbuf_iova_offset(mbuf, (sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + 8 + CIPHER_IV_LENGTH_AES_CBC + encrypt_len));
+	//sym_cop->auth.digest.phys_addr = rte_pktmbuf_mtophys_offset(mbuf, (sizeof(prox_rte_ether_hdr) + sizeof(prox_rte_ipv4_hdr) + 8 + CIPHER_IV_LENGTH_AES_CBC + encrypt_len));
+	sym_cop->auth.digest.phys_addr = rte_pktmbuf_iova_offset(mbuf, (sizeof(prox_rte_ether_hdr) + sizeof(prox_rte_ipv4_hdr) + 8 + CIPHER_IV_LENGTH_AES_CBC + encrypt_len));
 	//sym_cop->auth.digest.length = DIGEST_BYTE_LENGTH_SHA1;
 
 	//sym_cop->cipher.iv.data = data + 8;
-	//sym_cop->cipher.iv.phys_addr = rte_pktmbuf_mtophys(mbuf) + sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + 4 + 4;
+	//sym_cop->cipher.iv.phys_addr = rte_pktmbuf_mtophys(mbuf) + sizeof(prox_rte_ether_hdr) + sizeof(prox_rte_ipv4_hdr) + 4 + 4;
 	//sym_cop->cipher.iv.length = CIPHER_IV_LENGTH_AES_CBC;
 
 	//rte_memcpy(sym_cop->cipher.iv.data, aes_cbc_iv, CIPHER_IV_LENGTH_AES_CBC);
@@ -457,7 +457,7 @@ static inline uint8_t handle_esp_ah_enc(struct task_esp_enc *task, struct rte_mb
 	rte_memcpy(iv_ptr, aes_cbc_iv, CIPHER_IV_LENGTH_AES_CBC);
 
 #if 0//old
-	sym_cop->cipher.data.offset = sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + 4 + 4 + CIPHER_IV_LENGTH_AES_CBC;
+	sym_cop->cipher.data.offset = sizeof(prox_rte_ether_hdr) + sizeof(prox_rte_ipv4_hdr) + 4 + 4 + CIPHER_IV_LENGTH_AES_CBC;
 	sym_cop->cipher.data.length = encrypt_len;
 
 	uint64_t *iv = (uint64_t *)(pesp + 1);
@@ -465,11 +465,11 @@ static inline uint8_t handle_esp_ah_enc(struct task_esp_enc *task, struct rte_mb
 #else
 	//uint64_t *iv = (uint64_t *)(pesp + 1);
 	//memset(iv, 0, CIPHER_IV_LENGTH_AES_CBC);
-	sym_cop->cipher.data.offset = sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + sizeof(struct prox_esp_hdr);
+	sym_cop->cipher.data.offset = sizeof(prox_rte_ether_hdr) + sizeof(prox_rte_ipv4_hdr) + sizeof(struct prox_esp_hdr);
 	sym_cop->cipher.data.length = encrypt_len + CIPHER_IV_LENGTH_AES_CBC;
 #endif
 
-	sym_cop->auth.data.offset = sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr);
+	sym_cop->auth.data.offset = sizeof(prox_rte_ether_hdr) + sizeof(prox_rte_ipv4_hdr);
 	sym_cop->auth.data.length = sizeof(struct prox_esp_hdr) + CIPHER_IV_LENGTH_AES_CBC + encrypt_len;// + 4;// FIXME
 
 	sym_cop->m_src = mbuf;
@@ -483,8 +483,8 @@ static inline uint8_t handle_esp_ah_enc(struct task_esp_enc *task, struct rte_mb
 static inline uint8_t handle_esp_ah_dec(struct task_esp_dec *task, struct rte_mbuf *mbuf, struct rte_crypto_op *cop)
 {
 	struct rte_crypto_sym_op *sym_cop = cop->sym;
-	struct ether_hdr *peth = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
-	struct ipv4_hdr* pip4 = (struct ipv4_hdr *)(peth + 1);
+	prox_rte_ether_hdr *peth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
+	prox_rte_ipv4_hdr* pip4 = (prox_rte_ipv4_hdr *)(peth + 1);
 	uint16_t ipv4_length = rte_be_to_cpu_16(pip4->total_length);
 	u8 *data = (u8*)(pip4 + 1);
 
@@ -497,12 +497,12 @@ static inline uint8_t handle_esp_ah_dec(struct task_esp_dec *task, struct rte_mb
 	rte_crypto_op_attach_sym_session(cop, task->sess);
 
 	sym_cop->auth.digest.data = (unsigned char *)((unsigned char*)pip4 + ipv4_length - DIGEST_BYTE_LENGTH_SHA1);
-	//sym_cop->auth.digest.phys_addr = rte_pktmbuf_mtophys_offset(mbuf, sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + sizeof(struct prox_esp_hdr)); // FIXME
-	sym_cop->auth.digest.phys_addr = rte_pktmbuf_iova_offset(mbuf, sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + sizeof(struct prox_esp_hdr));
+	//sym_cop->auth.digest.phys_addr = rte_pktmbuf_mtophys_offset(mbuf, sizeof(prox_rte_ether_hdr) + sizeof(prox_rte_ipv4_hdr) + sizeof(struct prox_esp_hdr)); // FIXME
+	sym_cop->auth.digest.phys_addr = rte_pktmbuf_iova_offset(mbuf, sizeof(prox_rte_ether_hdr) + sizeof(prox_rte_ipv4_hdr) + sizeof(struct prox_esp_hdr));
 	//sym_cop->auth.digest.length = DIGEST_BYTE_LENGTH_SHA1;
 
 	//sym_cop->cipher.iv.data = (uint8_t *)data + 8;
-	//sym_cop->cipher.iv.phys_addr = rte_pktmbuf_mtophys(mbuf) + sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + 4 + 4;
+	//sym_cop->cipher.iv.phys_addr = rte_pktmbuf_mtophys(mbuf) + sizeof(prox_rte_ether_hdr) + sizeof(prox_rte_ipv4_hdr) + 4 + 4;
 	//sym_cop->cipher.iv.length = CIPHER_IV_LENGTH_AES_CBC;
 
 #if 0
@@ -516,11 +516,11 @@ static inline uint8_t handle_esp_ah_dec(struct task_esp_dec *task, struct rte_mb
 				CIPHER_IV_LENGTH_AES_CBC);
 #endif
 
-	sym_cop->auth.data.offset = sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr);
-	sym_cop->auth.data.length = ipv4_length - sizeof(struct ipv4_hdr) - 4 - CIPHER_IV_LENGTH_AES_CBC;
+	sym_cop->auth.data.offset = sizeof(prox_rte_ether_hdr) + sizeof(prox_rte_ipv4_hdr);
+	sym_cop->auth.data.length = ipv4_length - sizeof(prox_rte_ipv4_hdr) - 4 - CIPHER_IV_LENGTH_AES_CBC;
 
-	sym_cop->cipher.data.offset = sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + sizeof(struct prox_esp_hdr) + CIPHER_IV_LENGTH_AES_CBC;
-	sym_cop->cipher.data.length = ipv4_length - sizeof(struct ipv4_hdr) - CIPHER_IV_LENGTH_AES_CBC - 28; // FIXME
+	sym_cop->cipher.data.offset = sizeof(prox_rte_ether_hdr) + sizeof(prox_rte_ipv4_hdr) + sizeof(struct prox_esp_hdr) + CIPHER_IV_LENGTH_AES_CBC;
+	sym_cop->cipher.data.length = ipv4_length - sizeof(prox_rte_ipv4_hdr) - CIPHER_IV_LENGTH_AES_CBC - 28; // FIXME
 
 	sym_cop->m_src = mbuf;
 	return 0;
@@ -528,12 +528,12 @@ static inline uint8_t handle_esp_ah_dec(struct task_esp_dec *task, struct rte_mb
 
 static inline void do_ipv4_swap(struct task_esp_dec *task, struct rte_mbuf *mbuf)
 {
-	struct ether_hdr *peth = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
-	struct ether_addr src_mac = peth->s_addr;
-	struct ether_addr dst_mac = peth->d_addr;
+	prox_rte_ether_hdr *peth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
+	prox_rte_ether_addr src_mac = peth->s_addr;
+	prox_rte_ether_addr dst_mac = peth->d_addr;
 	uint32_t src_ip, dst_ip;
 
-	struct ipv4_hdr* pip4 = (struct ipv4_hdr *)(peth + 1);
+	prox_rte_ipv4_hdr* pip4 = (prox_rte_ipv4_hdr *)(peth + 1);
 	src_ip = pip4->src_addr;
 	dst_ip = pip4->dst_addr;
 
@@ -541,15 +541,15 @@ static inline void do_ipv4_swap(struct task_esp_dec *task, struct rte_mbuf *mbuf
 	peth->d_addr = src_mac;//should be replaced by arp
 	pip4->src_addr = dst_ip;
 	pip4->dst_addr = src_ip;
-	ether_addr_copy(&task->local_mac, &peth->s_addr);
+	prox_rte_ether_addr_copy(&task->local_mac, &peth->s_addr);
 }
 
 static inline uint8_t handle_esp_ah_dec_finish(struct task_esp_dec *task, struct rte_mbuf *mbuf)
 {
-	struct ether_hdr *peth = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
-	rte_memcpy(((u8*)peth) + sizeof(struct ether_hdr), ((u8*)peth) + sizeof(struct ether_hdr) +
-			+ sizeof(struct ipv4_hdr) + 4 + 4 + CIPHER_IV_LENGTH_AES_CBC, sizeof(struct ipv4_hdr));// next hdr, padding
-	struct ipv4_hdr* pip4 = (struct ipv4_hdr *)(peth + 1);
+	prox_rte_ether_hdr *peth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
+	rte_memcpy(((u8*)peth) + sizeof(prox_rte_ether_hdr), ((u8*)peth) + sizeof(prox_rte_ether_hdr) +
+			+ sizeof(prox_rte_ipv4_hdr) + 4 + 4 + CIPHER_IV_LENGTH_AES_CBC, sizeof(prox_rte_ipv4_hdr));// next hdr, padding
+	prox_rte_ipv4_hdr* pip4 = (prox_rte_ipv4_hdr *)(peth + 1);
 
 	if (unlikely((pip4->version_ihl >> 4) != 4)) {
 		plog_info("non IPv4 packet after esp dec %i\n", pip4->version_ihl);
@@ -564,22 +564,22 @@ static inline uint8_t handle_esp_ah_dec_finish(struct task_esp_dec *task, struct
 		return OUT_DISCARD;
 	}
 	uint16_t ipv4_length = rte_be_to_cpu_16(pip4->total_length);
-	rte_memcpy(((u8*)peth) + sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr),
-		((u8*)peth) + sizeof(struct ether_hdr) +
-		+ 2 * sizeof(struct ipv4_hdr) + 4 + 4 + CIPHER_IV_LENGTH_AES_CBC, ipv4_length - sizeof(struct ipv4_hdr));
+	rte_memcpy(((u8*)peth) + sizeof(prox_rte_ether_hdr) + sizeof(prox_rte_ipv4_hdr),
+		((u8*)peth) + sizeof(prox_rte_ether_hdr) +
+		+ 2 * sizeof(prox_rte_ipv4_hdr) + 4 + 4 + CIPHER_IV_LENGTH_AES_CBC, ipv4_length - sizeof(prox_rte_ipv4_hdr));
 
 	int len = rte_pktmbuf_pkt_len(mbuf);
-	rte_pktmbuf_trim(mbuf, len - sizeof(struct ether_hdr) - ipv4_length);
-	peth = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
+	rte_pktmbuf_trim(mbuf, len - sizeof(prox_rte_ether_hdr) - ipv4_length);
+	peth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 
 #if 0
 	do_ipv4_swap(task, mbuf);
 #else
-	ether_addr_copy(&task->local_mac, &peth->s_addr);
-	ether_addr_copy(&task->dst_mac, &peth->d_addr);
+	prox_rte_ether_addr_copy(&task->local_mac, &peth->s_addr);
+	prox_rte_ether_addr_copy(&task->dst_mac, &peth->d_addr);
 	//rte_memcpy(peth, task->dst_mac, sizeof(task->dst_mac));
 #endif
-	prox_ip_cksum(mbuf, pip4, sizeof(struct ether_hdr), sizeof(struct ipv4_hdr), 1);
+	prox_ip_cksum(mbuf, pip4, sizeof(prox_rte_ether_hdr), sizeof(prox_rte_ipv4_hdr), 1);
 
 	return 0;
 }
@@ -587,10 +587,10 @@ static inline uint8_t handle_esp_ah_dec_finish(struct task_esp_dec *task, struct
 static inline uint8_t handle_esp_ah_dec_finish2(struct task_esp_dec *task, struct rte_mbuf *mbuf)
 {
 	u8* m = rte_pktmbuf_mtod(mbuf, u8*);
-	rte_memcpy(m+sizeof(struct ipv4_hdr)+sizeof(struct prox_esp_hdr)+CIPHER_IV_LENGTH_AES_CBC,
-		m, sizeof(struct ether_hdr));
-	m = (u8*)rte_pktmbuf_adj(mbuf, sizeof(struct ipv4_hdr)+sizeof(struct prox_esp_hdr)+CIPHER_IV_LENGTH_AES_CBC);
-	struct ipv4_hdr* pip4 = (struct ipv4_hdr *)(m+sizeof(struct ether_hdr));
+	rte_memcpy(m+sizeof(prox_rte_ipv4_hdr)+sizeof(struct prox_esp_hdr)+CIPHER_IV_LENGTH_AES_CBC,
+		m, sizeof(prox_rte_ether_hdr));
+	m = (u8*)rte_pktmbuf_adj(mbuf, sizeof(prox_rte_ipv4_hdr)+sizeof(struct prox_esp_hdr)+CIPHER_IV_LENGTH_AES_CBC);
+	prox_rte_ipv4_hdr* pip4 = (prox_rte_ipv4_hdr *)(m+sizeof(prox_rte_ether_hdr));
 
 	if (unlikely((pip4->version_ihl >> 4) != 4)) {
 		plog_info("non IPv4 packet after esp dec %i\n", pip4->version_ihl);
@@ -606,18 +606,18 @@ static inline uint8_t handle_esp_ah_dec_finish2(struct task_esp_dec *task, struc
 	}
 	uint16_t ipv4_length = rte_be_to_cpu_16(pip4->total_length);
 	int len = rte_pktmbuf_pkt_len(mbuf);
-	rte_pktmbuf_trim(mbuf, len - sizeof(struct ether_hdr) - ipv4_length);
+	rte_pktmbuf_trim(mbuf, len - sizeof(prox_rte_ether_hdr) - ipv4_length);
 
 #if 0
 	do_ipv4_swap(task, mbuf);
 #else
-	struct ether_hdr *peth = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
-	ether_addr_copy(&task->local_mac, &peth->s_addr);
-	ether_addr_copy(&task->dst_mac, &peth->d_addr);
+	prox_rte_ether_hdr *peth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
+	prox_rte_ether_addr_copy(&task->local_mac, &peth->s_addr);
+	prox_rte_ether_addr_copy(&task->dst_mac, &peth->d_addr);
 	//rte_memcpy(peth, task->dst_mac, sizeof(task->dst_mac));
 #endif
 
-	prox_ip_cksum(mbuf, pip4, sizeof(struct ether_hdr), sizeof(struct ipv4_hdr), 1);
+	prox_ip_cksum(mbuf, pip4, sizeof(prox_rte_ether_hdr), sizeof(prox_rte_ipv4_hdr), 1);
 	return 0;
 }
 

@@ -42,23 +42,23 @@ static void init_task_unmpls(__attribute__((unused)) struct task_base *tbase,
 
 static inline uint8_t handle_unmpls(__attribute__((unused)) struct task_unmpls *task, struct rte_mbuf *mbuf)
 {
-	struct ether_hdr *peth = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
+	prox_rte_ether_hdr *peth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
         struct mpls_hdr *mpls = (struct mpls_hdr *)(peth + 1);
         uint32_t mpls_len = sizeof(struct mpls_hdr);
         while (!(mpls->bytes & 0x00010000)) {
                 mpls++;
                 mpls_len += sizeof(struct mpls_hdr);
         }
-		uint32_t tot_eth_addr_len = 2*sizeof(struct ether_addr);
+		uint32_t tot_eth_addr_len = 2*sizeof(prox_rte_ether_addr);
 		rte_memcpy(((uint8_t *)peth) + mpls_len, peth, tot_eth_addr_len);
-        struct ipv4_hdr *ip = (struct ipv4_hdr *)(mpls + 1);
+        prox_rte_ipv4_hdr *ip = (prox_rte_ipv4_hdr *)(mpls + 1);
         switch (ip->version_ihl >> 4) {
         case 4:
-                peth = (struct ether_hdr *)rte_pktmbuf_adj(mbuf, mpls_len);
+                peth = (prox_rte_ether_hdr *)rte_pktmbuf_adj(mbuf, mpls_len);
                 peth->ether_type = ETYPE_IPv4;
                 return 0;
         case 6:
-                peth = (struct ether_hdr *)rte_pktmbuf_adj(mbuf, mpls_len);
+                peth = (prox_rte_ether_hdr *)rte_pktmbuf_adj(mbuf, mpls_len);
                 peth->ether_type = ETYPE_IPv6;
                 return 0;
         default:
@@ -109,12 +109,12 @@ static void init_task_tagmpls(__attribute__((unused)) struct task_base *tbase,
 
 static inline uint8_t handle_tagmpls(__attribute__((unused)) struct task_tagmpls *task, struct rte_mbuf *mbuf)
 {
-        struct ether_hdr *peth = (struct ether_hdr *)rte_pktmbuf_prepend(mbuf, 4);
+        prox_rte_ether_hdr *peth = (prox_rte_ether_hdr *)rte_pktmbuf_prepend(mbuf, 4);
         PROX_ASSERT(peth);
         rte_prefetch0(peth);
 	uint32_t mpls = 0;
 
-	uint32_t tot_eth_addr_len = 2*sizeof(struct ether_addr);
+	uint32_t tot_eth_addr_len = 2*sizeof(prox_rte_ether_addr);
 	rte_memcpy(peth, ((uint8_t *)peth) + sizeof(struct mpls_hdr), tot_eth_addr_len);
         *((uint32_t *)(peth + 1)) = mpls | 0x00010000; // Set BoS to 1
         peth->ether_type = ETYPE_MPLSU;

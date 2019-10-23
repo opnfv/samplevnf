@@ -31,32 +31,32 @@ struct task_l2fwd {
 static int handle_l2fwd_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts)
 {
 	struct task_l2fwd *task = (struct task_l2fwd *)tbase;
-	struct ether_hdr *hdr;
-	struct ether_addr mac;
+	prox_rte_ether_hdr *hdr;
+	prox_rte_ether_addr mac;
 
 	if ((task->runtime_flags & (TASK_ARG_DST_MAC_SET|TASK_ARG_SRC_MAC_SET)) == (TASK_ARG_DST_MAC_SET|TASK_ARG_SRC_MAC_SET)) {
 		/* Source and Destination mac hardcoded */
 		for (uint16_t j = 0; j < n_pkts; ++j) {
-			hdr = rte_pktmbuf_mtod(mbufs[j], struct ether_hdr *);
+			hdr = rte_pktmbuf_mtod(mbufs[j], prox_rte_ether_hdr *);
                		rte_memcpy(hdr, task->src_dst_mac, sizeof(task->src_dst_mac));
 		}
 	} else {
 		for (uint16_t j = 0; j < n_pkts; ++j) {
-			hdr = rte_pktmbuf_mtod(mbufs[j], struct ether_hdr *);
+			hdr = rte_pktmbuf_mtod(mbufs[j], prox_rte_ether_hdr *);
 			if ((task->runtime_flags & (TASK_ARG_DO_NOT_SET_SRC_MAC|TASK_ARG_SRC_MAC_SET)) == 0) {
 				/* dst mac will be used as src mac */
-				ether_addr_copy(&hdr->d_addr, &mac);
+				prox_rte_ether_addr_copy(&hdr->d_addr, &mac);
 			}
 
 			if (task->runtime_flags & TASK_ARG_DST_MAC_SET)
-				ether_addr_copy((struct ether_addr *)&task->src_dst_mac[0], &hdr->d_addr);
+				prox_rte_ether_addr_copy((prox_rte_ether_addr *)&task->src_dst_mac[0], &hdr->d_addr);
 			else if ((task->runtime_flags & TASK_ARG_DO_NOT_SET_DST_MAC) == 0)
-				ether_addr_copy(&hdr->s_addr, &hdr->d_addr);
+				prox_rte_ether_addr_copy(&hdr->s_addr, &hdr->d_addr);
 
 			if (task->runtime_flags & TASK_ARG_SRC_MAC_SET) {
-				ether_addr_copy((struct ether_addr *)&task->src_dst_mac[6], &hdr->s_addr);
+				prox_rte_ether_addr_copy((prox_rte_ether_addr *)&task->src_dst_mac[6], &hdr->s_addr);
 			} else if ((task->runtime_flags & TASK_ARG_DO_NOT_SET_SRC_MAC) == 0) {
-				ether_addr_copy(&mac, &hdr->s_addr);
+				prox_rte_ether_addr_copy(&mac, &hdr->s_addr);
 			}
 		}
 	}
@@ -66,7 +66,7 @@ static int handle_l2fwd_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, u
 static void init_task_l2fwd(struct task_base *tbase, struct task_args *targ)
 {
 	struct task_l2fwd *task = (struct task_l2fwd *)tbase;
-	struct ether_addr *src_addr, *dst_addr;
+	prox_rte_ether_addr *src_addr, *dst_addr;
 
 	/*
 	 * The destination MAC of the outgoing packet is based on the config file:

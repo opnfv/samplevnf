@@ -21,10 +21,10 @@
 #include <rte_ether.h>
 #include <rte_hash.h>
 
+#include "prox_compat.h"
 #include "ip6_addr.h"
 
 struct lua_State;
-struct ether_addr;
 struct ip4_subnet;
 struct ip6_subnet;
 struct next_hop;
@@ -70,7 +70,7 @@ struct lpm6 {
 
 struct ipv6_tun_binding_entry {
 	struct ipv6_addr        endpoint_addr;  // IPv6 local addr
-	struct ether_addr       next_hop_mac;   // mac addr of next hop towards lwB4
+	prox_rte_ether_addr       next_hop_mac;   // mac addr of next hop towards lwB4
 	uint32_t                public_ipv4;    // Public IPv4 address
 	uint16_t                public_port;    // Public base port (together with port mask, defines the Port Set)
 } __attribute__((__packed__));
@@ -86,7 +86,7 @@ struct cpe_table_entry {
 	uint32_t svlan;
 	uint32_t cvlan;
 	uint32_t ip;
-	struct ether_addr eth_addr;
+	prox_rte_ether_addr eth_addr;
 	uint32_t user;
 };
 
@@ -115,7 +115,7 @@ int lua_getfrom(struct lua_State *L, enum lua_place from, const char *name);
 int lua_to_port(struct lua_State *L, enum lua_place from, const char *name, uint16_t *port);
 int lua_to_ip(struct lua_State *L, enum lua_place from, const char *name, uint32_t *ip);
 int lua_to_ip6(struct lua_State *L, enum lua_place from, const char *name, uint8_t *ip);
-int lua_to_mac(struct lua_State *L, enum lua_place from, const char *name, struct ether_addr *mac);
+int lua_to_mac(struct lua_State *L, enum lua_place from, const char *name, prox_rte_ether_addr *mac);
 int lua_to_cidr(struct lua_State *L, enum lua_place from, const char *name, struct ip4_subnet *cidr);
 int lua_to_cidr6(struct lua_State *L, enum lua_place from, const char *name, struct ip6_subnet *cidr);
 int lua_to_int(struct lua_State *L, enum lua_place from, const char *name, uint32_t *val);

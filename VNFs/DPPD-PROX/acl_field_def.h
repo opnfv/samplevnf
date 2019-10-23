@@ -24,9 +24,9 @@
 #include "qinq.h"
 
 struct pkt_eth_ipv4_udp {
-	struct ether_hdr ether_hdr;
-	struct ipv4_hdr ipv4_hdr;
-	struct udp_hdr udp_hdr;
+	prox_rte_ether_hdr ether_hdr;
+	prox_rte_ipv4_hdr ipv4_hdr;
+	prox_rte_udp_hdr udp_hdr;
 } __attribute__((packed));
 
 static struct rte_acl_field_def pkt_eth_ipv4_udp_defs[] = {
@@ -73,8 +73,8 @@ static struct rte_acl_field_def pkt_eth_ipv4_udp_defs[] = {
 
 struct pkt_qinq_ipv4_udp {
 	struct qinq_hdr qinq_hdr;
-	struct ipv4_hdr ipv4_hdr;
-	struct udp_hdr udp_hdr;
+	prox_rte_ipv4_hdr ipv4_hdr;
+	prox_rte_udp_hdr udp_hdr;
 };
 
 static struct rte_acl_field_def pkt_qinq_ipv4_udp_defs[] = {

@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
-
 #ifndef _PROX_COMPAT_H_
 #define _PROX_COMPAT_H_
 #include <rte_common.h>
@@ -148,6 +147,33 @@ static void *prox_rte_table_create(struct prox_rte_table_params *params, int soc
 #define prox_rte_color rte_color
 #define prox_rte_sched_port_pkt_read_tree_path(A,B,C,D,E,F) rte_sched_port_pkt_read_tree_path(A,B,C,D,E,F)
 #define prox_rte_sched_port_pkt_write(A,B,C,D,E,F,G) rte_sched_port_pkt_write(A,B,C,D,E,F,G);
+#endif
+
+#if RTE_VERSION < RTE_VERSION_NUM(19,8,0,0)
+#if RTE_VERSION >= RTE_VERSION_NUM(18,5,0,0)
+typedef struct vxlan_gpe_hdr prox_rte_vxlan_gpe_hdr;
+#endif
+#define PROX_RTE_ETHER_CRC_LEN ETHER_CRC_LEN
+#define PROX_RTE_ETHER_MIN_LEN ETHER_MIN_LEN
+#define PROX_RTE_ETHER_MAX_LEN ETHER_MAX_LEN
+#define PROX_RTE_ETHER_HDR_LEN ETHER_HDR_LEN
+#define PROX_RTE_TCP_SYN_FLAG TCP_SYN_FLAG
+#define PROX_RTE_TCP_FIN_FLAG TCP_FIN_FLAG
+#define PROX_RTE_TCP_RST_FLAG TCP_RST_FLAG
+#define PROX_RTE_TCP_ACK_FLAG TCP_ACK_FLAG
+
+#define prox_rte_ether_addr_copy ether_addr_copy
+#define prox_rte_eth_random_addr eth_random_addr
+
+typedef struct ipv6_hdr prox_rte_ipv6_hdr;
+typedef struct ipv4_hdr prox_rte_ipv4_hdr;
+typedef struct ether_addr prox_rte_ether_addr;
+typedef struct ether_hdr prox_rte_ether_hdr;
+typedef struct vlan_hdr prox_rte_vlan_hdr;
+typedef struct udp_hdr prox_rte_udp_hdr;
+typedef struct tcp_hdr prox_rte_tcp_hdr;
+
+#else
 #endif
 
 static inline char *prox_strncpy(char * dest, const char * src, size_t count)
