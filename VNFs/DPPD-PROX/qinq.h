@@ -18,6 +18,7 @@
 #define _QINQ_H_
 
 #include <rte_ether.h>
+#include "prox_compat.h"
 
 struct my_vlan_hdr {
 	uint16_t eth_proto;
@@ -30,8 +31,8 @@ struct vlans {
 };
 
 struct qinq_hdr {
-	struct ether_addr  d_addr;
-	struct ether_addr  s_addr;
+	prox_rte_ether_addr  d_addr;
+	prox_rte_ether_addr  s_addr;
 	struct my_vlan_hdr svlan;
 	struct my_vlan_hdr cvlan;
 	uint16_t ether_type;

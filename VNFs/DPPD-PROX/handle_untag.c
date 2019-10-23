@@ -65,16 +65,16 @@ static int handle_untag_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, u
 	return task->base.tx_pkt(&task->base, mbufs, n_pkts, out);
 }
 
-static inline uint8_t untag_mpls(struct rte_mbuf *mbuf, struct ether_hdr *peth)
+static inline uint8_t untag_mpls(struct rte_mbuf *mbuf, prox_rte_ether_hdr *peth)
 {
-	struct ether_hdr *pneweth = (struct ether_hdr *)rte_pktmbuf_adj(mbuf, 4);
+	prox_rte_ether_hdr *pneweth = (prox_rte_ether_hdr *)rte_pktmbuf_adj(mbuf, 4);
 	const struct mpls_hdr *mpls = (const struct mpls_hdr *)(peth + 1);
-	const struct ipv4_hdr *pip = (const struct ipv4_hdr *)(mpls + 1);
+	const prox_rte_ipv4_hdr *pip = (const prox_rte_ipv4_hdr *)(mpls + 1);
 	PROX_ASSERT(pneweth);
 
 	if (mpls->bos == 0) {
 		// Double MPLS tag
-		pneweth = (struct ether_hdr *)rte_pktmbuf_adj(mbuf, 4);
+		pneweth = (prox_rte_ether_hdr *)rte_pktmbuf_adj(mbuf, 4);
 		PROX_ASSERT(pneweth);
 	}
 
@@ -98,13 +98,13 @@ static uint8_t untag_qinq(struct rte_mbuf *mbuf, struct qinq_hdr *qinq)
 		return OUT_DISCARD;
 	}
 
-	rte_pktmbuf_adj(mbuf, sizeof(struct qinq_hdr) - sizeof(struct ether_hdr));
+	rte_pktmbuf_adj(mbuf, sizeof(struct qinq_hdr) - sizeof(prox_rte_ether_hdr));
 	return 0;
 }
 
 static inline uint8_t handle_untag(struct task_untag *task, struct rte_mbuf *mbuf)
 {
-	struct ether_hdr *peth = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
+	prox_rte_ether_hdr *peth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 	const uint16_t etype = peth->ether_type;
 
 	if (etype != task->etype) {

@@ -245,22 +245,22 @@ int handle_lb_qinq_bulk_set_port(struct task_base *tbase, struct rte_mbuf **mbuf
 struct qinq_packet {
 	struct qinq_hdr qinq_hdr;
 	union {
-		struct ipv4_hdr ipv4_hdr;
-		struct ipv6_hdr ipv6_hdr;
+		prox_rte_ipv4_hdr ipv4_hdr;
+		prox_rte_ipv6_hdr ipv6_hdr;
 	};
 } __attribute__((packed));
 
 struct qinq_packet_data {
-	struct ether_addr  d_addr;
-	struct ether_addr  s_addr;
+	prox_rte_ether_addr  d_addr;
+	prox_rte_ether_addr  s_addr;
 	uint64_t qinq;
 } __attribute__((packed));
 
 struct ether_packet {
-	struct ether_hdr ether_hdr;
+	prox_rte_ether_hdr ether_hdr;
 	union {
-		struct ipv4_hdr ipv4_hdr;
-		struct ipv6_hdr ipv6_hdr;
+		prox_rte_ipv4_hdr ipv4_hdr;
+		prox_rte_ipv6_hdr ipv6_hdr;
 	};
 } __attribute__((packed));
 

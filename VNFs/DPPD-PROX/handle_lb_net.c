@@ -357,9 +357,9 @@ static inline uint8_t worker_from_mask(struct task_lb_net *task, uint32_t val)
 static inline int extract_gre_key(struct task_lb_net_lut *task, uint32_t *key, struct rte_mbuf *mbuf)
 {
 	// For all packets, one by one, remove MPLS tag if any and fills in keys used by "fake" packets
-	struct ether_hdr *peth = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
+	prox_rte_ether_hdr *peth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 	// Check for MPLS TAG
-	struct ipv4_hdr *ip;
+	prox_rte_ipv4_hdr *ip;
 	if (peth->ether_type == ETYPE_MPLSU) {
 		struct mpls_hdr *mpls = (struct mpls_hdr *)(peth + 1);
 		uint32_t mpls_len = 0;
@@ -368,12 +368,12 @@ static inline int extract_gre_key(struct task_lb_net_lut *task, uint32_t *key, s
 			mpls_len += sizeof(struct mpls_hdr);
 		}
 		mpls_len += sizeof(struct mpls_hdr);
-		ip = (struct ipv4_hdr *)(mpls + 1);
+		ip = (prox_rte_ipv4_hdr *)(mpls + 1);
 		switch (ip->version_ihl >> 4) {
 		case 4:
 			// Remove MPLS Tag if requested
 			if (task->runtime_flags & TASK_MPLS_TAGGING) {
-				peth = (struct ether_hdr *)rte_pktmbuf_adj(mbuf, mpls_len);
+				peth = (prox_rte_ether_hdr *)rte_pktmbuf_adj(mbuf, mpls_len);
 				peth->ether_type = ETYPE_IPv4;
 			}
 			break;
@@ -386,7 +386,7 @@ static inline int extract_gre_key(struct task_lb_net_lut *task, uint32_t *key, s
 		}
 	}
 	else {
-		ip = (struct ipv4_hdr *)(peth + 1);
+		ip = (prox_rte_ipv4_hdr *)(peth + 1);
 	}
 	// Entry point for the packet => check for packet validity
 	// => do not use extract_key_core(mbufs[j], &task->keys[j]);
@@ -416,7 +416,7 @@ static inline int extract_gre_key(struct task_lb_net_lut *task, uint32_t *key, s
 	return 0;
 }
 
-static inline uint8_t lb_ip4(struct task_lb_net *task, struct ipv4_hdr *ip)
+static inline uint8_t lb_ip4(struct task_lb_net *task, prox_rte_ipv4_hdr *ip)
 {
 	if (unlikely(ip->version_ihl >> 4 != 4)) {
 		plog_warn("Expected to receive IPv4 packet but IP version was %d\n",
@@ -453,7 +453,7 @@ static inline uint8_t lb_ip4(struct task_lb_net *task, struct ipv4_hdr *ip)
 	return OUT_DISCARD;
 }
 
-static inline uint8_t lb_ip6(struct task_lb_net *task, struct ipv6_hdr *ip)
+static inline uint8_t lb_ip6(struct task_lb_net *task, prox_rte_ipv6_hdr *ip)
 {
 	if (unlikely((*(uint8_t*)ip) >> 4 != 6)) {
 		plog_warn("Expected to receive IPv6 packet but IP version was %d\n",
@@ -465,7 +465,7 @@ static inline uint8_t lb_ip6(struct task_lb_net *task, struct ipv6_hdr *ip)
 	return worker + task->nb_worker_threads * IPV6;
 }
 
-static inline uint8_t lb_mpls(struct task_lb_net *task, struct ether_hdr *peth, struct rte_mbuf *mbuf)
+static inline uint8_t lb_mpls(struct task_lb_net *task, prox_rte_ether_hdr *peth, struct rte_mbuf *mbuf)
 {
 	struct mpls_hdr *mpls = (struct mpls_hdr *)(peth + 1);
 	uint32_t mpls_len = 0;
@@ -474,21 +474,21 @@ static inline uint8_t lb_mpls(struct task_lb_net *task, struct ether_hdr *peth, 
 		mpls_len += sizeof(struct mpls_hdr);
 	}
 	mpls_len += sizeof(struct mpls_hdr);
-	struct ipv4_hdr *ip = (struct ipv4_hdr *)(mpls + 1);
+	prox_rte_ipv4_hdr *ip = (prox_rte_ipv4_hdr *)(mpls + 1);
 
 	switch (ip->version_ihl >> 4) {
 	case 4:
 		if (task->runtime_flags & TASK_MPLS_TAGGING) {
-			peth = (struct ether_hdr *)rte_pktmbuf_adj(mbuf, mpls_len);
+			peth = (prox_rte_ether_hdr *)rte_pktmbuf_adj(mbuf, mpls_len);
 			peth->ether_type = ETYPE_IPv4;
 		}
 		return lb_ip4(task, ip);
 	case 6:
 		if (task->runtime_flags & TASK_MPLS_TAGGING) {
-			peth = (struct ether_hdr *)rte_pktmbuf_adj(mbuf, mpls_len);
+			peth = (prox_rte_ether_hdr *)rte_pktmbuf_adj(mbuf, mpls_len);
 			peth->ether_type = ETYPE_IPv6;
 		}
-		return lb_ip6(task, (struct ipv6_hdr *)ip);
+		return lb_ip6(task, (prox_rte_ipv6_hdr *)ip);
 	default:
 		plogd_warn(mbuf, "Failed Decoding MPLS Packet - neither IPv4 neither IPv6: version %u for packet : \n", ip->version_ihl);
 		return OUT_DISCARD;
@@ -507,7 +507,7 @@ static inline uint8_t lb_qinq(struct task_lb_net *task, struct qinq_hdr *qinq)
 
 static inline uint8_t handle_lb_net(struct task_lb_net *task, struct rte_mbuf *mbuf)
 {
-	struct ether_hdr *peth = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
+	prox_rte_ether_hdr *peth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 	const uint16_t len = rte_pktmbuf_pkt_len(mbuf);
 	if (len < 60) {
 		plogd_warn(mbuf, "Unexpected frame len = %d for packet : \n", len);
@@ -520,9 +520,9 @@ static inline uint8_t handle_lb_net(struct task_lb_net *task, struct rte_mbuf *m
 	case ETYPE_8021ad:
 		return lb_qinq(task, (struct qinq_hdr *)peth);
 	case ETYPE_IPv4:
-		return lb_ip4(task, (struct ipv4_hdr *)(peth + 1));
+		return lb_ip4(task, (prox_rte_ipv4_hdr *)(peth + 1));
 	case ETYPE_IPv6:
-		return lb_ip6(task, (struct ipv6_hdr *)(peth + 1));
+		return lb_ip6(task, (prox_rte_ipv6_hdr *)(peth + 1));
 	case ETYPE_LLDP:
 		return OUT_DISCARD;
 	default:

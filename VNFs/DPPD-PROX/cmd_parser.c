@@ -731,8 +731,8 @@ static int parse_cmd_set_random(const char *str, struct input *input)
 			if ((!task_is_mode_and_submode(lcore_id, task_id, "gen", "")) && (!task_is_mode_and_submode(lcore_id, task_id, "gen", "l3"))) {
 				plog_err("Core %u task %u is not generating packets\n", lcore_id, task_id);
 			}
-			else if (offset > ETHER_MAX_LEN) {
-				plog_err("Offset out of range (must be less then %u)\n", ETHER_MAX_LEN);
+			else if (offset > PROX_RTE_ETHER_MAX_LEN) {
+				plog_err("Offset out of range (must be less then %u)\n", PROX_RTE_ETHER_MAX_LEN);
 			}
 			else if (value_len > 4) {
 				plog_err("Length out of range (must be less then 4)\n");
@@ -1256,7 +1256,7 @@ static int parse_cmd_tot_imissed_tot(const char *str, struct input *input)
 static int parse_cmd_enable_multicast(const char *str, struct input *input)
 {
 	uint8_t port_id;
-	struct ether_addr mac;
+	prox_rte_ether_addr mac;
 
 	if (sscanf(str, "%hhu %hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &port_id, mac.addr_bytes, mac.addr_bytes + 1, mac.addr_bytes + 2, mac.addr_bytes + 3, mac.addr_bytes + 4, mac.addr_bytes + 5 ) != 7) {
                 return -1;
@@ -1268,7 +1268,7 @@ static int parse_cmd_enable_multicast(const char *str, struct input *input)
 static int parse_cmd_disable_multicast(const char *str, struct input *input)
 {
 	uint8_t port_id;
-	struct ether_addr mac;
+	prox_rte_ether_addr mac;
 
 	if (sscanf(str, "%hhu %hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &port_id, mac.addr_bytes, mac.addr_bytes + 1, mac.addr_bytes + 2, mac.addr_bytes + 3, mac.addr_bytes + 4, mac.addr_bytes + 5 ) != 7) {
                 return -1;

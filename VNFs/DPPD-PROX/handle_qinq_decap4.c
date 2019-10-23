@@ -380,9 +380,9 @@ static int handle_qinq_decap4_bulk(struct task_base *tbase, struct rte_mbuf **mb
 static inline void gre_encap(struct task_qinq_decap4 *task, uint32_t src_ipv4, struct rte_mbuf *mbuf, uint32_t gre_id)
 {
 #ifdef USE_QINQ
-	struct ipv4_hdr *pip = (struct ipv4_hdr *)(1 + rte_pktmbuf_mtod(mbuf, struct qinq_hdr *));
+	prox_rte_ipv4_hdr *pip = (prox_rte_ipv4_hdr *)(1 + rte_pktmbuf_mtod(mbuf, struct qinq_hdr *));
 #else
-	struct ipv4_hdr *pip = (struct ipv4_hdr *)(1 + rte_pktmbuf_mtod(mbuf, struct ether_hdr *));
+	prox_rte_ipv4_hdr *pip = (prox_rte_ipv4_hdr *)(1 + rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *));
 #endif
 	uint16_t ip_len = rte_be_to_cpu_16(pip->total_length);
 	uint16_t padlen = rte_pktmbuf_pkt_len(mbuf) - 20 - ip_len - sizeof(struct qinq_hdr);
@@ -391,15 +391,15 @@ static inline void gre_encap(struct task_qinq_decap4 *task, uint32_t src_ipv4, s
 		rte_pktmbuf_trim(mbuf, padlen);
 	}
 
-	PROX_PANIC(rte_pktmbuf_data_len(mbuf) - padlen + 20 > ETHER_MAX_LEN,
+	PROX_PANIC(rte_pktmbuf_data_len(mbuf) - padlen + 20 > PROX_RTE_ETHER_MAX_LEN,
 	           "Would need to fragment packet new size = %u - not implemented\n",
 	           rte_pktmbuf_data_len(mbuf) - padlen + 20);
 
 #ifdef USE_QINQ
 	/* prepend only 20 bytes instead of 28, 8 bytes are present from the QinQ */
-	struct ether_hdr *peth = (struct ether_hdr *)rte_pktmbuf_prepend(mbuf, 20);
+	prox_rte_ether_hdr *peth = (prox_rte_ether_hdr *)rte_pktmbuf_prepend(mbuf, 20);
 #else
-	struct ether_hdr *peth = (struct ether_hdr *)rte_pktmbuf_prepend(mbuf, 28);
+	prox_rte_ether_hdr *peth = (prox_rte_ether_hdr *)rte_pktmbuf_prepend(mbuf, 28);
 #endif
 
 	PROX_ASSERT(peth);
@@ -407,16 +407,16 @@ static inline void gre_encap(struct task_qinq_decap4 *task, uint32_t src_ipv4, s
 	if (task->runtime_flags & TASK_TX_CRC) {
 		/* calculate IP CRC here to avoid problems with -O3 flag with gcc */
 #ifdef MPLS_ROUTING
-		prox_ip_cksum(mbuf, pip, sizeof(struct ether_hdr) + sizeof(struct mpls_hdr), sizeof(struct ipv4_hdr), task->offload_crc);
+		prox_ip_cksum(mbuf, pip, sizeof(prox_rte_ether_hdr) + sizeof(struct mpls_hdr), sizeof(prox_rte_ipv4_hdr), task->offload_crc);
 #else
-		prox_ip_cksum(mbuf, pip, sizeof(struct ether_hdr), sizeof(struct ipv4_hdr), task->offload_crc);
+		prox_ip_cksum(mbuf, pip, sizeof(prox_rte_ether_hdr), sizeof(prox_rte_ipv4_hdr), task->offload_crc);
 #endif
 	}
 
 	/* new IP header */
-	struct ipv4_hdr *p_tunnel_ip = (struct ipv4_hdr *)(peth + 1);
-	rte_memcpy(p_tunnel_ip, &tunnel_ip_proto, sizeof(struct ipv4_hdr));
-	ip_len += sizeof(struct ipv4_hdr) + sizeof(struct gre_hdr);
+	prox_rte_ipv4_hdr *p_tunnel_ip = (prox_rte_ipv4_hdr *)(peth + 1);
+	rte_memcpy(p_tunnel_ip, &tunnel_ip_proto, sizeof(prox_rte_ipv4_hdr));
+	ip_len += sizeof(prox_rte_ipv4_hdr) + sizeof(struct gre_hdr);
 	p_tunnel_ip->total_length = rte_cpu_to_be_16(ip_len);
 	p_tunnel_ip->src_addr = src_ipv4;
 
@@ -435,7 +435,7 @@ static inline uint16_t calc_padlen(const struct rte_mbuf *mbuf, const uint16_t i
 
 static inline uint8_t gre_encap_route(uint32_t src_ipv4, struct rte_mbuf *mbuf, uint32_t gre_id, struct task_qinq_decap4 *task)
 {
-	PROX_PANIC(rte_pktmbuf_data_len(mbuf) + DOWNSTREAM_DELTA  > ETHER_MAX_LEN,
+	PROX_PANIC(rte_pktmbuf_data_len(mbuf) + DOWNSTREAM_DELTA  > PROX_RTE_ETHER_MAX_LEN,
 	           "Would need to fragment packet new size = %u - not implemented\n",
 	           rte_pktmbuf_data_len(mbuf) + DOWNSTREAM_DELTA);
 
@@ -443,7 +443,7 @@ static inline uint8_t gre_encap_route(uint32_t src_ipv4, struct rte_mbuf *mbuf, 
 	PROX_ASSERT(packet);
 	PREFETCH0(packet);
 
-	struct ipv4_hdr *pip = &((struct cpe_pkt_delta *)packet)->pkt.ipv4_hdr;
+	prox_rte_ipv4_hdr *pip = &((struct cpe_pkt_delta *)packet)->pkt.ipv4_hdr;
 	uint16_t ip_len = rte_be_to_cpu_16(pip->total_length);
 
 	/* returns 0 on success, returns -ENOENT of failure (or -EINVAL if first or last parameter is NULL) */
@@ -476,16 +476,16 @@ static inline uint8_t gre_encap_route(uint32_t src_ipv4, struct rte_mbuf *mbuf, 
 #endif
 
 	/* New IP header */
-	rte_memcpy(&packet->tunnel_ip_hdr, &tunnel_ip_proto, sizeof(struct ipv4_hdr));
-	ip_len += sizeof(struct ipv4_hdr) + sizeof(struct gre_hdr);
+	rte_memcpy(&packet->tunnel_ip_hdr, &tunnel_ip_proto, sizeof(prox_rte_ipv4_hdr));
+	ip_len += sizeof(prox_rte_ipv4_hdr) + sizeof(struct gre_hdr);
 	packet->tunnel_ip_hdr.total_length = rte_cpu_to_be_16(ip_len);
 	packet->tunnel_ip_hdr.src_addr = src_ipv4;
 	packet->tunnel_ip_hdr.dst_addr = task->next_hops[next_hop_index].ip_dst;
 	if (task->runtime_flags & TASK_TX_CRC) {
 #ifdef MPLS_ROUTING
-		prox_ip_cksum(mbuf, (void *)&(packet->tunnel_ip_hdr), sizeof(struct ether_hdr) + sizeof(struct mpls_hdr), sizeof(struct ipv4_hdr), task->offload_crc);
+		prox_ip_cksum(mbuf, (void *)&(packet->tunnel_ip_hdr), sizeof(prox_rte_ether_hdr) + sizeof(struct mpls_hdr), sizeof(prox_rte_ipv4_hdr), task->offload_crc);
 #else
-		prox_ip_cksum(mbuf, (void *)&(packet->tunnel_ip_hdr), sizeof(struct ether_hdr), sizeof(struct ipv4_hdr), task->offload_crc);
+		prox_ip_cksum(mbuf, (void *)&(packet->tunnel_ip_hdr), sizeof(prox_rte_ether_hdr), sizeof(prox_rte_ipv4_hdr), task->offload_crc);
 #endif
 	}
 

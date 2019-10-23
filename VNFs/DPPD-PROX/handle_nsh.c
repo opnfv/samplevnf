@@ -27,7 +27,7 @@
 #include "prefetch.h"
 #include "log.h"
 
-#define VXLAN_GPE_HDR_SZ sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + sizeof(struct udp_hdr) + sizeof(struct vxlan_gpe_hdr) + sizeof(struct nsh_hdr)
+#define VXLAN_GPE_HDR_SZ sizeof(prox_rte_ether_hdr) + sizeof(prox_rte_ipv4_hdr) + sizeof(prox_rte_udp_hdr) + sizeof(prox_rte_vxlan_gpe_hdr) + sizeof(struct nsh_hdr)
 #define ETHER_NSH_TYPE 0x4F89 /* 0x894F in little endian */
 #define VXLAN_GPE_NSH_TYPE 0xB612 /* 4790 in little endian */
 #define VXLAN_GPE_NP 0x4
@@ -51,15 +51,15 @@ static void init_task_decap_nsh(__attribute__((unused)) struct task_base *tbase,
 
 static inline uint8_t handle_decap_nsh(__attribute__((unused)) struct task_decap_nsh *task, struct rte_mbuf *mbuf)
 {
-	struct ether_hdr *eth_hdr = NULL;
-	struct udp_hdr *udp_hdr = NULL;
-	struct vxlan_gpe_hdr *vxlan_gpe_hdr = NULL;
+	prox_rte_ether_hdr *eth_hdr = NULL;
+	prox_rte_udp_hdr *udp_hdr = NULL;
+	prox_rte_vxlan_gpe_hdr *vxlan_gpe_hdr = NULL;
 	uint16_t hdr_len;
 
-	eth_hdr = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
+	eth_hdr = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 	if (eth_hdr->ether_type == ETHER_NSH_TYPE) {
 		/* "decapsulate" Ethernet + NSH header by moving packet pointer */
-		hdr_len = sizeof(struct ether_hdr) + sizeof(struct nsh_hdr);
+		hdr_len = sizeof(prox_rte_ether_hdr) + sizeof(struct nsh_hdr);
 
 		mbuf->data_len = (uint16_t)(mbuf->data_len - hdr_len);
 		mbuf->data_off += hdr_len;
@@ -74,14 +74,14 @@ static inline uint8_t handle_decap_nsh(__attribute__((unused)) struct task_decap
 		}
 
 		/* check the UDP destination port */
-		udp_hdr = (struct udp_hdr *)(((unsigned char *)eth_hdr) + sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr));
+		udp_hdr = (prox_rte_udp_hdr *)(((unsigned char *)eth_hdr) + sizeof(prox_rte_ether_hdr) + sizeof(prox_rte_ipv4_hdr));
 		if (udp_hdr->dst_port != VXLAN_GPE_NSH_TYPE) {
 			mbuf->udata64 = 0;
 			return 0;
 		}
 
 		/* check the Next Protocol field in VxLAN-GPE header */
-		vxlan_gpe_hdr = (struct vxlan_gpe_hdr *)(((unsigned char *)eth_hdr) + sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + sizeof(struct udp_hdr));
+		vxlan_gpe_hdr = (prox_rte_vxlan_gpe_hdr *)(((unsigned char *)eth_hdr) + sizeof(prox_rte_ether_hdr) + sizeof(prox_rte_ipv4_hdr) + sizeof(prox_rte_udp_hdr));
 		if (vxlan_gpe_hdr->proto != VXLAN_GPE_NP) {
 			mbuf->udata64 = 0;
 			return 0;
@@ -131,10 +131,10 @@ static void init_task_encap_nsh(__attribute__((unused)) struct task_base *tbase,
 
 static inline uint8_t handle_encap_nsh(__attribute__((unused)) struct task_encap_nsh *task, struct rte_mbuf *mbuf)
 {
-	struct ether_hdr *eth_hdr = NULL;
+	prox_rte_ether_hdr *eth_hdr = NULL;
 	struct nsh_hdr *nsh_hdr = NULL;
-	struct udp_hdr *udp_hdr = NULL;
-	struct vxlan_gpe_hdr *vxlan_gpe_hdr = NULL;
+	prox_rte_udp_hdr *udp_hdr = NULL;
+	prox_rte_vxlan_gpe_hdr *vxlan_gpe_hdr = NULL;
 	uint16_t hdr_len;
 
 	if (mbuf == NULL)
@@ -148,9 +148,9 @@ static inline uint8_t handle_encap_nsh(__attribute__((unused)) struct task_encap
 	mbuf->data_off -= mbuf->udata64;
 	mbuf->pkt_len  = (uint32_t)(mbuf->pkt_len + mbuf->udata64);
 
-	eth_hdr = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
+	eth_hdr = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 	if (eth_hdr->ether_type == ETHER_NSH_TYPE) {
-		nsh_hdr = (struct nsh_hdr *) (((unsigned char *)eth_hdr) + sizeof(struct ether_hdr));
+		nsh_hdr = (struct nsh_hdr *) (((unsigned char *)eth_hdr) + sizeof(prox_rte_ether_hdr));
 
 		/* decrement Service Index in NSH header */
 		if (nsh_hdr->sf_index > 0)
@@ -162,17 +162,17 @@ static inline uint8_t handle_encap_nsh(__attribute__((unused)) struct task_encap
 			return 0;
 
 		/* check the UDP destination port */
-		udp_hdr = (struct udp_hdr *)(((unsigned char *)eth_hdr) + sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr));
+		udp_hdr = (prox_rte_udp_hdr *)(((unsigned char *)eth_hdr) + sizeof(prox_rte_ether_hdr) + sizeof(prox_rte_ipv4_hdr));
 		if (udp_hdr->dst_port != VXLAN_GPE_NSH_TYPE)
 			return 0;
 
 		/* check the Next Protocol field in VxLAN-GPE header */
-		vxlan_gpe_hdr = (struct vxlan_gpe_hdr *)(((unsigned char *)eth_hdr) + sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + sizeof(struct udp_hdr));
+		vxlan_gpe_hdr = (prox_rte_vxlan_gpe_hdr *)(((unsigned char *)eth_hdr) + sizeof(prox_rte_ether_hdr) + sizeof(prox_rte_ipv4_hdr) + sizeof(prox_rte_udp_hdr));
 		if (vxlan_gpe_hdr->proto != VXLAN_GPE_NP)
 			return 0;
 
 		/* decrement Service Index in NSH header */
-		nsh_hdr = (struct nsh_hdr *)(((unsigned char *)vxlan_gpe_hdr) + sizeof(struct vxlan_gpe_hdr));
+		nsh_hdr = (struct nsh_hdr *)(((unsigned char *)vxlan_gpe_hdr) + sizeof(prox_rte_vxlan_gpe_hdr));
 		if (nsh_hdr->sf_index > 0)
 			nsh_hdr->sf_index -= 1;
 	}

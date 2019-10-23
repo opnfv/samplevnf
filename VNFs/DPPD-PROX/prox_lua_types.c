@@ -183,7 +183,7 @@ int lua_to_ip6(struct lua_State *L, enum lua_place from, const char *name, uint8
 	return 0;
 }
 
-int lua_to_mac(struct lua_State *L, enum lua_place from, const char *name, struct ether_addr *mac)
+int lua_to_mac(struct lua_State *L, enum lua_place from, const char *name, prox_rte_ether_addr *mac)
 {
 	uint32_t n_entries;
 	uint32_t mac_array[4];
@@ -419,7 +419,7 @@ int lua_to_next_hop(struct lua_State *L, enum lua_place from, const char *name, 
 	uint32_t port_id;
 	uint32_t ip;
 	uint32_t mpls;
-	struct ether_addr mac;
+	prox_rte_ether_addr mac;
 	int pop;
 
 	if ((pop = lua_getfrom(L, from, name)) < 0)
@@ -463,7 +463,7 @@ int lua_to_next_hop6(struct lua_State *L, enum lua_place from, const char *name,
 {
 	struct next_hop6 *ret;
 	uint32_t next_hop_index, port_id, mpls;
-	struct ether_addr mac;
+	prox_rte_ether_addr mac;
 	uint8_t ip[16];
 	int pop;
 
@@ -919,7 +919,7 @@ int lua_to_cpe_table_data(struct lua_State *L, enum lua_place from, const char *
 	struct ip4_subnet cidr;
 	uint32_t n_entries = 0;
 	uint32_t port_idx, gre_id, svlan, cvlan, user;
-	struct ether_addr mac;
+	prox_rte_ether_addr mac;
 	uint32_t idx = 0;
 
 	lua_pushnil(L);

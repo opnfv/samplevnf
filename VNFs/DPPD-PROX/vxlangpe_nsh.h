@@ -36,12 +36,12 @@ struct nsh_hdr {
 } __attribute__((__packed__));
 
 #if RTE_VERSION < RTE_VERSION_NUM(18,5,0,0)
-struct vxlan_gpe_hdr {
+typedef struct prox_rte_vxlan_gpe_hdr {
 	uint8_t flag_0;
 	uint8_t flag_1;
 	uint8_t reserved;
 	uint8_t proto;
 	uint32_t vni_res;
-} __attribute__((__packed__));
+} __attribute__((__packed__)) prox_rte_vxlan_gpe_hdr;
 #endif
 #endif /* _VXLANGPE_NSH_H_ */

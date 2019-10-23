@@ -28,6 +28,7 @@
 #include "prefetch.h"
 #include "igmp.h"
 #include "prox_cksum.h"
+#include "prox_compat.h"
 
 struct task_swap {
 	struct task_base base;
@@ -45,56 +46,55 @@ struct task_swap {
 
 static void write_src_and_dst_mac(struct task_swap *task, struct rte_mbuf *mbuf)
 {
-	struct ether_hdr *hdr;
-	struct ether_addr mac;
+	prox_rte_ether_hdr *hdr;
+	prox_rte_ether_addr mac;
 
 	if (unlikely((task->runtime_flags & (TASK_ARG_DST_MAC_SET|TASK_ARG_SRC_MAC_SET)) == (TASK_ARG_DST_MAC_SET|TASK_ARG_SRC_MAC_SET))) {
 		/* Source and Destination mac hardcoded */
-		hdr = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
+		hdr = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
               	rte_memcpy(hdr, task->src_dst_mac, sizeof(task->src_dst_mac));
 	} else {
-		hdr = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
+		hdr = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 		if (likely((task->runtime_flags & TASK_ARG_SRC_MAC_SET) == 0)) {
 			/* dst mac will be used as src mac */
-			ether_addr_copy(&hdr->d_addr, &mac);
+			prox_rte_ether_addr_copy(&hdr->d_addr, &mac);
 		}
 
 		if (unlikely(task->runtime_flags & TASK_ARG_DST_MAC_SET))
-			ether_addr_copy((struct ether_addr *)&task->src_dst_mac[0], &hdr->d_addr);
+			prox_rte_ether_addr_copy((prox_rte_ether_addr *)&task->src_dst_mac[0], &hdr->d_addr);
 		else
-			ether_addr_copy(&hdr->s_addr, &hdr->d_addr);
+			prox_rte_ether_addr_copy(&hdr->s_addr, &hdr->d_addr);
 
 		if (unlikely(task->runtime_flags & TASK_ARG_SRC_MAC_SET)) {
-			ether_addr_copy((struct ether_addr *)&task->src_dst_mac[6], &hdr->s_addr);
+			prox_rte_ether_addr_copy((prox_rte_ether_addr *)&task->src_dst_mac[6], &hdr->s_addr);
 		} else {
-			ether_addr_copy(&mac, &hdr->s_addr);
+			prox_rte_ether_addr_copy(&mac, &hdr->s_addr);
 		}
 	}
 }
-
-static inline void build_mcast_mac(uint32_t ip, struct ether_addr *dst_mac)
+static inline void build_mcast_mac(uint32_t ip, prox_rte_ether_addr *dst_mac)
 {
 	// MAC address is 01:00:5e followed by 23 LSB of IP address
 	uint64_t mac = 0x0000005e0001L | ((ip & 0xFFFF7F00L) << 16);
-	memcpy(dst_mac, &mac, sizeof(struct ether_addr));
+	memcpy(dst_mac, &mac, sizeof(prox_rte_ether_addr));
 }
 
 static inline void build_igmp_message(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t ip, uint8_t igmp_message)
 {
 	struct task_swap *task = (struct task_swap *)tbase;
-	struct ether_hdr *hdr = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
-	struct ether_addr dst_mac;
+	prox_rte_ether_hdr *hdr = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
+	prox_rte_ether_addr dst_mac;
 	build_mcast_mac(ip, &dst_mac);
 
         rte_pktmbuf_pkt_len(mbuf) = 46;
         rte_pktmbuf_data_len(mbuf) = 46;
         init_mbuf_seg(mbuf);
 
-        ether_addr_copy(&dst_mac, &hdr->d_addr);
-	ether_addr_copy((struct ether_addr *)&task->src_dst_mac[6], &hdr->s_addr);
+        prox_rte_ether_addr_copy(&dst_mac, &hdr->d_addr);
+	prox_rte_ether_addr_copy((prox_rte_ether_addr *)&task->src_dst_mac[6], &hdr->s_addr);
 	hdr->ether_type = ETYPE_IPv4;
 
-	struct ipv4_hdr *ip_hdr = (struct ipv4_hdr *)(hdr + 1);
+	prox_rte_ipv4_hdr *ip_hdr = (prox_rte_ipv4_hdr *)(hdr + 1);
 	ip_hdr->version_ihl = 0x45;		/**< version and header length */
 	ip_hdr->type_of_service = 0;	/**< type of service */
 	ip_hdr->total_length = rte_cpu_to_be_16(32);		/**< length of packet */
@@ -110,25 +110,25 @@ static inline void build_igmp_message(struct task_base *tbase, struct rte_mbuf *
 	pigmp->max_resp_time = 0;
 	pigmp->checksum = 0;
 	pigmp->group_address = ip;
-	prox_ip_udp_cksum(mbuf, ip_hdr, sizeof(struct ether_hdr), sizeof(struct ipv4_hdr), task->offload_crc);
+	prox_ip_udp_cksum(mbuf, ip_hdr, sizeof(prox_rte_ether_hdr), sizeof(prox_rte_ipv4_hdr), task->offload_crc);
 }
 
 static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts)
 {
 	struct task_swap *task = (struct task_swap *)tbase;
-	struct ether_hdr *hdr;
-	struct ether_addr mac;
-	struct ipv4_hdr *ip_hdr;
-	struct udp_hdr *udp_hdr;
+	prox_rte_ether_hdr *hdr;
+	prox_rte_ether_addr mac;
+	prox_rte_ipv4_hdr *ip_hdr;
+	prox_rte_udp_hdr *udp_hdr;
 	struct gre_hdr *pgre;
-	struct ipv4_hdr *inner_ip_hdr;
+	prox_rte_ipv4_hdr *inner_ip_hdr;
 	uint32_t ip;
 	uint16_t port;
 	uint8_t out[64] = {0};
 	struct mpls_hdr *mpls;
 	uint32_t mpls_len = 0;
 	struct qinq_hdr *qinq;
-	struct vlan_hdr *vlan;
+	prox_rte_vlan_hdr *vlan;
 	uint16_t j;
 	struct igmpv2_hdr *pigmp;
 	uint8_t type;
@@ -142,7 +142,7 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 
 	// TODO 1: check packet is long enough for Ethernet + IP + UDP = 42 bytes
 	for (uint16_t j = 0; j < n_pkts; ++j) {
-		hdr = rte_pktmbuf_mtod(mbufs[j], struct ether_hdr *);
+		hdr = rte_pktmbuf_mtod(mbufs[j], prox_rte_ether_hdr *);
 		switch (hdr->ether_type) {
 		case ETYPE_MPLSU:
 			mpls = (struct mpls_hdr *)(hdr + 1);
@@ -152,7 +152,7 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 				mpls_len += sizeof(struct mpls_hdr);
 			}
 			mpls_len += sizeof(struct mpls_hdr);
-			ip_hdr = (struct ipv4_hdr *)(mpls + 1);
+			ip_hdr = (prox_rte_ipv4_hdr *)(mpls + 1);
 			break;
 		case ETYPE_8021ad:
 			qinq = (struct qinq_hdr *)hdr;
@@ -161,16 +161,16 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 				out[j] = OUT_DISCARD;
 				continue;
 			}
-			ip_hdr = (struct ipv4_hdr *)(qinq + 1);
+			ip_hdr = (prox_rte_ipv4_hdr *)(qinq + 1);
 			break;
 		case ETYPE_VLAN:
-			vlan = (struct vlan_hdr *)(hdr + 1);
+			vlan = (prox_rte_vlan_hdr *)(hdr + 1);
 			if (vlan->eth_proto == ETYPE_IPv4) {
-				ip_hdr = (struct ipv4_hdr *)(vlan + 1);
+				ip_hdr = (prox_rte_ipv4_hdr *)(vlan + 1);
 			} else if (vlan->eth_proto == ETYPE_VLAN) {
-				vlan = (struct vlan_hdr *)(vlan + 1);
+				vlan = (prox_rte_vlan_hdr *)(vlan + 1);
 				if (vlan->eth_proto == ETYPE_IPv4) {
-					ip_hdr = (struct ipv4_hdr *)(vlan + 1);
+					ip_hdr = (prox_rte_ipv4_hdr *)(vlan + 1);
 				}
 				else if (vlan->eth_proto == ETYPE_IPv6) {
 					plog_warn("Unsupported IPv6\n");
@@ -189,7 +189,7 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 			}
 			break;
 		case ETYPE_IPv4:
-			ip_hdr = (struct ipv4_hdr *)(hdr + 1);
+			ip_hdr = (prox_rte_ipv4_hdr *)(hdr + 1);
 			break;
 		case ETYPE_IPv6:
 			plog_warn("Unsupported IPv6\n");
@@ -212,12 +212,12 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 			ip_hdr->src_addr = ip;
 
 			pgre = (struct gre_hdr *)(ip_hdr + 1);
-			inner_ip_hdr = ((struct ipv4_hdr *)(pgre + 1));
+			inner_ip_hdr = ((prox_rte_ipv4_hdr *)(pgre + 1));
 			ip = inner_ip_hdr->dst_addr;
 			inner_ip_hdr->dst_addr = inner_ip_hdr->src_addr;
 			inner_ip_hdr->src_addr = ip;
 
-			udp_hdr = (struct udp_hdr *)(inner_ip_hdr + 1);
+			udp_hdr = (prox_rte_udp_hdr *)(inner_ip_hdr + 1);
 			// TODO 3.1 : verify proto is UPD or TCP
 			port = udp_hdr->dst_port;
 			udp_hdr->dst_port = udp_hdr->src_port;
@@ -230,7 +230,7 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 				out[j] = OUT_DISCARD;
 				continue;
 			}
-			udp_hdr = (struct udp_hdr *)(ip_hdr + 1);
+			udp_hdr = (prox_rte_udp_hdr *)(ip_hdr + 1);
 			ip_hdr->dst_addr = ip_hdr->src_addr;
 			ip_hdr->src_addr = ip;
 
@@ -311,7 +311,7 @@ void igmp_leave_group(struct task_base *tbase)
 static void init_task_swap(struct task_base *tbase, struct task_args *targ)
 {
 	struct task_swap *task = (struct task_swap *)tbase;
-	struct ether_addr *src_addr, *dst_addr;
+	prox_rte_ether_addr *src_addr, *dst_addr;
 
 	/*
 	 * The destination MAC of the outgoing packet is based on the config file:

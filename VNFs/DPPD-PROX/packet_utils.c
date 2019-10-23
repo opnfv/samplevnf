@@ -26,15 +26,15 @@
 
 static inline int find_ip(struct ether_hdr_arp *pkt, uint16_t len, uint32_t *ip_dst)
 {
-	struct vlan_hdr *vlan_hdr;
-	struct ether_hdr *eth_hdr = (struct ether_hdr*)pkt;
-	struct ipv4_hdr *ip;
+	prox_rte_vlan_hdr *vlan_hdr;
+	prox_rte_ether_hdr *eth_hdr = (prox_rte_ether_hdr*)pkt;
+	prox_rte_ipv4_hdr *ip;
 	uint16_t ether_type = eth_hdr->ether_type;
-	uint16_t l2_len = sizeof(struct ether_hdr);
+	uint16_t l2_len = sizeof(prox_rte_ether_hdr);
 
 	// Unstack VLAN tags
-	while (((ether_type == ETYPE_8021ad) || (ether_type == ETYPE_VLAN)) && (l2_len + sizeof(struct vlan_hdr) < len)) {
-		vlan_hdr = (struct vlan_hdr *)((uint8_t *)pkt + l2_len);
+	while (((ether_type == ETYPE_8021ad) || (ether_type == ETYPE_VLAN)) && (l2_len + sizeof(prox_rte_vlan_hdr) < len)) {
+		vlan_hdr = (prox_rte_vlan_hdr *)((uint8_t *)pkt + l2_len);
 		l2_len +=4;
 		ether_type = vlan_hdr->eth_proto;
 	}
@@ -58,8 +58,8 @@ static inline int find_ip(struct ether_hdr_arp *pkt, uint16_t len, uint32_t *ip_
 		break;
 	}
 
-	if (l2_len && (l2_len + sizeof(struct ipv4_hdr) <= len)) {
-		struct ipv4_hdr *ip = (struct ipv4_hdr *)((uint8_t *)pkt + l2_len);
+	if (l2_len && (l2_len + sizeof(prox_rte_ipv4_hdr) <= len)) {
+		prox_rte_ipv4_hdr *ip = (prox_rte_ipv4_hdr *)((uint8_t *)pkt + l2_len);
 		// TODO: implement LPM => replace ip_dst by next hop IP DST
 		*ip_dst = ip->dst_addr;
 		return 0;
@@ -79,13 +79,13 @@ int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_d
 {
 	const uint64_t hz = rte_get_tsc_hz();
 	struct ether_hdr_arp *packet = rte_pktmbuf_mtod(mbuf, struct ether_hdr_arp *);
-	struct ether_addr *mac = &packet->ether_hdr.d_addr;
+	prox_rte_ether_addr *mac = &packet->ether_hdr.d_addr;
 
 	uint64_t tsc = rte_rdtsc();
 	struct l3_base *l3 = &(tbase->l3);
 	if (l3->gw.ip) {
 		if (likely((l3->flags & FLAG_DST_MAC_KNOWN) && (tsc < l3->gw.arp_update_time) && (tsc < l3->gw.arp_timeout))) {
-			memcpy(mac, &l3->gw.mac, sizeof(struct ether_addr));
+			memcpy(mac, &l3->gw.mac, sizeof(prox_rte_ether_addr));
 			return SEND_MBUF;
 		} else if (tsc > l3->gw.arp_update_time) {
 			// long time since we have sent an arp, send arp
@@ -93,7 +93,7 @@ int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_d
 			*ip_dst = l3->gw.ip;
 			if ((l3->flags & FLAG_DST_MAC_KNOWN) && (tsc < l3->gw.arp_timeout)){
 				// MAC is valid in the table => send also the mbuf
-				memcpy(mac, &l3->gw.mac, sizeof(struct ether_addr));
+				memcpy(mac, &l3->gw.mac, sizeof(prox_rte_ether_addr));
 				return SEND_MBUF_AND_ARP;
 			} else {
 				// MAC still unknown, or timed out => only send ARP
@@ -116,14 +116,14 @@ int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_d
 				 // IP address already in table
 				if ((tsc < l3->optimized_arp_table[idx].arp_update_time) && (tsc < l3->optimized_arp_table[idx].arp_timeout)) {
 					// MAC address was recently updated in table, use it
-					memcpy(mac, &l3->optimized_arp_table[idx].mac, sizeof(struct ether_addr));
+					memcpy(mac, &l3->optimized_arp_table[idx].mac, sizeof(prox_rte_ether_addr));
 					return SEND_MBUF;
 				} else if (tsc > l3->optimized_arp_table[idx].arp_update_time) {
 					// ARP not sent since a long time, send ARP
 					l3->optimized_arp_table[idx].arp_update_time = tsc + l3->arp_update_time * hz / 1000;
 					if (tsc < l3->optimized_arp_table[idx].arp_timeout) {
 						// MAC still valid => also send mbuf
-						memcpy(mac, &l3->optimized_arp_table[idx].mac, sizeof(struct ether_addr));
+						memcpy(mac, &l3->optimized_arp_table[idx].mac, sizeof(prox_rte_ether_addr));
 						return SEND_MBUF_AND_ARP;
 					} else {
 						// MAC unvalid => only send ARP
@@ -178,14 +178,14 @@ int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_d
 			// IP has been found
 			if (likely((tsc < l3->arp_table[ret].arp_update_time) && (tsc < l3->arp_table[ret].arp_timeout))) {
 				// MAC still valid and ARP sent recently
-				memcpy(mac, &l3->arp_table[ret].mac, sizeof(struct ether_addr));
+				memcpy(mac, &l3->arp_table[ret].mac, sizeof(prox_rte_ether_addr));
 				return SEND_MBUF;
 			} else if (tsc > l3->arp_table[ret].arp_update_time) {
 				// ARP not sent since a long time, send ARP
 				l3->arp_table[ret].arp_update_time = tsc + l3->arp_update_time * hz / 1000;
 				if (tsc < l3->arp_table[ret].arp_timeout) {
 					// MAC still valid => send also MBUF
-					memcpy(mac, &l3->arp_table[ret].mac, sizeof(struct ether_addr));
+					memcpy(mac, &l3->arp_table[ret].mac, sizeof(prox_rte_ether_addr));
 					return SEND_MBUF_AND_ARP;
 				} else {
 					return SEND_ARP;
@@ -317,7 +317,7 @@ void handle_ctrl_plane_pkts(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 				}
 				if (idx < l3->n_pkts) {
 					// IP not found; this is a reply while we never asked for the request!
-					memcpy(&l3->optimized_arp_table[idx].mac, &(hdr->arp.data.sha), sizeof(struct ether_addr));
+					memcpy(&l3->optimized_arp_table[idx].mac, &(hdr->arp.data.sha), sizeof(prox_rte_ether_addr));
 					l3->optimized_arp_table[idx].arp_timeout = tsc + l3->arp_timeout * hz / 1000;
 				}
 			} else {
@@ -325,7 +325,7 @@ void handle_ctrl_plane_pkts(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 				if (ret < 0) {
 					plogx_info("Unable add ip %d.%d.%d.%d in mac_hash\n", IP4(ip));
 				} else {
-					memcpy(&l3->arp_table[ret].mac, &(hdr->arp.data.sha), sizeof(struct ether_addr));
+					memcpy(&l3->arp_table[ret].mac, &(hdr->arp.data.sha), sizeof(prox_rte_ether_addr));
 					l3->arp_table[ret].arp_timeout = tsc + l3->arp_timeout * hz / 1000;
 				}
 			}

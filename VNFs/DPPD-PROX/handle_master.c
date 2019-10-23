@@ -56,18 +56,18 @@ static struct my_arp_t arp_request = {
 };
 
 struct ip_table {
-	struct ether_addr 	mac;
+	prox_rte_ether_addr 	mac;
 	struct rte_ring 	*ring;
 };
 
 struct external_ip_table {
-	struct ether_addr 	mac;
+	prox_rte_ether_addr 	mac;
 	struct rte_ring 	*rings[PROX_MAX_ARP_REQUESTS];
 	uint16_t 		nb_requests;
 };
 
 struct port_table {
-	struct ether_addr 	mac;
+	prox_rte_ether_addr 	mac;
 	struct rte_ring 	*ring;
 	uint32_t 		ip;
 	uint8_t			port;
@@ -187,7 +187,7 @@ static inline void handle_arp_request(struct task_base *tbase, struct rte_mbuf *
 	key.ip = hdr_arp->arp.data.tpa;
 	key.port = port;
 	if (task->internal_port_table[port].flags & HANDLE_RANDOM_IP_FLAG) {
-		struct ether_addr mac;
+		prox_rte_ether_addr mac;
 		plogx_dbg("\tMaster handling ARP request for ip %d.%d.%d.%d on port %d which supports random ip\n", IP4(key.ip), key.port);
 		struct rte_ring *ring = task->internal_port_table[port].ring;
 		create_mac(hdr_arp, &mac);

@@ -81,9 +81,9 @@ union ip_port {
 };
 
 struct pkt_ether_ipv4_udp {
-	struct ether_hdr ether;
-	struct ipv4_hdr  ipv4;
-	struct udp_hdr   udp;
+	prox_rte_ether_hdr ether;
+	prox_rte_ipv4_hdr  ipv4;
+	prox_rte_udp_hdr   udp;
 } __attribute__((unused));
 
 static uint8_t handle_lb_ip_port(struct task_lb_pos *task, struct rte_mbuf *mbuf)

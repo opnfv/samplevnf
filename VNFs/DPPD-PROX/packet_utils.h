@@ -16,6 +16,7 @@
 #ifndef _PACKET_UTILS_H_
 #define _PACKET_UTILS_H_
 
+#include "prox_compat.h"
 #include "arp.h"
 #include "quit.h"
 #include "prox_malloc.h"
@@ -42,7 +43,7 @@ struct arp_table {
 	uint64_t arp_update_time;
 	uint64_t arp_timeout;
 	uint32_t ip;
-	struct ether_addr mac;
+	prox_rte_ether_addr mac;
 };
 struct l3_base {
 	struct rte_ring *ctrl_plane_ring;
