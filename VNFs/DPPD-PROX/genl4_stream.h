@@ -160,9 +160,9 @@ static void stream_ctx_reset_move(struct stream_ctx *ctx, struct stream_cfg *cfg
 static int stream_cfg_calc_max_payload_len(struct stream_cfg *cfg, enum l4gen_peer peer)
 {
 	const uint32_t l4_hdr_len = cfg->proto == IPPROTO_UDP?
-		sizeof(struct udp_hdr) : sizeof(struct tcp_hdr);
+		sizeof(prox_rte_udp_hdr) : sizeof(prox_rte_tcp_hdr);
 
-	return ETHER_MAX_LEN - ETHER_CRC_LEN - cfg->data[peer].hdr_len - l4_hdr_len;
+	return PROX_RTE_ETHER_MAX_LEN - PROX_RTE_ETHER_CRC_LEN - cfg->data[peer].hdr_len - l4_hdr_len;
 }
 
 static int stream_cfg_max_n_segments(struct stream_cfg *cfg)

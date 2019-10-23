@@ -18,6 +18,7 @@
 #define _DEFAULTS_H_
 
 #include <rte_ether.h>
+#include "prox_compat.h"
 
 struct prox_cfg;
 struct lcore_cfg;
@@ -58,8 +59,8 @@ void set_port_defaults(void);
    TX_MBUF_SIZE is used for when transmitting only: in this case the mbuf size can be smaller.
 */
 #define MBUF_SIZE (2048 + (unsigned)sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM + 2 * PROX_VLAN_TAG_SIZE)
-#define TX_MBUF_SIZE (ETHER_MAX_LEN + (unsigned)sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM +  2 * PROX_VLAN_TAG_SIZE)
+#define TX_MBUF_SIZE (PROX_RTE_ETHER_MAX_LEN + (unsigned)sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM +  2 * PROX_VLAN_TAG_SIZE)
 
-#define PROX_MTU   ETHER_MAX_LEN - ETHER_HDR_LEN - ETHER_CRC_LEN
+#define PROX_MTU   PROX_RTE_ETHER_MAX_LEN - PROX_RTE_ETHER_HDR_LEN - PROX_RTE_ETHER_CRC_LEN
 
 #endif /* _DEFAULTS_H_ */

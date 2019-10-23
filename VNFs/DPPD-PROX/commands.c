@@ -246,7 +246,7 @@ static struct size_unit to_size_unit(uint64_t bytes)
 	return ret;
 }
 
-static int add_multicast_addr(uint8_t port_id, struct ether_addr *addr)
+static int add_multicast_addr(uint8_t port_id, prox_rte_ether_addr *addr)
 {
         unsigned int i;
 	int rc = 0;
@@ -264,7 +264,7 @@ static int add_multicast_addr(uint8_t port_id, struct ether_addr *addr)
                 }
         }
 
-	ether_addr_copy(addr, &port_cfg->mc_addr[port_cfg->nb_mc_addr]);
+	prox_rte_ether_addr_copy(addr, &port_cfg->mc_addr[port_cfg->nb_mc_addr]);
 	if ((rc = rte_eth_dev_set_mc_addr_list(port_id, port_cfg->mc_addr, port_cfg->nb_mc_addr + 1)) != 0) {
 		plog_err("rte_eth_dev_set_mc_addr_list returns %d on port %u\n", rc, port_id);
 		return rc;
@@ -275,7 +275,7 @@ static int add_multicast_addr(uint8_t port_id, struct ether_addr *addr)
 	return rc;
 }
 
-static int del_multicast_addr(uint8_t port_id, struct ether_addr *addr)
+static int del_multicast_addr(uint8_t port_id, prox_rte_ether_addr *addr)
 {
         unsigned int i;
 	int rc = 0;
@@ -285,12 +285,12 @@ static int del_multicast_addr(uint8_t port_id, struct ether_addr *addr)
         for (i = 0; i < port_cfg->nb_mc_addr; i++) {
                 if (is_same_ether_addr(addr, &port_cfg->mc_addr[i])) {
 			// Copy last address to the slot to be deleted
-			ether_addr_copy(&port_cfg->mc_addr[port_cfg->nb_mc_addr-1], &port_cfg->mc_addr[i]);
+			prox_rte_ether_addr_copy(&port_cfg->mc_addr[port_cfg->nb_mc_addr-1], &port_cfg->mc_addr[i]);
 
 			if ((rc = rte_eth_dev_set_mc_addr_list(port_id, port_cfg->mc_addr, port_cfg->nb_mc_addr - 1)) != 0) {
 				plog_err("rte_eth_dev_set_mc_addr_list returns %d on port %u\n", rc, port_id);
 				// When set failed, let restore the situation we were before calling the function...
-				ether_addr_copy(addr, &port_cfg->mc_addr[i]);
+				prox_rte_ether_addr_copy(addr, &port_cfg->mc_addr[i]);
 				return rc;
 			}
 			port_cfg->nb_mc_addr--;
@@ -957,7 +957,7 @@ void cmd_reset_port(uint8_t portid)
 	}
 }
 
-void cmd_multicast(uint8_t port_id, unsigned int val, struct ether_addr *mac)
+void cmd_multicast(uint8_t port_id, unsigned int val, prox_rte_ether_addr *mac)
 {
 	if (!port_is_active(port_id)) {
 		return;

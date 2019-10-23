@@ -22,6 +22,7 @@
 #include <rte_common.h>
 #include <rte_sched.h>
 #include <rte_ether.h>
+#include "prox_compat.h"
 #include "task_base.h"
 #include "prox_globals.h"
 #include "ip6_addr.h"
@@ -135,8 +136,8 @@ struct task_args {
 	struct rte_ring        *tx_rings[MAX_RINGS_PER_TASK];
 	struct rte_ring        *ctrl_plane_ring;
 	uint32_t               tot_n_txrings_inited;
-	struct ether_addr      edaddr;
-	struct ether_addr      esaddr;
+	prox_rte_ether_addr      edaddr;
+	prox_rte_ether_addr      esaddr;
 	struct port_queue      tx_port_queue[PROX_MAX_PORTS];
 	struct port_queue      rx_port_queue[PROX_MAX_PORTS];
 	/* Used to set up actual task at initialization time. */

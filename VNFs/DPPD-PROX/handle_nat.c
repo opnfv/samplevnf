@@ -45,8 +45,8 @@ struct task_nat {
 };
 
 struct pkt_eth_ipv4 {
-	struct ether_hdr ether_hdr;
-	struct ipv4_hdr  ipv4_hdr;
+	prox_rte_ether_hdr ether_hdr;
+	prox_rte_ipv4_hdr  ipv4_hdr;
 } __attribute__((packed));
 
 static int handle_nat(struct task_nat *task, struct rte_mbuf *mbuf)
@@ -71,7 +71,7 @@ static int handle_nat(struct task_nat *task, struct rte_mbuf *mbuf)
 		return OUT_DISCARD;
 
         *ip_addr = task->entries[ret];
-	prox_ip_udp_cksum(mbuf, &pkt->ipv4_hdr, sizeof(struct ether_hdr), sizeof(struct ipv4_hdr), task->offload_crc);
+	prox_ip_udp_cksum(mbuf, &pkt->ipv4_hdr, sizeof(prox_rte_ether_hdr), sizeof(prox_rte_ipv4_hdr), task->offload_crc);
 	return 0;
 }
 

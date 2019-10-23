@@ -51,11 +51,11 @@ struct task_fm {
 };
 
 struct eth_ip4_udp {
-	struct ether_hdr l2;
-	struct ipv4_hdr  l3;
+	prox_rte_ether_hdr l2;
+	prox_rte_ipv4_hdr  l3;
 	union {
-		struct udp_hdr   udp;
-		struct tcp_hdr   tcp;
+		prox_rte_udp_hdr   udp;
+		prox_rte_tcp_hdr   tcp;
 	} l4;
 } __attribute__((packed));
 
@@ -104,8 +104,8 @@ static int extract_flow_info(struct eth_ip4_udp *p, struct flow_info *fi, struct
 		fi_flipped->port_src = p->l4.udp.dst_port;
 		fi_flipped->port_dst = p->l4.udp.src_port;
 
-		*len = rte_be_to_cpu_16(p->l4.udp.dgram_len) - sizeof(struct udp_hdr);
-		*payload = (uint8_t*)(&p->l4.udp) + sizeof(struct udp_hdr);
+		*len = rte_be_to_cpu_16(p->l4.udp.dgram_len) - sizeof(prox_rte_udp_hdr);
+		*payload = (uint8_t*)(&p->l4.udp) + sizeof(prox_rte_udp_hdr);
 		return 0;
 	}
 	else if (pkt_type.val == pkt_type_tcp.val) {
@@ -121,7 +121,7 @@ static int extract_flow_info(struct eth_ip4_udp *p, struct flow_info *fi, struct
 		fi_flipped->port_src = p->l4.tcp.dst_port;
 		fi_flipped->port_dst = p->l4.tcp.src_port;
 
-		*len = rte_be_to_cpu_16(p->l3.total_length) - sizeof(struct ipv4_hdr) - ((p->l4.tcp.data_off >> 4)*4);
+		*len = rte_be_to_cpu_16(p->l3.total_length) - sizeof(prox_rte_ipv4_hdr) - ((p->l4.tcp.data_off >> 4)*4);
 		*payload = ((uint8_t*)&p->l4.tcp) + ((p->l4.tcp.data_off >> 4)*4);
 		return 0;
 	}
@@ -132,7 +132,7 @@ static int extract_flow_info(struct eth_ip4_udp *p, struct flow_info *fi, struct
 static int is_flow_beg(const struct flow_info *fi, const struct eth_ip4_udp *p)
 {
 	return fi->ip_proto == IPPROTO_UDP ||
-		(fi->ip_proto == IPPROTO_TCP && p->l4.tcp.tcp_flags & TCP_SYN_FLAG);
+		(fi->ip_proto == IPPROTO_TCP && p->l4.tcp.tcp_flags & PROX_RTE_TCP_SYN_FLAG);
 }
 
 static void *lookup_flow(struct task_fm *task, struct flow_info *fi, uint64_t now_tsc)

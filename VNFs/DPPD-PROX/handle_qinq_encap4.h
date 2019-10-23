@@ -70,20 +70,20 @@ void init_cpe4_hash(struct task_args *targ);
 
 static inline uint8_t mpls_untag(struct rte_mbuf *mbuf)
 {
-	struct ether_hdr *peth = rte_pktmbuf_mtod(mbuf, struct ether_hdr *);
+	prox_rte_ether_hdr *peth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 	const uint16_t eth_type = peth->ether_type;
 
 	if (eth_type == ETYPE_MPLSU) {
-		struct ether_hdr *pneweth = (struct ether_hdr *)rte_pktmbuf_adj(mbuf, 4);
+		prox_rte_ether_hdr *pneweth = (prox_rte_ether_hdr *)rte_pktmbuf_adj(mbuf, 4);
 		const struct mpls_hdr *mpls = (const struct mpls_hdr *)(peth + 1);
 
 		if (mpls->bos == 0) {
 			// Double MPLS tag
-			pneweth = (struct ether_hdr *)rte_pktmbuf_adj(mbuf, 4);
+			pneweth = (prox_rte_ether_hdr *)rte_pktmbuf_adj(mbuf, 4);
 			PROX_ASSERT(pneweth);
 		}
 
-		const struct ipv4_hdr *pip = (const struct ipv4_hdr *)(pneweth + 1);
+		const prox_rte_ipv4_hdr *pip = (const prox_rte_ipv4_hdr *)(pneweth + 1);
 		if ((pip->version_ihl >> 4) == 4) {
 			pneweth->ether_type = ETYPE_IPv4;
 			return 1;
