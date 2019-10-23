@@ -19,6 +19,7 @@
 #include <rte_common.h>
 #include <rte_table_hash.h>
 #include <rte_hash_crc.h>
+#include <rte_cryptodev.h>
 #include "hash_utils.h"
 #include "quit.h"
 
@@ -159,4 +160,35 @@ static inline char *prox_strncpy(char * dest, const char * src, size_t count)
 	PROX_PANIC(dest[count - 1] != 0, "\t\tError in strncpy: buffer overrun (%lu bytes)", count);
 	return dest;
 }
+#ifdef RTE_LIBRTE_PMD_AESNI_MB
+#if RTE_VERSION < RTE_VERSION_NUM(19,5,0,0)
+//RFC4303
+struct prox_esp_hdr {
+        uint32_t spi;
+        uint32_t seq;
+};
+typedef struct prox_rte_cryptodev_qp_conf {
+	uint32_t nb_descriptors; /**< Number of descriptors per queue pair */
+	struct rte_mempool * 	mp_session;
+	struct rte_mempool * 	mp_session_private;
+} prox_rte_cryptodev_qp_conf;
+
+static int prox_rte_cryptodev_queue_pair_setup(uint8_t dev_id, uint16_t queue_pair_id, struct prox_rte_cryptodev_qp_conf *qp_conf, int socket_id)
+{
+	struct rte_mempool *session_pool = qp_conf->mp_session;
+	return rte_cryptodev_queue_pair_setup(dev_id, queue_pair_id, (struct rte_cryptodev_qp_conf *)qp_conf, socket_id, session_pool);
+}
+
+#else
+#define prox_esp_hdr esp_hdr
+typedef struct rte_cryptodev_qp_conf prox_rte_cryptodev_qp_conf;
+
+static int prox_rte_cryptodev_queue_pair_setup(uint8_t dev_id, uint16_t queue_pair_id, prox_rte_cryptodev_qp_conf *qp_conf, int socket_id)
+{
+	return rte_cryptodev_queue_pair_setup(dev_id, queue_pair_id, (struct rte_cryptodev_qp_conf *)qp_conf, socket_id);
+}
+
+#endif
+#endif	// CONFIG_RTE_LIBRTE_PMD_AESNI_MB
+
 #endif // _PROX_COMPAT_H

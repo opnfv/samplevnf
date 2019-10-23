@@ -99,12 +99,6 @@ static uint8_t aes_cbc_iv[] = {
 	0xE4, 0x23, 0x33, 0x8A, 0x35, 0x64, 0x61, 0xE2,
 	0x49, 0x03, 0xDD, 0xC6, 0xB8, 0xCA, 0x55, 0x7A };
 
-//RFC4303
-struct esp_hdr {
-	uint32_t spi;
-	uint32_t sn;
-};
-
 static void printf_cdev_info(uint8_t cdev_id)
 {
 	struct rte_cryptodev_info dev_info;
@@ -194,11 +188,10 @@ static void init_task_esp_enc(struct task_base *tbase, struct task_args *targ)
 
 	task->qp_id=0;
 	plog_info("enc: task->qp_id=%u\n", task->qp_id);
-	struct rte_cryptodev_qp_conf qp_conf;
-	//qp_conf.nb_descriptors = 4096;
+	prox_rte_cryptodev_qp_conf qp_conf;
 	qp_conf.nb_descriptors = 128;
-	rte_cryptodev_queue_pair_setup(task->cdev_id, task->qp_id,
-		&qp_conf, rte_cryptodev_socket_id(task->cdev_id), task->session_pool);
+	qp_conf.mp_session = task->session_pool;
+	prox_rte_cryptodev_queue_pair_setup(task->cdev_id, task->qp_id, &qp_conf, rte_cryptodev_socket_id(task->cdev_id));
 
 	int ret = rte_cryptodev_start(task->cdev_id);
 	PROX_PANIC(ret < 0, "Failed to start device\n");
@@ -295,11 +288,10 @@ static void init_task_esp_dec(struct task_base *tbase, struct task_args *targ)
 
 	task->qp_id=0;
 	plog_info("dec: task->qp_id=%u\n", task->qp_id);
-	struct rte_cryptodev_qp_conf qp_conf;
-	//qp_conf.nb_descriptors = 4096;
+	prox_rte_cryptodev_qp_conf qp_conf;
 	qp_conf.nb_descriptors = 128;
-	rte_cryptodev_queue_pair_setup(task->cdev_id, task->qp_id,
-		&qp_conf, rte_cryptodev_socket_id(task->cdev_id), task->session_pool);
+	qp_conf.mp_session = task->session_pool;
+	prox_rte_cryptodev_queue_pair_setup(task->cdev_id, task->qp_id, &qp_conf, rte_cryptodev_socket_id(task->cdev_id));
 
 	int ret = rte_cryptodev_start(task->cdev_id);
 	PROX_PANIC(ret < 0, "Failed to start device\n");
@@ -397,7 +389,7 @@ static inline uint8_t handle_esp_ah_enc(struct task_esp_enc *task, struct rte_mb
 		encrypt_len += padding;
 	}
 
-	const int extra_space = sizeof(struct ipv4_hdr) + sizeof(struct esp_hdr) + CIPHER_IV_LENGTH_AES_CBC;
+	const int extra_space = sizeof(struct ipv4_hdr) + sizeof(struct prox_esp_hdr) + CIPHER_IV_LENGTH_AES_CBC;
 
 	struct ether_addr src_mac = peth->s_addr;
 	struct ether_addr dst_mac = peth->d_addr;
@@ -427,7 +419,7 @@ static inline uint8_t handle_esp_ah_enc(struct task_esp_enc *task, struct rte_mb
 	pip4->time_to_live = ttl;
 	pip4->next_proto_id = IPPROTO_ESP; // 50 for ESP, ip in ip next proto trailer
 	pip4->version_ihl = version_ihl; // 20 bytes, ipv4
-	pip4->total_length = rte_cpu_to_be_16(ipv4_length + sizeof(struct ipv4_hdr) + sizeof(struct esp_hdr) + CIPHER_IV_LENGTH_AES_CBC + padding + 1 + 1 + DIGEST_BYTE_LENGTH_SHA1); // iphdr+SPI+SN+IV+payload+padding+padlen+next header + crc + auth
+	pip4->total_length = rte_cpu_to_be_16(ipv4_length + sizeof(struct ipv4_hdr) + sizeof(struct prox_esp_hdr) + CIPHER_IV_LENGTH_AES_CBC + padding + 1 + 1 + DIGEST_BYTE_LENGTH_SHA1); // iphdr+SPI+SN+IV+payload+padding+padlen+next header + crc + auth
 	pip4->packet_id = 0x0101;
 	pip4->type_of_service = 0;
 	pip4->time_to_live = 64;
@@ -438,12 +430,12 @@ static inline uint8_t handle_esp_ah_enc(struct task_esp_enc *task, struct rte_mb
 	*((u32*) data) = 0x2016; // FIXME SPI
 	*((u32*) data + 1) = 0x2; // FIXME SN
 #else
-	struct esp_hdr *pesp = (struct esp_hdr*)(pip4+1);
+	struct prox_esp_hdr *pesp = (struct prox_esp_hdr*)(pip4+1);
 	pesp->spi = src_addr;//for simplicity assume 1 tunnel per source ip
 	static u32 sn = 0;
-	pesp->sn = ++sn;
+	pesp->seq = ++sn;
 	pesp->spi=0xAAAAAAAA;//debug
-	pesp->sn =0xBBBBBBBB;//debug
+	pesp->seq =0xBBBBBBBB;//debug
 #endif
 	u8 *padl = (u8*)data + (8 + encrypt_len - 2 + CIPHER_IV_LENGTH_AES_CBC); // No ESN yet. (-2 means NH is crypted)
 	//padl += CIPHER_IV_LENGTH_AES_CBC;
@@ -473,12 +465,12 @@ static inline uint8_t handle_esp_ah_enc(struct task_esp_enc *task, struct rte_mb
 #else
 	//uint64_t *iv = (uint64_t *)(pesp + 1);
 	//memset(iv, 0, CIPHER_IV_LENGTH_AES_CBC);
-	sym_cop->cipher.data.offset = sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + sizeof(struct esp_hdr);
+	sym_cop->cipher.data.offset = sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + sizeof(struct prox_esp_hdr);
 	sym_cop->cipher.data.length = encrypt_len + CIPHER_IV_LENGTH_AES_CBC;
 #endif
 
 	sym_cop->auth.data.offset = sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr);
-	sym_cop->auth.data.length = sizeof(struct esp_hdr) + CIPHER_IV_LENGTH_AES_CBC + encrypt_len;// + 4;// FIXME
+	sym_cop->auth.data.length = sizeof(struct prox_esp_hdr) + CIPHER_IV_LENGTH_AES_CBC + encrypt_len;// + 4;// FIXME
 
 	sym_cop->m_src = mbuf;
 	rte_crypto_op_attach_sym_session(cop, task->sess);
@@ -505,8 +497,8 @@ static inline uint8_t handle_esp_ah_dec(struct task_esp_dec *task, struct rte_mb
 	rte_crypto_op_attach_sym_session(cop, task->sess);
 
 	sym_cop->auth.digest.data = (unsigned char *)((unsigned char*)pip4 + ipv4_length - DIGEST_BYTE_LENGTH_SHA1);
-	//sym_cop->auth.digest.phys_addr = rte_pktmbuf_mtophys_offset(mbuf, sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + sizeof(struct esp_hdr)); // FIXME
-	sym_cop->auth.digest.phys_addr = rte_pktmbuf_iova_offset(mbuf, sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + sizeof(struct esp_hdr));
+	//sym_cop->auth.digest.phys_addr = rte_pktmbuf_mtophys_offset(mbuf, sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + sizeof(struct prox_esp_hdr)); // FIXME
+	sym_cop->auth.digest.phys_addr = rte_pktmbuf_iova_offset(mbuf, sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + sizeof(struct prox_esp_hdr));
 	//sym_cop->auth.digest.length = DIGEST_BYTE_LENGTH_SHA1;
 
 	//sym_cop->cipher.iv.data = (uint8_t *)data + 8;
@@ -518,7 +510,7 @@ static inline uint8_t handle_esp_ah_dec(struct task_esp_dec *task, struct rte_mb
 				aes_cbc_iv,
 				CIPHER_IV_LENGTH_AES_CBC);
 #else
-	uint8_t * iv = (uint8_t *)(pip4 + 1) + sizeof(struct esp_hdr);
+	uint8_t * iv = (uint8_t *)(pip4 + 1) + sizeof(struct prox_esp_hdr);
 	rte_memcpy(rte_crypto_op_ctod_offset(cop, uint8_t *, IV_OFFSET),
 				iv,
 				CIPHER_IV_LENGTH_AES_CBC);
@@ -527,7 +519,7 @@ static inline uint8_t handle_esp_ah_dec(struct task_esp_dec *task, struct rte_mb
 	sym_cop->auth.data.offset = sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr);
 	sym_cop->auth.data.length = ipv4_length - sizeof(struct ipv4_hdr) - 4 - CIPHER_IV_LENGTH_AES_CBC;
 
-	sym_cop->cipher.data.offset = sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + sizeof(struct esp_hdr) + CIPHER_IV_LENGTH_AES_CBC;
+	sym_cop->cipher.data.offset = sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + sizeof(struct prox_esp_hdr) + CIPHER_IV_LENGTH_AES_CBC;
 	sym_cop->cipher.data.length = ipv4_length - sizeof(struct ipv4_hdr) - CIPHER_IV_LENGTH_AES_CBC - 28; // FIXME
 
 	sym_cop->m_src = mbuf;
@@ -595,9 +587,9 @@ static inline uint8_t handle_esp_ah_dec_finish(struct task_esp_dec *task, struct
 static inline uint8_t handle_esp_ah_dec_finish2(struct task_esp_dec *task, struct rte_mbuf *mbuf)
 {
 	u8* m = rte_pktmbuf_mtod(mbuf, u8*);
-	rte_memcpy(m+sizeof(struct ipv4_hdr)+sizeof(struct esp_hdr)+CIPHER_IV_LENGTH_AES_CBC,
+	rte_memcpy(m+sizeof(struct ipv4_hdr)+sizeof(struct prox_esp_hdr)+CIPHER_IV_LENGTH_AES_CBC,
 		m, sizeof(struct ether_hdr));
-	m = (u8*)rte_pktmbuf_adj(mbuf, sizeof(struct ipv4_hdr)+sizeof(struct esp_hdr)+CIPHER_IV_LENGTH_AES_CBC);
+	m = (u8*)rte_pktmbuf_adj(mbuf, sizeof(struct ipv4_hdr)+sizeof(struct prox_esp_hdr)+CIPHER_IV_LENGTH_AES_CBC);
 	struct ipv4_hdr* pip4 = (struct ipv4_hdr *)(m+sizeof(struct ether_hdr));
 
 	if (unlikely((pip4->version_ihl >> 4) != 4)) {
