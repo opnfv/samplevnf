@@ -31,7 +31,30 @@ The default name of the qcow2 file is rapidVM.qcow2
 When using the packer tool, the first step is to upload an
 existing CentOS cloud image from the internet into OpenStack.
 Check out: https://cloud.centos.org/centos/7/images/
-You should now source the proper .rc file so Packer can connect to your OpenStack.
+You should now create proper clouds.yaml file so Packer can connect to your OpenStack.
+Sample clouds.yaml could look like this:
+
+client:
+  force_ipv4: true
+clouds:
+  overcloud:
+    verify:    False
+    interface: "public"
+    auth:
+      username:         "admin"
+      password:         "your_password"
+      project_name:     "admin"
+      tenant_name:      "admin"
+      auth_url:         "https://192.168.1.1:5000/v3"
+      user_domain_name: "Default"
+      domain_name:      "Default"
+    identity_api_version: "3"
+
+Packer could be run from docker image, you will need to create following alias:
+
+alias packer='docker run -it -v "$PWD":/root/project -w /root/project hashicorp/packer:light $@'
+
+
 There are 2 files: centos.json and deploycentostools.sh, allowing you to create
 an image automatically. Run
   # packer build centos.json
@@ -42,8 +65,11 @@ be the ID's of your system:
     to start the VM in which we will install all tools
   - "networks": ID of the network that will be used for the VM
   - "use_floating_ip": true or false
-  - "floating_ip_pool": ID of the floating ip pool in case floating ip are being used
+  - "floating_ip_network": ID of the floating ip network in case floating ip are being used
   - "security_groups": ID of the security group being used
+
+Refer to Packer docs for more details:
+https://www.packer.io/docs/builders/openstack.html
 
 Note that this procedure is not only installing the necessary tools to run PROX,
 but also does some system optimizations (tuned). Check deploycentostools.sh for more details.
