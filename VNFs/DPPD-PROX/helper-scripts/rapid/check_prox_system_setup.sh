@@ -27,7 +27,7 @@ then
                         isolated_cores=1-$MAXCOREID*)
                                 echo "Isolated CPU(s) OK, no reboot: $line">>$logfile
                                 modprobe uio
-                                insmod /root/dpdk/build/kmod/igb_uio.ko
+                                insmod /home/centos/dpdk/build/kmod/igb_uio.ko
                                 exit 0
                         ;;
                         isolated_cores=*)

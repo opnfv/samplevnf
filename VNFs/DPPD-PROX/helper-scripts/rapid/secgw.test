@@ -20,7 +20,6 @@ number_of_tests = 2
 total_number_of_test_machines = 3
 prox_socket = true
 prox_launch_exit = true
-tasks=[0]
 
 [TestM1]
 name = Generator
@@ -34,12 +33,12 @@ latcores = [3]
 name = GW1
 config_file = secgw1.cfg
 dest_vm = 3
-secgwcores = [1]
+cores = [1]
 
 [TestM3]
 name = GW2
 config_file = secgw2.cfg
-secgwcores = [1]
+cores = [1]
 
 [BinarySearchParams]
 drop_rate_threshold = 0.1

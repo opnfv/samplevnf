@@ -28,12 +28,11 @@ import re
 import logging
 from logging.handlers import RotatingFileHandler
 from logging import handlers
-from prox_ctrl import prox_ctrl
 import ConfigParser
 
-version="19.6.30"
+version="19.11.21"
 stack = "rapid" #Default string for stack. This is not an OpenStack Heat stack, just a group of VMs
-vms = "rapidVMs.vms" #Default string for vms file
+vms = "rapid.vms" #Default string for vms file
 key = "prox" # default name for key
 image = "rapidVM" # default name for the image
 image_file = "rapidVM.qcow2"
@@ -206,6 +205,8 @@ log.debug("Checking dataplane network: " + dataplane_network)
 if dataplane_network in Networks:
 	# If the dataplane already exists, we are assuming that this network is already created before with the proper configuration, hence we do not check if the subnet is created etc...
 	log.info("Dataplane network (" + dataplane_network + ") already active")
+	subnet = "n/a: was already existing"
+	subnet_cidr = "n/a, was already existing"
 else:
 	log.info('Creating dataplane network ...')
 	cmd = 'openstack network create '+dataplane_network+' -f value -c status'
@@ -220,6 +221,8 @@ else:
 		Subnets = subprocess.check_output(cmd , shell=True).decode().strip()
 		if subnet in  Subnets:
 			log.info("Subnet (" +subnet+ ") already exists")
+			subnet = "n/a, was already existing"
+			subnet_cidr = "n/a, was already existing"
 		else:
 			log.info('Creating subnet ...')
 			cmd = 'openstack subnet create --network ' + dataplane_network + ' --subnet-range ' + subnet_cidr +' --gateway none ' + subnet+' -f value -c name'
@@ -241,6 +244,7 @@ log.debug(cmd)
 Images = subprocess.check_output(cmd , shell=True).decode().strip()
 if image in Images:
 	log.info("Image (" + image + ") already available")
+	image_file="Don't know, was already existing"
 else:
 	log.info('Creating image ...')
 	cmd = 'openstack image create  -f value -c status --disk-format qcow2 --container-format bare --public --file ./'+image_file+ ' ' +image
@@ -384,7 +388,8 @@ for vm in range(1, int(total_number_of_VMs)+1):
 	log.info('%s: (admin IP: %s), (dataplane IP: %s), (dataplane MAC: %s)' % (ServerName[vm-1],vmAdminIP,vmDPIP,vmDPmac))
 
 config.add_section('ssh')
-config.set('ssh', 'key', key)
+config.set('ssh', 'key', key+'.pem')
+config.set('ssh', 'user', 'centos')
 config.add_section('Varia')
 config.set('Varia', 'VIM', 'OpenStack')
 config.set('Varia', 'stack', stack)
