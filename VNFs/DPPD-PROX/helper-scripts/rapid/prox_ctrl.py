@@ -172,13 +172,10 @@ class prox_sock(object):
     def stop(self, cores):
         self._send('stop %s' % ','.join(map(str, cores)))
 
-    def speed(self, speed, cores, tasks=None):
-        if tasks is None:
-            tasks = [ 0 ] * len(cores)
-        elif len(tasks) != len(cores):
-            raise ValueError('cores and tasks must have the same len')
-        for (core, task) in zip(cores, tasks):
-            self._send('speed %s %s %s' % (core, task, speed))
+    def speed(self, speed, cores, tasks=[0]):
+        for core in cores:
+        	for task in tasks:
+			self._send('speed %s %s %s' % (core, task, speed))
 
     def reset_stats(self):
         self._send('reset stats')
@@ -239,6 +236,23 @@ class prox_sock(object):
 			tsc = int(stats[6])
 			hz = int(stats[7])
         return rx, rx_non_dp, tx, tx_non_dp, drop, tx_fail, tsc, hz
+
+    def multi_port_stats(self, ports=[0]):
+        rx = tx = port_id = tsc = no_mbufs = errors = 0
+        self._send('multi port stats %s' % (','.join(map(str, ports))))
+	result = self._recv().split(';')
+	if result[0].startswith('error'):  
+		log.critical("multi port stats error: unexpected invalid syntax (potential incompatibility between scripts and PROX)")
+		raise Exception("multi port stats error")
+        for statistics in result:
+		stats = statistics.split(',')
+		port_id = int(stats[0])
+		rx += int(stats[1])
+		tx += int(stats[2])
+		no_mbufs += int(stats[3])
+		errors += int(stats[4])
+		tsc = int(stats[5])
+        return rx, tx, no_mbufs, errors, tsc
 
     def set_random(self, cores, task, offset, mask, length):
         self._send('set random %s %s %s %s %s' % (','.join(map(str, cores)), task, offset, mask, length))

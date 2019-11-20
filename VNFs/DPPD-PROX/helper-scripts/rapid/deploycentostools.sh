@@ -15,19 +15,22 @@
 ## limitations under the License.
 ##
 
-BUILD_DIR="/opt/openstackrapid"
-COPY_DIR="/home/centos" # Directory where the packer tool has copied some files (e.g. check_prox_system_setup.sh)
-DPDK_VERSION="18.08"
-PROX_COMMIT="c8e9e6bb696363a397b2e718eb4d3e5f38a8ef22"
+BUILD_DIR="/opt/rapid"
+WORK_DIR="/home/centos" # Directory where the packer tool has copied some files (e.g. check_prox_system_setup.sh)
+			# Runtime scripts are assuming ${WORK_DIR} as the directory for PROX. Check the rundir variable in runrapid.py. Should be the same!
+			# This variable is defined in 4 different places and should have the same value: centos.json, deploycentos.sh, check_prox_system_setup.sh and runrapid.py
+DPDK_VERSION="19.05"
+PROX_COMMIT="f456ab65"
+MULTI_BUFFER_LIB_VER="0.52"
 export RTE_SDK="${BUILD_DIR}/dpdk-${DPDK_VERSION}"
 export RTE_TARGET="x86_64-native-linuxapp-gcc"
 
 function os_pkgs_install()
 {
+	sudo yum install -y deltarpm yum-utils
 	# NASM repository for AESNI MB library
 	sudo yum-config-manager --add-repo http://www.nasm.us/nasm.repo
 
-	sudo yum install -y deltarpm
 	sudo yum update -y
 	sudo yum install -y git wget gcc unzip libpcap-devel ncurses-devel \
 			 libedit-devel lua-devel kernel-devel iperf3 pciutils \
@@ -36,9 +39,6 @@ function os_pkgs_install()
 
 function os_cfg()
 {
-	# Enabling root ssh access
-	sudo sed -i '/disable_root: 1/c\disable_root: 0' /etc/cloud/cloud.cfg
-
 	# huge pages to be used by DPDK
 	sudo sh -c '(echo "vm.nr_hugepages = 1024") > /etc/sysctl.conf'
 
@@ -59,9 +59,9 @@ function os_cfg()
 
 	# Install the check_tuned_params service to make sure that the grub cmd line has the right cpus in isolcpu. The actual number of cpu's
 	# assigned to this VM depends on the flavor used. We don't know at this time what that will be.
-	sudo chmod +x ${COPY_DIR}/check_prox_system_setup.sh
-	sudo cp -r ${COPY_DIR}/check_prox_system_setup.sh /usr/local/libexec/
-	sudo cp -r ${COPY_DIR}/check-prox-system-setup.service /etc/systemd/system/
+	sudo chmod +x ${WORK_DIR}/check_prox_system_setup.sh
+	sudo cp -r ${WORK_DIR}/check_prox_system_setup.sh /usr/local/libexec/
+	sudo cp -r ${WORK_DIR}/check-prox-system-setup.service /etc/systemd/system/
 	sudo systemctl daemon-reload
 	sudo systemctl enable check-prox-system-setup.service
 
@@ -70,12 +70,12 @@ function os_cfg()
 
 function mblib_install()
 {
-	export AESNI_MULTI_BUFFER_LIB_PATH="${BUILD_DIR}/intel-ipsec-mb-0.50"
+	export AESNI_MULTI_BUFFER_LIB_PATH="${BUILD_DIR}/intel-ipsec-mb-${MULTI_BUFFER_LIB_VER}"
 
 	# Downloading the Multi-buffer library. Note that the version to download is linked to the DPDK version being used
 	pushd ${BUILD_DIR} > /dev/null 2>&1
-	wget https://github.com/01org/intel-ipsec-mb/archive/v0.50.zip
-	unzip v0.50.zip
+	wget https://github.com/01org/intel-ipsec-mb/archive/v${MULTI_BUFFER_LIB_VER}.zip
+	unzip v${MULTI_BUFFER_LIB_VER}.zip
 	pushd ${AESNI_MULTI_BUFFER_LIB_PATH}
 	make -j`getconf _NPROCESSORS_ONLN`
 	sudo make install
@@ -95,8 +95,7 @@ function dpdk_install()
 	tar -xf ./dpdk-${DPDK_VERSION}.tar.xz
 	popd > /dev/null 2>&1
 
-	# Runtime scripts are assuming /root as the directory for PROX
-	sudo ln -s ${RTE_SDK} /root/dpdk
+	sudo ln -s ${RTE_SDK} ${WORK_DIR}/dpdk
 
 	pushd ${RTE_SDK} > /dev/null 2>&1
 	make config T=${RTE_TARGET}
@@ -129,7 +128,7 @@ function prox_install()
 	git checkout ${PROX_COMMIT}
 	popd > /dev/null 2>&1
 	prox_compile
-	sudo ln -s ${BUILD_DIR}/samplevnf/VNFs/DPPD-PROX /root/prox
+	sudo ln -s ${BUILD_DIR}/samplevnf/VNFs/DPPD-PROX ${WORK_DIR}/prox
 	popd > /dev/null 2>&1
 }
 
