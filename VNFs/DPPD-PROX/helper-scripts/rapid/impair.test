@@ -20,7 +20,6 @@ number_of_tests = 2
 total_number_of_test_machines = 3
 prox_socket = true
 prox_launch_exit = true
-tasks=[0]
 
 [TestM1]
 name = Generator
@@ -33,12 +32,12 @@ latcores = [3]
 [TestM2]
 name = ImpairGW
 config_file = impair.cfg
-impaircores = [1]
+cores = [1]
 
 [TestM3]
 name = Swap
 config_file = swap.cfg
-swapcores = [1]
+cores = [1]
 
 [BinarySearchParams]
 drop_rate_threshold = 0.1
@@ -57,3 +56,4 @@ warmuptime=2
 [test2]
 test=impairtest
 packetsize=64
+flowsize=64

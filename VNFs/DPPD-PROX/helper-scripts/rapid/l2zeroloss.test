@@ -20,7 +20,6 @@ number_of_tests = 2
 total_number_of_test_machines = 2
 prox_socket = true
 prox_launch_exit = true
-tasks=[0]
 
 [TestM1]
 name = Generator
@@ -32,7 +31,7 @@ latcores = [3]
 [TestM2]
 name = Swap
 config_file = l2swap.cfg
-swapcores = [1]
+cores = [1]
 
 [BinarySearchParams]
 drop_rate_threshold = 0
@@ -52,6 +51,5 @@ warmuptime=2
 test=flowsizetest
 packetsizes=[64]
 # the number of flows in the list need to be powers of 2, max 2^20
-# # Select from following numbers: 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65535, 131072, 262144, 524280, 1048576
+# Select from following numbers: 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576
 flows=[512,1]
-
