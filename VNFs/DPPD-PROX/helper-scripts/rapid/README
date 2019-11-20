@@ -20,6 +20,8 @@ rapid (Rapid Automated Performance Indication for Dataplane)
 rapid is a set of files offering an easy way to do a sanity check of the
 dataplane performance of an OpenStack or container environment.
 
+Most of the information below is now available on wiki.opnfv.org/display/SAM/Rapid+scripting
+
 In case of OpenStack, copy the files in a directory on a machine that can run the OpenStack CLI
 commands and that can reach the networks to connect to the VMs.
 
@@ -159,12 +161,13 @@ dp_ip = 10.10.10.15
 dp_mac = fa:16:3e:69:f3:e7
 
 [ssh]
-key = prox
+key = prox.pem
+user = centos
 
 [Varia]
 vim = OpenStack
 stack = rapid
-vms = rapidVMs.vms
+vms = rapid.vms
 image = rapidVM
 image_file = rapidVM.qcow2
 dataplane_network = dataplane-network

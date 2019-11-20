@@ -15,17 +15,16 @@
 ##
 
 [DEFAULT]
-name = MonitorSwap
+name = CoreStatistics
 number_of_tests = 1
 total_number_of_test_machines = 1
 prox_socket = true
-prox_launch_exit = false
-tasks=[0]
+prox_launch_exit = true
 
 [TestM1]
 name = Swap
 config_file = swap.cfg
-swapcores = [1]
+cores = [1]
 
 [test1]
-test=measureswap
+test=corestats
