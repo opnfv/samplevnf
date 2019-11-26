@@ -1,0 +1,113 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "ad6f997c_afc351a2",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/l3framerate.test",
+        "patchSetId": 2
+      },
+      "lineNbr": 41,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-11-26T15:58:51Z",
+      "side": 1,
+      "message": "524288",
+      "range": {
+        "startLine": 41,
+        "startChar": 133,
+        "endLine": 41,
+        "endChar": 139
+      },
+      "revId": "85ac9d53b94553d6daeb177c5d91a8d2f429713c",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7a518c77_530d086b",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/l3framerate.test",
+        "patchSetId": 2
+      },
+      "lineNbr": 41,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-11-26T15:58:51Z",
+      "side": 1,
+      "message": "65536",
+      "range": {
+        "startLine": 41,
+        "startChar": 110,
+        "endLine": 41,
+        "endChar": 115
+      },
+      "revId": "85ac9d53b94553d6daeb177c5d91a8d2f429713c",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ec3db9bd_2169ee74",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
+        "patchSetId": 2
+      },
+      "lineNbr": 890,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-11-26T15:58:51Z",
+      "side": 1,
+      "message": "This now looks like a pattern, rather than static file name, so should be checked using re.match(), because \u003d\u003d operator will always return False.",
+      "range": {
+        "startLine": 890,
+        "startChar": 28,
+        "endLine": 890,
+        "endChar": 41
+      },
+      "revId": "85ac9d53b94553d6daeb177c5d91a8d2f429713c",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "93a60df7_60de8cc7",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
+        "patchSetId": 2
+      },
+      "lineNbr": 897,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-11-26T15:58:51Z",
+      "side": 1,
+      "message": "This now looks like a pattern, rather than static file name, so should be checked using re.match(), because \u003d\u003d operator will always return False.",
+      "range": {
+        "startLine": 897,
+        "startChar": 28,
+        "endLine": 897,
+        "endChar": 41
+      },
+      "revId": "85ac9d53b94553d6daeb177c5d91a8d2f429713c",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "f9fb4440_098039d3",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/swap.cfg",
+        "patchSetId": 2
+      },
+      "lineNbr": 40,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2019-11-26T15:58:51Z",
+      "side": 1,
+      "message": "Doesn\u0027t it work without this space character?",
+      "revId": "85ac9d53b94553d6daeb177c5d91a8d2f429713c",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
