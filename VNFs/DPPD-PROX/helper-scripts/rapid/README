@@ -54,8 +54,9 @@ clouds:
 
 Packer could be run from docker image, you will need to create following alias:
 
-alias packer='docker run -it -v "$PWD":/root/project -w /root/project hashicorp/packer:light $@'
-
+alias packer='docker run -it --env OS_CLOUD=$OS_CLOUD -v "$PWD":/root/project -w /root/project hashicorp/packer:light $@'
+and make sure the OS_CLOUD variable is set to the correct cloud: in the clouds.yaml example above, you would first
+export OS_CLOUD=overcloud
 
 There are 2 files: centos.json and deploycentostools.sh, allowing you to create
 an image automatically. Run
