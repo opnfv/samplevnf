@@ -16,6 +16,24 @@
       "revId": "21c3b7f054e34055654a9ca94058deefb51c25e6",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c229ca8e_2eeec15f",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/centos.json",
+        "patchSetId": 4
+      },
+      "lineNbr": 17,
+      "author": {
+        "id": 6991
+      },
+      "writtenOn": "2019-12-02T14:06:00Z",
+      "side": 1,
+      "message": "Fixed in the new commit",
+      "parentUuid": "52d221cd_c66e7a8d",
+      "revId": "21c3b7f054e34055654a9ca94058deefb51c25e6",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
     }
   ]
 }
