@@ -54,20 +54,20 @@ clouds:
 
 Packer could be run from docker image, you will need to create following alias:
 
-alias packer='docker run -it -v "$PWD":/root/project -w /root/project hashicorp/packer:light $@'
-
+alias packer='docker run -it --env OS_CLOUD=$OS_CLOUD -v "$PWD":/root/project -w /root/project hashicorp/packer:light $@'
+and make sure the OS_CLOUD variable is set to the correct cloud: in the clouds.yaml example above, you would first
+export OS_CLOUD=overcloud
 
 There are 2 files: centos.json and deploycentostools.sh, allowing you to create
 an image automatically. Run
   # packer build centos.json
-Edit centos.json to reflect the settings of your environment: The following fields need to
-be the ID's of your system:
+Edit centos.json to reflect the settings of your environment: The following fields need to populated
+with the values of your system:
   - "source_image_name": Needs to be the name of the Centos cloud image
   - "flavor": Needs to be the ID or name of the flavor existing in your OpenStack environment that will be used
     to start the VM in which we will install all tools
-  - "networks": ID of the network that will be used for the VM
-  - "use_floating_ip": true or false
-  - "floating_ip_network": ID of the floating ip network in case floating ip are being used
+  - "network_discovery_cidrs": Should contain the CIDR of the network you want to use e.g. "10.6.6.0/24"
+  - "floating_ip_network": ID or name of the floating ip network in case floating ip are being used
   - "security_groups": ID or name of the security group being used
 
 Refer to Packer docs for more details:
