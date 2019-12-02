@@ -6,12 +6,11 @@
 "type": "openstack",
 "ssh_username": "centos",
 "image_name": "rapidVM",
-"source_image_name": "centos-7-1907",
-"flavor": "m1.medium",
-"networks": "2d2bb4ec-58ae-47a4-8af9-f58f14533337",
-"use_floating_ip": true,
-"floating_ip_network": "ext-net",
-"security_groups": "1da93e77-29c2-42d7-b611-f2ae094aa8df",
+"source_image_name": "CentOS",
+"flavor": "packer_flavor",
+"network_discovery_cidrs":"10.6.6.0/24",
+"floating_ip_network": "admin_floating_net",
+"security_groups": "prox_security_group",
 "ssh_timeout":"1000s",
 "ssh_pty":"true"
    }
