@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-rapid-
+  annotations:
+    k8s.v1.cni.cncf.io/networks: intel-sriov-vfio
+spec:
+  containers:
+  - name: pod-rapid
+    image: localhost:5000/prox_slim:latest
+    imagePullPolicy: Always
+    securityContext:
+      capabilities:
+        add: ["IPC_LOCK"]
+    volumeMounts:
+    - mountPath: /dev/hugepages
+      name: hugepages
+    resources:
+      requests:
+        hugepages-2Mi: 512Mi
+        memory: 1Gi
+        intel.com/intel_sriov_vfio: '1'
+      limits:
+        hugepages-2Mi: 512Mi
+        intel.com/intel_sriov_vfio: '1'
+  volumes:
+  - name: hugepages
+    emptyDir:
+      medium: HugePages
+  restartPolicy: Never

@@ -790,6 +790,7 @@ vmDPIP =[]
 vmAdminIP =[]
 vmDPmac =[]
 hexDPIP =[]
+vmDPPCIDEV =[]
 config_file =[]
 prox_socket =[]
 prox_launch_exit =[]
@@ -815,6 +816,7 @@ config = ConfigParser.RawConfigParser()
 config.read(env)
 machine_map = ConfigParser.RawConfigParser()
 machine_map.read(machine_map_file)
+vim_type = config.get('Varia', 'vim')
 key = config.get('ssh', 'key')
 user = config.get('ssh', 'user')
 total_number_of_machines = config.get('rapid', 'total_number_of_machines')
@@ -827,6 +829,8 @@ for vm in range(1, int(total_number_of_machines)+1):
 	vmDPIP.append(config.get('M%d'%vm, 'dp_ip'))
 	ip = vmDPIP[-1].split('.')
 	hexDPIP.append(hex(int(ip[0]))[2:].zfill(2) + ' ' + hex(int(ip[1]))[2:].zfill(2) + ' ' + hex(int(ip[2]))[2:].zfill(2) + ' ' + hex(int(ip[3]))[2:].zfill(2))
+	if (vim_type == "kubernetes"):
+		vmDPPCIDEV.append(config.get('M%d'%vm, 'dp_pci_dev'))
 machine_index = []
 for vm in range(1, int(required_number_of_test_machines)+1):
 	machine_index.append(int(machine_map.get('TestM%d'%vm, 'machine_index'))-1)
@@ -844,6 +848,10 @@ for vm in range(1, int(required_number_of_test_machines)+1):
 			f.write('name="%s"\n'% testconfig.get('TestM%d'%vm, 'name'))
 			f.write('local_ip="%s"\n'% vmDPIP[machine_index[vm-1]])
 			f.write('local_hex_ip="%s"\n'% hexDPIP[machine_index[vm-1]])
+			if (vim_type == "kubernetes"):
+				f.write("eal=\"--socket-mem=512,0 --file-prefix %s-%s-%s --pci-whitelist %s\"\n" % (env, test_file, vm, vmDPPCIDEV[machine_index[vm-1]]))
+			else:
+				f.write("eal=\"\"\n")
 			if testconfig.has_option('TestM%d'%vm, 'cores'):
 				cores.append(ast.literal_eval(testconfig.get('TestM%d'%vm, 'cores')))
 				f.write('cores="%s"\n'% ','.join(map(str, cores[-1])))
@@ -921,42 +929,44 @@ for vm in range(0, int(required_number_of_test_machines)):
 	if prox_socket[vm]:
 		clients.append(prox_ctrl(vmAdminIP[machine_index[vm]], key,user))
 		connect_client(clients[-1])
+		if (vim_type == "OpenStack"):
 # Creating script to bind the right network interface to the poll mode driver
-		devbindfile = '{}_{}_devbindvm{}.sh'.format(env,test_file, vm+1)
-		with open(devbindfile, "w") as f:
-			newText= 'link="$(ip -o link | grep '+vmDPmac[machine_index[vm]]+' |cut -d":" -f 2)"\n'
-			f.write(newText)
-			newText= 'if [ -n "$link" ];\n'
-			f.write(newText)
-			newText= 'then\n'
-			f.write(newText)
-			newText= '        echo Need to bind\n'
-			f.write(newText)
-			newText= '        sudo ' + rundir + '/dpdk/usertools/dpdk-devbind.py --force --bind igb_uio $('+rundir+'/dpdk/usertools/dpdk-devbind.py --status |grep  $link | cut -d" " -f 1)\n'
-			f.write(newText)
-			newText= 'else\n'
-			f.write(newText)
-			newText= '       echo Assuming port is already bound to DPDK\n'
-			f.write(newText)
-			newText= 'fi\n'
-			f.write(newText)
-			newText= 'exit 0\n'
-			f.write(newText)
-		st = os.stat(devbindfile)
-		os.chmod(devbindfile, st.st_mode | stat.S_IEXEC)
-		clients[-1].scp_put('./%s'%devbindfile, rundir+'/devbind.sh')
-		cmd = 'sudo ' + rundir+ '/devbind.sh'
-		clients[-1].run_cmd(cmd)
-		log.debug("devbind.sh running on VM%d"%(vm+1))
+			devbindfile = '{}_{}_devbindvm{}.sh'.format(env,test_file, vm+1)
+			with open(devbindfile, "w") as f:
+				newText= 'link="$(ip -o link | grep '+vmDPmac[machine_index[vm]]+' |cut -d":" -f 2)"\n'
+				f.write(newText)
+				newText= 'if [ -n "$link" ];\n'
+				f.write(newText)
+				newText= 'then\n'
+				f.write(newText)
+				newText= '        echo Need to bind\n'
+				f.write(newText)
+				newText= '        sudo ' + rundir + '/dpdk/usertools/dpdk-devbind.py --force --bind igb_uio $('+rundir+'/dpdk/usertools/dpdk-devbind.py --status |grep  $link | cut -d" " -f 1)\n'
+				f.write(newText)
+				newText= 'else\n'
+				f.write(newText)
+				newText= '       echo Assuming port is already bound to DPDK\n'
+				f.write(newText)
+				newText= 'fi\n'
+				f.write(newText)
+				newText= 'exit 0\n'
+				f.write(newText)
+			st = os.stat(devbindfile)
+			os.chmod(devbindfile, st.st_mode | stat.S_IEXEC)
+			clients[-1].scp_put('./%s'%devbindfile, rundir+'/devbind.sh')
+			cmd = 'sudo ' + rundir+ '/devbind.sh'
+			clients[-1].run_cmd(cmd)
+			log.debug("devbind.sh running on VM%d"%(vm+1))
+
 		clients[-1].scp_put('./%s'%config_file[vm], rundir+'/%s'%config_file[vm])
 		clients[-1].scp_put('./{}_{}_parameters{}.lua'.format(env,test_file, vm+1), rundir + '/parameters.lua')
 		if not configonly:
 			if prox_launch_exit[vm]:
 				log.debug("Starting PROX on VM%d"%(vm+1))
 				if auto_start[vm]:
-					cmd = 'sudo ' +rundir + '/prox/build/prox -t -o cli -f ' + rundir + '/%s'%config_file[vm]
+					cmd = 'sudo ' + rundir + '/prox -t -o cli -f ' + rundir + '/%s'%config_file[vm]
 				else:
-					cmd = 'sudo ' +rundir + '/prox/build/prox -e -t -o cli -f ' + rundir + '/%s'%config_file[vm]
+					cmd = 'sudo ' + rundir + '/prox -e -t -o cli -f ' + rundir + '/%s'%config_file[vm]
 				clients[-1].fork_cmd(cmd, 'PROX Testing on TestM%d'%(vm+1))
 			socks_control.append(prox_launch_exit[vm])
 			socks.append(connect_socket(clients[-1]))

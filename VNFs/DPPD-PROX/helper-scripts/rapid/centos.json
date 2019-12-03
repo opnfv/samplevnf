@@ -39,7 +39,9 @@
    },
    {
    "type": "shell",
-   "script": "deploycentostools.sh"
+   "inline": [
+     "chmod a+x /home/centos/deploycentostools.sh",
+     "/home/centos/deploycentostools.sh -u deploy" ]
    }
 ]
 }
