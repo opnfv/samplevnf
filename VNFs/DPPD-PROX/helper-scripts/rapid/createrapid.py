@@ -264,14 +264,14 @@ cmd = 'openstack keypair list -f value -c Name'
 log.debug (cmd)
 KeyExist = subprocess.check_output(cmd , shell=True).decode().strip()
 if key in KeyExist:
-	log.info("Key ("+key+") already installed")
+	log.info("Key (" + key + ") already installed")
 else:
 	log.info('Creating key ...')
-	cmd = 'openstack keypair create '+ key + '>' +key+'.pem'
+	cmd = 'openstack keypair create ' + key + '>' + key + '.pem'
 	log.debug(cmd)
 	subprocess.check_call(cmd , shell=True)
-	cmd = 'chmod 600 ' +key+'.pem'
-	subprocess.check_call(cmd , shell=True)
+	cmd = 'chmod 600 ' + key + '.pem'
+	subprocess.check_call(cmd, shell=True)
 	cmd = 'openstack keypair list -f value -c Name'
 	log.debug(cmd)
 	KeyExist = subprocess.check_output(cmd , shell=True).decode().strip()
@@ -388,7 +388,7 @@ for vm in range(1, int(total_number_of_VMs)+1):
 	log.info('%s: (admin IP: %s), (dataplane IP: %s), (dataplane MAC: %s)' % (ServerName[vm-1],vmAdminIP,vmDPIP,vmDPmac))
 
 config.add_section('ssh')
-config.set('ssh', 'key', key+'.pem')
+config.set('ssh', 'key', key + '.pem')
 config.set('ssh', 'user', 'centos')
 config.add_section('Varia')
 config.set('Varia', 'VIM', 'OpenStack')
