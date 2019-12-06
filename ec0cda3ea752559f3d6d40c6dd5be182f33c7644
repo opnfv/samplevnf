@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "17a3ec82_3e0732e7",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/README",
+        "patchSetId": 3
+      },
+      "lineNbr": 59,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2019-12-06T13:29:27Z",
+      "side": 1,
+      "message": "Most of this documentation is duplicate of the wiki.\nYou should clean up and avoid duplicates",
+      "revId": "ec0cda3ea752559f3d6d40c6dd5be182f33c7644",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    }
+  ]
+}
