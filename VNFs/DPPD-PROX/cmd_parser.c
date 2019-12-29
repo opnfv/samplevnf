@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2019 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -1910,7 +1910,7 @@ static void task_lat_show_latency_histogram(uint8_t lcore_id, uint8_t task_id, s
 				plog_info("Bucket [%zu]: %"PRIu64"\n", i, buckets[i]);
 	}
 #else
-	plog_info("LATENCY_DETAILS disabled\n");
+	plog_info("LATENCY_HISTOGRAM disabled\n");
 #endif
 }
 
