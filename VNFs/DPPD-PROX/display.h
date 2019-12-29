@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2019 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 #ifndef _DISPLAY_H_
 #define _DISPLAY_H_
 
+#define PROX_MAX_COLS	32
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -33,7 +34,7 @@ struct display_column {
 };
 
 struct display_table {
-	struct display_column cols[16];
+	struct display_column cols[PROX_MAX_COLS];
 	char title[32];
 	int n_cols;
 	int offset;
@@ -86,6 +87,7 @@ void display_init(void);
 void display_end(void);
 void display_stats(void);
 void display_refresh(void);
+void display_renew(void);
 void display_print(const char *str);
 void display_cmd(const char *cmd, int cmd_len, int cursor_pos);
 void display_screen(unsigned screen_id);

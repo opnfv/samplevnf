@@ -1,5 +1,5 @@
 ##
-## Copyright (c) 2010-2017 Intel Corporation
+## Copyright (c) 2010-2019 Intel Corporation
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
 ## you may not use this file except in compliance with the License.
@@ -133,7 +133,7 @@ CFLAGS += -DPROX_PREFETCH_OFFSET=2
 #CFLAGS += -DASSERT
 #CFLAGS += -DENABLE_EXTRA_USER_STATISTICS
 CFLAGS += -DLATENCY_PER_PACKET
-CFLAGS += -DLATENCY_DETAILS
+CFLAGS += -DLATENCY_HISTOGRAM
 CFLAGS += -DGRE_TP
 CFLAGS += -std=gnu99
 CFLAGS += -D_GNU_SOURCE                # for PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP
@@ -204,7 +204,7 @@ SRCS-$(CONFIG_RTE_LIBRTE_PIPELINE) += thread_pipeline.c
 SRCS-y += prox_args.c prox_cfg.c prox_cksum.c prox_port_cfg.c
 
 SRCS-y += cfgfile.c clock.c commands.c cqm.c msr.c defaults.c
-SRCS-y += display.c display_latency.c display_mempools.c
+SRCS-y += display.c display_latency.c display_latency_distr.c display_mempools.c
 SRCS-y += display_ports.c display_rings.c display_priority.c display_pkt_len.c display_l4gen.c display_tasks.c display_irq.c
 SRCS-y += log.c hash_utils.c main.c parse_utils.c file_utils.c
 SRCS-y += run.c input_conn.c input_curses.c

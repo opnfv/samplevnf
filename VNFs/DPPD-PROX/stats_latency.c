@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2019 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@
 
 struct stats_latency_manager_entry {
 	struct task_lat        *task;
+	uint32_t 		bucket_size;
 	uint8_t                lcore_id;
 	uint8_t                task_id;
 	struct lat_test        lat_test;
@@ -32,6 +33,7 @@ struct stats_latency_manager_entry {
 
 struct stats_latency_manager {
 	uint16_t n_latency;
+	uint32_t bucket_size;
 	struct stats_latency_manager_entry entries[0]; /* copy of stats when running update stats. */
 };
 
@@ -48,6 +50,11 @@ int stats_get_n_latency(void)
 	return slm->n_latency;
 }
 
+int stats_get_latency_bucket_size(void)
+{
+	return slm->bucket_size;
+}
+
 uint32_t stats_latency_get_core_id(uint32_t i)
 {
 	return slm->entries[i].lcore_id;
@@ -61,6 +68,16 @@ uint32_t stats_latency_get_task_id(uint32_t i)
 struct stats_latency *stats_latency_get(uint32_t i)
 {
 	return &slm->entries[i].stats;
+}
+
+uint64_t *stats_latency_get_bucket(uint32_t i)
+{
+	return slm->entries[i].lat_test.buckets;
+}
+
+uint64_t *stats_latency_get_tot_bucket(uint32_t i)
+{
+	return slm->entries[i].tot_lat_test.buckets;
 }
 
 struct stats_latency *stats_latency_tot_get(uint32_t i)
@@ -140,9 +157,14 @@ static void stats_latency_add_task(struct lcore_cfg *lconf, struct task_args *ta
 	struct stats_latency_manager_entry *new_entry = &slm->entries[slm->n_latency];
 
 	new_entry->task = (struct task_lat *)targ->tbase;
+	new_entry->bucket_size = task_lat_get_latency_bucket_size(new_entry->task);
 	new_entry->lcore_id = lconf->id;
 	new_entry->task_id = targ->id;
 	new_entry->tot_lat_test.min_lat = -1;
+	if (slm->bucket_size == 0)
+		slm->bucket_size = new_entry->bucket_size;
+	else if (slm->bucket_size != new_entry->bucket_size)
+		plog_err("Latency bucket size does not support different bucket sizes per task - using bucket size from first task (%d)\n", slm->bucket_size);
 	slm->n_latency++;
 }
 
