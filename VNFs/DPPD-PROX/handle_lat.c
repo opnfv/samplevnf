@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2019 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@
 #include "prox_shared.h"
 #include "prox_port_cfg.h"
 
-#define DEFAULT_BUCKET_SIZE	10
+#define DEFAULT_BUCKET_SIZE	11
 #define ACCURACY_BUFFER_SIZE	(2 * ACCURACY_WINDOW)
 
 struct lat_info {
@@ -60,7 +60,7 @@ struct delayed_latency_entry {
 	uint32_t packet_id;
 	uint8_t generator_id;
 	uint64_t pkt_rx_time;
-	uint64_t pkt_tx_time;
+	uint64_t pkt_tx_time;	// Time written into packets by gen. Unit is TSC >> LATENCY_ACCURACY
 	uint64_t rx_time_err;
 };
 
@@ -126,6 +126,11 @@ struct task_lat {
 static uint32_t diff_time(uint32_t rx_time, uint32_t tx_time)
 {
 	return rx_time - tx_time;
+}
+
+uint32_t task_lat_get_latency_bucket_size(struct task_lat *task)
+{
+	return task->lat_test->bucket_size;
 }
 
 struct lat_test *task_lat_get_latency_meassurement(struct task_lat *task)
@@ -453,7 +458,7 @@ static void lat_test_histogram_add(struct lat_test *lat_test, uint64_t lat_tsc)
 	uint64_t bucket_id = (lat_tsc >> lat_test->bucket_size);
 	size_t bucket_count = sizeof(lat_test->buckets)/sizeof(lat_test->buckets[0]);
 
-	bucket_id = bucket_id < bucket_count? bucket_id : bucket_count;
+	bucket_id = bucket_id < bucket_count? bucket_id : (bucket_count - 1);
 	lat_test->buckets[bucket_id]++;
 }
 
@@ -776,8 +781,8 @@ static void init_task_lat(struct task_base *tbase, struct task_args *targ)
 
 	task->lt[0].min_lat = -1;
 	task->lt[1].min_lat = -1;
-	task->lt[0].bucket_size = targ->bucket_size - LATENCY_ACCURACY;
-	task->lt[1].bucket_size = targ->bucket_size - LATENCY_ACCURACY;
+	task->lt[0].bucket_size = targ->bucket_size;
+	task->lt[1].bucket_size = targ->bucket_size;
         if (task->unique_id_pos) {
 		task_lat_init_eld(task, socket_id);
 		task_lat_reset_eld(task);
