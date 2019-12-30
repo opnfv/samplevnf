@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2019 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@
 // packet N is received (re-ordering) resulting in accuracy being unused
 // 8192 packets is equivalent to 550 micro-seconds at 10Gbps for 64 bytes packets
 #define ACCURACY_WINDOW		8192
+#define LAT_BUCKET_COUNT	128
 
 struct lat_test {
 	uint64_t tot_all_pkts;
@@ -44,7 +45,7 @@ struct lat_test {
 	uint64_t tot_lat_error;
 	unsigned __int128 var_lat_error;
 
-	uint64_t buckets[128];
+	uint64_t buckets[LAT_BUCKET_COUNT];
 	uint64_t bucket_size;
 	uint64_t lost_packets;
 };

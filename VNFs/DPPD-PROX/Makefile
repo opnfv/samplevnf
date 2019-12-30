@@ -1,5 +1,5 @@
 ##
-## Copyright (c) 2010-2017 Intel Corporation
+## Copyright (c) 2010-2019 Intel Corporation
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
 ## you may not use this file except in compliance with the License.
@@ -133,7 +133,7 @@ CFLAGS += -DPROX_PREFETCH_OFFSET=2
 #CFLAGS += -DASSERT
 #CFLAGS += -DENABLE_EXTRA_USER_STATISTICS
 CFLAGS += -DLATENCY_PER_PACKET
-CFLAGS += -DLATENCY_DETAILS
+CFLAGS += -DLATENCY_HISTOGRAM
 CFLAGS += -DGRE_TP
 CFLAGS += -std=gnu99
 CFLAGS += -D_GNU_SOURCE                # for PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP
