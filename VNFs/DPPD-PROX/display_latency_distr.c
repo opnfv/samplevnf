@@ -35,7 +35,7 @@ static uint32_t group_size = 9; //LAT_BUCKET_COUNT / global_nb_buckets_displayed
 
 static void display_latency_distr_draw_frame(struct screen_state *state)
 {
-  	uint32_t n_tasks = stats_get_n_latency();
+	uint32_t n_tasks = stats_get_n_latency();
 	struct lcore_cfg *lconf = NULL;
 	struct task_args *targ;
 	char name[32];
@@ -166,9 +166,6 @@ static void display_latency_distr_draw_stats(struct screen_state *state)
 				if (i + j < LAT_BUCKET_COUNT)
 					nb += bucket[i+j];
 			display_column_print(stats_latency_distr[k++], count, "%9lu", nb);
-			if ((nb == 16) || (nb == 48))
-				for (uint32_t j = 0; j <= group_size; j++)
-					plog_info("id %d:  %ld\n", i+j, bucket[i+j]);
 			nb = 0;
 			i += group_size;
 		}

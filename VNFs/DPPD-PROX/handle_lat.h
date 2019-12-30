@@ -29,6 +29,9 @@
 // packet N is received (re-ordering) resulting in accuracy being unused
 // 8192 packets is equivalent to 550 micro-seconds at 10Gbps for 64 bytes packets
 #define ACCURACY_WINDOW		8192
+#define LAT_BUCKET_COUNT	128
+
+#define LAT_BUCKET_COUNT	128
 
 #define LAT_BUCKET_COUNT	128
 
