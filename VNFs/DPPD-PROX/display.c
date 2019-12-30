@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2019 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@
 #include "display_ports.h"
 #include "display_priority.h"
 #include "display_irq.h"
+#include "display_latency_distr.h"
 #include "display_rings.h"
 #include "display_pkt_len.h"
 #include "display_l4gen.h"
@@ -292,6 +293,9 @@ static void display_init_screens(void)
 	display_add_screen(display_ports());
 	display_add_screen(display_mempools());
 	display_add_screen(display_latency());
+#ifdef LATENCY_HISTOGRAM
+	display_add_screen(display_latency_distr());
+#endif
 	display_add_screen(display_rings());
 	display_add_screen(display_l4gen());
 	display_add_screen(display_pkt_len());
@@ -915,6 +919,11 @@ void display_page_down(void)
 void display_refresh(void)
 {
 	stats_display_layout(1);
+}
+
+void display_renew(void)
+{
+	stats_display_layout(0);
 }
 
 void display_stats(void)

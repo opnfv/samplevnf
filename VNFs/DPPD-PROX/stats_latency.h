@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2019 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -36,6 +36,8 @@ struct stats_latency {
 uint32_t stats_latency_get_core_id(uint32_t i);
 uint32_t stats_latency_get_task_id(uint32_t i);
 struct stats_latency *stats_latency_get(uint32_t i);
+uint64_t *stats_latency_get_bucket(uint32_t i);
+uint64_t *stats_latency_get_tot_bucket(uint32_t i);
 struct stats_latency *stats_latency_find(uint32_t lcore_id, uint32_t task_id);
 
 struct stats_latency *stats_latency_tot_get(uint32_t i);
@@ -46,6 +48,7 @@ void stats_latency_update(void);
 void stats_latency_reset(void);
 
 int stats_get_n_latency(void);
+int stats_get_latency_bucket_size(void);
 
 #ifdef LATENCY_HISTOGRAM
 void stats_core_lat_histogram(uint8_t lcore_id, uint8_t task_id, uint64_t **buckets);
