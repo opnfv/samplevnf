@@ -197,12 +197,18 @@ class prox_sock(object):
 			min_lat = min(int(stats[0]),min_lat)
 			max_lat = max(int(stats[1]),max_lat)
 			avg_lat += int(stats[2])
+			#min_since begin = int(stats[3])
+			#max_since_begin = int(stats[4])
+			tsc = int(stats[5])
+			hz = int(stats[6])
+			#coreid = int(stats[7])
+			#taskid = int(stats[8])
         avg_lat = avg_lat/number_tasks_returning_stats
         self._send('stats latency(0).used')
         used = float(self._recv())
         self._send('stats latency(0).total')
         total = float(self._recv())
-        return min_lat, max_lat, avg_lat, (used/total)
+        return min_lat, max_lat, avg_lat, (used/total), tsc, hz
 
     def irq_stats(self, core, bucket, task=0):
         self._send('stats task.core(%s).task(%s).irq(%s)' % (core, task, bucket))
