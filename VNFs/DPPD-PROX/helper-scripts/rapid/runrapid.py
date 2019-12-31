@@ -213,10 +213,10 @@ def connect_client(client):
 	log.debug("Connected to VM on %s" % client.ip())
 
 def run_iteration(gensock,sutsock):
-	r = 1;
+	r = 0;
 	sleep_time = 2
 	# Sleep_time is needed to be able to do accurate measurements to check for packet loss. We need to make this time large enough so that we do not take the first measurement while some packets from the previous tests migth still be in flight
-	while (r <= TST009_MAXr):
+	while (r < TST009_MAXr):
 		time.sleep(sleep_time)
 		abs_old_rx, abs_old_non_dp_rx, abs_old_tx, abs_old_non_dp_tx, abs_old_drop, abs_old_tx_fail, abs_old_tsc, abs_tsc_hz = gensock.core_stats(genstatcores,gentasks)
 		abs_old_rx = abs_old_rx - abs_old_non_dp_rx
@@ -232,8 +232,7 @@ def run_iteration(gensock,sutsock):
 		old_rx = old_rx - old_non_dp_rx
 		old_tx = old_tx - old_non_dp_tx
 		# Measure latency statistics per second
-		lat_min, lat_max, lat_avg, used_sample, old_lat_tsc, lat_hz = gensock.lat_stats(latcores)
-		used_avg = used_sample
+		lat_min, lat_max, lat_avg, used_avg, old_lat_tsc, lat_hz = gensock.lat_stats(latcores)
 		tot_lat_measurement_duration = 0
 		while tot_lat_measurement_duration< float(runtime):
 			time.sleep(0.8)
@@ -249,8 +248,8 @@ def run_iteration(gensock,sutsock):
 			lat_avg = lat_avg + lat_avg_sample * single_lat_measurement_duration # Sometimes, There is more than 1 second between 2 lat_stats. Hence we will take the latest measurement
 			used_avg = used_avg + used_sample * single_lat_measurement_duration  # and give it more weigth.
 			old_lat_tsc = new_lat_tsc
-		lat_avg = lat_avg / tot_lat_measurement_duration
-		used_avg = used_avg / tot_lat_measurement_duration
+		lat_avg = lat_avg / (tot_lat_measurement_duration + 1)
+		used_avg = used_avg / (tot_lat_measurement_duration + 1)
 		# Get statistics after some execution time
 		new_rx, new_non_dp_rx, new_tx, new_non_dp_tx, new_drop, new_tx_fail, new_tsc, tsc_hz = gensock.core_stats(genstatcores,gentasks)
 		new_rx = new_rx - new_non_dp_rx
@@ -287,10 +286,9 @@ def run_iteration(gensock,sutsock):
 			raise Exception("TX = 0")
 		abs_tx = abs_new_tx - abs_old_tx
 		drop_rate = 100.0*abs_dropped/abs_tx
+		r += 1
 		if ((drop_rate < DROP_RATE_TRESHOLD) or (abs_dropped==DROP_RATE_TRESHOLD ==0) or (abs_dropped > TST009_MAXz)):
 			break
-		else:
-			r += 1
 	return(pps_req_tx,pps_tx,pps_sut_tx_str,pps_rx,lat_avg,lat_max,abs_dropped,(abs_new_tx_fail - abs_old_tx_fail),drop_rate,lat_min,used_avg,r)
 
 def new_speed(speed,size,success):
@@ -388,7 +386,9 @@ def run_flow_size_test(gensock,sutsock):
 					retry_warning = bcolors.WARNING + ' {:1} retries needed'.format(r) +  bcolors.ENDC
 				else:
 					retry_warning = ''
-				if lat_used < 0.95:
+				# Drop rate is expressed in percentage. lat_used is a ratio (0 to 1). The sum of these 2 should be 100%.
+				# If the some is lower than 95, it means that more than 5% of the latency measurements where dropped for accuray reasons.
+				if (drop_rate + lat_used * 100) < 95:
 					lat_warning = bcolors.WARNING + ' Latency accuracy issue?: {:>3.0f}%'.format(lat_used*100) +  bcolors.ENDC
 				else:
 					lat_warning = ''
