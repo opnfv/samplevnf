@@ -17,6 +17,7 @@
 #ifndef _LOG_H_
 #define _LOG_H_
 
+#define PROX_LOG_PANIC  -1
 #define PROX_LOG_ERR  0
 #define PROX_LOG_WARN 1
 #define PROX_LOG_INFO 2
@@ -33,11 +34,13 @@ const char* get_warning(int i);
 struct rte_mbuf;
 
 #if PROX_MAX_LOG_LVL >= PROX_LOG_ERR
+int plog_err_or_panic(int do_panic, const char *fmt, ...) __attribute__((format(printf, 2, 3), cold));
 int plog_err(const char *fmt, ...) __attribute__((format(printf, 1, 2), cold));
 int plogx_err(const char *fmt, ...) __attribute__((format(printf, 1, 2), cold));
 int plogd_err(const struct rte_mbuf *mbuf, const char *fmt, ...) __attribute__((format(printf, 2, 3), cold));
 int plogdx_err(const struct rte_mbuf *mbuf, const char *fmt, ...) __attribute__((format(printf, 2, 3), cold));
 #else
+__attribute__((format(printf, 2, 3))) static inline int plog_err_or_panic(__attribute__((unused)) int do_panic, __attribute__((unused)) const char *fmt, ...) {return 0;}
 __attribute__((format(printf, 1, 2))) static inline int plog_err(__attribute__((unused)) const char *fmt, ...) {return 0;}
 __attribute__((format(printf, 1, 2))) static inline int plogx_err(__attribute__((unused)) const char *fmt, ...) {return 0;}
 __attribute__((format(printf, 2, 3))) static inline int plogd_err(__attribute__((unused)) const struct rte_mbuf *mbuf, __attribute__((unused)) const char *fmt, ...) {return 0;}
