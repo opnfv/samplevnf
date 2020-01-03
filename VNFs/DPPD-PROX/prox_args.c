@@ -1009,6 +1009,34 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 	if (STR_EQ(str, "pcap file")) {
 		return parse_str(targ->pcap_file, pkey, sizeof(targ->pcap_file));
 	}
+	if (STR_EQ(str, "imix")) {
+		char pkey2[MAX_CFG_STRING_LEN], *ptr;
+		if (parse_str(pkey2, pkey, sizeof(pkey2)) != 0) {
+			set_errf("Error while parsing imix, too long\n");
+			return -1;
+		}
+		const size_t pkey_len = strlen(pkey2);
+		targ->imix_nb_pkts = 0;
+		ptr = pkey2;
+		while (targ->imix_nb_pkts < MAX_IMIX_PKTS) {
+			if (parse_int(&targ->imix_pkt_sizes[targ->imix_nb_pkts], ptr) != 0)
+				break;
+			targ->imix_nb_pkts++;
+			if ((ptr = strchr(ptr, ',')) == NULL)
+				break;
+			ptr++;
+			if (targ->imix_nb_pkts == MAX_IMIX_PKTS) {
+				set_errf("Too many packet sizes specified");
+				return -1;
+			}
+		}
+		plog_info("%d IMIX packets:", targ->imix_nb_pkts);
+		for (size_t i = 0; i < targ->imix_nb_pkts; ++i) {
+			plog_info("%d ", targ->imix_pkt_sizes[i]);
+		}
+		plog_info("\n");
+		return 0;
+	}
 	if (STR_EQ(str, "pkt inline")) {
 		char pkey2[MAX_CFG_STRING_LEN];
 		if (parse_str(pkey2, pkey, sizeof(pkey2)) != 0) {

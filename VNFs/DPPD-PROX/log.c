@@ -25,6 +25,7 @@
 #include <rte_mbuf.h>
 
 #include "log.h"
+#include "quit.h"
 #include "display.h"
 #include "defaults.h"
 #include "etypes.h"
@@ -212,6 +213,10 @@ static int vplog(int lvl, const char *format, va_list ap, const struct rte_mbuf 
 		ret--;
 		ret += dump_pkt(buf + ret, sizeof(buf) - ret, mbuf);
 	}
+
+	if (lvl == PROX_LOG_PANIC)
+		PROX_PANIC(1, "%s", buf);
+
 	plog_buf(buf);
 
 	if (lvl == PROX_LOG_WARN) {
@@ -276,6 +281,23 @@ int plog_err(const char *fmt, ...)
 	ret = vplog(PROX_LOG_ERR, fmt, ap, NULL, 0);
 	va_end(ap);
 	return ret;
+}
+
+int plog_err_or_panic(int do_panic, const char *fmt, ...)
+{
+	va_list ap;
+	int ret;
+
+	va_start(ap, fmt);
+	if (do_panic) {
+		ret = vplog(PROX_LOG_PANIC, fmt, ap, NULL, 0);
+		va_end(ap);
+		return ret;
+	} else {
+		ret = vplog(PROX_LOG_ERR, fmt, ap, NULL, 0);
+		va_end(ap);
+		return ret;
+	}
 }
 
 int plogx_err(const char *fmt, ...)
