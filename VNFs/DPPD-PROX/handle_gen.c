@@ -22,6 +22,7 @@
 #include <rte_byteorder.h>
 #include <rte_ether.h>
 #include <rte_hash_crc.h>
+#include <rte_malloc.h>
 
 #include "prox_shared.h"
 #include "random.h"
@@ -56,6 +57,12 @@ struct pkt_template {
 
 #define IP4(x) x & 0xff, (x >> 8) & 0xff, (x >> 16) & 0xff, x >> 24
 
+#define DO_PANIC	1
+#define DO_NOT_PANIC	0
+
+#define FROM_PCAP	1
+#define NOT_FROM_PCAP	0
+
 #define TASK_OVERWRITE_SRC_MAC_WITH_PORT_MAC 1
 
 static void pkt_template_init_mbuf(struct pkt_template *pkt_template, struct rte_mbuf *mbuf, uint8_t *pkt)
@@ -78,6 +85,7 @@ struct task_gen_pcap {
 	uint32_t n_pkts;
 	uint64_t last_tsc;
 	uint64_t *proto_tsc;
+	uint32_t socket_id;
 };
 
 struct task_gen {
@@ -91,6 +99,7 @@ struct task_gen {
 	uint64_t new_rate_bps;
 	uint64_t pkt_queue_index;
 	uint32_t n_pkts; /* number of packets in pcap */
+	uint32_t orig_n_pkts; /* number of packets in pcap */
 	uint32_t pkt_idx; /* current packet from pcap */
 	uint32_t pkt_count; /* how many pakets to generate */
 	uint32_t max_frame_size;
@@ -100,6 +109,7 @@ struct task_gen {
 	uint16_t accur_pos;
 	uint16_t sig_pos;
 	uint32_t sig;
+	uint32_t socket_id;
 	uint8_t generator_id;
 	uint8_t n_rands; /* number of randoms */
 	uint8_t min_bulk_size;
@@ -121,6 +131,9 @@ struct task_gen {
 	uint8_t cksum_offload;
 	struct prox_port_cfg *port;
 	uint64_t *bytes_to_tsc;
+	uint32_t imix_pkt_sizes[MAX_IMIX_PKTS];
+	uint32_t imix_nb_pkts;
+	uint32_t new_imix_nb_pkts;
 } __rte_cache_aligned;
 
 static inline uint8_t ipv4_get_hdr_len(prox_rte_ipv4_hdr *ip)
@@ -266,7 +279,7 @@ static inline uint64_t bytes_to_tsc(struct task_gen *task, uint32_t bytes)
 
 static uint32_t task_gen_next_pkt_idx(const struct task_gen *task, uint32_t pkt_idx)
 {
-	return pkt_idx + 1 == task->n_pkts? 0 : pkt_idx + 1;
+	return pkt_idx + 1 >= task->n_pkts? 0 : pkt_idx + 1;
 }
 
 static uint32_t task_gen_offset_pkt_idx(const struct task_gen *task, uint32_t offset)
@@ -541,10 +554,197 @@ static void task_gen_build_packets(struct task_gen *task, struct rte_mbuf **mbuf
 	}
 }
 
+static int task_gen_allocate_templates(struct task_gen *task, uint32_t orig_nb_pkts, uint32_t nb_pkts, int do_panic, int pcap)
+{
+	size_t mem_size = nb_pkts * sizeof(*task->pkt_template);
+	size_t orig_mem_size = orig_nb_pkts * sizeof(*task->pkt_template);
+	task->pkt_template = prox_zmalloc(mem_size, task->socket_id);
+	task->pkt_template_orig = prox_zmalloc(orig_mem_size, task->socket_id);
+
+	if (task->pkt_template == NULL || task->pkt_template_orig == NULL) {
+		plog_err_or_panic(do_panic, "Failed to allocate %lu bytes (in huge pages) for %s\n", mem_size, pcap ? "pcap file":"packet template");
+		return -1;
+	}
+
+	for (uint i = 0; i < orig_nb_pkts; i++) {
+		task->pkt_template_orig[i].buf = prox_zmalloc(task->max_frame_size, task->socket_id);
+		if (task->pkt_template_orig[i].buf == NULL) {
+			plog_err_or_panic(do_panic, "Failed to allocate %u bytes (in huge pages) for %s\n", task->max_frame_size, pcap ? "packet from pcap": "packet");
+			return -1;
+		}
+	}
+	for (uint i = 0; i < nb_pkts; i++) {
+		task->pkt_template[i].buf = prox_zmalloc(task->max_frame_size, task->socket_id);
+		if (task->pkt_template[i].buf == NULL) {
+			plog_err_or_panic(do_panic, "Failed to allocate %u bytes (in huge pages) for %s\n", task->max_frame_size, pcap ? "packet from pcap": "packet");
+			return -1;
+		}
+	}
+	return 0;
+}
+
+static int task_gen_reallocate_templates(struct task_gen *task, uint32_t nb_pkts, int do_panic, int pcap)
+{
+	// Need to free up bufs allocated in previous (longer) imix
+	for (size_t i = nb_pkts; i < task->n_pkts; i++) {
+		if (task->pkt_template[i].buf) {
+			rte_free(task->pkt_template[i].buf);
+			task->pkt_template[i].buf = NULL;
+		}
+	}
+
+	size_t mem_size = nb_pkts * sizeof(*task->pkt_template);
+	struct pkt_template *ptr;
+	// re-allocate memory for new pkt_template (this might allocate additional memory or free up some...)
+	if ((ptr = rte_realloc_socket(task->pkt_template, mem_size, RTE_CACHE_LINE_SIZE, task->socket_id)) != NULL) {
+		task->pkt_template = ptr;
+	} else {
+		plog_err_or_panic(do_panic, "Failed to allocate %lu bytes (in huge pages) for packet template for IMIX\n", mem_size);
+		return -1;
+	}
+
+	// Need to allocate bufs for new template but no need to reallocate for existing ones
+	for (size_t i = task->n_pkts; i < nb_pkts; ++i) {
+		task->pkt_template[i].buf = prox_zmalloc(task->max_frame_size, task->socket_id);
+		if (task->pkt_template[i].buf == NULL) {
+			plog_err_or_panic(do_panic, "Failed to allocate %u bytes (in huge pages) for packet %zd in IMIX\n", task->max_frame_size, i);
+			return -1;
+		}
+	}
+	return 0;
+}
+
+static int check_pkt_size(struct task_gen *task, uint32_t pkt_size, int do_panic)
+{
+	const uint16_t min_len = sizeof(prox_rte_ether_hdr) + sizeof(prox_rte_ipv4_hdr);
+	const uint16_t max_len = task->max_frame_size;
+
+	if (do_panic) {
+		PROX_PANIC(pkt_size == 0, "Invalid packet size length (no packet defined?)\n");
+		PROX_PANIC(pkt_size > max_len, "pkt_size out of range (must be <= %u)\n", max_len);
+		PROX_PANIC(pkt_size < min_len, "pkt_size out of range (must be >= %u)\n", min_len);
+		return 0;
+	} else {
+		if (pkt_size == 0) {
+			plog_err("Invalid packet size length (no packet defined?)\n");
+			return -1;
+		}
+		if (pkt_size > max_len) {
+			if (pkt_size >  PROX_RTE_ETHER_MAX_LEN + 2 * PROX_VLAN_TAG_SIZE - 4)
+				plog_err("pkt_size too high and jumbo frames disabled\n");
+			else
+				plog_err("pkt_size out of range (must be <= (mtu=%u))\n", max_len);
+			return -1;
+		}
+		if (pkt_size < min_len) {
+			plog_err("pkt_size out of range (must be >= %u)\n", min_len);
+			return -1;
+		}
+		return 0;
+	}
+}
+
+static int check_fields_in_bounds(struct task_gen *task, uint32_t pkt_size, int do_panic)
+{
+	if (task->lat_enabled) {
+		uint32_t pos_beg = task->lat_pos;
+		uint32_t pos_end = task->lat_pos + 3U;
+
+		if (do_panic)
+			PROX_PANIC(pkt_size <= pos_end, "Writing latency at %u-%u, but packet size is %u bytes\n",
+			   pos_beg, pos_end, pkt_size);
+		else if (pkt_size <= pos_end) {
+			plog_err("Writing latency at %u-%u, but packet size is %u bytes\n", pos_beg, pos_end, pkt_size);
+			return -1;
+		}
+	}
+	if (task->packet_id_pos) {
+		uint32_t pos_beg = task->packet_id_pos;
+		uint32_t pos_end = task->packet_id_pos + 4U;
+
+		if (do_panic)
+			PROX_PANIC(pkt_size <= pos_end, "Writing packet at %u-%u, but packet size is %u bytes\n",
+			   pos_beg, pos_end, pkt_size);
+		else if (pkt_size <= pos_end) {
+			plog_err("Writing packet at %u-%u, but packet size is %u bytes\n", pos_beg, pos_end, pkt_size);
+			return -1;
+		}
+	}
+	if (task->accur_pos) {
+		uint32_t pos_beg = task->accur_pos;
+		uint32_t pos_end = task->accur_pos + 3U;
+
+		if (do_panic)
+			PROX_PANIC(pkt_size <= pos_end, "Writing accuracy at %u%-u, but packet size is %u bytes\n",
+			   pos_beg, pos_end, pkt_size);
+		else if (pkt_size <= pos_end) {
+			plog_err("Writing accuracy at %u%-u, but packet size is %u bytes\n", pos_beg, pos_end, pkt_size);
+			return -1;
+		}
+	}
+	return 0;
+}
+
+static int task_gen_set_eth_ip_udp_sizes(struct task_gen *task, uint32_t n_orig_pkts, uint32_t nb_pkt_sizes, uint32_t *pkt_sizes, int do_panic)
+{
+	int rc;
+	size_t k;
+	uint32_t l4_len;
+	prox_rte_ipv4_hdr *ip;
+	struct pkt_template *template;
+
+	for (size_t i = 0; i < n_orig_pkts; ++i) {
+		for (size_t j = 0; j < nb_pkt_sizes; ++j) {
+			k = i * nb_pkt_sizes + j;
+			template = &task->pkt_template[k];
+			template->len = pkt_sizes[j];
+       			rte_memcpy(template->buf, task->pkt_template_orig[i].buf, pkt_sizes[j]);
+			parse_l2_l3_len(template->buf, &template->l2_len, &template->l3_len, template->len);
+			if (template->l2_len == 0)
+				continue;
+			ip = (prox_rte_ipv4_hdr *)(template->buf + template->l2_len);
+			ip->total_length = rte_bswap16(pkt_sizes[j] - template->l2_len);
+			l4_len = pkt_sizes[j] - template->l2_len - template->l3_len;
+			ip->hdr_checksum = 0;
+			prox_ip_cksum_sw(ip);
+
+			if (ip->next_proto_id == IPPROTO_UDP) {
+				prox_rte_udp_hdr *udp = (prox_rte_udp_hdr *)(((uint8_t *)ip) + template->l3_len);
+				udp->dgram_len = rte_bswap16(l4_len);
+				prox_udp_cksum_sw(udp, l4_len, ip->src_addr, ip->dst_addr);
+			} else if (ip->next_proto_id == IPPROTO_TCP) {
+				prox_rte_tcp_hdr *tcp = (prox_rte_tcp_hdr *)(((uint8_t *)ip) + template->l3_len);
+				prox_tcp_cksum_sw(tcp, l4_len, ip->src_addr, ip->dst_addr);
+			}
+		}
+	}
+	return 0;
+}
+
+static int task_gen_apply_imix(struct task_gen *task, int do_panic)
+{
+	struct pkt_template *ptr;
+	int rc;
+	task->imix_nb_pkts = task->new_imix_nb_pkts;
+	uint32_t n_pkts = task->imix_nb_pkts * task->orig_n_pkts;
+
+	if ((n_pkts != task->n_pkts) && ((rc = task_gen_reallocate_templates(task, n_pkts, do_panic, NOT_FROM_PCAP)) < 0))
+		return rc;
+
+	task->n_pkts = n_pkts;
+	if (task->pkt_idx >= n_pkts)
+		task->pkt_idx = 0;
+	task_gen_set_eth_ip_udp_sizes(task, task->orig_n_pkts, task->imix_nb_pkts, task->imix_pkt_sizes, DO_NOT_PANIC);
+	return 0;
+}
+
 static void task_gen_update_config(struct task_gen *task)
 {
 	if (task->token_time.cfg.bpp != task->new_rate_bps)
 		task_gen_reset_token_time(task);
+	if (task->new_imix_nb_pkts)
+		task_gen_apply_imix(task, DO_NOT_PANIC);
+	task->new_imix_nb_pkts = 0;
 }
 
 static inline void build_value(struct task_gen *task, uint32_t mask, int bit_pos, uint32_t val, uint32_t fixed_bits)
@@ -759,33 +959,6 @@ static int pcap_read_pkts(pcap_t *handle, const char *file_name, uint32_t n_pkts
 	return 0;
 }
 
-static int check_pkt_size(struct task_gen *task, uint32_t pkt_size, int do_panic)
-{
-	const uint16_t min_len = sizeof(prox_rte_ether_hdr) + sizeof(prox_rte_ipv4_hdr);
-	const uint16_t max_len = task->max_frame_size;
-
-	if (do_panic) {
-		PROX_PANIC(pkt_size == 0, "Invalid packet size length (no packet defined?)\n");
-		PROX_PANIC(pkt_size > max_len, "pkt_size out of range (must be <= %u)\n", max_len);
-		PROX_PANIC(pkt_size < min_len, "pkt_size out of range (must be >= %u)\n", min_len);
-		return 0;
-	} else {
-		if (pkt_size == 0) {
-			plog_err("Invalid packet size length (no packet defined?)\n");
-			return -1;
-		}
-		if (pkt_size > max_len) {
-			plog_err("pkt_size out of range (must be <= %u)\n", max_len);
-			return -1;
-		}
-		if (pkt_size < min_len) {
-			plog_err("pkt_size out of range (must be >= %u)\n", min_len);
-			return -1;
-		}
-		return 0;
-	}
-}
-
 static int check_all_pkt_size(struct task_gen *task, int do_panic)
 {
 	int rc;
@@ -796,43 +969,12 @@ static int check_all_pkt_size(struct task_gen *task, int do_panic)
 	return 0;
 }
 
-static int check_fields_in_bounds(struct task_gen *task, uint32_t pkt_size, int do_panic)
+static int check_all_fields_in_bounds(struct task_gen *task, int do_panic)
 {
-	if (task->lat_enabled) {
-		uint32_t pos_beg = task->lat_pos;
-		uint32_t pos_end = task->lat_pos + 3U;
-
-		if (do_panic)
-			PROX_PANIC(pkt_size <= pos_end, "Writing latency at %u-%u, but packet size is %u bytes\n",
-			   pos_beg, pos_end, pkt_size);
-		else if (pkt_size <= pos_end) {
-			plog_err("Writing latency at %u-%u, but packet size is %u bytes\n", pos_beg, pos_end, pkt_size);
-			return -1;
-		}
-	}
-	if (task->packet_id_pos) {
-		uint32_t pos_beg = task->packet_id_pos;
-		uint32_t pos_end = task->packet_id_pos + 4U;
-
-		if (do_panic)
-			PROX_PANIC(pkt_size <= pos_end, "Writing packet at %u-%u, but packet size is %u bytes\n",
-			   pos_beg, pos_end, pkt_size);
-		else if (pkt_size <= pos_end) {
-			plog_err("Writing packet at %u-%u, but packet size is %u bytes\n", pos_beg, pos_end, pkt_size);
-			return -1;
-		}
-	}
-	if (task->accur_pos) {
-		uint32_t pos_beg = task->accur_pos;
-		uint32_t pos_end = task->accur_pos + 3U;
-
-		if (do_panic)
-			PROX_PANIC(pkt_size <= pos_end, "Writing accuracy at %u%-u, but packet size is %u bytes\n",
-			   pos_beg, pos_end, pkt_size);
-		else if (pkt_size <= pos_end) {
-			plog_err("Writing accuracy at %u%-u, but packet size is %u bytes\n", pos_beg, pos_end, pkt_size);
-			return -1;
-		}
+	int rc;
+	for (uint32_t i = 0; i < task->n_pkts;++i) {
+		if ((rc = check_fields_in_bounds(task, task->pkt_template[i].len, do_panic)) != 0)
+			return rc;
 	}
 	return 0;
 }
@@ -894,10 +1036,12 @@ static void task_gen_reset_pkt_templates_len(struct task_gen *task)
 {
 	struct pkt_template *src, *dst;
 
-	for (size_t i = 0; i < task->n_pkts; ++i) {
-		src = &task->pkt_template_orig[i];
-		dst = &task->pkt_template[i];
-		dst->len = src->len;
+	for (size_t j = 0; j < task->n_pkts / task->orig_n_pkts; ++j) {
+		for (size_t i = 0; i < task->orig_n_pkts; ++i) {
+			src = &task->pkt_template_orig[i];
+			dst = &task->pkt_template[j * task->orig_n_pkts + i];
+			dst->len = src->len;
+		}
 	}
 }
 
@@ -905,11 +1049,13 @@ static void task_gen_reset_pkt_templates_content(struct task_gen *task)
 {
 	struct pkt_template *src, *dst;
 
-	for (size_t i = 0; i < task->n_pkts; ++i) {
-		src = &task->pkt_template_orig[i];
-		dst = &task->pkt_template[i];
-		memcpy(dst->buf, src->buf, RTE_MAX(src->len, dst->len));
-		task_gen_apply_sig(task, dst);
+	for (size_t j = 0; j < task->n_pkts / task->orig_n_pkts; ++j) {
+		for (size_t i = 0; i < task->orig_n_pkts; ++i) {
+			src = &task->pkt_template_orig[i];
+			dst = &task->pkt_template[j * task->orig_n_pkts + i];
+			memcpy(dst->buf, src->buf, RTE_MAX(src->len, dst->len));
+			task_gen_apply_sig(task, dst);
+		}
 	}
 }
 
@@ -922,71 +1068,57 @@ static void task_gen_reset_pkt_templates(struct task_gen *task)
 
 static void task_init_gen_load_pkt_inline(struct task_gen *task, struct task_args *targ)
 {
-	const int socket_id = rte_lcore_to_socket_id(targ->lconf->id);
+	int rc;
 
-	task->n_pkts = 1;
+	task->orig_n_pkts = 1;
+	if (task->imix_nb_pkts == 0) {
+		task->n_pkts = 1;
+		task->imix_pkt_sizes[0] = targ->pkt_size;
+	} else {
+		task->n_pkts = task->imix_nb_pkts;
+	}
+	task_gen_allocate_templates(task, task->orig_n_pkts, task->n_pkts, DO_PANIC, NOT_FROM_PCAP);
 
-	size_t mem_size = task->n_pkts * sizeof(*task->pkt_template);
-	task->pkt_template = prox_zmalloc(mem_size, socket_id);
-	task->pkt_template_orig = prox_zmalloc(mem_size, socket_id);
-
-	PROX_PANIC(task->pkt_template == NULL ||
-		   task->pkt_template_orig == NULL,
-		   "Failed to allocate %lu bytes (in huge pages) for packet template\n", mem_size);
-
-	task->pkt_template->buf = prox_zmalloc(task->max_frame_size, socket_id);
-	task->pkt_template_orig->buf = prox_zmalloc(task->max_frame_size, socket_id);
-	PROX_PANIC(task->pkt_template->buf == NULL ||
-		task->pkt_template_orig->buf == NULL,
-		"Failed to allocate %u bytes (in huge pages) for packet\n", task->max_frame_size);
-
-	PROX_PANIC(targ->pkt_size > task->max_frame_size,
-		targ->pkt_size > PROX_RTE_ETHER_MAX_LEN + 2 * PROX_VLAN_TAG_SIZE - 4 ?
-			"pkt_size too high and jumbo frames disabled" : "pkt_size > mtu");
-
-	rte_memcpy(task->pkt_template_orig[0].buf, targ->pkt_inline, targ->pkt_size);
-	task->pkt_template_orig[0].len = targ->pkt_size;
+	rte_memcpy(task->pkt_template_orig[0].buf, targ->pkt_inline, task->max_frame_size);
+	task->pkt_template_orig[0].len = task->imix_pkt_sizes[0];
 	task_gen_reset_pkt_templates(task);
 	check_all_pkt_size(task, 1);
-	check_fields_in_bounds(task, task->pkt_template[0].len, 1);
+	check_all_fields_in_bounds(task, 1);
+
+	// If IMIX was not specified then pkt_size is specified using pkt_size parameter or the length of pkt_inline
+	// In that case, for backward compatibility, we do NOT adapt the length of IP and UDP to the length of the packet
+	task_gen_set_eth_ip_udp_sizes(task, task->orig_n_pkts, task->imix_nb_pkts, task->imix_pkt_sizes, DO_NOT_PANIC);
 }
 
 static void task_init_gen_load_pcap(struct task_gen *task, struct task_args *targ)
 {
-	const int socket_id = rte_lcore_to_socket_id(targ->lconf->id);
 	char err[PCAP_ERRBUF_SIZE];
 	uint32_t max_frame_size;
 	pcap_t *handle = pcap_open_offline(targ->pcap_file, err);
 	PROX_PANIC(handle == NULL, "Failed to open PCAP file: %s\n", err);
 
-	task->n_pkts = pcap_count_pkts(handle, &max_frame_size);
-	plogx_info("%u packets in pcap file '%s'; max frame size=%d\n", task->n_pkts, targ->pcap_file, max_frame_size);
+	task->orig_n_pkts = pcap_count_pkts(handle, &max_frame_size);
+	plogx_info("%u packets in pcap file '%s'; max frame size=%d\n", task->orig_n_pkts, targ->pcap_file, max_frame_size);
 	PROX_PANIC(max_frame_size > task->max_frame_size,
 		max_frame_size > PROX_RTE_ETHER_MAX_LEN + 2 * PROX_VLAN_TAG_SIZE -4 ?
 			"pkt_size too high and jumbo frames disabled" : "pkt_size > mtu");
 
 	if (targ->n_pkts)
-		task->n_pkts = RTE_MIN(task->n_pkts, targ->n_pkts);
-	plogx_info("Loading %u packets from pcap\n", task->n_pkts);
-	size_t mem_size = task->n_pkts * sizeof(*task->pkt_template);
-	task->pkt_template = prox_zmalloc(mem_size, socket_id);
-	task->pkt_template_orig = prox_zmalloc(mem_size, socket_id);
-	PROX_PANIC(task->pkt_template == NULL ||
-		   task->pkt_template_orig == NULL,
-		   "Failed to allocate %lu bytes (in huge pages) for pcap file\n", mem_size);
-
-	for (uint i = 0; i < task->n_pkts; i++) {
-		task->pkt_template[i].buf = prox_zmalloc(task->max_frame_size, socket_id);
-		task->pkt_template_orig[i].buf = prox_zmalloc(task->max_frame_size, socket_id);
-
-		PROX_PANIC(task->pkt_template->buf == NULL ||
-			task->pkt_template_orig->buf == NULL,
-			"Failed to allocate %u bytes (in huge pages) for pcap file\n", task->max_frame_size);
+		task->orig_n_pkts = RTE_MIN(task->orig_n_pkts, targ->n_pkts);
+	if (task->imix_nb_pkts == 0) {
+		task->n_pkts = task->orig_n_pkts;
+	} else {
+		task->n_pkts = task->imix_nb_pkts * task->orig_n_pkts;
 	}
+	task_gen_allocate_templates(task, task->orig_n_pkts, task->n_pkts, DO_PANIC, FROM_PCAP);
+	plogx_info("Loading %u packets from pcap\n", task->n_pkts);
 
 	pcap_read_pkts(handle, targ->pcap_file, task->n_pkts, task->pkt_template_orig, NULL, max_frame_size);
 	pcap_close(handle);
 	task_gen_reset_pkt_templates(task);
+	check_all_pkt_size(task, 1);
+	check_all_fields_in_bounds(task, 1);
+	task_gen_set_eth_ip_udp_sizes(task, task->orig_n_pkts, task->imix_nb_pkts, task->imix_pkt_sizes, DO_NOT_PANIC);
 }
 
 static struct rte_mempool *task_gen_create_mempool(struct task_args *targ, uint16_t max_frame_size)
@@ -1033,6 +1165,22 @@ int task_gen_set_pkt_size(struct task_base *tbase, uint32_t pkt_size)
 	}
 	for (size_t i = 0; i < task->n_pkts; ++i) {
 		task->pkt_template[i].len = pkt_size;
+	}
+	return 0;
+}
+
+int task_gen_set_imix(struct task_base *tbase, uint32_t nb_pkt_sizes, uint32_t *pkt_sizes)
+{
+	struct task_gen *task = (struct task_gen *)tbase;
+	int rc;
+
+	task->new_imix_nb_pkts = nb_pkt_sizes;
+	memcpy(task->imix_pkt_sizes, pkt_sizes, nb_pkt_sizes * sizeof(uint32_t));
+	for (size_t i = 0; i < nb_pkt_sizes; ++i) {
+		if ((rc = check_pkt_size(task, pkt_sizes[i], DO_NOT_PANIC)) != 0)
+			return rc;
+		if ((rc = check_fields_in_bounds(task, pkt_sizes[i], DO_NOT_PANIC)) != 0)
+			return rc;
 	}
 	return 0;
 }
@@ -1096,7 +1244,7 @@ uint32_t task_gen_get_n_randoms(struct task_base *tbase)
 static void init_task_gen_pcap(struct task_base *tbase, struct task_args *targ)
 {
 	struct task_gen_pcap *task = (struct task_gen_pcap *)tbase;
-	const uint32_t sockid = rte_lcore_to_socket_id(targ->lconf->id);
+	task->socket_id = rte_lcore_to_socket_id(targ->lconf->id);
 	uint32_t max_frame_size;
 
 	task->loop = targ->loop;
@@ -1122,14 +1270,14 @@ static void init_task_gen_pcap(struct task_base *tbase, struct task_args *targ)
 	plogx_info("Loading %u packets from pcap\n", task->n_pkts);
 
 	size_t mem_size = task->n_pkts * (sizeof(*task->proto) + sizeof(*task->proto_tsc));
-	uint8_t *mem = prox_zmalloc(mem_size, sockid);
+	uint8_t *mem = prox_zmalloc(mem_size, task->socket_id);
 
 	PROX_PANIC(mem == NULL, "Failed to allocate %lu bytes (in huge pages) for pcap file\n", mem_size);
 	task->proto = (struct pkt_template *) mem;
 	task->proto_tsc = (uint64_t *)(mem + task->n_pkts * sizeof(*task->proto));
 
 	for (uint i = 0; i < targ->n_pkts; i++) {
-		task->proto[i].buf = prox_zmalloc(max_frame_size, sockid);
+		task->proto[i].buf = prox_zmalloc(max_frame_size, task->socket_id);
 		PROX_PANIC(task->proto[i].buf == NULL, "Failed to allocate %u bytes (in huge pages) for pcap file\n", max_frame_size);
 	}
 
@@ -1229,6 +1377,7 @@ static void init_task_gen_early(struct task_args *targ)
 static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 {
 	struct task_gen *task = (struct task_gen *)tbase;
+	task->socket_id = rte_lcore_to_socket_id(targ->lconf->id);
 
 	task->packet_id_pos = targ->packet_id_pos;
 
@@ -1282,7 +1431,7 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 	plog_info("\tGenerator id = %d\n", task->generator_id);
 
 	// Allocate array holding bytes to tsc for supported frame sizes
-	task->bytes_to_tsc = prox_zmalloc(task->max_frame_size * MAX_PKT_BURST * sizeof(task->bytes_to_tsc[0]), rte_lcore_to_socket_id(targ->lconf->id));
+	task->bytes_to_tsc = prox_zmalloc(task->max_frame_size * MAX_PKT_BURST * sizeof(task->bytes_to_tsc[0]), task->socket_id);
 	PROX_PANIC(task->bytes_to_tsc == NULL,
 		"Failed to allocate %u bytes (in huge pages) for bytes_to_tsc\n", task->max_frame_size);
 
@@ -1304,6 +1453,10 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 			task->bytes_to_tsc[i] = (task->hz * i * 0.99) / bytes_per_hz;
 	}
 
+	task->imix_nb_pkts = targ->imix_nb_pkts;
+	for (uint32_t i = 0; i < targ->imix_nb_pkts; i++) {
+		task->imix_pkt_sizes[i] = targ->imix_pkt_sizes[i];
+	}
 	if (!strcmp(targ->pcap_file, "")) {
 		plog_info("\tUsing inline definition of a packet\n");
 		task_init_gen_load_pkt_inline(task, targ);
