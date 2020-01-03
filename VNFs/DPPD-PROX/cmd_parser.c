@@ -536,6 +536,47 @@ static int parse_cmd_pkt_size(const char *str, struct input *input)
 	return 0;
 }
 
+static int parse_cmd_imix(const char *str, struct input *input)
+{
+	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
+	uint32_t pkt_sizes[MAX_IMIX_PKTS], tmp;
+	uint32_t pkt_index = 0;
+
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
+		return -1;
+	if (!(str = strchr_skip_twice(str, ' ')))
+		return -1;
+	while (pkt_index < MAX_IMIX_PKTS) {
+		if (sscanf(str, "%d", &pkt_sizes[pkt_index]) != 1)
+			break;
+		pkt_index++;
+		if ((str = strchr(str, ',')) == NULL)
+			break;
+        	str = str + 1;
+	}
+	if (pkt_index == 0) {
+		plog_err("No pkt size found\n");
+		return -1;
+	}
+	if ((pkt_index == MAX_IMIX_PKTS) && (str) && (sscanf(str, "%d", &tmp) == 1)) {
+		plog_err("Too many inputs - unexpected inputs starting at %s\n", str);
+		return -1;
+	}
+
+	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
+		for (unsigned int i = 0; i < nb_cores; i++) {
+			lcore_id = lcores[i];
+			if ((!task_is_mode_and_submode(lcore_id, task_id, "gen", "")) && (!task_is_mode_and_submode(lcore_id, task_id, "gen", "l3"))) {
+				plog_err("Core %u task %u is not generating packets\n", lcore_id, task_id);
+			} else {
+				struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
+				task_gen_set_imix(tbase, pkt_index, pkt_sizes); /* error printed within function */
+			}
+		}
+	}
+	return 0;
+}
+
 static int parse_cmd_speed(const char *str, struct input *input)
 {
 	unsigned lcores[RTE_MAX_LCORE], task_id, lcore_id, nb_cores;
@@ -2137,6 +2178,7 @@ static struct cmd_str cmd_strings[] = {
 	{"bypass", "<core_id> <task_id>", "Bypass task", parse_cmd_bypass},
 	{"reconnect", "<core_id> <task_id>", "Reconnect task", parse_cmd_reconnect},
 	{"pkt_size", "<core_id> <task_id> <pkt_size>", "Set the packet size to <pkt_size>", parse_cmd_pkt_size},
+	{"imix", "<core_id> <task_id> <pkt_size,pkt_size ... >", "Set the packet sizes to <pkt_size>", parse_cmd_imix},
 	{"speed", "<core_id> <task_id> <speed percentage>", "Change the speed to <speed percentage> at which packets are being generated on core <core_id> in task <task_id>.", parse_cmd_speed},
 	{"speed_byte", "<core_id> <task_id> <speed>", "Change speed to <speed>. The speed is specified in units of bytes per second.", parse_cmd_speed_byte},
 	{"set value", "<core_id> <task_id> <offset> <value> <value_len>", "Set <value_len> bytes to <value> at offset <offset> in packets generated on <core_id> <task_id>", parse_cmd_set_value},
