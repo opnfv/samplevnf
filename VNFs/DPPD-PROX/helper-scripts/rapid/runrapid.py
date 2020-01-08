@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ##
-## Copyright (c) 2010-2019 Intel Corporation
+## Copyright (c) 2010-2020 Intel Corporation
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
 ## you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ import requests
 from numpy import inf
 from math import ceil
 
-version="19.11.21"
+version="20.01.10"
 env = "rapid.env" #Default string for environment
 test_file = "basicrapid.test" #Default string for test
 machine_map_file = "machine.map" #Default string for machine map file
@@ -212,87 +212,183 @@ def connect_client(client):
 			log.debug("Trying to connect to VM which was just launched on %s, attempt: %d" % (client.ip(), attempts))
 	log.debug("Connected to VM on %s" % client.ip())
 
-def run_iteration(gensock,sutsock):
+def report_result(flow_number,size,speed,pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat_avg,lat_max,tx,rx,tot_drop,elapsed_time,speed_prefix='',lat_avg_prefix='',lat_max_prefix='',abs_drop_rate_prefix='',drop_rate_prefix=''):
+	if pps_req_tx == None:
+		pps_req_tx_str = '{0: >14}'.format('   NA     |')
+	else:
+		pps_req_tx_str = '{:>7.3f} Mpps |'.format(pps_req_tx)
+	if pps_tx == None:
+		pps_tx_str = '{0: >14}'.format('   NA     |')
+	else:
+		pps_tx_str = '{:>7.3f} Mpps |'.format(pps_tx) 
+	if pps_sut_tx == None:
+		pps_sut_tx_str = '{0: >14}'.format('   NA     |')
+	else:
+		pps_sut_tx_str = '{:>7.3f} Mpps |'.format(pps_sut_tx)
+	if pps_rx == None:
+		pps_rx_str = '{0: >24}'.format('NA        ')
+	else:
+		pps_rx_str = bcolors.OKBLUE + '{:>4.1f} Gb/s |{:7.3f} Mpps '.format(get_speed(pps_rx,size),pps_rx) + bcolors.ENDC
+	if tot_drop == None:
+		tot_drop_str = ' |       NA  | '
+	else:
+		tot_drop_str = ' | {:>9.0f} | '.format(tot_drop)
+	if elapsed_time == None:
+		elapsed_time_str = ' NA |'
+	else:
+		elapsed_time_str = '{:>3.0f} |'.format(elapsed_time)
+	return('|{:>7}'.format(flow_number)+' |' + '{:>5.1f}'.format(speed) + '% '+speed_prefix +'{:>6.3f}'.format(get_pps(speed,size)) + ' Mpps|'+ pps_req_tx_str + pps_tx_str + bcolors.ENDC + pps_sut_tx_str + pps_rx_str +lat_avg_prefix+ '| {:>5.0f}'.format(lat_avg)+' us |'+lat_max_prefix+'{:>5.0f}'.format(lat_max)+' us  | ' + '{:>9.0f}'.format(tx) + ' | {:>9.0f}'.format(rx) + ' | '+ abs_drop_rate_prefix+ '{:>9.0f}'.format(tx-rx) + tot_drop_str +drop_rate_prefix+ '{:>5.2f}'.format(float(tx-rx)/tx)  +bcolors.ENDC+' |' + elapsed_time_str)
+		
+def run_iteration(gensock, sutsock, requested_duration,flow_number,size,speed):
 	r = 0;
 	sleep_time = 2
+	time.sleep(sleep_time)
 	# Sleep_time is needed to be able to do accurate measurements to check for packet loss. We need to make this time large enough so that we do not take the first measurement while some packets from the previous tests migth still be in flight
 	while (r < TST009_MAXr):
-		time.sleep(sleep_time)
-		abs_old_rx, abs_old_non_dp_rx, abs_old_tx, abs_old_non_dp_tx, abs_old_drop, abs_old_tx_fail, abs_old_tsc, abs_tsc_hz = gensock.core_stats(genstatcores,gentasks)
-		abs_old_rx = abs_old_rx - abs_old_non_dp_rx
-		abs_old_tx = abs_old_tx - abs_old_non_dp_tx
+		t1_rx, t1_non_dp_rx, t1_tx, t1_non_dp_tx, t1_drop, t1_tx_fail, t1_tsc, abs_tsc_hz = gensock.core_stats(genstatcores,gentasks)
+		t1_dp_rx = t1_rx - t1_non_dp_rx
+		t1_dp_tx = t1_tx - t1_non_dp_tx
 		gensock.start(gencores)
-		time.sleep(sleep_time)
+		time.sleep(2) ## Needs to be 2 seconds since this the time that PROX uses to refresh the stats. Note that this can be changed in PROX!! Don't do it.
 		if sutsock!='none':
-			old_sut_rx, old_sut_non_dp_rx, old_sut_tx, old_sut_non_dp_tx, old_sut_drop, old_sut_tx_fail, old_sut_tsc, sut_tsc_hz = sutsock.core_stats(sutstatcores,tasks)
-			old_sut_rx = old_sut_rx - old_sut_non_dp_rx
-			old_sut_tx = old_sut_tx - old_sut_non_dp_tx
-		old_rx, old_non_dp_rx, old_tx, old_non_dp_tx, old_drop, old_tx_fail, old_tsc, tsc_hz = gensock.core_stats(genstatcores,gentasks)
+			t2_sut_rx, t2_sut_non_dp_rx, t2_sut_tx, t2_sut_non_dp_tx, t2_sut_drop, t2_sut_tx_fail, t2_sut_tsc, sut_tsc_hz = sutsock.core_stats(sutstatcores,tasks)
+			##t2_sut_rx = t2_sut_rx - t2_sut_non_dp_rx
+			##t2_sut_tx = t2_sut_tx - t2_sut_non_dp_tx
+		t2_rx, t2_non_dp_rx, t2_tx, t2_non_dp_tx, t2_drop, t2_tx_fail, t2_tsc, tsc_hz = gensock.core_stats(genstatcores,gentasks)
 		# Ask PROX to calibrate the bucket size once we have a PROX function to do this.
-		old_rx = old_rx - old_non_dp_rx
-		old_tx = old_tx - old_non_dp_tx
 		# Measure latency statistics per second
-		lat_min, lat_max, lat_avg, used_avg, old_lat_tsc, lat_hz = gensock.lat_stats(latcores)
-		tot_lat_measurement_duration = 0
-		while tot_lat_measurement_duration< float(runtime):
-			time.sleep(0.8)
-			lat_min_sample, lat_max_sample, lat_avg_sample, used_sample, new_lat_tsc, lat_hz = gensock.lat_stats(latcores)
-			single_lat_measurement_duration = (new_lat_tsc - old_lat_tsc) * 1.0 / lat_hz  # time difference between the 2 measurements, expressed in seconds.
-			if single_lat_measurement_duration == 0 :
-				continue # A second has not passed yet in between to lat_stats requests. Hence we need to wait for the next iteration
-			tot_lat_measurement_duration = tot_lat_measurement_duration + single_lat_measurement_duration
-			if lat_min > lat_min_sample:
-				lat_min = lat_min_sample
-			if lat_max < lat_max_sample:
-				lat_max = lat_max_sample
-			lat_avg = lat_avg + lat_avg_sample * single_lat_measurement_duration # Sometimes, There is more than 1 second between 2 lat_stats. Hence we will take the latest measurement
-			used_avg = used_avg + used_sample * single_lat_measurement_duration  # and give it more weigth.
-			old_lat_tsc = new_lat_tsc
-		lat_avg = lat_avg / (tot_lat_measurement_duration + 1)
-		used_avg = used_avg / (tot_lat_measurement_duration + 1)
-		# Get statistics after some execution time
-		new_rx, new_non_dp_rx, new_tx, new_non_dp_tx, new_drop, new_tx_fail, new_tsc, tsc_hz = gensock.core_stats(genstatcores,gentasks)
-		new_rx = new_rx - new_non_dp_rx
-		new_tx = new_tx - new_non_dp_tx
-		if sutsock!='none':
-			new_sut_rx, new_sut_non_dp_rx, new_sut_tx, new_sut_non_dp_tx, new_sut_drop, new_sut_tx_fail, new_sut_tsc, sut_tsc_hz = sutsock.core_stats(sutstatcores,tasks)
-			new_sut_rx = new_sut_rx - new_sut_non_dp_rx
-			new_sut_tx = new_sut_tx - new_sut_non_dp_tx
-		#Stop generating
-		gensock.stop(gencores)
-		time.sleep(sleep_time)
-		abs_new_rx, abs_new_non_dp_rx, abs_new_tx, abs_new_non_dp_tx, abs_new_drop, abs_new_tx_fail, abs_new_tsc, abs_tsc_hz = gensock.core_stats(genstatcores,gentasks)
-		abs_new_rx = abs_new_rx - abs_new_non_dp_rx
-		abs_new_tx = abs_new_tx - abs_new_non_dp_tx
-		drop = new_drop-old_drop # drop is all packets dropped by all tasks. This includes packets dropped at the generator task + packets dropped by the nop task. In steady state, this equals to the number of packets received by this VM
-		rx = new_rx - old_rx     # rx is all packets received by the nop task = all packets received in the gen VM
-		tx = new_tx - old_tx     # tx is all generated packets actually accepted by the interface
-		abs_dropped = (abs_new_tx - abs_old_tx) - (abs_new_rx - abs_old_rx)
-		tsc = new_tsc - old_tsc  # time difference between the 2 measurements, expressed in cycles.
-		pps_req_tx = (tx+drop-rx)*tsc_hz*1.0/(tsc*1000000)
-		pps_tx = tx*tsc_hz*1.0/(tsc*1000000)
-		pps_rx = rx*tsc_hz*1.0/(tsc*1000000)
-		if sutsock!='none':
-			sut_rx = new_sut_rx - old_sut_rx
-			sut_tx = new_sut_tx - old_sut_tx
-			sut_tsc = new_sut_tsc - old_sut_tsc
-			pps_sut_tx = sut_tx*sut_tsc_hz*1.0/(sut_tsc*1000000)
-			pps_sut_tx_str = '{:>9.3f}'.format(pps_sut_tx)
-		else:
-			pps_sut_tx = 0
-			pps_sut_tx_str = 'NO MEAS.'
-		if (tx == 0):
+		lat_min, lat_max, lat_avg, used_avg, t2_lat_tsc, lat_hz = gensock.lat_stats(latcores)
+		tx = t2_tx - t1_tx
+		dp_tx =  tx - (t2_non_dp_tx - t1_non_dp_tx )
+		dp_rx =  t2_rx - t1_rx - (t2_non_dp_rx - t1_non_dp_rx) 
+		tot_dp_drop = dp_tx - dp_rx
+		if tx == 0:
 			log.critical("TX = 0. Test interrupted since no packet has been sent.")
 			raise Exception("TX = 0")
-		abs_tx = abs_new_tx - abs_old_tx
-		drop_rate = 100.0*abs_dropped/abs_tx
+		if dp_tx == 0:
+			log.critical("Only non-dataplane packets (e.g. ARP) sent. Test interrupted since no packet has been sent.")
+			raise Exception("Only non-dataplane packets (e.g. ARP) sent")
+		if test == 'fixed_rate':
+			log.info(report_result(flow_number,size,speed,None,None,None,None,lat_avg,lat_max, dp_tx, dp_rx , None, None))
+		tot_rx = tot_non_dp_rx = tot_tx = tot_non_dp_tx = tot_drop = 0
+		lat_avg = used_avg = 0
+		tot_lat_measurement_duration = float(0)
+		tot_core_measurement_duration = float(0)
+		tot_sut_core_measurement_duration = float(0)
+		tot_sut_rx = tot_sut_non_dp_rx = tot_sut_tx = tot_sut_non_dp_tx = tot_sut_drop = tot_sut_tx_fail = tot_sut_tsc = 0
+		lat_avail = core_avail = sut_avail = False
+		while (tot_core_measurement_duration - float(requested_duration) <= 0.1) or (tot_sut_core_measurement_duration - float(requested_duration) <= 0.1) or (tot_lat_measurement_duration - float(requested_duration) <= 0.1):
+			time.sleep(0.5)
+			lat_min_sample, lat_max_sample, lat_avg_sample, used_sample, t3_lat_tsc, lat_hz = gensock.lat_stats(latcores)
+			single_lat_measurement_duration = (t3_lat_tsc - t2_lat_tsc) * 1.0 / lat_hz  # time difference between the 2 measurements, expressed in seconds.
+			# Get statistics after some execution time
+			if single_lat_measurement_duration != 0:
+				# A second has passed in between to lat_stats requests. Hence we need to process the results
+				tot_lat_measurement_duration = tot_lat_measurement_duration + single_lat_measurement_duration
+				if lat_min > lat_min_sample:
+					lat_min = lat_min_sample
+				if lat_max < lat_max_sample:
+					lat_max = lat_max_sample
+				lat_avg = lat_avg + lat_avg_sample * single_lat_measurement_duration # Sometimes, There is more than 1 second between 2 lat_stats. Hence we will take the latest measurement
+				used_avg = used_avg + used_sample * single_lat_measurement_duration  # and give it more weigth.
+				t2_lat_tsc = t3_lat_tsc
+				lat_avail = True
+			t3_rx, t3_non_dp_rx, t3_tx, t3_non_dp_tx, t3_drop, t3_tx_fail, t3_tsc, tsc_hz = gensock.core_stats(genstatcores,gentasks)
+			single_core_measurement_duration = (t3_tsc - t2_tsc) * 1.0 / tsc_hz  # time difference between the 2 measurements, expressed in seconds.
+			if single_core_measurement_duration!= 0:
+				stored_single_core_measurement_duration = single_core_measurement_duration
+				tot_core_measurement_duration = tot_core_measurement_duration + single_core_measurement_duration
+				delta_rx = t3_rx - t2_rx
+				tot_rx += delta_rx
+				delta_non_dp_rx = t3_non_dp_rx - t2_non_dp_rx
+				tot_non_dp_rx += delta_non_dp_rx
+				delta_tx = t3_tx - t2_tx
+				tot_tx += delta_tx
+				delta_non_dp_tx = t3_non_dp_tx - t2_non_dp_tx
+				tot_non_dp_tx += delta_non_dp_tx
+				delta_dp_tx = delta_tx -delta_non_dp_tx
+				delta_dp_rx = delta_rx -delta_non_dp_rx
+				delta_dp_drop = delta_dp_tx - delta_dp_rx
+				tot_dp_drop += delta_dp_drop
+				delta_drop = t3_drop - t2_drop
+				tot_drop += delta_drop
+				t2_rx, t2_non_dp_rx, t2_tx, t2_non_dp_tx, t2_drop, t2_tx_fail, t2_tsc = t3_rx, t3_non_dp_rx, t3_tx, t3_non_dp_tx, t3_drop, t3_tx_fail, t3_tsc
+				core_avail = True
+			if sutsock!='none':
+				t3_sut_rx, t3_sut_non_dp_rx, t3_sut_tx, t3_sut_non_dp_tx, t3_sut_drop, t3_sut_tx_fail, t3_sut_tsc, sut_tsc_hz = sutsock.core_stats(sutstatcores,tasks)
+				single_sut_core_measurement_duration = (t3_sut_tsc - t2_sut_tsc) * 1.0 / tsc_hz  # time difference between the 2 measurements, expressed in seconds.
+				if single_sut_core_measurement_duration!= 0:
+					stored_single_sut_core_measurement_duration = single_sut_core_measurement_duration
+					tot_sut_core_measurement_duration = tot_sut_core_measurement_duration + single_sut_core_measurement_duration
+					tot_sut_rx += t3_sut_rx - t2_sut_rx
+					tot_sut_non_dp_rx += t3_sut_non_dp_rx - t2_sut_non_dp_rx
+					delta_sut_tx = t3_sut_tx - t2_sut_tx
+					tot_sut_tx += delta_sut_tx
+					delta_sut_non_dp_tx = t3_sut_non_dp_tx - t2_sut_non_dp_tx
+					tot_sut_non_dp_tx += delta_sut_non_dp_tx 
+					t2_sut_rx, t2_sut_non_dp_rx, t2_sut_tx, t2_sut_non_dp_tx, t2_sut_drop, t2_sut_tx_fail, t2_sut_tsc = t3_sut_rx, t3_sut_non_dp_rx, t3_sut_tx, t3_sut_non_dp_tx, t3_sut_drop, t3_sut_tx_fail, t3_sut_tsc
+					sut_avail = True
+			if test == 'fixed_rate':
+				if lat_avail == core_avail == sut_avail == True:
+					lat_avail = core_avail = sut_avail = False
+					pps_req_tx = (delta_tx + delta_drop - delta_rx)/stored_single_core_measurement_duration/1000000
+					pps_tx = delta_tx/stored_single_core_measurement_duration/1000000
+					if sutsock!='none':
+						pps_sut_tx = delta_sut_tx/stored_single_sut_core_measurement_duration/1000000
+					else:
+						pps_sut_tx = None
+					pps_rx = delta_rx/stored_single_core_measurement_duration/1000000
+					log.info(report_result(flow_number,size,speed,pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat_avg_sample,lat_max_sample,delta_dp_tx,delta_dp_rx,tot_dp_drop,stored_single_core_measurement_duration))
+		#Stop generating
+		gensock.stop(gencores)
 		r += 1
-		if ((drop_rate < DROP_RATE_TRESHOLD) or (abs_dropped==DROP_RATE_TRESHOLD ==0) or (abs_dropped > TST009_MAXz)):
-			break
-	return(pps_req_tx,pps_tx,pps_sut_tx_str,pps_rx,lat_avg,lat_max,abs_dropped,(abs_new_tx_fail - abs_old_tx_fail),drop_rate,lat_min,used_avg,r)
+		lat_avg = lat_avg / float(tot_lat_measurement_duration)
+		used_avg = used_avg / float(tot_lat_measurement_duration)
+		t4_tsc = t2_tsc
+		while t4_tsc == t2_tsc:
+			t4_rx, t4_non_dp_rx, t4_tx, t4_non_dp_tx, t4_drop, t4_tx_fail, t4_tsc, abs_tsc_hz = gensock.core_stats(genstatcores,gentasks)
+		if test == 'fixed_rate':
+			t4_lat_tsc = t2_lat_tsc
+			while t4_lat_tsc == t2_lat_tsc:
+				lat_min_sample, lat_max_sample, lat_avg_sample, used_sample, t4_lat_tsc, lat_hz = gensock.lat_stats(latcores)
+			lat_max = lat_max_sample
+			lat_avg = lat_avg_sample
+			delta_rx = t4_rx - t2_rx
+			delta_non_dp_rx = t4_non_dp_rx - t2_non_dp_rx
+			delta_tx = t4_tx - t2_tx
+			delta_non_dp_tx = t4_non_dp_tx - t2_non_dp_tx
+			delta_dp_tx = delta_tx -delta_non_dp_tx
+			delta_dp_rx = delta_rx -delta_non_dp_rx
+			dp_tx = delta_dp_tx
+			dp_rx = delta_dp_rx
+			tot_dp_drop += delta_dp_tx - delta_dp_rx
+			pps_req_tx = None
+			pps_tx = None
+			pps_sut_tx = None
+			pps_rx = None
+			drop_rate = 100.0*(dp_tx-dp_rx)/dp_tx
+			tot_core_measurement_duration = None
+			break ## Not really needed since the while loop will stop when evaluating the value of r
+		else:
+			pps_req_tx = (tot_tx + tot_drop - tot_rx)/tot_core_measurement_duration/1000000.0 # tot_drop is all packets dropped by all tasks. This includes packets dropped at the generator task + packets dropped by the nop task. In steady state, this equals to the number of packets received by this VM
+			pps_tx = tot_tx/tot_core_measurement_duration/1000000.0 # tot_tx is all generated packets actually accepted by the interface
+			pps_rx = tot_rx/tot_core_measurement_duration/1000000.0 # tot_rx is all packets received by the nop task = all packets received in the gen VM
+			if sutsock!='none':
+				pps_sut_tx = tot_sut_tx / tot_sut_core_measurement_duration / 1000000.0
+			else:
+				pps_sut_tx = None
+			dp_tx = (t4_tx - t1_tx) - (t4_non_dp_tx - t1_non_dp_tx)
+			dp_rx = (t4_rx - t1_rx) - (t4_non_dp_rx - t1_non_dp_rx)
+			tot_dp_drop = dp_tx - dp_rx
+			drop_rate = 100.0*tot_dp_drop/dp_tx
+			if ((drop_rate < DROP_RATE_TRESHOLD) or (tot_dp_drop == DROP_RATE_TRESHOLD ==0) or (tot_dp_drop > TST009_MAXz)):
+				break
+	return(pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat_avg,lat_max,dp_tx,dp_rx,tot_dp_drop,(t4_tx_fail - t1_tx_fail),drop_rate,lat_min,used_avg,r,tot_core_measurement_duration)
 
 def new_speed(speed,size,success):
-	if TST009:
+	if test == 'fixed_rate':
+		return (STARTSPEED)
+	elif TST009:
 		global TST009_m
 		global TST009_L
 		global TST009_R
@@ -312,7 +408,9 @@ def new_speed(speed,size,success):
 		return ((minspeed + maxspeed)/2.0)
 
 def get_start_speed_and_init(size):
-	if TST009:
+	if test == 'fixed_rate':
+		return (STARTSPEED)
+	elif TST009:
 		global TST009_L
 		global TST009_R
 		global TST009_m
@@ -327,8 +425,10 @@ def get_start_speed_and_init(size):
 		maxspeed = STARTSPEED 
 		return (STARTSPEED)
 
-def resolution_achieved(size):
-	if TST009:
+def resolution_achieved():
+	if test == 'fixed_rate':
+		return (True)
+	elif TST009:
 		return (TST009_L == TST009_R)
 	else:
 		return ((maxspeed - minspeed) <= ACCURACY)
@@ -345,9 +445,11 @@ def get_speed(packet_speed,size):
 	# return speed in Gb/s
 	return (packet_speed / 1000.0 * (8*(size+24)))
 
-
 def run_flow_size_test(gensock,sutsock):
-	fieldnames = ['Flows','PacketSize','Gbps','Mpps','AvgLatency','MaxLatency','PacketsDropped','PacketDropRate']
+	global fieldnames
+	global writer
+	#fieldnames = ['Flows','PacketSize','Gbps','Mpps','AvgLatency','MaxLatency','PacketsDropped','PacketDropRate']
+	fieldnames = ['Flows','PacketSize','RequestedPPS','GeneratedPPS','SentPPS','ForwardedPPS','ReceivedPPS','AvgLatencyUSEC','MaxLatencyUSEC','Sent','Received','Lost','LostTotal']
 	writer = csv.DictWriter(data_csv_file, fieldnames=fieldnames)
 	writer.writeheader()
 	gensock.start(latcores)
@@ -356,12 +458,12 @@ def run_flow_size_test(gensock,sutsock):
 		gensock.set_size(gencores,0,size) # This is setting the frame size
 		gensock.set_value(gencores,0,16,(size-14),2) # 18 is the difference between the frame size and IP size = size of (MAC addresses, ethertype and FCS)
 		gensock.set_value(gencores,0,38,(size-34),2) # 38 is the difference between the frame size and UDP size = 18 + size of IP header (=20)
-		# This will only work when using sending UDP packets. For different protocls and ehternet types, we would need a different calculation
-		log.info("+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------+")
-		log.info("| UDP, "+ '{:>5}'.format(size+4) +" bytes, different number of flows by randomizing SRC & DST UDP port                                                                                           |")
-		log.info("+--------+--------------------+----------------+----------------+----------------+------------------------+----------------+----------------+----------------+------------+")
-		log.info("| Flows  |  Speed requested   | core generated | Sent by Gen NIC| Forward by SUT |      core received     |  Avg. Latency  |  Max. Latency  |  Packets Lost  | Loss Ratio |")
-		log.info("+--------+--------------------+----------------+----------------+----------------+------------------------+----------------+----------------+----------------+------------+")
+		# This will only work when using sending UDP packets. For different protocls and ethernet types, we would need a different calculation
+		log.info("+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+")
+		log.info("| UDP, "+ '{:>5}'.format(size+4) +" bytes, different number of flows by randomizing SRC & DST UDP port                                                                                                   |")
+		log.info("+--------+------------------+-------------+-------------+-------------+------------------------+----------+----------+-----------+-----------+-----------+-----------+-------+----+")
+		log.info("| Flows  | Speed requested  | Gen by core | Sent by NIC | Fwrd by SUT | Rec. by core           | Avg. Lat.| Max. Lat.|   Sent    |  Received |    Lost   | Total Lost|L.Ratio|Time|")
+		log.info("+--------+------------------+-------------+-------------+-------------+------------------------+----------+----------+-----------+-----------+-----------+-----------+-------+----+")
 		for flow_number in flow_size_list:
 			attempts = 0
 			gensock.reset_stats()
@@ -370,18 +472,18 @@ def run_flow_size_test(gensock,sutsock):
 			source_port,destination_port = flows[flow_number]
 			gensock.set_random(gencores,0,34,source_port,2)
 			gensock.set_random(gencores,0,36,destination_port,2)
-			endpps_sut_tx_str = 'NO_RESULTS'
+			endspeed = None
 			speed = get_start_speed_and_init(size)
 			while True:
 				attempts += 1
-				endwarning =''
+				endwarning = False
 				print(str(flow_number)+' flows: Measurement ongoing at speed: ' + str(round(speed,2)) + '%      ',end='\r')
 				sys.stdout.flush()
 				# Start generating packets at requested speed (in % of a 10Gb/s link)
 				gensock.speed(speed / len(gencores) / len (gentasks), gencores, gentasks)
-				time.sleep(1)
+				##time.sleep(1)
 				# Get statistics now that the generation is stable and initial ARP messages are dealt with
-				pps_req_tx,pps_tx,pps_sut_tx_str,pps_rx,lat_avg,lat_max, abs_dropped, abs_tx_fail, drop_rate, lat_min, lat_used, r = run_iteration(gensock,sutsock)
+				pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat_avg,lat_max, abs_tx,abs_rx,abs_dropped, abs_tx_fail, drop_rate, lat_min, lat_used, r, actual_duration = run_iteration(gensock,sutsock,float(runtime),flow_number,size,speed)
 				if r > 1:
 					retry_warning = bcolors.WARNING + ' {:1} retries needed'.format(r) +  bcolors.ENDC
 				else:
@@ -395,7 +497,21 @@ def run_flow_size_test(gensock,sutsock):
 				# The following if statement is testing if we pass the success criteria of a certain drop rate, average latenecy and maximum latency below the threshold
 				# The drop rate success can be achieved in 2 ways: either the drop rate is below a treshold, either we want that no packet has been lost during the test
 				# This can be specified by putting 0 in the .test file
-				if ((drop_rate < DROP_RATE_TRESHOLD) or (abs_dropped==DROP_RATE_TRESHOLD ==0)) and (lat_avg< LAT_AVG_TRESHOLD) and (lat_max < LAT_MAX_TRESHOLD):
+				if test == 'fixed_rate':
+					endspeed = speed
+					endpps_req_tx = None
+					endpps_tx = None
+					endpps_sut_tx = None
+					endpps_rx = None
+					endlat_avg = lat_avg 
+					endlat_max = lat_max 
+					endabs_dropped = abs_dropped
+					enddrop_rate = drop_rate
+					endabs_tx = abs_tx
+					endabs_rx = abs_rx
+					success = True
+					speed_prefix = lat_avg_prefix = lat_max_prefix = abs_drop_rate_prefix = drop_rate_prefix = bcolors.ENDC
+				elif ((drop_rate < DROP_RATE_TRESHOLD) or (abs_dropped==DROP_RATE_TRESHOLD ==0)) and (lat_avg< LAT_AVG_TRESHOLD) and (lat_max < LAT_MAX_TRESHOLD):
 					lat_avg_prefix = bcolors.ENDC
 					lat_max_prefix = bcolors.ENDC
 					abs_drop_rate_prefix = bcolors.ENDC
@@ -413,18 +529,22 @@ def run_flow_size_test(gensock,sutsock):
 					endspeed_prefix = speed_prefix
 					endpps_req_tx = pps_req_tx
 					endpps_tx = pps_tx
-					endpps_sut_tx_str = pps_sut_tx_str
+					endpps_sut_tx = pps_sut_tx
 					endpps_rx = pps_rx
 					endlat_avg = lat_avg 
 					endlat_max = lat_max 
-					endabs_dropped = abs_dropped
+					##endabs_dropped = abs_dropped
+					endabs_dropped = None
 					enddrop_rate = drop_rate
+					endabs_tx = abs_tx
+					endabs_rx = abs_rx
 					if lat_warning or gen_warning or retry_warning:
 						endwarning = '|        | {:167.167} |'.format(retry_warning + lat_warning + gen_warning)
 					success = True
-					success_message='%  | SUCCESS'
+					success_message=' SUCCESS'
+					log.debug(report_result(attempts,size,speed,pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat_avg,lat_max,abs_tx,abs_rx,abs_dropped,actual_duration,speed_prefix,lat_avg_prefix,lat_max_prefix,abs_drop_rate_prefix,drop_rate_prefix)+ success_message + retry_warning + lat_warning + gen_warning)
 				else:
-					success_message='%  | FAILED'
+					success_message=' FAILED'
 					gen_warning = ''
 					abs_drop_rate_prefix = bcolors.ENDC
 					if ((abs_dropped>0) and (DROP_RATE_TRESHOLD ==0)):
@@ -446,159 +566,23 @@ def run_flow_size_test(gensock,sutsock):
 					else:
 						speed_prefix = bcolors.FAIL
 					success = False 
-				log.debug('|step{:>3}'.format(str(attempts))+" | " + '{:>5.1f}'.format(speed) + '% '+speed_prefix +'{:>6.3f}'.format(get_pps(speed,size)) + ' Mpps | '+ '{:>9.3f}'.format(pps_req_tx)+' Mpps | ' + '{:>9.3f}'.format(pps_tx) +' Mpps | '+ bcolors.ENDC  + '{:>9}'.format(pps_sut_tx_str) +' Mpps | '+bcolors.OKBLUE + '{:>4.1f}'.format(get_speed(pps_rx,size)) + 'Gb/s{:>9.3f}'.format(pps_rx)+' Mpps'+bcolors.ENDC+' | '+lat_avg_prefix+ '{:>9.0f}'.format(lat_avg)+' us   | '+lat_max_prefix+ '{:>9.0f}'.format(lat_max)+' us   | '+ abs_drop_rate_prefix + '{:>14d}'.format(abs_dropped)+drop_rate_prefix+ ' |''{:>9.2f}'.format(drop_rate)+bcolors.ENDC+ success_message + retry_warning + lat_warning + gen_warning)
-				if resolution_achieved(size):
+					log.debug(report_result(attempts,size,speed,pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat_avg,lat_max,abs_tx,abs_rx,abs_dropped,actual_duration,speed_prefix,lat_avg_prefix,lat_max_prefix,abs_drop_rate_prefix,drop_rate_prefix)+ success_message + retry_warning + lat_warning + gen_warning)
+				speed = new_speed(speed, size, success)
+				if resolution_achieved():
 					break
-				else:
-					speed = new_speed(speed, size, success)
-			if endpps_sut_tx_str !=  'NO_RESULTS':
-				log.info('|{:>7}'.format(str(flow_number))+" | " + '{:>5.1f}'.format(endspeed) + '% ' + endspeed_prefix + '{:>6.3f}'.format(get_pps(endspeed,size)) + ' Mpps | '+ '{:>9.3f}'.format(endpps_req_tx)+ ' Mpps | '+ '{:>9.3f}'.format(endpps_tx) + ' Mpps | ' + bcolors.ENDC + '{:>9}'.format(endpps_sut_tx_str) +' Mpps | '+bcolors.OKBLUE + '{:>4.1f}'.format(get_speed(endpps_rx,size)) + 'Gb/s{:>9.3f}'.format(endpps_rx)+' Mpps'+bcolors.ENDC+' | '+ '{:>9.0f}'.format(endlat_avg)+' us   | '+ '{:>9.0f}'.format(endlat_max)+' us   | '+ '{:>14d}'.format(endabs_dropped)+ ' |'+'{:>9.2f}'.format(enddrop_rate)+ '%  |')
+			if endspeed !=  None:
+				log.info(report_result(flow_number,size,endspeed,endpps_req_tx,endpps_tx,endpps_sut_tx,endpps_rx,endlat_avg,endlat_max,endabs_tx,endabs_rx,endabs_dropped,actual_duration,speed_prefix,lat_avg_prefix,lat_max_prefix,abs_drop_rate_prefix,drop_rate_prefix))
 				if endwarning:
 					log.info (endwarning)
-				log.info("+--------+--------------------+----------------+----------------+----------------+------------------------+----------------+----------------+----------------+------------+")
-				writer.writerow({'Flows':flow_number,'PacketSize':(size+4),'Gbps':get_speed(endpps_rx,size),'Mpps':endpps_rx,'AvgLatency':endlat_avg,'MaxLatency':endlat_max,'PacketsDropped':endabs_dropped,'PacketDropRate':enddrop_rate})
+				log.info("+--------+------------------+-------------+-------------+-------------+------------------------+----------+----------+-----------+-----------+-----------+-----------+-------+----+")
+				writer.writerow({'Flows':flow_number,'PacketSize':(size+4),'RequestedPPS':get_pps(endspeed,size),'GeneratedPPS':endpps_req_tx,'SentPPS':endpps_tx,'ForwardedPPS':endpps_sut_tx,'ReceivedPPS':endpps_rx,'AvgLatencyUSEC':endlat_avg,'MaxLatencyUSEC':endlat_max,'Sent':endabs_tx,'Received':endabs_rx,'Lost':endabs_dropped,'LostTotal':endabs_dropped})
 				if PushGateway:
 					URL     = PushGateway + '/metrics/job/' + TestName + '/instance/' + env
-					DATA = 'Flows {}\nPacketSize {}\nGbps {}\nMpps {}\nAvgLatency {}\nMaxLatency {}\nPacketsDropped {}\nPacketDropRate {}\n'.format(flow_number,size+4,get_speed(endpps_rx,size),endpps_rx,endlat_avg,endlat_max,endabs_dropped,enddrop_rate)
+					DATA = 'Flows {}\nPacketSize {}\nRequestedPPS {}\nGeneratedPPS {}\nSentPPS {}\nForwardedPPS {}\nReceivedPPS {}\nAvgLatencyUSEC {}\nMaxLatencyUSEC {}\nSent {}\nReceived {}\nLost {}\nLostTotal {}\n'.format(flow_number,size+4,get_pps(endspeed,size),endpps_req_tx,endpps_tx,endpps_sut_tx,endpps_rx,endlat_avg,endlat_max,endabs_tx,endabs_rx,endabs_Dropped,endabs_dropped)
 					HEADERS = {'X-Requested-With': 'Python requests', 'Content-type': 'text/xml'}
 					response = requests.post(url=URL, data=DATA,headers=HEADERS)
 			else:
 				log.info('|{:>7}'.format(str(flow_number))+" | Speed 0 or close to 0")
-	gensock.stop(latcores)
-
-def run_fixed_rate(gensock,sutsock):
-	fieldnames = ['Flows','PacketSize','RequestedPPS','GeneratedPPS','SentPPS','ForwardedPPS','ReceivedPPS','AvgLatencyUSEC','MaxLatencyUSEC','Sent','Received','Lost','LostTotal']
-	writer = csv.DictWriter(data_csv_file, fieldnames=fieldnames)
-	writer.writeheader()
-	gensock.start(latcores)
-	sleep_time=3
-	for size in packet_size_list:
-		size = size-4
-		gensock.set_size(gencores,0,size) # This is setting the frame size
-		gensock.set_value(gencores,0,16,(size-14),2) # 18 is the difference between the frame size and IP size = size of (MAC addresses, ethertype and FCS)
-		gensock.set_value(gencores,0,38,(size-34),2) # 38 is the difference between the frame size and UDP size = 18 + size of IP header (=20)
-		# This will only work when using sending UDP packets. For different protocols and ehternet types, we would need a different calculation
-		log.info("+--------------------------------------------------------------------------------------------------------------------------------------------------------------+")
-		log.info("| UDP, "+ '{:>5}'.format(size+4) +" bytes, different number of flows by randomizing SRC & DST UDP port                                                                                |")
-		log.info("+--------+------------------+-------------+-------------+-------------+-------------+-------------+-------------+-----------+-----------+---------+------------+")
-		log.info("| Flows  | Speed requested  | Gen by core | Sent by NIC | Fwrd by SUT | Rec. by core| Avg. Latency| Max. Latency|   Sent    |  Received |  Lost   | Total Lost |")
-		log.info("+--------+------------------+-------------+-------------+-------------+-------------+-------------+-------------+-----------+-----------+---------+------------+")
-		for flow_number in flow_size_list:
-			time.sleep(sleep_time)
-			gensock.reset_stats()
-			if sutsock!='none':
-				sutsock.reset_stats()
-			source_port,destination_port = flows[flow_number]
-			gensock.set_random(gencores,0,34,source_port,2)
-			gensock.set_random(gencores,0,36,destination_port,2)
-			endpps_sut_tx_str = 'NO_RESULTS'
-			speed = STARTSPEED
-			# Start generating packets at requested speed (in % of a 10Gb/s link)
-			gensock.speed(speed / len(gencores) / len (gentasks), gencores, gentasks)
-			duration = float(runtime)
-			first = 1
-			tot_drop = 0
-			if sutsock!='none':
-				old_sut_rx, old_sut_non_dp_rx, old_sut_tx, old_sut_non_dp_tx, old_sut_drop, old_sut_tx_fail, old_sut_tsc, sut_tsc_hz = sutsock.core_stats(sutstatcores,tasks)
-				old_sut_rx = old_sut_rx - old_sut_non_dp_rx
-				old_sut_tx = old_sut_tx - old_sut_non_dp_tx
-			old_rx, old_non_dp_rx, old_tx, old_non_dp_tx, old_drop, old_tx_fail, old_tsc, tsc_hz = gensock.core_stats(genstatcores,gentasks)
-			old_rx = old_rx - old_non_dp_rx
-			old_tx = old_tx - old_non_dp_tx
-			gensock.start(gencores)
-			while (duration > 0):
-				time.sleep(0.5)
-				lat_min, lat_max, lat_avg, lat_used = gensock.lat_stats(latcores)
-				if lat_used < 0.95:
-					lat_warning = bcolors.FAIL + ' Potential latency accuracy problem: {:>3.0f}%'.format(lat_used*100) +  bcolors.ENDC
-				else:
-					lat_warning = ''
-				# Get statistics after some execution time
-				new_rx, new_non_dp_rx, new_tx, new_non_dp_tx, new_drop, new_tx_fail, new_tsc, tsc_hz = gensock.core_stats(genstatcores,gentasks)
-				new_rx = new_rx - new_non_dp_rx
-				new_tx = new_tx - new_non_dp_tx
-				if sutsock!='none':
-					new_sut_rx, new_sut_non_dp_rx, new_sut_tx, new_sut_non_dp_tx, new_sut_drop, new_sut_tx_fail, new_sut_tsc, sut_tsc_hz = sutsock.core_stats(sutstatcores,tasks)
-					new_sut_rx = new_sut_rx - new_sut_non_dp_rx
-					new_sut_tx = new_sut_tx - new_sut_non_dp_tx
-					drop = new_drop-old_drop # drop is all packets dropped by all tasks. This includes packets dropped at the generator task + packets dropped by the nop task. In steady state, this equals to the number of packets received by this VM
-					rx = new_rx - old_rx     # rx is all packets received by the nop task = all packets received in the gen VM
-					tx = new_tx - old_tx     # tx is all generated packets actually accepted by the interface
-					tsc = new_tsc - old_tsc  # time difference between the 2 measurements, expressed in cycles.
-				if tsc == 0 :
-					continue
-				if sutsock!='none':
-					sut_rx = new_sut_rx - old_sut_rx
-					sut_tx = new_sut_tx - old_sut_tx
-					sut_tsc = new_sut_tsc - old_sut_tsc
-					if sut_tsc == 0 :
-						continue
-				duration = duration - 1
-				old_drop = new_drop
-				old_rx = new_rx
-				old_tx = new_tx
-				old_tsc = new_tsc
-				pps_req_tx = (tx+drop-rx)*tsc_hz*1.0/(tsc*1000000)
-				pps_tx = tx*tsc_hz*1.0/(tsc*1000000)
-				pps_rx = rx*tsc_hz*1.0/(tsc*1000000)
-				if sutsock!='none':
-					old_sut_tx = new_sut_tx
-					old_sut_rx = new_sut_rx
-					old_sut_tsc= new_sut_tsc
-					pps_sut_tx = sut_tx*sut_tsc_hz*1.0/(sut_tsc*1000000)
-					pps_sut_tx_str = '{:>7.3f}'.format(pps_sut_tx)
-				else:
-					pps_sut_tx = 0
-					pps_sut_tx_str = 'NO MEAS.'
-				if (tx == 0):
-					log.critical("TX = 0. Test interrupted since no packet has been sent.")
-					raise Exception("TX = 0")
-				tot_drop = tot_drop + tx - rx
-
-				if pps_sut_tx_str !=  'NO_RESULTS':
-					# First second mpps are not valid as there is no alignement between time the generator is started and per seconds stats
-					if (first):
-						log.info('|{:>7}'.format(flow_number)+" |" + '{:>5.1f}'.format(speed) + '% ' +'{:>6.3f}'.format(get_pps(speed,size)) + ' Mpps|'+'             |' +'             |'  +'             |'+ '             |'+ '{:>8.0f}'.format(lat_avg)+' us  |'+'{:>8.0f}'.format(lat_max)+' us  | ' + '{:>9.0f}'.format(tx) + ' | '+ '{:>9.0f}'.format(rx) + ' | '+ '{:>7.0f}'.format(tx-rx) + ' | '+'{:>7.0f}'.format(tot_drop) +'    |'+lat_warning)
-					else:
-						log.info('|{:>7}'.format(flow_number)+" |" + '{:>5.1f}'.format(speed) + '% ' +'{:>6.3f}'.format(get_pps(speed,size)) + ' Mpps|'+ '{:>7.3f}'.format(pps_req_tx)+' Mpps |'+ '{:>7.3f}'.format(pps_tx) +' Mpps |' + '{:>7}'.format(pps_sut_tx_str) +' Mpps |'+ '{:>7.3f}'.format(pps_rx)+' Mpps |'+ '{:>8.0f}'.format(lat_avg)+' us  |'+'{:>8.0f}'.format(lat_max)+' us  | ' + '{:>9.0f}'.format(tx) + ' | '+ '{:>9.0f}'.format(rx) + ' | '+ '{:>7.0f}'.format(tx-rx) + ' | '+ '{:>7.0f}'.format(tot_drop) +'    |'+lat_warning)
-						writer.writerow({'Flows':flow_number,'PacketSize':(size+4),'RequestedPPS':get_pps(speed,size),'GeneratedPPS':pps_req_tx,'SentPPS':pps_tx,'ForwardedPPS':pps_sut_tx,'ReceivedPPS':pps_rx,'AvgLatencyUSEC':lat_avg,'MaxLatencyUSEC':lat_max,'Sent':tx,'Received':rx,'Lost':(tx-rx),'LostTotal':tot_drop})
-						if PushGateway:
-							URL     = PushGateway + '/metrics/job/' + TestName + '/instance/' + env
-							DATA = 'Flows {}\nPacketSize {}\nRequestedPPS {}\nGeneratedPPS {}\nSentPPS {}\nForwardedPPS {}\nReceivedPPS {}\nAvgLatencyUSEC {}\nMaxLatencyUSEC {}\nSent {}\nReceived {}\nLost {}\nLostTotal {}\n'.format(flow_number,size+4,get_pps(speed,size),pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat_avg,lat_max,tx,rx,(tx-rx),tot_drop)
-							HEADERS = {'X-Requested-With': 'Python requests', 'Content-type': 'text/xml'}
-							response = requests.post(url=URL, data=DATA,headers=HEADERS)
-				else:
-					log.debug('|{:>7} | Speed 0 or close to 0'.format(str(size)))
-				first = 0
-				if (duration <= 0):
-					#Stop generating
-					gensock.stop(gencores)
-					time.sleep(sleep_time)
-					lat_min, lat_max, lat_avg, lat_used = gensock.lat_stats(latcores)
-					if lat_used < 0.95:
-						lat_warning = bcolors.FAIL + ' Potential latency accuracy problem: {:>3.0f}%'.format(lat_used*100) +  bcolors.ENDC
-					else:
-						lat_warning = ''
-					# Get statistics after some execution time
-					new_rx, new_non_dp_rx, new_tx, new_non_dp_tx, new_drop, new_tx_fail, new_tsc, tsc_hz = gensock.core_stats(genstatcores,gentasks)
-					new_rx = new_rx - new_non_dp_rx
-					new_tx = new_tx - new_non_dp_tx
-					if sutsock!='none':
-						new_sut_rx, new_sut_non_dp_rx, new_sut_tx, new_sut_non_dp_tx, new_sut_drop, new_sut_tx_fail, new_sut_tsc, sut_tsc_hz = sutsock.core_stats(sutstatcores,tasks)
-						new_sut_rx = new_sut_rx - new_sut_non_dp_rx
-						new_sut_tx = new_sut_tx - new_sut_non_dp_tx
-					drop = new_drop-old_drop # drop is all packets dropped by all tasks. This includes packets dropped at the generator task + packets dropped by the nop task. In steady state, this equals to the number of packets received by this VM
-					rx = new_rx - old_rx     # rx is all packets received by the nop task = all packets received in the gen VM
-					tx = new_tx - old_tx     # tx is all generated packets actually accepted by the interface
-					tsc = new_tsc - old_tsc  # time difference between the 2 measurements, expressed in cycles.
-					tot_drop = tot_drop + tx - rx
-					if sutsock!='none':
-						sut_rx = new_sut_rx - old_sut_rx
-						sut_tx = new_sut_tx - old_sut_tx
-						sut_tsc = new_sut_tsc - old_sut_tsc
-					if pps_sut_tx_str !=  'NO_RESULTS':
-						log.info('|{:>7}'.format(flow_number)+" |" + '{:>5.1f}'.format(speed) + '% ' +'{:>6.3f}'.format(get_pps(speed,size)) + ' Mpps|'+'             |' +'             |'  +'             |'+ '             |'+ '{:>8.0f}'.format(lat_avg)+' us  |'+'{:>8.0f}'.format(lat_max)+' us  | ' + '{:>9.0f}'.format(tx) + ' | '+ '{:>9.0f}'.format(rx) + ' | '+ '{:>7.0f}'.format(tx-rx) + ' | '+ '{:>7.0f}'.format(tot_drop) +'    |'+lat_warning)
-			log.info("+--------+------------------+-------------+-------------+-------------+-------------+-------------+-------------+-----------+-----------+---------+------------+")
 	gensock.stop(latcores)
 
 def run_core_stats(socks):
@@ -769,7 +753,7 @@ def run_impairtest(gensock,sutsock):
 		sys.stdout.flush()
 		time.sleep(1)
 		# Get statistics now that the generation is stable and NO ARP messages any more
-		pps_req_tx,pps_tx,pps_sut_tx_str,pps_rx,lat_avg,lat_max, abs_dropped, abs_tx_fail, abs_tx, lat_min, lat_used, r = run_iteration(gensock,sutsock)
+		pps_req_tx,pps_tx,pps_sut_tx_str,pps_rx,lat_avg,lat_max, abs_dropped, abs_tx_fail, abs_tx, lat_min, lat_used, r, actual_duration = run_iteration(gensock,sutsock,runtime)
 		drop_rate = 100.0*abs_dropped/abs_tx
 		if lat_used < 0.95:
 			lat_warning = bcolors.FAIL + ' Potential latency accuracy problem: {:>3.0f}%'.format(lat_used*100) +  bcolors.ENDC
@@ -802,6 +786,7 @@ def run_warmuptest(gensock):
 	time.sleep(WARMUPTIME)
 	gensock.stop(genstatcores)
 	gensock.set_value(gencores,0,56,50,1)
+	time.sleep(WARMUPTIME)
 
 # To generate a desired number of flows, PROX will randomize the bits in source and destination ports, as specified by the bit masks in the flows variable. 
 flows={\
@@ -1024,6 +1009,26 @@ def get_BinarySearchParams() :
 	TST009_MAXz = inf
 	TST009 = False
 	
+def get_FixedRateParams() :
+	global  DROP_RATE_TRESHOLD
+	global  LAT_AVG_TRESHOLD
+	global  LAT_MAX_TRESHOLD
+	global  flow_size_list
+	global  packet_size_list
+	global	STARTSPEED
+	global  TST009
+	global  TST009_MAXr
+	global  TST009_MAXz
+	DROP_RATE_TRESHOLD = inf
+	LAT_AVG_TRESHOLD = inf
+	LAT_MAX_TRESHOLD = inf
+	TST009_MAXr = 1
+	TST009_MAXz = inf
+	TST009 = False
+	packet_size_list = ast.literal_eval(testconfig.get('test%d'%test_nr, 'packetsizes'))
+	flow_size_list = ast.literal_eval(testconfig.get('test%d'%test_nr, 'flows'))
+	STARTSPEED = float(testconfig.get('test%d'%test_nr, 'speed'))
+	
 def get_TST009SearchParams() :
 	global  DROP_RATE_TRESHOLD
 	global  LAT_AVG_TRESHOLD
@@ -1077,10 +1082,8 @@ for test_nr in range(1, int(number_of_tests)+1):
 		flow_size_list = ast.literal_eval(testconfig.get('test%d'%test_nr, 'flows'))
 		run_flow_size_test(socks[gensock_index],socks[sutsock_index])
 	elif test == 'fixed_rate':
-		packet_size_list = ast.literal_eval(testconfig.get('test%d'%test_nr, 'packetsizes'))
-		flow_size_list = ast.literal_eval(testconfig.get('test%d'%test_nr, 'flows'))
-		STARTSPEED = float(testconfig.get('test%d'%test_nr, 'speed'))
-		run_fixed_rate(socks[gensock_index],socks[sutsock_index])
+		get_FixedRateParams()
+		run_flow_size_test(socks[gensock_index],socks[sutsock_index])
 	elif test == 'corestats':
 		run_core_stats(socks)
 	elif test == 'portstats':

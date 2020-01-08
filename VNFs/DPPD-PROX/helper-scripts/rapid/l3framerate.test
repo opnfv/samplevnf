@@ -1,5 +1,5 @@
 ##
-## Copyright (c) 2010-2019 Intel Corporation
+## Copyright (c) 2010-2020 Intel Corporation
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
 ## you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 [DEFAULT]
 name = L3FrameRateTesting
-number_of_tests = 1
+number_of_tests = 2
 total_number_of_test_machines = 2
 prox_socket = true
 prox_launch_exit = true
@@ -35,6 +35,13 @@ config_file = swap.cfg
 cores = [1]
 
 [test1]
+test=warmuptest
+flowsize=64
+packetsize=64
+warmupspeed=1
+warmuptime=2
+
+[test2]
 test=fixed_rate
 packetsizes=[64,128]
 # the number of flows in the list need to be powers of 2, max 2^20
