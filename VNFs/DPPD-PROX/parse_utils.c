@@ -27,13 +27,13 @@
 
 #include "quit.h"
 #include "cfgfile.h"
-#include "ip6_addr.h"
 #include "parse_utils.h"
 #include "prox_globals.h"
 #include "prox_cfg.h"
 #include "log.h"
 #include "prox_lua.h"
 #include "prox_lua_types.h"
+#include "prox_ipv6.h"
 #include "prox_compat.h"
 
 #define MAX_NB_PORT_NAMES PROX_MAX_PORTS

@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -49,6 +49,7 @@ struct lcore_cfg;
 #define	TASK_ARG_DO_NOT_SET_DST_MAC 0x400
 #define	TASK_ARG_HW_SRC_MAC 	0x800
 #define TASK_ARG_L3		0x1000
+#define TASK_ARG_NDP		0x2000
 
 #define PROX_MODE_LEN	32
 
@@ -126,12 +127,15 @@ struct task_args {
 	uint8_t                tot_rxrings;
 	uint8_t                nb_rxports;
 	uint32_t               byte_offset;
+	uint32_t               ipv6_router;
 	uint32_t               gateway_ipv4;
 	uint32_t               local_ipv4;
 	uint32_t               remote_ipv4;
-	uint32_t               arp_timeout;
-	uint32_t               arp_update_time;
+	uint32_t               reachable_timeout;
+	uint32_t               arp_ndp_retransmit_timeout;
 	struct ipv6_addr       local_ipv6;    /* For IPv6 Tunnel, it's the local tunnel endpoint address */
+	struct ipv6_addr       global_ipv6;
+	struct ipv6_addr       router_prefix;
 	struct rte_ring        *rx_rings[MAX_RINGS_PER_TASK];
 	struct rte_ring        *tx_rings[MAX_RINGS_PER_TASK];
 	struct rte_ring        *ctrl_plane_ring;

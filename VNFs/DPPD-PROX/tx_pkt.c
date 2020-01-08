@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@
 #include "log.h"
 #include "mbuf_utils.h"
 #include "handle_master.h"
+#include "defines.h"
 
 static void buf_pkt_single(struct task_base *tbase, struct rte_mbuf *mbuf, const uint8_t out)
 {
@@ -50,6 +51,70 @@ static inline void buf_pkt_all(struct task_base *tbase, struct rte_mbuf **mbufs,
 }
 #define MAX_PMD_TX 32
 
+void store_packet(struct task_base *tbase, struct rte_mbuf *mbuf)
+{
+	// If buffer is full, drop the first mbuf
+	if (tbase->aux->mbuf)
+		tx_drop(tbase->aux->mbuf);
+	tbase->aux->mbuf = mbuf;
+}
+
+int tx_pkt_ndp(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts, uint8_t *out)
+{
+	// TODO NDP
+	struct ipv6_addr ip_dst;
+	int first = 0, ret, ok = 0, rc;
+	const struct port_queue *port_queue = &tbase->tx_params_hw.tx_port_queue[0];
+	struct rte_mbuf *mbuf = NULL;       // used when one need to send both an ARP and a mbuf
+
+	for (int j = 0; j < n_pkts; j++) {
+		if ((out) && (out[j] >= OUT_HANDLED))
+			continue;
+		if (unlikely((rc = write_ip6_dst_mac(tbase, mbufs[j], &ip_dst)) != SEND_MBUF)) {
+			if (j - first) {
+				ret = tbase->aux->tx_pkt_l2(tbase, mbufs + first, j - first, out);
+				ok += ret;
+			}
+			first = j + 1;
+			switch(rc) {
+			case SEND_ARP_ND:
+				// Original mbuf (packet) is stored to be sent later -> need to allocate new mbuf
+				ret = rte_mempool_get(tbase->l3.arp_nd_pool, (void **)&mbuf);
+				if (likely(ret == 0))   {
+					store_packet(tbase, mbufs[j]);
+					mbuf->port = tbase->l3.reachable_port_id;
+					tx_ring_cti6(tbase, tbase->l3.ctrl_plane_ring, IP6_REQ_MAC_TO_MASTER, mbuf, tbase->l3.core_id, tbase->l3.task_id, &ip_dst);
+				} else {
+					plog_err("Failed to get a mbuf from arp/nd mempool\n");
+					tx_drop(mbufs[j]);
+					TASK_STATS_ADD_DROP_DISCARD(&tbase->aux->stats, 1);
+				}
+				break;
+			case SEND_MBUF_AND_ARP_ND:
+				// We send the mbuf and an ND - we need to allocate another mbuf for ND
+				ret = rte_mempool_get(tbase->l3.arp_nd_pool, (void **)&mbuf);
+				if (likely(ret == 0))   {
+					mbuf->port = tbase->l3.reachable_port_id;
+					tx_ring_cti6(tbase, tbase->l3.ctrl_plane_ring, IP6_REQ_MAC_TO_MASTER, mbuf, tbase->l3.core_id, tbase->l3.task_id, &ip_dst);
+				} else {
+					plog_err("Failed to get a mbuf from arp/nd mempool\n");
+					// We still send the initial mbuf
+				}
+				ret = tbase->aux->tx_pkt_l2(tbase, mbufs + j, 1, out);
+				break;
+			case DROP_MBUF:
+				tx_drop(mbufs[j]);
+				TASK_STATS_ADD_DROP_DISCARD(&tbase->aux->stats, 1);
+				break;
+			}
+		}
+	}
+	if (n_pkts - first) {
+		ret = tbase->aux->tx_pkt_l2(tbase, mbufs + first, n_pkts - first, out);
+		ok += ret;
+	}
+	return ok;
+}
 int tx_pkt_l3(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts, uint8_t *out)
 {
 	uint32_t ip_dst;
@@ -67,17 +132,17 @@ int tx_pkt_l3(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts,
 			}
 			first = j + 1;
 			switch(rc) {
-			case SEND_ARP:
+			case SEND_ARP_ND:
 				// We re-use the mbuf - no need to create a arp_mbuf and delete the existing mbuf
 				mbufs[j]->port = tbase->l3.reachable_port_id;
-				tx_ring_cti(tbase, tbase->l3.ctrl_plane_ring, REQ_MAC_TO_CTRL, mbufs[j], tbase->l3.core_id, tbase->l3.task_id, ip_dst);
+				tx_ring_cti(tbase, tbase->l3.ctrl_plane_ring, IP4_REQ_MAC_TO_MASTER, mbufs[j], tbase->l3.core_id, tbase->l3.task_id, ip_dst);
 				break;
-			case SEND_MBUF_AND_ARP:
+			case SEND_MBUF_AND_ARP_ND:
 				// We send the mbuf and an ARP - we need to allocate another mbuf for ARP
-				ret = rte_mempool_get(tbase->l3.arp_pool, (void **)&arp_mbuf);
+				ret = rte_mempool_get(tbase->l3.arp_nd_pool, (void **)&arp_mbuf);
 				if (likely(ret == 0))   {
 					arp_mbuf->port = tbase->l3.reachable_port_id;
-					tx_ring_cti(tbase, tbase->l3.ctrl_plane_ring, REQ_MAC_TO_CTRL, arp_mbuf, tbase->l3.core_id, tbase->l3.task_id, ip_dst);
+					tx_ring_cti(tbase, tbase->l3.ctrl_plane_ring, IP4_REQ_MAC_TO_MASTER, arp_mbuf, tbase->l3.core_id, tbase->l3.task_id, ip_dst);
 				} else {
 					plog_err("Failed to get a mbuf from arp mempool\n");
 					// We still send the initial mbuf
@@ -636,7 +701,7 @@ static inline void trace_one_tx_pkt(struct task_base *tbase, struct rte_mbuf *mb
 static void unset_trace(struct task_base *tbase)
 {
 	if (0 == tbase->aux->task_rt_dump.n_trace) {
-		if (tbase->tx_pkt == tx_pkt_l3) {
+		if ((tbase->tx_pkt == tx_pkt_l3) || (tbase->tx_pkt == tx_pkt_ndp)){
 			tbase->aux->tx_pkt_l2 = tbase->aux->tx_pkt_orig;
 			tbase->aux->tx_pkt_orig = NULL;
 		} else {
@@ -705,7 +770,7 @@ int tx_pkt_dump(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkt
 	ret = tbase->aux->tx_pkt_orig(tbase, mbufs, n_pkts, out);
 
 	if (0 == tbase->aux->task_rt_dump.n_print_tx) {
-		if (tbase->tx_pkt == tx_pkt_l3) {
+		if ((tbase->tx_pkt == tx_pkt_l3) || (tbase->tx_pkt == tx_pkt_ndp)) {
 			tbase->aux->tx_pkt_l2 = tbase->aux->tx_pkt_orig;
 			tbase->aux->tx_pkt_orig = NULL;
 		} else {
@@ -801,7 +866,7 @@ static inline int tx_ring_all(struct task_base *tbase, struct rte_ring *ring, ui
 	if (tbase->aux->task_rt_dump.cur_trace) {
 		trace_one_rx_pkt(tbase, mbuf);
 	}
-	mbuf->udata64 = ((uint64_t)ip << 32) | (core_id << 16) | (task_id << 8) | command;
+	ctrl_ring_set_command(mbuf, ((uint64_t)ip << 32) | (core_id << 16) | (task_id << 8) | command);
 	return rte_ring_enqueue(ring, mbuf);
 }
 
@@ -827,6 +892,22 @@ void tx_ring_ip(struct task_base *tbase, struct rte_ring *ring, uint16_t command
 	}
 }
 
+void tx_ring_u64(struct task_base *tbase, struct rte_ring *ring, uint16_t command,  struct rte_mbuf *mbuf, uint64_t data)
+{
+	plogx_dbg("\tSending command %s with data %ld to ring %p using mbuf %p - ring size now %d\n", actions_string[command], data, ring, mbuf, rte_ring_free_count(ring));
+	if (tbase->aux->task_rt_dump.cur_trace) {
+		trace_one_rx_pkt(tbase, mbuf);
+	}
+	ctrl_ring_set_command(mbuf, command);
+	ctrl_ring_set_data(mbuf, data);
+	int ret = rte_ring_enqueue(ring, mbuf);
+	if (unlikely(ret != 0)) {
+		plogx_dbg("\tFail to send command %s with data %ld to ring %p using mbuf %p - ring size now %d\n", actions_string[command], data, ring, mbuf, rte_ring_free_count(ring));
+		TASK_STATS_ADD_DROP_DISCARD(&tbase->aux->stats, 1);
+		rte_pktmbuf_free(mbuf);
+	}
+}
+
 void tx_ring(struct task_base *tbase, struct rte_ring *ring, uint16_t command,  struct rte_mbuf *mbuf)
 {
 	plogx_dbg("\tSending command %s to ring %p using mbuf %p - ring size now %d\n", actions_string[command], ring, mbuf, rte_ring_free_count(ring));
@@ -836,4 +917,70 @@ void tx_ring(struct task_base *tbase, struct rte_ring *ring, uint16_t command,  
 		TASK_STATS_ADD_DROP_DISCARD(&tbase->aux->stats, 1);
 		rte_pktmbuf_free(mbuf);
 	}
+}
+
+void tx_ring_cti6(struct task_base *tbase, struct rte_ring *ring, uint16_t command,  struct rte_mbuf *mbuf, uint8_t core_id, uint8_t task_id, struct ipv6_addr *ip)
+{
+	int ret;
+	plogx_dbg("\tSending command %s with ip "IPv6_BYTES_FMT" to ring %p using mbuf %p, core %d and task %d - ring size now %d\n", actions_string[command], IPv6_BYTES(ip->bytes), ring, mbuf, core_id, task_id, rte_ring_free_count(ring));
+	if (tbase->aux->task_rt_dump.cur_trace) {
+		trace_one_rx_pkt(tbase, mbuf);
+	}
+	ctrl_ring_set_command(mbuf, (core_id << 16) | (task_id << 8) | command);
+	ctrl_ring_set_ipv6_addr(mbuf, ip);
+	ret = rte_ring_enqueue(ring, mbuf);
+
+	if (unlikely(ret != 0)) {
+		plogx_dbg("\tFail to send command %s with ip "IPv6_BYTES_FMT" to ring %p using mbuf %p, core %d and task %d - ring size now %d\n", actions_string[command], IPv6_BYTES(ip->bytes), ring, mbuf, core_id, task_id, rte_ring_free_count(ring));
+		TASK_STATS_ADD_DROP_DISCARD(&tbase->aux->stats, 1);
+		rte_pktmbuf_free(mbuf);
+	}
+}
+void tx_ring_ip6(struct task_base *tbase, struct rte_ring *ring, uint16_t command,  struct rte_mbuf *mbuf, struct ipv6_addr *ip)
+{
+	int ret;
+	plogx_dbg("\tSending command %s with ip "IPv6_BYTES_FMT" to ring %p using mbuf %p - ring size now %d\n", actions_string[command], IPv6_BYTES(ip->bytes), ring, mbuf, rte_ring_free_count(ring));
+	if (tbase->aux->task_rt_dump.cur_trace) {
+		trace_one_rx_pkt(tbase, mbuf);
+	}
+	ctrl_ring_set_command(mbuf, command);
+	ctrl_ring_set_ipv6_addr(mbuf, ip);
+	ret = rte_ring_enqueue(ring, mbuf);
+
+	if (unlikely(ret != 0)) {
+		plogx_dbg("\tFail to send command %s with ip "IPv6_BYTES_FMT" to ring %p using mbuf %p - ring size now %d\n", actions_string[command], IPv6_BYTES(ip->bytes), ring, mbuf, rte_ring_free_count(ring));
+		TASK_STATS_ADD_DROP_DISCARD(&tbase->aux->stats, 1);
+		rte_pktmbuf_free(mbuf);
+	}
+
+}
+void ctrl_ring_set_command(struct rte_mbuf *mbuf, uint64_t udata64)
+{
+	struct prox_headroom *prox_headroom = (struct prox_headroom *)(rte_pktmbuf_mtod(mbuf, uint8_t*) - sizeof(struct prox_headroom));
+	prox_headroom->command = udata64;
+}
+void ctrl_ring_set_data(struct rte_mbuf *mbuf, uint64_t data)
+{
+	struct prox_headroom *prox_headroom = (struct prox_headroom *)(rte_pktmbuf_mtod(mbuf, uint8_t*) - sizeof(struct prox_headroom));
+	prox_headroom->data64 = data;
+}
+void ctrl_ring_set_ipv6_addr(struct rte_mbuf *mbuf, struct ipv6_addr *ip)
+{
+	struct prox_headroom *prox_headroom = (struct prox_headroom *)(rte_pktmbuf_mtod(mbuf, uint8_t*) - sizeof(struct prox_headroom));
+	memcpy(&prox_headroom->ipv6_addr, ip, sizeof(struct ipv6_addr));
+}
+uint64_t ctrl_ring_get_command(struct rte_mbuf *mbuf)
+{
+	struct prox_headroom *prox_headroom = (struct prox_headroom *)(rte_pktmbuf_mtod(mbuf, uint8_t*) - sizeof(struct prox_headroom));
+	return prox_headroom->command;
+}
+uint64_t ctrl_ring_get_data(struct rte_mbuf *mbuf)
+{
+	struct prox_headroom *prox_headroom = (struct prox_headroom *)(rte_pktmbuf_mtod(mbuf, uint8_t*) - sizeof(struct prox_headroom));
+	return prox_headroom->data64;
+}
+struct ipv6_addr *ctrl_ring_get_ipv6_addr(struct rte_mbuf *mbuf)
+{
+	struct prox_headroom *prox_headroom = (struct prox_headroom *)(rte_pktmbuf_mtod(mbuf, uint8_t*) - sizeof(struct prox_headroom));
+	return &prox_headroom->ipv6_addr;
 }
