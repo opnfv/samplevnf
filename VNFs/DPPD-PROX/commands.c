@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -114,7 +114,7 @@ static inline void start_l3(struct task_args *targ)
 {
 	if (!task_is_master(targ)) {
 		if ((targ->nb_txrings != 0) || (targ->nb_txports != 0)) {
-			if (targ->flags & TASK_ARG_L3)
+			if (targ->flags & (TASK_ARG_L3|TASK_ARG_NDP))
 				task_start_l3(targ->tbase, targ);
 		}
 	}

@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 #include <string.h>
 #include <libgen.h>
 #include <rte_sched.h>
+#include <rte_ether.h>
 #include <rte_version.h>
 
 #include "lconf.h"
@@ -28,6 +29,7 @@
 #include "toeplitz.h"
 #include "handle_master.h"
 #include "prox_compat.h"
+#include "prox_ipv6.h"
 
 #define TEN_GIGABIT     1250000000
 #define QUEUE_SIZES     128
@@ -108,8 +110,16 @@ static struct rte_sched_subport_params subport_params_default = {
 	.tc_period = 40, /* default was 10 */
 };
 
-void set_global_defaults(__attribute__((unused)) struct prox_cfg *prox_cfg)
+void set_global_defaults(struct prox_cfg *prox_cfg)
 {
+	if (parse_ip6(&prox_cfg->all_routers_ipv6_mcast_addr, ALL_ROUTERS_IPV6_MCAST_ADDR) != 0)
+		plog_err("Failed to parse %s\n", ALL_ROUTERS_IPV6_MCAST_ADDR);
+	if (parse_ip6(&prox_cfg->all_nodes_ipv6_mcast_addr, ALL_NODES_IPV6_MCAST_ADDR) != 0)
+		plog_err("Failed to parse %s\n", ALL_NODES_IPV6_MCAST_ADDR);
+	if (parse_ip6(&prox_cfg->random_ip, RANDOM_IPV6) != 0)
+		plog_err("Failed to parse %s\n", RANDOM_IPV6);
+	set_mcast_mac_from_ipv6(&prox_cfg->all_routers_mac_addr, &prox_cfg->all_routers_ipv6_mcast_addr);
+	set_mcast_mac_from_ipv6(&prox_cfg->all_nodes_mac_addr, &prox_cfg->all_nodes_ipv6_mcast_addr);
 }
 
 void set_task_defaults(struct prox_cfg* prox_cfg, struct lcore_cfg* lcore_cfg_init)

@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -35,6 +35,8 @@
 #include "defaults.h"
 #include "prox_lua.h"
 #include "cqm.h"
+#include "defines.h"
+#include "prox_ipv6.h"
 #include "prox_compat.h"
 
 #define MAX_RTE_ARGV 64
@@ -945,6 +947,9 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 	if (STR_EQ(str, "streams")) {
 		return parse_str(targ->streams, pkey, sizeof(targ->streams));
 	}
+	if (STR_EQ(str, "Unsollicited NA")) {
+		return parse_flag(&targ->flags, TASK_ARG_SEND_NA_AT_STARTUP, pkey);
+	}
 	if (STR_EQ(str, "local lpm")) {
 		return parse_flag(&targ->flags, TASK_ARG_LOCAL_LPM, pkey);
 	}
@@ -1312,7 +1317,7 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 
 		targ->task_init = to_task_init(mode_str, sub_mode_str);
 		if (!targ->task_init) {
-			if (strcmp(sub_mode_str, "l3") != 0) {
+			if ((strcmp(sub_mode_str, "l3") != 0) && (strcmp(sub_mode_str, "ndp") != 0)) {
 				set_errf("sub mode %s not supported for mode %s", sub_mode_str, mode_str);
 				return -1;
 			}
@@ -1323,9 +1328,13 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 			}
 		}
 		if (strcmp(sub_mode_str, "l3") == 0) {
-			prox_cfg.flags |= DSF_CTRL_PLANE_ENABLED;
+			prox_cfg.flags |= DSF_L3_ENABLED;
 			targ->flags |= TASK_ARG_L3;
 			strcpy(targ->sub_mode_str, "l3");
+		} else if (strcmp(sub_mode_str, "ndp") == 0) {
+			prox_cfg.flags |= DSF_NDP_ENABLED;
+			targ->flags |= TASK_ARG_NDP;
+			strcpy(targ->sub_mode_str, "ndp");
 		} else {
 			strcpy(targ->sub_mode_str, targ->task_init->sub_mode_str);
 		}
@@ -1382,19 +1391,59 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 			plog_warn("gateway ipv4 configured but L3 sub mode not enabled\n");
 		return parse_ip(&targ->gateway_ipv4, pkey);
 	}
+	if (STR_EQ(str, "ipv6 router")) { /* we simulate an IPV6 router */
+		int rc = parse_flag(&targ->ipv6_router, 1, pkey);
+		if (!rc && targ->ipv6_router) {
+			plog_info("\tipv6 router configured => NDP enabled\n");
+			prox_cfg.flags |= DSF_NDP_ENABLED;
+			targ->flags |= TASK_ARG_NDP;
+			strcpy(targ->sub_mode_str, "ndp");
+		}
+		return 0;
+	}
 	if (STR_EQ(str, "local ipv4")) { /* source IP address to be used for packets */
 		return parse_ip(&targ->local_ipv4, pkey);
 	}
 	if (STR_EQ(str, "remote ipv4")) { /* source IP address to be used for packets */
 		return parse_ip(&targ->remote_ipv4, pkey);
 	}
+        if (STR_EQ(str, "global ipv6")) {
+		if (parse_ip6(&targ->global_ipv6, pkey) == 0) {
+			plog_info("\tglobal ipv6 configured => NDP enabled\n");
+			targ->flags |= TASK_ARG_NDP;
+			prox_cfg.flags |= DSF_NDP_ENABLED;
+			strcpy(targ->sub_mode_str, "ndp");
+		} else {
+			plog_err("Unable to parse content of local ipv6: %s\n", pkey);
+			return -1;
+		}
+		return 0;
+	}
         if (STR_EQ(str, "local ipv6")) { /* source IPv6 address to be used for packets */
-                return parse_ip6(&targ->local_ipv6, pkey);
+		if (parse_ip6(&targ->local_ipv6, pkey) == 0) {
+			plog_info("\tlocal ipv6 configured => NDP enabled\n");
+			targ->flags |= TASK_ARG_NDP;
+			prox_cfg.flags |= DSF_NDP_ENABLED;
+			strcpy(targ->sub_mode_str, "ndp");
+		} else {
+			plog_err("Unable to parse content of local ipv6: %s\n", pkey);
+			return -1;
+		}
+		return 0;
         }
+        if (STR_EQ(str, "router prefix")) {
+		if (parse_ip6(&targ->router_prefix, pkey) == 0) {
+			plog_info("\trouter prefix set to "IPv6_BYTES_FMT" (%s)\n", IPv6_BYTES(targ->router_prefix.bytes), IP6_Canonical(&targ->router_prefix));
+		} else {
+			plog_err("Unable to parse content of router prefix: %s\n", pkey);
+			return -1;
+		}
+		return 0;
+	}
 	if (STR_EQ(str, "arp timeout"))
-		return parse_int(&targ->arp_timeout, pkey);
+		return parse_int(&targ->reachable_timeout, pkey);
 	if (STR_EQ(str, "arp update time"))
-		return parse_int(&targ->arp_update_time, pkey);
+		return parse_int(&targ->arp_ndp_retransmit_timeout, pkey);
 	if (STR_EQ(str, "number of packets"))
 		return parse_int(&targ->n_pkts, pkey);
 	if (STR_EQ(str, "pipes")) {

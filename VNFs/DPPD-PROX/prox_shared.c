@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -59,9 +59,9 @@ static void prox_sh_create_hash(struct prox_shared *ps, size_t size)
 	PROX_PANIC(ps->hash == NULL, "Failed to create hash table for shared data");
 	ps->size = size;
 	if (ps->size == INIT_HASH_TABLE_SIZE)
-		plog_info("Shared data tracking hash table created with size %zu\n", ps->size);
+		plog_info("\tShared data tracking hash table created with size %zu\n", ps->size);
 	else
-		plog_info("Shared data tracking hash table grew to %zu\n", ps->size);
+		plog_info("\tShared data tracking hash table grew to %zu\n", ps->size);
 }
 
 #if RTE_VERSION >= RTE_VERSION_NUM(2,1,0,0)

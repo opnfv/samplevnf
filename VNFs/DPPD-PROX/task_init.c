@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -176,6 +176,8 @@ static size_t init_rx_tx_rings_ports(struct task_args *targ, struct task_base *t
 		if (targ->nb_rxports == 1) {
 			if (targ->flags & TASK_ARG_L3)
 				tbase->rx_pkt = (targ->task_init->flag_features & TASK_FEATURE_MULTI_RX)? rx_pkt_hw1_multi_l3 : rx_pkt_hw1_l3;
+			else if (targ->flags & TASK_ARG_NDP)
+				tbase->rx_pkt = (targ->task_init->flag_features & TASK_FEATURE_MULTI_RX)? rx_pkt_hw1_multi_ndp : rx_pkt_hw1_ndp;
 			else
 				tbase->rx_pkt = (targ->task_init->flag_features & TASK_FEATURE_MULTI_RX)? rx_pkt_hw1_multi : rx_pkt_hw1;
 			tbase->rx_params_hw1.rx_pq.port =  targ->rx_port_queue[0].port;
@@ -185,6 +187,8 @@ static size_t init_rx_tx_rings_ports(struct task_args *targ, struct task_base *t
 			PROX_ASSERT((targ->nb_rxports != 0) || (targ->task_init->flag_features & TASK_FEATURE_NO_RX));
 			if (targ->flags & TASK_ARG_L3)
 				tbase->rx_pkt = (targ->task_init->flag_features & TASK_FEATURE_MULTI_RX)? rx_pkt_hw_multi_l3 : rx_pkt_hw_l3;
+			else if (targ->flags & TASK_ARG_NDP)
+				tbase->rx_pkt = (targ->task_init->flag_features & TASK_FEATURE_MULTI_RX)? rx_pkt_hw_multi_ndp : rx_pkt_hw_ndp;
 			else
 				tbase->rx_pkt = (targ->task_init->flag_features & TASK_FEATURE_MULTI_RX)? rx_pkt_hw_multi : rx_pkt_hw;
 			tbase->rx_params_hw.nb_rxports = targ->nb_rxports;
@@ -198,6 +202,8 @@ static size_t init_rx_tx_rings_ports(struct task_args *targ, struct task_base *t
 			if (rte_is_power_of_2(targ->nb_rxports)) {
 				if (targ->flags & TASK_ARG_L3)
 					tbase->rx_pkt = (targ->task_init->flag_features & TASK_FEATURE_MULTI_RX)? rx_pkt_hw_pow2_multi_l3 : rx_pkt_hw_pow2_l3;
+				else if (targ->flags & TASK_ARG_NDP)
+					tbase->rx_pkt = (targ->task_init->flag_features & TASK_FEATURE_MULTI_RX)? rx_pkt_hw_pow2_multi_ndp : rx_pkt_hw_pow2_ndp;
 				else
 					tbase->rx_pkt = (targ->task_init->flag_features & TASK_FEATURE_MULTI_RX)? rx_pkt_hw_pow2_multi : rx_pkt_hw_pow2;
 				tbase->rx_params_hw.rxport_mask = targ->nb_rxports - 1;
@@ -359,15 +365,20 @@ struct task_base *init_task_struct(struct task_args *targ)
 
 	tbase->handle_bulk = t->handle;
 
-	if (targ->flags & TASK_ARG_L3) {
-		plog_info("\tTask configured in L3 mode\n");
+	if (targ->flags & (TASK_ARG_L3|TASK_ARG_NDP)) {
+		plog_info("\tTask (%d,%d) configured in L3/NDP mode\n", targ->lconf->id, targ->id);
 		tbase->l3.ctrl_plane_ring = targ->ctrl_plane_ring;
 		if (targ->nb_txports != 0) {
 			tbase->aux->tx_pkt_l2 = tbase->tx_pkt;
-			tbase->tx_pkt = tx_pkt_l3;
-			// Make sure control plane packets such as arp are not dropped
 			tbase->aux->tx_ctrlplane_pkt = targ->nb_txrings ? tx_ctrlplane_sw : tx_ctrlplane_hw;
-			task_init_l3(tbase, targ);
+			if (targ->flags & TASK_ARG_L3) {
+				tbase->tx_pkt = tx_pkt_l3;
+				task_init_l3(tbase, targ);
+			} else if (targ->flags & TASK_ARG_NDP) {
+				tbase->tx_pkt = tx_pkt_ndp;
+				task_init_l3(tbase, targ);
+			}
+			// Make sure control plane packets such as arp are not dropped
 		}
 	}
 
