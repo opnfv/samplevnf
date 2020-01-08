@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,9 +18,18 @@
 #define _TX_PKT_H_
 
 #include <inttypes.h>
+#include <string.h>
+#include <rte_mbuf.h>
+#include "ip6_addr.h"
 
 struct task_base;
-struct rte_mbuf;
+//struct rte_mbuf;
+
+struct prox_headroom {
+	struct ipv6_addr ipv6_addr;
+	uint64_t command;
+	uint64_t data64;
+} __attribute__((packed));
 
 void flush_queues_hw(struct task_base *tbase);
 void flush_queues_sw(struct task_base *tbase);
@@ -81,9 +90,20 @@ uint16_t tx_try_self(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t 
    sink. */
 int tx_pkt_drop_all(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts, uint8_t *out);
 int tx_pkt_l3(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts, uint8_t *out);
+int tx_pkt_ndp(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts, uint8_t *out);
 
 void tx_ring_cti(struct task_base *tbase, struct rte_ring *ring, uint16_t command, struct rte_mbuf *mbuf, uint8_t core_id, uint8_t task_id, uint32_t ip);
+void tx_ring_cti6(struct task_base *tbase, struct rte_ring *ring, uint16_t command, struct rte_mbuf *mbuf, uint8_t core_id, uint8_t task_id, struct ipv6_addr *ip);
 void tx_ring_ip(struct task_base *tbase, struct rte_ring *ring, uint16_t command, struct rte_mbuf *mbuf, uint32_t ip);
+void tx_ring_u64(struct task_base *tbase, struct rte_ring *ring, uint16_t command, struct rte_mbuf *mbuf, uint64_t data);
+void tx_ring_ip6(struct task_base *tbase, struct rte_ring *ring, uint16_t command,  struct rte_mbuf *mbuf, struct ipv6_addr *ip);
+void tx_ring_ip6_data(struct task_base *tbase, struct rte_ring *ring, uint16_t command,  struct rte_mbuf *mbuf, struct ipv6_addr *ip, uint64_t data);
 void tx_ring(struct task_base *tbase, struct rte_ring *ring, uint16_t command, struct rte_mbuf *mbuf);
-
+void ctrl_ring_set_command(struct rte_mbuf *mbuf, uint64_t udata64);
+void ctrl_ring_set_data(struct rte_mbuf *mbuf, uint64_t data);
+void ctrl_ring_set_ipv6_addr(struct rte_mbuf *mbuf, struct ipv6_addr *ip);
+uint64_t ctrl_ring_get_command(struct rte_mbuf *mbuf);
+uint64_t ctrl_ring_get_data(struct rte_mbuf *mbuf);
+struct ipv6_addr *ctrl_ring_get_ipv6_addr(struct rte_mbuf *mbuf);
+static void store_packet(struct task_base *tbase, struct rte_mbuf *mbufs);
 #endif /* _TX_PKT_H_ */

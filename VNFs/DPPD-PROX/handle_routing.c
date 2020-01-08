@@ -37,7 +37,6 @@
 #include "mpls.h"
 #include "qinq.h"
 #include "prox_cfg.h"
-#include "ip6_addr.h"
 #include "prox_shared.h"
 #include "prox_cksum.h"
 #include "mbuf_utils.h"
