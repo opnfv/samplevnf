@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -178,6 +178,7 @@ struct task_base_aux {
 	void (*stop_last)(struct task_base *tbase);
 	void (*start_first)(struct task_base *tbase);
 	struct task_rt_dump task_rt_dump;
+	struct rte_mbuf *mbuf;
 };
 
 /* The task_base is accessed for _all_ task types. In case
@@ -208,7 +209,6 @@ struct task_base {
 		struct tx_params_hw_sw tx_params_hw_sw;
 	};
 	struct l3_base l3;
-	uint32_t local_ipv4;
 } __attribute__((packed)) __rte_cache_aligned;
 
 static void task_base_add_rx_pkt_function(struct task_base *tbase, rx_pkt_func to_add)

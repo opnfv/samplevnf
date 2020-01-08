@@ -27,13 +27,13 @@
 
 #include "quit.h"
 #include "cfgfile.h"
-#include "ip6_addr.h"
 #include "parse_utils.h"
 #include "prox_globals.h"
 #include "prox_cfg.h"
 #include "log.h"
 #include "prox_lua.h"
 #include "prox_lua_types.h"
+#include "prox_ipv6.h"
 #include "prox_compat.h"
 
 #define MAX_NB_PORT_NAMES PROX_MAX_PORTS
@@ -406,12 +406,12 @@ int parse_ip6(struct ipv6_addr *addr, const char *str2)
 
 	for (uint8_t i = 0, j = 0; i < ret; ++i, ++j) {
 		if (*addr_parts[i] == 0) {
-			if (omitted == 0) {
+			if (omitted) {
 				set_errf("Can only omit zeros once");
 				return -1;
 			}
 			omitted = 1;
-			j += 8 - ret;
+			j += 2 * (8 - ret) + 1;
 		}
 		else {
 			uint16_t w = strtoll(addr_parts[i], NULL, 16);

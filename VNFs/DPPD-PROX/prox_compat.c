@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2020 Intel Corporation
+// Copyright (c) 2010-2017 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,11 +14,17 @@
 // limitations under the License.
 */
 
-#ifndef _IP6_ADDR_H_
-#define _IP6_ADDR_H_
+#include <stddef.h>
+#include "quit.h"
+#include "prox_compat.h"
 
-struct ipv6_addr {
-	uint8_t bytes[16];
-};
-
-#endif /* _IP6_ADDR_H_ */
+char *prox_strncpy(char * dest, const char * src, size_t count)
+{
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpragmas"
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
+	strncpy(dest, src, count);
+#pragma GCC diagnostic pop
+	PROX_PANIC(dest[count - 1] != 0, "\t\tError in strncpy: buffer overrun (%lu bytes)", count);
+	return dest;
+}

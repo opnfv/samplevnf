@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@
 #include <rte_mbuf.h>
 #include "igmp.h"
 #include "prox_compat.h"
+#include "prox_ipv6.h"
 
 #if RTE_VERSION >= RTE_VERSION_NUM(1,8,0,0)
 #define CALC_TX_OL(l2_len, l3_len) ((uint64_t)(l2_len) | (uint64_t)(l3_len) << 7)
@@ -68,4 +69,11 @@ void prox_udp_cksum_sw(prox_rte_udp_hdr *udp, uint16_t len, uint32_t src_ip_addr
 void prox_tcp_cksum_sw(prox_rte_tcp_hdr *tcp, uint16_t len, uint32_t src_ip_addr, uint32_t dst_ip_addr);
 void prox_igmp_cksum_sw(struct igmpv2_hdr *igmp, uint16_t len);
 
+struct ipv6_pseudo_hdr {
+	struct ipv6_addr src;
+	struct ipv6_addr dst;
+	uint32_t length;
+	uint32_t protocl:8;
+	uint32_t reserved:24;
+} __attribute__((__packed__));
 #endif /* _PROX_CKSUM_H_ */
