@@ -669,6 +669,7 @@ void display_end(void)
 	if (scr != NULL) {
 		endwin();
 	}
+	scr = NULL;
 }
 
 static void pps_print(WINDOW *dst_scr, int y, int x, uint64_t val, int is_blue)

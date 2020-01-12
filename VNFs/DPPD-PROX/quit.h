@@ -34,6 +34,8 @@
 		if (cond) {						\
 			plog_info(__VA_ARGS__);				\
 			display_end();					\
+			plog_end();					\
+			plog_info(__VA_ARGS__);				\
  			if (prox_cfg.flags & DSF_DAEMON) {		\
                 		pid_t ppid = getppid();			\
 				plog_info("sending SIGUSR2 to %d\n", ppid);\
