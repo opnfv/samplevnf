@@ -81,6 +81,7 @@ __attribute__((format(printf, 2, 3))) static inline int plogdx_dbg(__attribute__
 #endif
 
 void plog_init(const char *log_name, int log_name_pid);
+void plog_end(void);
 void file_print(const char *str);
 
 int plog_set_lvl(int lvl);

@@ -81,6 +81,13 @@ void plog_init(const char *log_name, int log_name_pid)
 	tsc_off = rte_rdtsc() + 2500000000;
 }
 
+void plog_end(void)
+{
+	if (fp)
+		fclose(fp);
+	fp = NULL;
+}
+
 int plog_set_lvl(int lvl)
 {
 	if (lvl <= PROX_MAX_LOG_LVL) {
