@@ -184,6 +184,46 @@ class prox_sock(object):
         min_lat = 999999999
 	max_lat = avg_lat = 0
 	number_tasks_returning_stats = 0
+	buckets = [0] * 128
+        self._send('lat all stats %s %s' % (','.join(map(str, cores)), ','.join(map(str, tasks))))
+        for core in cores:
+	    	for task in tasks:
+	        	stats = self._recv().split(',')
+			if 'is not measuring' in stats[0]:
+				continue
+			if stats[0].startswith('error'):
+				log.critical("lat stats error: unexpected reply from PROX (potential incompatibility between scripts and PROX)")
+				raise Exception("lat stats error")
+			number_tasks_returning_stats += 1
+			min_lat = min(int(stats[0]),min_lat)
+			max_lat = max(int(stats[1]),max_lat)
+			avg_lat += int(stats[2])
+			#min_since begin = int(stats[3])
+			#max_since_begin = int(stats[4])
+			tsc = int(stats[5]) # Taking the last tsc as the timestamp since PROX will return the same tsc for each core/task combination 
+			hz = int(stats[6])
+			#coreid = int(stats[7])
+			#taskid = int(stats[8])
+	        	stats = self._recv().split(':')
+			if stats[0].startswith('error'):
+				log.critical("lat stats error: unexpected lat bucket reply (potential incompatibility between scripts and PROX)")
+				raise Exception("lat bucket reply error")
+			buckets[0] = int(stats[1])
+			for i in range(1, 128):
+	        		stats = self._recv().split(':')
+				buckets[i] = int(stats[1])
+        avg_lat = avg_lat/number_tasks_returning_stats
+        self._send('stats latency(0).used')
+        used = float(self._recv())
+        self._send('stats latency(0).total')
+        total = float(self._recv())
+        return min_lat, max_lat, avg_lat, (used/total), tsc, hz, buckets
+
+    def old_lat_stats(self, cores, tasks=[0]):
+        min_lat = 999999999
+	max_lat = avg_lat = 0
+	number_tasks_returning_stats = 0
+	buckets = [0] * 128
         self._send('lat stats %s %s' % (','.join(map(str, cores)), ','.join(map(str, tasks))))
         for core in cores:
 	    	for task in tasks:
@@ -208,7 +248,7 @@ class prox_sock(object):
         used = float(self._recv())
         self._send('stats latency(0).total')
         total = float(self._recv())
-        return min_lat, max_lat, avg_lat, (used/total), tsc, hz
+        return min_lat, max_lat, avg_lat, (used/total), tsc, hz, buckets
 
     def irq_stats(self, core, bucket, task=0):
         self._send('stats task.core(%s).task(%s).irq(%s)' % (core, task, bucket))
