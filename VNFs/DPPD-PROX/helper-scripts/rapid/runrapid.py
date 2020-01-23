@@ -213,6 +213,10 @@ def connect_client(client):
 	log.debug("Connected to VM on %s" % client.ip())
 
 def report_result(flow_number,size,speed,pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat_avg,lat_perc,lat_perc_max,lat_max,tx,rx,tot_drop,elapsed_time,speed_prefix='',lat_avg_prefix='',lat_perc_prefix='',lat_max_prefix='',abs_drop_rate_prefix='',drop_rate_prefix=''):
+	if flow_number < 0:
+		flow_number_str = '| ({:>4}) |'.format(abs(flow_number))
+	else:
+		flow_number_str = '|{:>7} |'.format(flow_number)
 	if pps_req_tx == None:
 		pps_req_tx_str = '{0: >14}'.format('   NA     |')
 	else:
@@ -226,9 +230,9 @@ def report_result(flow_number,size,speed,pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat
 	else:
 		pps_sut_tx_str = '{:>7.3f} Mpps |'.format(pps_sut_tx)
 	if pps_rx == None:
-		pps_rx_str = '{0: >24}'.format('NA        ')
+		pps_rx_str = '{0: >24|}'.format('NA        ')
 	else:
-		pps_rx_str = bcolors.OKBLUE + '{:>4.1f} Gb/s |{:7.3f} Mpps '.format(get_speed(pps_rx,size),pps_rx) + bcolors.ENDC
+		pps_rx_str = bcolors.OKBLUE + '{:>4.1f} Gb/s |{:7.3f} Mpps {}|'.format(get_speed(pps_rx,size),pps_rx,bcolors.ENDC)
 	if tot_drop == None:
 		tot_drop_str = ' |       NA  | '
 	else:
@@ -243,7 +247,7 @@ def report_result(flow_number,size,speed,pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat
 		elapsed_time_str = ' NA |'
 	else:
 		elapsed_time_str = '{:>3.0f} |'.format(elapsed_time)
-	return('|{:>7}'.format(flow_number)+' |' + '{:>5.1f}'.format(speed) + '% '+speed_prefix +'{:>6.3f}'.format(get_pps(speed,size)) + ' Mpps|'+ pps_req_tx_str + pps_tx_str + bcolors.ENDC + pps_sut_tx_str + pps_rx_str +lat_avg_prefix+ '| {:>5.0f}'.format(lat_avg)+' us'+lat_perc_str+lat_max_prefix+'{:>6.0f}'.format(lat_max)+' us | ' + '{:>9.0f}'.format(tx) + ' | {:>9.0f}'.format(rx) + ' | '+ abs_drop_rate_prefix+ '{:>9.0f}'.format(tx-rx) + tot_drop_str +drop_rate_prefix+ '{:>5.2f}'.format(float(tx-rx)/tx)  +bcolors.ENDC+' |' + elapsed_time_str)
+	return(flow_number_str + '{:>5.1f}'.format(speed) + '% '+speed_prefix +'{:>6.3f}'.format(get_pps(speed,size)) + ' Mpps|'+ pps_req_tx_str + pps_tx_str + bcolors.ENDC + pps_sut_tx_str + pps_rx_str +lat_avg_prefix+ ' {:>5.0f}'.format(lat_avg)+' us'+lat_perc_str+lat_max_prefix+'{:>6.0f}'.format(lat_max)+' us | ' + '{:>9.0f}'.format(tx) + ' | {:>9.0f}'.format(rx) + ' | '+ abs_drop_rate_prefix+ '{:>9.0f}'.format(tx-rx) + tot_drop_str +drop_rate_prefix+ '{:>5.2f}'.format(float(tx-rx)/tx)  +bcolors.ENDC+' |' + elapsed_time_str)
 		
 def run_iteration(gensock, sutsock, requested_duration,flow_number,size,speed):
 	r = 0;
@@ -296,7 +300,8 @@ def run_iteration(gensock, sutsock, requested_duration,flow_number,size,speed):
 		tot_sut_core_measurement_duration = float(0)
 		tot_sut_rx = tot_sut_non_dp_rx = tot_sut_tx = tot_sut_non_dp_tx = tot_sut_drop = tot_sut_tx_fail = tot_sut_tsc = 0
 		lat_avail = core_avail = sut_avail = False
-		while (tot_core_measurement_duration - float(requested_duration) <= 0.1) or (tot_sut_core_measurement_duration - float(requested_duration) <= 0.1) or (tot_lat_measurement_duration - float(requested_duration) <= 0.1):
+		##while (tot_core_measurement_duration - float(requested_duration) <= 0.1) or (tot_sut_core_measurement_duration - float(requested_duration) <= 0.1) or (tot_lat_measurement_duration - float(requested_duration) <= 0.1):
+		while (tot_core_measurement_duration - float(requested_duration) <= 0.1) or (tot_lat_measurement_duration - float(requested_duration) <= 0.1):
 			time.sleep(0.5)
 			lat_min_sample, lat_max_sample, lat_avg_sample, used_sample, t3_lat_tsc, lat_hz, buckets = gensock.lat_stats(latcores)
 			single_lat_measurement_duration = (t3_lat_tsc - t2_lat_tsc) * 1.0 / lat_hz  # time difference between the 2 measurements, expressed in seconds.
@@ -361,12 +366,13 @@ def run_iteration(gensock, sutsock, requested_duration,flow_number,size,speed):
 					t2_sut_rx, t2_sut_non_dp_rx, t2_sut_tx, t2_sut_non_dp_tx, t2_sut_drop, t2_sut_tx_fail, t2_sut_tsc = t3_sut_rx, t3_sut_non_dp_rx, t3_sut_tx, t3_sut_non_dp_tx, t3_sut_drop, t3_sut_tx_fail, t3_sut_tsc
 					sut_avail = True
 			if test == 'fixed_rate':
-				if lat_avail == core_avail == sut_avail == True:
-					lat_avail = core_avail = sut_avail = False
+				if lat_avail == core_avail == True:
+					lat_avail = core_avail = False
 					pps_req_tx = (delta_tx + delta_drop - delta_rx)/stored_single_core_measurement_duration/1000000
 					pps_tx = delta_tx/stored_single_core_measurement_duration/1000000
-					if sutsock!='none':
+					if sutsock!='none' and sut_avail:
 						pps_sut_tx = delta_sut_tx/stored_single_sut_core_measurement_duration/1000000
+						sut_avail = False
 					else:
 						pps_sut_tx = None
 					pps_rx = delta_rx/stored_single_core_measurement_duration/1000000
@@ -426,7 +432,7 @@ def run_iteration(gensock, sutsock, requested_duration,flow_number,size,speed):
 			pps_req_tx = (tot_tx + tot_drop - tot_rx)/tot_core_measurement_duration/1000000.0 # tot_drop is all packets dropped by all tasks. This includes packets dropped at the generator task + packets dropped by the nop task. In steady state, this equals to the number of packets received by this VM
 			pps_tx = tot_tx/tot_core_measurement_duration/1000000.0 # tot_tx is all generated packets actually accepted by the interface
 			pps_rx = tot_rx/tot_core_measurement_duration/1000000.0 # tot_rx is all packets received by the nop task = all packets received in the gen VM
-			if sutsock!='none':
+			if sutsock!='none' and sut_avail:
 				pps_sut_tx = tot_sut_tx / tot_sut_core_measurement_duration / 1000000.0
 			else:
 				pps_sut_tx = None
@@ -601,6 +607,7 @@ def run_flow_size_test(gensock,sutsock):
 						endwarning = '|        | {:177.177} |'.format(retry_warning + lat_warning + gen_warning)
 					success = True
 					success_message=' SUCCESS'
+					speed_prefix = lat_avg_prefix = lat_perc_prefix = lat_max_prefix = abs_drop_rate_prefix = drop_rate_prefix = bcolors.ENDC
 					log.debug(report_result(-attempts,size,speed,pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat_avg,lat_perc,lat_perc_max,lat_max,abs_tx,abs_rx,abs_dropped,actual_duration,speed_prefix,lat_avg_prefix,lat_max_prefix,abs_drop_rate_prefix,drop_rate_prefix)+ success_message + retry_warning + lat_warning + gen_warning)
 				else:
 					success_message=' FAILED'
@@ -969,6 +976,11 @@ for vm in range(1, int(required_number_of_test_machines)+1):
 				else:
 					BUCKET_SIZE_EXP = 11
 				f.write('bucket_size_exp="%s"\n'% BUCKET_SIZE_EXP)
+				if testconfig.has_option('TestM%d'%vm, 'heartbeat'):
+					heartbeat = int(testconfig.get('TestM%d'%vm, 'heartbeat'))
+				else:
+					heartbeat = 60
+				f.write('heartbeat="%s"\n'% heartbeat)
 			elif re.match('(l2){0,1}gen_gw.*\.cfg',config_file[-1]):
 				if testconfig.has_option('TestM%d'%vm, 'bucket_size_exp'):
 					BUCKET_SIZE_EXP = int(testconfig.get('TestM%d'%vm, 'bucket_size_exp'))
@@ -994,6 +1006,11 @@ for vm in range(1, int(required_number_of_test_machines)+1):
 				else:
 					BUCKET_SIZE_EXP = 11
 				f.write('bucket_size_exp="%s"\n'% BUCKET_SIZE_EXP)
+				if testconfig.has_option('TestM%d'%vm, 'heartbeat'):
+					heartbeat = int(testconfig.get('TestM%d'%vm, 'heartbeat'))
+				else:
+					heartbeat = 60
+				f.write('heartbeat="%s"\n'% heartbeat)
 			elif re.match('(l2){0,1}swap.*\.cfg',config_file[-1]):
 				sutstatcores = cores[-1]
 				auto_start.append(True)

@@ -21,6 +21,10 @@ WORK_DIR="/home/centos" # Directory where the packer tool has copied some files 
 			# This variable is defined in 4 different places and should have the same value: centos.json, deploycentos.sh, check_prox_system_setup.sh and runrapid.py
 DPDK_VERSION="19.05"
 PROX_COMMIT="f456ab65"
+##PROX_CHECKOUT="git checkout ${PROX_COMMIT}"
+## Next line is overruling the PROX_COMMIT and will replace the version with a very specific patch. Should be commented out
+## 	if you want to use a committed version of PROX
+PROX_CHECKOUT="git fetch \"https://gerrit.opnfv.org/gerrit/samplevnf\" refs/changes/75/69475/2 && git checkout FETCH_HEAD"
 MULTI_BUFFER_LIB_VER="0.52"
 export RTE_SDK="${BUILD_DIR}/dpdk-${DPDK_VERSION}"
 export RTE_TARGET="x86_64-native-linuxapp-gcc"
@@ -125,7 +129,8 @@ function prox_install()
 	pushd ${BUILD_DIR} > /dev/null 2>&1
 	git clone https://git.opnfv.org/samplevnf
 	pushd ${BUILD_DIR}/samplevnf/VNFs/DPPD-PROX
-	git checkout ${PROX_COMMIT}
+	#git checkout ${PROX_COMMIT}
+	${PROX_CHECKOUT}
 	popd > /dev/null 2>&1
 	prox_compile
 	sudo ln -s ${BUILD_DIR}/samplevnf/VNFs/DPPD-PROX ${WORK_DIR}/prox
