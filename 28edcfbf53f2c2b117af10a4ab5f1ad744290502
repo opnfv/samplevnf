@@ -1,0 +1,67 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "89638455_5934959d",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 252,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-24T18:51:11Z",
+      "side": 1,
+      "message": "These two \"+1\" are giving a weight of 1s to the initial lat_avg and used_avg collected on L235, while in fact we don\u0027t really know their actual weight.\nSo an alternative would be to keep L251 and L252 unchanged, and to set lat_avg and used_avg to 0 just after L235.",
+      "revId": "28edcfbf53f2c2b117af10a4ab5f1ad744290502",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "3ea865bf_9d27689c",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 390,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-24T18:51:11Z",
+      "side": 1,
+      "message": "sum",
+      "range": {
+        "startLine": 390,
+        "startChar": 13,
+        "endLine": 390,
+        "endChar": 17
+      },
+      "revId": "28edcfbf53f2c2b117af10a4ab5f1ad744290502",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "a67d2616_13844531",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 390,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-24T18:51:11Z",
+      "side": 1,
+      "message": "accuracy",
+      "range": {
+        "startLine": 390,
+        "startChar": 109,
+        "endLine": 390,
+        "endChar": 116
+      },
+      "revId": "28edcfbf53f2c2b117af10a4ab5f1ad744290502",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    }
+  ]
+}
