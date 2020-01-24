@@ -1,0 +1,136 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "fc8b1003_64455353",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 10,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-24T18:39:21Z",
+      "side": 1,
+      "message": "It would be nice to provide the URL to the specification document, either here in the commit message, or even better in the Python source code and/or in the new TST009 test file.",
+      "range": {
+        "startLine": 10,
+        "startChar": 24,
+        "endLine": 10,
+        "endChar": 43
+      },
+      "revId": "1e7315e9fe35706a3565b4c594c20fb0591d33e1",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "e43ffedb_4c5da810",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 37,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-24T18:39:21Z",
+      "side": 1,
+      "message": "This package is not part of the Python Standard Library, so it must be installed explicitly.\nFor that purpose, it might be good to add a \"requirements\" section into the README.",
+      "range": {
+        "startLine": 37,
+        "startChar": 5,
+        "endLine": 37,
+        "endChar": 10
+      },
+      "revId": "1e7315e9fe35706a3565b4c594c20fb0591d33e1",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "f641529c_b47811e3",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 242,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-24T18:39:21Z",
+      "side": 1,
+      "message": "The expression on L241 makes single_lat_measurement_duration a float, that is checked here for equality against integer 0.",
+      "revId": "1e7315e9fe35706a3565b4c594c20fb0591d33e1",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "840e98ab_790f8d95",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 243,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-24T18:39:21Z",
+      "side": 1,
+      "message": "Whatever the granularity of stats returned by PROX, L242 actually checks that the old and new TSC are the exact same.\nThis comment suggests that you want to wait until at least a full second has elapsed, while the test on L242 will not trigger a \"continue to wait\", as soon as a µs or ns has passed between old and new TSC.\nDepending on what you want to do, you could:\n* either check whether (new_lat_tsc \u003d\u003d old_lat_tsc) between L240 and L241, and adjust the comment on L243\n* or check whether (single_lat_measurement_duration \u003c 1.0) on L242\n\nAdditionally, with the 800ms delay on L239, and assuming that you want to check whether (single_lat_measurement_duration \u003c 1.0), you will probably get durations swinging between 1s and 2s, considering that PROX granularity is 1s. So you should also change the delay on L239 to something that, once multiplied by the number of \"continue to wait\" loops, would be closer to 1s. For example 0.5, 0.33 or 0.25. 0.1 might be too heavy on the PROX socket...",
+      "range": {
+        "startLine": 243,
+        "startChar": 15,
+        "endLine": 243,
+        "endChar": 38
+      },
+      "revId": "1e7315e9fe35706a3565b4c594c20fb0591d33e1",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "c0c33cd9_69b2a507",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 290,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-24T18:39:21Z",
+      "side": 1,
+      "message": "This expression is likely not what you want to check!",
+      "range": {
+        "startLine": 290,
+        "startChar": 42,
+        "endLine": 290,
+        "endChar": 79
+      },
+      "revId": "1e7315e9fe35706a3565b4c594c20fb0591d33e1",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "e8b72ad2_1cf075f1",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 338,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-24T18:39:21Z",
+      "side": 1,
+      "message": "Would better be named get_percentageof10Gbps",
+      "range": {
+        "startLine": 338,
+        "startChar": 4,
+        "endLine": 338,
+        "endChar": 25
+      },
+      "revId": "1e7315e9fe35706a3565b4c594c20fb0591d33e1",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    }
+  ]
+}
