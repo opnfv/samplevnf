@@ -48,6 +48,30 @@
     },
     {
       "key": {
+        "uuid": "1de8073f_81e6e397",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 37,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-27T12:45:35Z",
+      "side": 1,
+      "message": "In order to drop the dependency on numpy, you can replace L37 with the following line (and move it below the import block):\ninf \u003d float(\"inf\")",
+      "parentUuid": "e43ffedb_4c5da810",
+      "range": {
+        "startLine": 37,
+        "startChar": 5,
+        "endLine": 37,
+        "endChar": 10
+      },
+      "revId": "1e7315e9fe35706a3565b4c594c20fb0591d33e1",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "f641529c_b47811e3",
         "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
         "patchSetId": 1
@@ -108,6 +132,30 @@
       "revId": "1e7315e9fe35706a3565b4c594c20fb0591d33e1",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "016aefb2_8b54253d",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 290,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-27T12:45:35Z",
+      "side": 1,
+      "message": "OK, my mistake here.\nChaining comparison operators is a Python-ism that looks weird to C/C++ developers ;-)\nEven more with the \u003d\u003d operator!\nI mean that the (a \u003c b \u003c c) expression can naturally be understood as ((a \u003c b) and (b \u003c c)) so it\u0027s easier to forget C/C++ habits.\nWhile the (a \u003d\u003d b \u003d\u003d c) expression looked weird to me because it translates to ((a \u003d\u003d b) \u003d\u003d c) in C/C++, which yields a totally different result.",
+      "parentUuid": "c0c33cd9_69b2a507",
+      "range": {
+        "startLine": 290,
+        "startChar": 42,
+        "endLine": 290,
+        "endChar": 79
+      },
+      "revId": "1e7315e9fe35706a3565b4c594c20fb0591d33e1",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
     },
     {
       "key": {
