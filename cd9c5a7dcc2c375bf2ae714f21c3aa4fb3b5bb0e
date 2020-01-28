@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1e6dd8aa_e20b4134",
+        "filename": "VNFs/DPPD-PROX/prox_port_cfg.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 184,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-28T19:20:39Z",
+      "side": 1,
+      "message": "Not sure about this one!",
+      "revId": "cd9c5a7dcc2c375bf2ae714f21c3aa4fb3b5bb0e",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    }
+  ]
+}
