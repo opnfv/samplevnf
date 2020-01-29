@@ -218,33 +218,33 @@ def report_result(flow_number,size,speed,pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat
 		flow_number_str = '| ({:>4}) |'.format(abs(flow_number))
 	else:
 		flow_number_str = '|{:>7} |'.format(flow_number)
-	if pps_req_tx == None:
+	if pps_req_tx is None:
 		pps_req_tx_str = '{0: >14}'.format('   NA     |')
 	else:
 		pps_req_tx_str = '{:>7.3f} Mpps |'.format(pps_req_tx)
-	if pps_tx == None:
+	if pps_tx is None:
 		pps_tx_str = '{0: >14}'.format('   NA     |')
 	else:
 		pps_tx_str = '{:>7.3f} Mpps |'.format(pps_tx) 
-	if pps_sut_tx == None:
+	if pps_sut_tx is None:
 		pps_sut_tx_str = '{0: >14}'.format('   NA     |')
 	else:
 		pps_sut_tx_str = '{:>7.3f} Mpps |'.format(pps_sut_tx)
-	if pps_rx == None:
+	if pps_rx is None:
 		pps_rx_str = '{0: >24|}'.format('NA        ')
 	else:
 		pps_rx_str = bcolors.OKBLUE + '{:>4.1f} Gb/s |{:7.3f} Mpps {}|'.format(get_speed(pps_rx,size),pps_rx,bcolors.ENDC)
-	if tot_drop == None:
+	if tot_drop is None:
 		tot_drop_str = ' |       NA  | '
 	else:
 		tot_drop_str = ' | {:>9.0f} | '.format(tot_drop)
-	if lat_perc == None:
+	if lat_perc is None:
 		lat_perc_str = ' |{:^10.10}|'.format('NA')
 	elif lat_perc_max == True:
 		lat_perc_str = ' |>{}{:>5.0f} us{} |'.format(lat_perc_prefix,float(lat_perc), bcolors.ENDC) 
 	else:
 		lat_perc_str = ' | {}{:>5.0f} us{} |'.format(lat_perc_prefix,float(lat_perc), bcolors.ENDC) 
-	if elapsed_time == None:
+	if elapsed_time is None:
 		elapsed_time_str = ' NA |'
 	else:
 		elapsed_time_str = '{:>3.0f} |'.format(elapsed_time)
@@ -285,10 +285,7 @@ def run_iteration(gensock, sutsock, requested_duration,flow_number,size,speed):
 			sample_count += bucket
 			if sample_count > (lat_samples * LAT_PERCENTILE):
 				break
-		if sample_percentile == len(buckets):
-			percentile_max = True
-		else:
-			percentile_max = False
+		percentile_max = (sample_percentile == len(buckets))
 		sample_percentile = sample_percentile *  float(2 ** BUCKET_SIZE_EXP) / (float(lat_hz)/float(10**6))
 		if test == 'fixed_rate':
 			log.info(report_result(flow_number,size,speed,None,None,None,None,lat_avg,sample_percentile,percentile_max,lat_max, dp_tx, dp_rx , None, None))
@@ -322,10 +319,7 @@ def run_iteration(gensock, sutsock, requested_duration,flow_number,size,speed):
 					sample_count += bucket
 					if sample_count > lat_samples * LAT_PERCENTILE:
 						break
-				if sample_percentile == len(buckets):
-					percentile_max = True
-				else:
-					percentile_max = False
+				percentile_max = (sample_percentile == len(buckets))
 				sample_percentile = sample_percentile *  float(2 ** BUCKET_SIZE_EXP) / (float(lat_hz)/float(10**6))
 				buckets_total = [buckets_total[i] + buckets[i] for i in range(len(buckets_total))] 
 				t2_lat_tsc = t3_lat_tsc
@@ -393,10 +387,7 @@ def run_iteration(gensock, sutsock, requested_duration,flow_number,size,speed):
 				sample_count += bucket
 				if sample_count > lat_samples * LAT_PERCENTILE:
 					break
-			if percentile == len(buckets):
-				percentile_max = True
-			else:
-				percentile_max = False
+			percentile_max = (percentile == len(buckets))
 			percentile = percentile *  float(2 ** BUCKET_SIZE_EXP) / (float(lat_hz)/float(10**6))
 			lat_max = lat_max_sample
 			lat_avg = lat_avg_sample
@@ -422,10 +413,7 @@ def run_iteration(gensock, sutsock, requested_duration,flow_number,size,speed):
 				sample_count += bucket
 				if sample_count > tot_lat_samples * LAT_PERCENTILE:
 					break
-			if percentile == len(buckets):
-				percentile_max = True
-			else:
-				percentile_max = False
+			percentile_max = (percentile == len(buckets))
 			percentile = percentile *  float(2 ** BUCKET_SIZE_EXP) / (float(lat_hz)/float(10**6))
 			pps_req_tx = (tot_tx + tot_drop - tot_rx)/tot_core_measurement_duration/1000000.0 # tot_drop is all packets dropped by all tasks. This includes packets dropped at the generator task + packets dropped by the nop task. In steady state, this equals to the number of packets received by this VM
 			pps_tx = tot_tx/tot_core_measurement_duration/1000000.0 # tot_tx is all generated packets actually accepted by the interface
@@ -658,7 +646,7 @@ def run_flow_size_test(gensock,sutsock):
 				speed = new_speed(speed, size, success)
 				if resolution_achieved():
 					break
-			if endspeed !=  None:
+			if endspeed is not  None:
 				speed_prefix = lat_avg_prefix = lat_perc_prefix = lat_max_prefix = abs_drop_rate_prefix = drop_rate_prefix = bcolors.ENDC
 				log.info(report_result(flow_number,size,endspeed,endpps_req_tx,endpps_tx,endpps_sut_tx,endpps_rx,endlat_avg,endlat_perc,endlat_perc_max,endlat_max,endabs_tx,endabs_rx,endabs_dropped,actual_duration,speed_prefix,lat_avg_prefix,lat_perc_prefix,lat_max_prefix,abs_drop_rate_prefix,drop_rate_prefix))
 				if endwarning:
