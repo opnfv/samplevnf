@@ -1,0 +1,475 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "261a84da_26bd3ef5",
+        "filename": "VNFs/DPPD-PROX/handle_gen.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 569,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-30T17:25:09Z",
+      "side": 1,
+      "message": "Either size_t, as almost anywhere else...",
+      "range": {
+        "startLine": 569,
+        "startChar": 6,
+        "endLine": 569,
+        "endChar": 10
+      },
+      "revId": "a7f9c45a3b1213ae008375a724e4fea77c6a753a",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "296a2469_7510120f",
+        "filename": "VNFs/DPPD-PROX/handle_gen.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 576,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-30T17:25:09Z",
+      "side": 1,
+      "message": "Either size_t, as almost anywhere else...",
+      "range": {
+        "startLine": 576,
+        "startChar": 6,
+        "endLine": 576,
+        "endChar": 10
+      },
+      "revId": "a7f9c45a3b1213ae008375a724e4fea77c6a753a",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "1db3ce4c_ef664d79",
+        "filename": "VNFs/DPPD-PROX/handle_gen.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 586,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-30T17:25:09Z",
+      "side": 1,
+      "message": "unused",
+      "range": {
+        "startLine": 586,
+        "startChar": 96,
+        "endLine": 586,
+        "endChar": 104
+      },
+      "revId": "a7f9c45a3b1213ae008375a724e4fea77c6a753a",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "a8a56132_87544214",
+        "filename": "VNFs/DPPD-PROX/handle_gen.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 589,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-30T17:25:09Z",
+      "side": 1,
+      "message": "... Or uint32_t, or uint as in task_gen_allocate_templates()",
+      "range": {
+        "startLine": 589,
+        "startChar": 6,
+        "endLine": 589,
+        "endChar": 12
+      },
+      "revId": "a7f9c45a3b1213ae008375a724e4fea77c6a753a",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "18e08c58_ff7cdc02",
+        "filename": "VNFs/DPPD-PROX/handle_gen.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 607,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-30T17:25:09Z",
+      "side": 1,
+      "message": "... Or uint32_t, or uint as in task_gen_allocate_templates()",
+      "range": {
+        "startLine": 607,
+        "startChar": 6,
+        "endLine": 607,
+        "endChar": 12
+      },
+      "revId": "a7f9c45a3b1213ae008375a724e4fea77c6a753a",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "776e747e_cd70e9fa",
+        "filename": "VNFs/DPPD-PROX/handle_gen.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 610,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-30T17:25:09Z",
+      "side": 1,
+      "message": "If not size_t, then this would become %d",
+      "range": {
+        "startLine": 610,
+        "startChar": 87,
+        "endLine": 610,
+        "endChar": 90
+      },
+      "revId": "a7f9c45a3b1213ae008375a724e4fea77c6a753a",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "2912d44d_6db1247c",
+        "filename": "VNFs/DPPD-PROX/handle_gen.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 678,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-30T17:25:09Z",
+      "side": 1,
+      "message": "%u-%u",
+      "range": {
+        "startLine": 678,
+        "startChar": 56,
+        "endLine": 678,
+        "endChar": 61
+      },
+      "revId": "a7f9c45a3b1213ae008375a724e4fea77c6a753a",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "fc512451_f30f057a",
+        "filename": "VNFs/DPPD-PROX/handle_gen.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 681,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-30T17:25:09Z",
+      "side": 1,
+      "message": "%u-%u",
+      "range": {
+        "startLine": 681,
+        "startChar": 33,
+        "endLine": 681,
+        "endChar": 38
+      },
+      "revId": "a7f9c45a3b1213ae008375a724e4fea77c6a753a",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "f65e6036_1eef68b1",
+        "filename": "VNFs/DPPD-PROX/handle_gen.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 688,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-30T17:25:09Z",
+      "side": 1,
+      "message": "unused",
+      "range": {
+        "startLine": 688,
+        "startChar": 130,
+        "endLine": 688,
+        "endChar": 142
+      },
+      "revId": "a7f9c45a3b1213ae008375a724e4fea77c6a753a",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "bfad769f_f5d5bcb2",
+        "filename": "VNFs/DPPD-PROX/handle_gen.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 690,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-30T17:25:09Z",
+      "side": 1,
+      "message": "unused",
+      "revId": "a7f9c45a3b1213ae008375a724e4fea77c6a753a",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "76050680_a056e608",
+        "filename": "VNFs/DPPD-PROX/handle_gen.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 698,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-30T17:25:09Z",
+      "side": 1,
+      "message": "Indexing expression differs from L1042 and L1055.\nOverall count is the same, but it might lead to confusion about how packets are sequenced in pkt_template...",
+      "revId": "a7f9c45a3b1213ae008375a724e4fea77c6a753a",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "0111fcff_16902410",
+        "filename": "VNFs/DPPD-PROX/handle_gen.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1085,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-30T17:25:09Z",
+      "side": 1,
+      "message": "Should be DO_PANIC, as on L1080",
+      "range": {
+        "startLine": 1085,
+        "startChar": 26,
+        "endLine": 1085,
+        "endChar": 27
+      },
+      "revId": "a7f9c45a3b1213ae008375a724e4fea77c6a753a",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "3ba74b94_72f469de",
+        "filename": "VNFs/DPPD-PROX/handle_gen.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1086,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-30T17:25:09Z",
+      "side": 1,
+      "message": "Should be DO_PANIC, as on L1080",
+      "range": {
+        "startLine": 1086,
+        "startChar": 34,
+        "endLine": 1086,
+        "endChar": 35
+      },
+      "revId": "a7f9c45a3b1213ae008375a724e4fea77c6a753a",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "7be364d7_b2470b5e",
+        "filename": "VNFs/DPPD-PROX/handle_gen.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1090,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-30T17:25:09Z",
+      "side": 1,
+      "message": "Might be 0, which would make task_gen_set_eth_ip_udp_sizes() do nothing.\nShouldn\u0027t it be set to 1, just above L1076?\nAlternatively, might be set to 1 on L1456, and task-\u003eimix_pkt_sizes[0] be assigned targ-\u003epkt_size, when targ-\u003eimix_nb_pkts is 0.\nThen L1074-L1079 would shrink to L1078 only.\nNot sure how this would break or not the backward compatibility mentioned here.",
+      "range": {
+        "startLine": 1090,
+        "startChar": 56,
+        "endLine": 1090,
+        "endChar": 74
+      },
+      "revId": "a7f9c45a3b1213ae008375a724e4fea77c6a753a",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "542970a9_4b880a62",
+        "filename": "VNFs/DPPD-PROX/handle_gen.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1116,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-30T17:25:09Z",
+      "side": 1,
+      "message": "Shouldn\u0027t that be orig_n_pkts?",
+      "range": {
+        "startLine": 1116,
+        "startChar": 47,
+        "endLine": 1116,
+        "endChar": 53
+      },
+      "revId": "a7f9c45a3b1213ae008375a724e4fea77c6a753a",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "e75811d6_0875dd3a",
+        "filename": "VNFs/DPPD-PROX/handle_gen.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1119,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-30T17:25:09Z",
+      "side": 1,
+      "message": "Should be DO_PANIC, as on L1113",
+      "range": {
+        "startLine": 1119,
+        "startChar": 26,
+        "endLine": 1119,
+        "endChar": 27
+      },
+      "revId": "a7f9c45a3b1213ae008375a724e4fea77c6a753a",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "e09a1d31_60ff3458",
+        "filename": "VNFs/DPPD-PROX/handle_gen.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1120,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-30T17:25:09Z",
+      "side": 1,
+      "message": "Should be DO_PANIC, as on L1113",
+      "range": {
+        "startLine": 1120,
+        "startChar": 34,
+        "endLine": 1120,
+        "endChar": 35
+      },
+      "revId": "a7f9c45a3b1213ae008375a724e4fea77c6a753a",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "33a4ceb8_505446be",
+        "filename": "VNFs/DPPD-PROX/handle_gen.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1121,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-30T17:25:09Z",
+      "side": 1,
+      "message": "Ditto L1090",
+      "range": {
+        "startLine": 1121,
+        "startChar": 56,
+        "endLine": 1121,
+        "endChar": 74
+      },
+      "revId": "a7f9c45a3b1213ae008375a724e4fea77c6a753a",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "1167fb7b_a395229a",
+        "filename": "VNFs/DPPD-PROX/log.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 43,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-30T17:25:09Z",
+      "side": 1,
+      "message": "2, 3",
+      "range": {
+        "startLine": 43,
+        "startChar": 30,
+        "endLine": 43,
+        "endChar": 34
+      },
+      "revId": "a7f9c45a3b1213ae008375a724e4fea77c6a753a",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "4513e47d_28dd4280",
+        "filename": "VNFs/DPPD-PROX/prox_args.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 982,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-30T17:25:09Z",
+      "side": 1,
+      "message": "No need for a second pointer.\nSince we break if strchr() returns NULL on L994, assignment could be done into ptr, and L996 would become: ptr++;",
+      "range": {
+        "startLine": 982,
+        "startChar": 41,
+        "endLine": 982,
+        "endChar": 45
+      },
+      "revId": "a7f9c45a3b1213ae008375a724e4fea77c6a753a",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "b066ba0e_7581d768",
+        "filename": "VNFs/DPPD-PROX/prox_args.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 984,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-30T17:25:09Z",
+      "side": 1,
+      "message": "imix",
+      "range": {
+        "startLine": 984,
+        "startChar": 33,
+        "endLine": 984,
+        "endChar": 36
+      },
+      "revId": "a7f9c45a3b1213ae008375a724e4fea77c6a753a",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    }
+  ]
+}
