@@ -19,6 +19,24 @@
     },
     {
       "key": {
+        "uuid": "6d2ab335_16f407fa",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 286,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-30T17:44:23Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "e6bed21c_76c560fa",
+      "revId": "1eb070d16476285b3dff087cff03cf352a0aadbc",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "3b4aee83_34fa1c81",
         "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
         "patchSetId": 1
@@ -33,6 +51,24 @@
       "revId": "1eb070d16476285b3dff087cff03cf352a0aadbc",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "3f0886e4_8cf49c74",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 323,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-30T17:44:23Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "3b4aee83_34fa1c81",
+      "revId": "1eb070d16476285b3dff087cff03cf352a0aadbc",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
     },
     {
       "key": {
@@ -53,6 +89,24 @@
     },
     {
       "key": {
+        "uuid": "55d450af_b5b2bc6f",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 395,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-30T17:44:23Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "48b6471b_63c45173",
+      "revId": "1eb070d16476285b3dff087cff03cf352a0aadbc",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "9a7893a9_17cbc2e3",
         "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
         "patchSetId": 1
@@ -64,6 +118,24 @@
       "writtenOn": "2020-01-28T15:53:36Z",
       "side": 1,
       "message": "ditto, except that the loop on L417 iterates over buckets_total (instead of buckets)",
+      "revId": "1eb070d16476285b3dff087cff03cf352a0aadbc",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "38a1fbab_d3723257",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 424,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-01-30T17:44:23Z",
+      "side": 1,
+      "message": "Possibly Done, pending the question buckets vs. buckets_total",
+      "parentUuid": "9a7893a9_17cbc2e3",
       "revId": "1eb070d16476285b3dff087cff03cf352a0aadbc",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": true
