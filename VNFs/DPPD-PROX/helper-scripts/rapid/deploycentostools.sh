@@ -20,7 +20,7 @@ WORK_DIR="/home/centos" # Directory where the packer tool has copied some files 
 			# Runtime scripts are assuming ${WORK_DIR} as the directory for PROX. Check the rundir variable in runrapid.py. Should be the same!
 			# This variable is defined in 4 different places and should have the same value: centos.json, deploycentos.sh, check_prox_system_setup.sh and runrapid.py
 DPDK_VERSION="19.05"
-PROX_COMMIT="2cd03b79"
+PROX_COMMIT="b71a4cfd"
 PROX_CHECKOUT="git checkout ${PROX_COMMIT}"
 ## Next line is overruling the PROX_COMMIT and will replace the version with a very specific patch. Should be commented out
 ## 	if you want to use a committed version of PROX

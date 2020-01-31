@@ -413,7 +413,7 @@ def run_iteration(gensock, sutsock, requested_duration,flow_number,size,speed):
 				sample_count += bucket
 				if sample_count > tot_lat_samples * LAT_PERCENTILE:
 					break
-			percentile_max = (percentile == len(buckets))
+			percentile_max = (percentile == len(buckets_total))
 			percentile = percentile *  float(2 ** BUCKET_SIZE_EXP) / (float(lat_hz)/float(10**6))
 			pps_req_tx = (tot_tx + tot_drop - tot_rx)/tot_core_measurement_duration/1000000.0 # tot_drop is all packets dropped by all tasks. This includes packets dropped at the generator task + packets dropped by the nop task. In steady state, this equals to the number of packets received by this VM
 			pps_tx = tot_tx/tot_core_measurement_duration/1000000.0 # tot_tx is all generated packets actually accepted by the interface
