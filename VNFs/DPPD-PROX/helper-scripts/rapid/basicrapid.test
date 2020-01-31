@@ -21,6 +21,7 @@ total_number_of_test_machines = 2
 prox_socket = true
 prox_launch_exit = true
 #PushGateway=http://192.168.36.1:9091
+lat_percentile = 99
 
 [TestM1]
 name = Generator
@@ -36,10 +37,11 @@ cores = [1]
 
 [BinarySearchParams]
 drop_rate_threshold = 0.1
-lat_avg_threshold = 400
-lat_max_threshold = 800
+lat_avg_threshold = 50
+lat_perc_threshold = 80
+lat_max_threshold = inf
 accuracy = 0.1
-startspeed = 10
+startspeed = 5
 
 [test1]
 test=warmuptest
@@ -50,7 +52,7 @@ warmuptime=2
 
 [test2]
 test=flowsizetest
-packetsizes=[64,128,1024]
+packetsizes=[64]
 # the number of flows in the list need to be powers of 2, max 2^20
 # Select from following numbers: 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576
-flows=[1,512,1048576]
+flows=[64]
