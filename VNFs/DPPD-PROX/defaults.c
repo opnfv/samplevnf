@@ -82,9 +82,11 @@ static struct rte_sched_port_params port_params_default = {
 	.frame_overhead = RTE_SCHED_FRAME_OVERHEAD_DEFAULT,
 	.n_subports_per_port = 1,
 	.n_pipes_per_subport = NB_PIPES,
+#if RTE_VERSION < RTE_VERSION_NUM(19,11,0,0)
 	.qsize = {QUEUE_SIZES, QUEUE_SIZES, QUEUE_SIZES, QUEUE_SIZES},
 	.pipe_profiles = NULL,
 	.n_pipe_profiles = 1 /* only one profile */
+#endif
 };
 
 static struct rte_sched_pipe_params pipe_params_default = {
@@ -106,6 +108,11 @@ static struct rte_sched_subport_params subport_params_default = {
 	.tb_size = 4000000,
 	.tc_rate = {TEN_GIGABIT, TEN_GIGABIT, TEN_GIGABIT, TEN_GIGABIT},
 	.tc_period = 40, /* default was 10 */
+#if RTE_VERSION >= RTE_VERSION_NUM(19,11,0,0)
+	.qsize = {QUEUE_SIZES, QUEUE_SIZES, QUEUE_SIZES, QUEUE_SIZES},
+	.pipe_profiles = NULL,
+	.n_pipe_profiles = 1 /* only one profile */
+#endif
 };
 
 void set_global_defaults(__attribute__((unused)) struct prox_cfg *prox_cfg)
@@ -137,7 +144,11 @@ void set_task_defaults(struct prox_cfg* prox_cfg, struct lcore_cfg* lcore_cfg_in
 			targ->qos_conf.port_params = port_params_default;
 			targ->qos_conf.pipe_params[0] = pipe_params_default;
 			targ->qos_conf.subport_params[0] = subport_params_default;
+#if RTE_VERSION >= RTE_VERSION_NUM(19,11,0,0)
+			targ->qos_conf.subport_params[0].pipe_profiles = targ->qos_conf.pipe_params;
+#else
 			targ->qos_conf.port_params.pipe_profiles = targ->qos_conf.pipe_params;
+#endif
 			targ->qos_conf.port_params.rate = TEN_GIGABIT;
 			targ->qinq_tag = ETYPE_8021ad;
 			targ->n_concur_conn = 8192*2;

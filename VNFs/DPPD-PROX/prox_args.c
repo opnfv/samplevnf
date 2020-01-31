@@ -1416,30 +1416,60 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 		if (err) {
 			return -1;
 		}
-
+#if RTE_VERSION >= RTE_VERSION_NUM(19,11,0,0)
+		targ->qos_conf.subport_params[0].qsize[0] = val;
+		targ->qos_conf.subport_params[0].qsize[1] = val;
+		targ->qos_conf.subport_params[0].qsize[2] = val;
+		targ->qos_conf.subport_params[0].qsize[3] = val;
+#else
 		targ->qos_conf.port_params.qsize[0] = val;
 		targ->qos_conf.port_params.qsize[1] = val;
 		targ->qos_conf.port_params.qsize[2] = val;
 		targ->qos_conf.port_params.qsize[3] = val;
+#endif
 		return 0;
 	}
 	if (STR_EQ(str, "subport tb rate")) {
+#if RTE_VERSION >= RTE_VERSION_NUM(19,11,0,0)
+		return parse_u64(&targ->qos_conf.subport_params[0].tb_rate, pkey);
+#else
 		return parse_int(&targ->qos_conf.subport_params[0].tb_rate, pkey);
+#endif
 	}
 	if (STR_EQ(str, "subport tb size")) {
+#if RTE_VERSION >= RTE_VERSION_NUM(19,11,0,0)
+		return parse_u64(&targ->qos_conf.subport_params[0].tb_size, pkey);
+#else
 		return parse_int(&targ->qos_conf.subport_params[0].tb_size, pkey);
+#endif
 	}
 	if (STR_EQ(str, "subport tc 0 rate")) {
+#if RTE_VERSION >= RTE_VERSION_NUM(19,11,0,0)
+		return parse_u64(&targ->qos_conf.subport_params[0].tc_rate[0], pkey);
+#else
 		return parse_int(&targ->qos_conf.subport_params[0].tc_rate[0], pkey);
+#endif
 	}
 	if (STR_EQ(str, "subport tc 1 rate")) {
+#if RTE_VERSION >= RTE_VERSION_NUM(19,11,0,0)
+		return parse_u64(&targ->qos_conf.subport_params[0].tc_rate[1], pkey);
+#else
 		return parse_int(&targ->qos_conf.subport_params[0].tc_rate[1], pkey);
+#endif
 	}
 	if (STR_EQ(str, "subport tc 2 rate")) {
+#if RTE_VERSION >= RTE_VERSION_NUM(19,11,0,0)
+		return parse_u64(&targ->qos_conf.subport_params[0].tc_rate[2], pkey);
+#else
 		return parse_int(&targ->qos_conf.subport_params[0].tc_rate[2], pkey);
+#endif
 	}
 	if (STR_EQ(str, "subport tc 3 rate")) {
+#if RTE_VERSION >= RTE_VERSION_NUM(19,11,0,0)
+		return parse_u64(&targ->qos_conf.subport_params[0].tc_rate[3], pkey);
+#else
 		return parse_int(&targ->qos_conf.subport_params[0].tc_rate[3], pkey);
+#endif
 	}
 
 	if (STR_EQ(str, "subport tc rate")) {
@@ -1457,13 +1487,25 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 		return 0;
 	}
 	if (STR_EQ(str, "subport tc period")) {
+#if RTE_VERSION >= RTE_VERSION_NUM(19,11,0,0)
+		return parse_u64(&targ->qos_conf.subport_params[0].tc_period, pkey);
+#else
 		return parse_int(&targ->qos_conf.subport_params[0].tc_period, pkey);
+#endif
 	}
 	if (STR_EQ(str, "pipe tb rate")) {
+#if RTE_VERSION >= RTE_VERSION_NUM(19,11,0,0)
+		return parse_u64(&targ->qos_conf.pipe_params[0].tb_rate, pkey);
+#else
 		return parse_int(&targ->qos_conf.pipe_params[0].tb_rate, pkey);
+#endif
 	}
 	if (STR_EQ(str, "pipe tb size")) {
+#if RTE_VERSION >= RTE_VERSION_NUM(19,11,0,0)
+		return parse_u64(&targ->qos_conf.pipe_params[0].tb_size, pkey);
+#else
 		return parse_int(&targ->qos_conf.pipe_params[0].tb_size, pkey);
+#endif
 	}
 	if (STR_EQ(str, "pipe tc rate")) {
 		uint32_t val;
@@ -1479,19 +1521,39 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 		return 0;
 	}
 	if (STR_EQ(str, "pipe tc 0 rate")) {
+#if RTE_VERSION >= RTE_VERSION_NUM(19,11,0,0)
+		return parse_u64(&targ->qos_conf.pipe_params[0].tc_rate[0], pkey);
+#else
 		return parse_int(&targ->qos_conf.pipe_params[0].tc_rate[0], pkey);
+#endif
 	}
 	if (STR_EQ(str, "pipe tc 1 rate")) {
+#if RTE_VERSION >= RTE_VERSION_NUM(19,11,0,0)
+		return parse_u64(&targ->qos_conf.pipe_params[0].tc_rate[1], pkey);
+#else
 		return parse_int(&targ->qos_conf.pipe_params[0].tc_rate[1], pkey);
+#endif
 	}
 	if (STR_EQ(str, "pipe tc 2 rate")) {
+#if RTE_VERSION >= RTE_VERSION_NUM(19,11,0,0)
+		return parse_u64(&targ->qos_conf.pipe_params[0].tc_rate[2], pkey);
+#else
 		return parse_int(&targ->qos_conf.pipe_params[0].tc_rate[2], pkey);
+#endif
 	}
 	if (STR_EQ(str, "pipe tc 3 rate")) {
+#if RTE_VERSION >= RTE_VERSION_NUM(19,11,0,0)
+		return parse_u64(&targ->qos_conf.pipe_params[0].tc_rate[3], pkey);
+#else
 		return parse_int(&targ->qos_conf.pipe_params[0].tc_rate[3], pkey);
+#endif
 	}
 	if (STR_EQ(str, "pipe tc period")) {
+#if RTE_VERSION >= RTE_VERSION_NUM(19,11,0,0)
+		return parse_u64(&targ->qos_conf.pipe_params[0].tc_period, pkey);
+#else
 		return parse_int(&targ->qos_conf.pipe_params[0].tc_period, pkey);
+#endif
 	}
 	if (STR_EQ(str, "police action")) {
 		char *in = strstr(pkey, " io=");

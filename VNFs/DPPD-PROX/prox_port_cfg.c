@@ -169,7 +169,7 @@ void init_rte_dev(int use_dummy_devices)
 	struct rte_eth_dev_info dev_info;
 	const struct rte_pci_device *pci_dev;
 
-	nb_ports = rte_eth_dev_count();
+	nb_ports = prox_rte_eth_dev_count_avail();
 	/* get available ports configuration */
 	PROX_PANIC(use_dummy_devices && nb_ports, "Can't use dummy devices while there are also real ports\n");
 
