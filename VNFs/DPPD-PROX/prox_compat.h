@@ -253,4 +253,10 @@ static int prox_rte_cryptodev_queue_pair_setup(uint8_t dev_id, uint16_t queue_pa
 #endif
 #endif	// CONFIG_RTE_LIBRTE_PMD_AESNI_MB
 
+#if RTE_VERSION < RTE_VERSION_NUM(19,11,0,0)
+#define prox_rte_eth_dev_count_avail() rte_eth_dev_count()
+#else
+#define prox_rte_eth_dev_count_avail() rte_eth_dev_count_avail()
+#endif
+
 #endif // _PROX_COMPAT_H

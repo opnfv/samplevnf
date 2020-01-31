@@ -18,6 +18,10 @@
 #include <rte_ether.h>
 #include <rte_ip.h>
 #include <rte_udp.h>
+#include <rte_version.h>
+#if RTE_VERSION >= RTE_VERSION_NUM(19,11,0,0)
+#include <rte_vxlan.h>
+#endif
 
 #include "vxlangpe_nsh.h"
 #include "task_base.h"
