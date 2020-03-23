@@ -169,7 +169,10 @@ void stats_port_init(void)
 	for (uint8_t port_id = 0; port_id < nb_interface; ++port_id) {
 		if (prox_port_cfg[port_id].active) {
 #if RTE_VERSION >= RTE_VERSION_NUM(16,7,0,0)
-			num_xstats[port_id] = rte_eth_xstats_get_names(port_id, NULL, 0);
+			if ((num_xstats[port_id] = rte_eth_xstats_get_names(port_id, NULL, 0)) < 0) {
+				plog_err("\tport %u: rte_eth_xstats_get_names returns %d\n", port_id, num_xstats[port_id]);
+				continue;
+			}
 			eth_xstat_names[port_id] = prox_zmalloc(num_xstats[port_id] * sizeof(struct rte_eth_xstat_name), prox_port_cfg[port_id].socket);
 			PROX_PANIC(eth_xstat_names[port_id] == NULL, "Error allocating memory for xstats");
 			num_xstats[port_id] = rte_eth_xstats_get_names(port_id, eth_xstat_names[port_id], num_xstats[port_id]);

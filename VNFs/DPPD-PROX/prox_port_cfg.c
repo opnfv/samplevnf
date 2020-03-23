@@ -47,6 +47,7 @@
 #include "rte_ethdev.h"
 
 struct prox_port_cfg prox_port_cfg[PROX_MAX_PORTS];
+
 rte_atomic32_t lsc;
 
 int prox_nb_active_ports(void)
@@ -271,17 +272,33 @@ void init_rte_dev(int use_dummy_devices)
 
 		nb_ports = PROX_MAX_PORTS;
 	}
-	port_id_max = nb_ports - 1;
+	port_id_max = -1;
+	uint16_t id;
+	RTE_ETH_FOREACH_DEV(id) {
+		char name[256];
+		rte_eth_dev_get_name_by_port(id, name);
+		plog_info("\tFound DPDK port id %u %s\n", id, name);
+		if (id >= PROX_MAX_PORTS) {
+			plog_warn("\tWarning: I can deal with at most %u ports."
+				 " Please update PROX_MAX_PORTS and recompile.\n", PROX_MAX_PORTS);
+		} else {
+			prox_port_cfg[id].available = 1;
+			if (id > port_id_max)
+				port_id_max = id;
+		}
+	}
 	port_id_last = prox_last_port_active();
 	PROX_PANIC(port_id_last > port_id_max,
 		   "\tError: invalid port(s) specified, last port index active: %d (max index is %d)\n",
 		   port_id_last, port_id_max);
 
 	/* Assign ports to PROX interfaces & Read max RX/TX queues per port */
-	for (uint8_t port_id = 0; port_id < nb_ports; ++port_id) {
+	for (uint8_t port_id = 0; port_id <= port_id_last; ++port_id) {
 		/* skip ports that are not enabled */
 		if (!prox_port_cfg[port_id].active) {
 			continue;
+		} else if (prox_port_cfg[port_id].available == 0) {
+			PROX_PANIC(1, "port %u enabled but not available\n", port_id);
 		}
 		plog_info("\tGetting info for rte dev %u\n", port_id);
 		rte_eth_dev_info_get(port_id, &dev_info);
@@ -813,6 +830,12 @@ static void init_port(struct prox_port_cfg *port_cfg)
 
 void init_port_all(void)
 {
+	enum rte_proc_type_t proc_type;
+	proc_type = rte_eal_process_type();
+	if (proc_type == RTE_PROC_SECONDARY) {
+		plog_info("\tSkipping port initialization as secondary process\n");
+		return;
+	}
 	uint8_t max_port_idx = prox_last_port_active() + 1;
 
 	for (uint8_t portid = 0; portid < max_port_idx; ++portid) {
@@ -831,6 +854,7 @@ void close_ports_atexit(void)
 		if (!prox_port_cfg[portid].active) {
 			continue;
 		}
+		plog_info("Closing port %u\n", portid);
 		rte_eth_dev_close(portid);
 	}
 }
@@ -838,6 +862,7 @@ void close_ports_atexit(void)
 void init_port_addr(void)
 {
 	struct prox_port_cfg *port_cfg;
+	enum rte_proc_type_t proc_type;
 	int rc;
 
 	for (uint8_t port_id = 0; port_id < PROX_MAX_PORTS; ++port_id) {
@@ -854,9 +879,13 @@ void init_port_addr(void)
 			prox_rte_eth_random_addr(port_cfg->eth_addr.addr_bytes);
 			break;
 		case PROX_PORT_MAC_SET:
-			plog_info("Setting MAC to "MAC_BYTES_FMT"\n", MAC_BYTES(port_cfg->eth_addr.addr_bytes));
-			if ((rc = rte_eth_dev_default_mac_addr_set(port_id, &port_cfg->eth_addr)) != 0)
-				plog_warn("port %u: failed to set mac address. Error = %d\n", port_id, rc);
+			proc_type = rte_eal_process_type();
+			if (proc_type == RTE_PROC_SECONDARY) {
+				plog_warn("\tport %u: unable to change port mac address as secondary process\n", port_id);
+			} else if ((rc = rte_eth_dev_default_mac_addr_set(port_id, &port_cfg->eth_addr)) != 0)
+				plog_warn("\tport %u: failed to set mac address. Error = %d\n", port_id, rc);
+			else
+				plog_info("Setting MAC to "MAC_BYTES_FMT"\n", MAC_BYTES(port_cfg->eth_addr.addr_bytes));
 			break;
 		}
 	}
