@@ -37,7 +37,7 @@ import requests
 from math import ceil
 inf = float("inf")
 
-version="20.01.10"
+version="20.03.23"
 env = "rapid.env" #Default string for environment
 test_file = "basicrapid.test" #Default string for test
 machine_map_file = "machine.map" #Default string for machine map file
@@ -45,7 +45,8 @@ loglevel="DEBUG" # sets log level for writing to file
 screenloglevel="INFO" # sets log level for writing to screen
 runtime=10 # time in seconds for 1 test run
 configonly = False # IF True, the system will upload all the necessary config fiels to the VMs, but not start PROX and the actual testing
-rundir = "/home/centos" # Directory where to find the tools in the machines running PROX
+#rundir = "/home/centos" # Directory where to find the tools in the machines running PROX
+rundir = "~" # Directory where to find the tools in the machines running PROX
 
 def usage():
 	print("usage: runrapid    [--version] [-v]")
@@ -231,7 +232,7 @@ def report_result(flow_number,size,speed,pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat
 	else:
 		pps_sut_tx_str = '{:>7.3f} Mpps |'.format(pps_sut_tx)
 	if pps_rx is None:
-		pps_rx_str = '{0: >24|}'.format('NA        ')
+		pps_rx_str = '{0: >25}'.format('NA        |')
 	else:
 		pps_rx_str = bcolors.OKBLUE + '{:>4.1f} Gb/s |{:7.3f} Mpps {}|'.format(get_speed(pps_rx,size),pps_rx,bcolors.ENDC)
 	if tot_drop is None:
@@ -241,14 +242,14 @@ def report_result(flow_number,size,speed,pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat
 	if lat_perc is None:
 		lat_perc_str = ' |{:^10.10}|'.format('NA')
 	elif lat_perc_max == True:
-		lat_perc_str = ' |>{}{:>5.0f} us{} |'.format(lat_perc_prefix,float(lat_perc), bcolors.ENDC) 
+		lat_perc_str = '|>{}{:>5.0f} us{} |'.format(lat_perc_prefix,float(lat_perc), bcolors.ENDC) 
 	else:
-		lat_perc_str = ' | {}{:>5.0f} us{} |'.format(lat_perc_prefix,float(lat_perc), bcolors.ENDC) 
+		lat_perc_str = '| {}{:>5.0f} us{} |'.format(lat_perc_prefix,float(lat_perc), bcolors.ENDC) 
 	if elapsed_time is None:
 		elapsed_time_str = ' NA |'
 	else:
 		elapsed_time_str = '{:>3.0f} |'.format(elapsed_time)
-	return(flow_number_str + '{:>5.1f}'.format(speed) + '% '+speed_prefix +'{:>6.3f}'.format(get_pps(speed,size)) + ' Mpps|'+ pps_req_tx_str + pps_tx_str + bcolors.ENDC + pps_sut_tx_str + pps_rx_str +lat_avg_prefix+ ' {:>5.0f}'.format(lat_avg)+' us'+lat_perc_str+lat_max_prefix+'{:>6.0f}'.format(lat_max)+' us | ' + '{:>9.0f}'.format(tx) + ' | {:>9.0f}'.format(rx) + ' | '+ abs_drop_rate_prefix+ '{:>9.0f}'.format(tx-rx) + tot_drop_str +drop_rate_prefix+ '{:>5.2f}'.format(float(tx-rx)/tx)  +bcolors.ENDC+' |' + elapsed_time_str)
+	return(flow_number_str + '{:>5.1f}'.format(speed) + '% '+speed_prefix +'{:>6.3f}'.format(get_pps(speed,size)) + ' Mpps|'+ pps_req_tx_str + pps_tx_str + bcolors.ENDC + pps_sut_tx_str + pps_rx_str +lat_avg_prefix+ ' {:>6.0f}'.format(lat_avg)+' us'+lat_perc_str+lat_max_prefix+'{:>6.0f}'.format(lat_max)+' us | ' + '{:>9.0f}'.format(tx) + ' | {:>9.0f}'.format(rx) + ' | '+ abs_drop_rate_prefix+ '{:>9.0f}'.format(tx-rx) + tot_drop_str +drop_rate_prefix+ '{:>5.2f}'.format(float(tx-rx)/tx)  +bcolors.ENDC+' |' + elapsed_time_str)
 		
 def run_iteration(gensock, sutsock, requested_duration,flow_number,size,speed):
 	r = 0;
@@ -260,11 +261,9 @@ def run_iteration(gensock, sutsock, requested_duration,flow_number,size,speed):
 		t1_dp_rx = t1_rx - t1_non_dp_rx
 		t1_dp_tx = t1_tx - t1_non_dp_tx
 		gensock.start(gencores)
-		time.sleep(2) ## Needs to be 2 seconds since this the time that PROX uses to refresh the stats. Note that this can be changed in PROX!! Don't do it.
+		time.sleep(2) ## Needs to be 2 seconds since this 1 sec is the time that PROX uses to refresh the stats. Note that this can be changed in PROX!! Don't do it.
 		if sutsock!='none':
 			t2_sut_rx, t2_sut_non_dp_rx, t2_sut_tx, t2_sut_non_dp_tx, t2_sut_drop, t2_sut_tx_fail, t2_sut_tsc, sut_tsc_hz = sutsock.core_stats(sutstatcores,tasks)
-			##t2_sut_rx = t2_sut_rx - t2_sut_non_dp_rx
-			##t2_sut_tx = t2_sut_tx - t2_sut_non_dp_tx
 		t2_rx, t2_non_dp_rx, t2_tx, t2_non_dp_tx, t2_drop, t2_tx_fail, t2_tsc, tsc_hz = gensock.core_stats(genstatcores,gentasks)
 		tx = t2_tx - t1_tx
 		dp_tx =  tx - (t2_non_dp_tx - t1_non_dp_tx )
@@ -578,8 +577,8 @@ def run_flow_size_test(gensock,sutsock):
 					enddrop_rate = drop_rate
 					endabs_tx = abs_tx
 					endabs_rx = abs_rx
-					if lat_warning or gen_warning or retry_warning:
-						endwarning = '|        | {:177.177} |'.format(retry_warning + lat_warning + gen_warning)
+					if lat_warning or retry_warning:
+						endwarning = '|        | {:177.177} |'.format(retry_warning + lat_warning)
 					success = True
 					speed_prefix = lat_avg_prefix = lat_perc_prefix = lat_max_prefix = abs_drop_rate_prefix = drop_rate_prefix = bcolors.ENDC
 				# The following if statement is testing if we pass the success criteria of a certain drop rate, average latency and maximum latency below the threshold
@@ -655,9 +654,16 @@ def run_flow_size_test(gensock,sutsock):
 				writer.writerow({'Flows':flow_number,'PacketSize':(size+4),'RequestedPPS':get_pps(endspeed,size),'GeneratedPPS':endpps_req_tx,'SentPPS':endpps_tx,'ForwardedPPS':endpps_sut_tx,'ReceivedPPS':endpps_rx,'AvgLatencyUSEC':endlat_avg,'MaxLatencyUSEC':endlat_max,'Sent':endabs_tx,'Received':endabs_rx,'Lost':endabs_dropped,'LostTotal':endabs_dropped})
 				if PushGateway:
 					URL     = PushGateway + '/metrics/job/' + TestName + '/instance/' + env
-					DATA = 'Flows {}\nPacketSize {}\nRequestedPPS {}\nGeneratedPPS {}\nSentPPS {}\nForwardedPPS {}\nReceivedPPS {}\nAvgLatencyUSEC {}\nMaxLatencyUSEC {}\nSent {}\nReceived {}\nLost {}\nLostTotal {}\n'.format(flow_number,size+4,get_pps(endspeed,size),endpps_req_tx,endpps_tx,endpps_sut_tx,endpps_rx,endlat_avg,endlat_max,endabs_tx,endabs_rx,endabs_Dropped,endabs_dropped)
+ 					if endabs_dropped == None:
+ 						ead = 0
+ 					else:
+ 						ead = endabs_dropped
+					DATA = 'Flows {}\nPacketSize {}\nRequestedPPS {}\nGeneratedPPS {}\nSentPPS {}\nForwardedPPS {}\nReceivedPPS {}\nAvgLatencyUSEC {}\nMaxLatencyUSEC {}\nSent {}\nReceived {}\nLost {}\nLostTotal {}\n'.format(flow_number,size+4,get_pps(endspeed,size),endpps_req_tx,endpps_tx,endpps_sut_tx,endpps_rx,endlat_avg,endlat_max,endabs_tx,endabs_rx,ead,ead)
 					HEADERS = {'X-Requested-With': 'Python requests', 'Content-type': 'text/xml'}
 					response = requests.post(url=URL, data=DATA,headers=HEADERS)
+					if (response.status_code != 202) and (response.status_code != 200):
+						log.info('Cannot send metrics to {}'.format(URL))
+						log.info(DATA)
 			else:
 				log.info('|{:>7}'.format(str(flow_number))+" | Speed 0 or close to 0")
 	gensock.stop(latcores)
@@ -711,6 +717,9 @@ def run_core_stats(socks):
 				DATA = 'PROXID {}\nTime {}\n Received {}\nSent {}\nNonDPReceived {}\nNonDPSent {}\nDelta {}\nNonDPDelta {}\nDropped {}\n'.format(i,duration,rx,tx,non_dp_rx,non_dp_tx,tx-rx,non_dp_tx-non_dp_rx,tot_drop[i])
 				HEADERS = {'X-Requested-With': 'Python requests', 'Content-type': 'text/xml'}
 				response = requests.post(url=URL, data=DATA,headers=HEADERS)
+				if (response.status_code != 202) and (response.status_code != 200):
+					log.info('Cannot send metrics to {}'.format(URL))
+					log.info(DATA)
 			if sockets_to_go == 0:
 				duration = duration - 1
 				sockets_to_go = len (socks)
@@ -760,6 +769,9 @@ def run_port_stats(socks):
 				DATA = 'PROXID {}\nTime {}\n Received {}\nSent {}\nNoMbufs {}\niErrMiss {}\n'.format(i,duration,rx,tx,no_mbufs,errors)
 				HEADERS = {'X-Requested-With': 'Python requests', 'Content-type': 'text/xml'}
 				response = requests.post(url=URL, data=DATA,headers=HEADERS)
+				if (response.status_code != 202) and (response.status_code != 200):
+					log.info('Cannot send metrics to {}'.format(URL))
+					log.info(DATA)
 			if sockets_to_go == 0:
 				duration = duration - 1
 				sockets_to_go = len (socks)
@@ -843,6 +855,9 @@ def run_impairtest(gensock,sutsock):
 			DATA = 'Flows {}\nPacketSize {}\nRequestedPPS {}\nGeneratedPPS {}\nSentPPS {}\nForwardedPPS {}\nReceivedPPS {}\nAvgLatencyUSEC {}\nMaxLatencyUSEC {}\nDropped {}\nDropRate {}\n'.format(FLOWSIZE,size+4,get_pps(speed,size),pps_req_tx,pps_tx,pps_sut_tx_str,pps_rx,lat_avg,lat_max,abs_dropped,drop_rate)
 			HEADERS = {'X-Requested-With': 'Python requests', 'Content-type': 'text/xml'}
 			response = requests.post(url=URL, data=DATA,headers=HEADERS)
+			if (response.status_code != 202) and (response.status_code != 200):
+				log.info('Cannot send metrics to {}'.format(URL))
+				log.info(DATA)
 
 def run_warmuptest(gensock):
 # Running at low speed to make sure the ARP messages can get through.
@@ -982,7 +997,6 @@ vmDPPCIDEV =[]
 config_file =[]
 prox_socket =[]
 prox_launch_exit =[]
-auto_start =[]
 mach_type =[]
 sock_type =[]
 monitor =[]
@@ -1028,6 +1042,7 @@ for vm in range(1, int(total_number_of_machines)+1):
 	if (vim_type == "kubernetes"):
 		vmDPPCIDEV.append(config.get('M%d'%vm, 'dp_pci_dev'))
 machine_index = []
+atexit.register(exit_handler)
 for vm in range(1, int(required_number_of_test_machines)+1):
 	machine_index.append(int(machine_map.get('TestM%d'%vm, 'machine_index'))-1)
 	prox_socket.append(testconfig.getboolean('TestM%d'%vm, 'prox_socket'))
@@ -1062,12 +1077,12 @@ for vm in range(1, int(required_number_of_test_machines)+1):
 				monitor.append(testconfig.getboolean('TestM%d'%vm, 'monitor'))
 			else:
 				monitor.append(True)
-			if re.match('(l2){0,1}gen(_bare){0,1}.*\.cfg',config_file[-1]):
+			if testconfig.has_option('TestM%d'%vm, 'gencores'):
+				# This must be a generator VM
 				gencores = ast.literal_eval(testconfig.get('TestM%d'%vm, 'gencores'))
 				latcores = ast.literal_eval(testconfig.get('TestM%d'%vm, 'latcores'))
 				genstatcores = gencores + latcores
 				gentasks = tasks_for_this_cfg
-				auto_start.append(False)
 				mach_type.append('gen')
 				f.write('gencores="%s"\n'% ','.join(map(str, gencores)))
 				f.write('latcores="%s"\n'% ','.join(map(str, latcores)))
@@ -1075,6 +1090,10 @@ for vm in range(1, int(required_number_of_test_machines)+1):
 				f.write('dest_ip="%s"\n'% vmDPIP[machine_index[destVMindex]])
 				f.write('dest_hex_ip="%s"\n'% hexDPIP[machine_index[destVMindex]])
 				f.write('dest_hex_mac="%s"\n'% vmDPmac[machine_index[destVMindex]].replace(':',' '))
+				if testconfig.has_option('TestM%d'%vm, 'gw_vm'):
+					gwVMindex = int(testconfig.get('TestM%d'%vm, 'gw_vm')) -1
+					f.write('gw_ip="%s"\n'% vmDPIP[machine_index[gwVMindex]])
+					f.write('gw_hex_ip="%s"\n'% hexDPIP[machine_index[gwVMindex]])
 				if testconfig.has_option('TestM%d'%vm, 'bucket_size_exp'):
 					BUCKET_SIZE_EXP = int(testconfig.get('TestM%d'%vm, 'bucket_size_exp'))
 				else:
@@ -1085,53 +1104,17 @@ for vm in range(1, int(required_number_of_test_machines)+1):
 				else:
 					heartbeat = 60
 				f.write('heartbeat="%s"\n'% heartbeat)
-			elif re.match('(l2){0,1}gen_gw.*\.cfg',config_file[-1]):
-				if testconfig.has_option('TestM%d'%vm, 'bucket_size_exp'):
-					BUCKET_SIZE_EXP = int(testconfig.get('TestM%d'%vm, 'bucket_size_exp'))
-				else:
-					BUCKET_SIZE_EXP = 11
-				gencores = ast.literal_eval(testconfig.get('TestM%d'%vm, 'gencores'))
-				latcores = ast.literal_eval(testconfig.get('TestM%d'%vm, 'latcores'))
-				genstatcores = gencores + latcores
-				gentasks = tasks_for_this_cfg
-				auto_start.append(False)
-				mach_type.append('gen')
-				f.write('gencores="%s"\n'% ','.join(map(str, gencores)))
-				f.write('latcores="%s"\n'% ','.join(map(str, latcores)))
-				gwVMindex = int(testconfig.get('TestM%d'%vm, 'gw_vm')) -1
-				f.write('gw_ip="%s"\n'% vmDPIP[machine_index[gwVMindex]])
-				f.write('gw_hex_ip="%s"\n'% hexDPIP[machine_index[gwVMindex]])
-				destVMindex = int(testconfig.get('TestM%d'%vm, 'dest_vm'))-1
-				f.write('dest_ip="%s"\n'% vmDPIP[machine_index[destVMindex]])
-				f.write('dest_hex_ip="%s"\n'% hexDPIP[machine_index[destVMindex]])
-				f.write('dest_hex_mac="%s"\n'% vmDPmac[machine_index[destVMindex]].replace(':',' '))
-				if testconfig.has_option('TestM%d'%vm, 'bucket_size_exp'):
-					BUCKET_SIZE_EXP = int(testconfig.get('TestM%d'%vm, 'bucket_size_exp'))
-				else:
-					BUCKET_SIZE_EXP = 11
-				f.write('bucket_size_exp="%s"\n'% BUCKET_SIZE_EXP)
-				if testconfig.has_option('TestM%d'%vm, 'heartbeat'):
-					heartbeat = int(testconfig.get('TestM%d'%vm, 'heartbeat'))
-				else:
-					heartbeat = 60
-				f.write('heartbeat="%s"\n'% heartbeat)
-			elif re.match('(l2){0,1}swap.*\.cfg',config_file[-1]):
-				sutstatcores = cores[-1]
-				auto_start.append(True)
-				mach_type.append('sut')
-			elif re.match('secgw1.*\.cfg',config_file[-1]):
-				auto_start.append(True)
+			elif testconfig.has_option('TestM%d'%vm, 'dest_vm'):
+				# This must be a machine acting as a GW that we will not monitor
 				mach_type.append('none')
 				destVMindex = int(testconfig.get('TestM%d'%vm, 'dest_vm'))-1
 				f.write('dest_ip="%s"\n'% vmDPIP[machine_index[destVMindex]])
 				f.write('dest_hex_ip="%s"\n'% hexDPIP[machine_index[destVMindex]])
 				f.write('dest_hex_mac="%s"\n'% vmDPmac[machine_index[destVMindex]].replace(':',' '))
-			elif re.match('secgw2.*\.cfg',config_file[-1]):
+			elif re.findall('mode\s*=\s*(swap|esp_dec)',filetext,re.MULTILINE):
 				sutstatcores = cores[-1]
-				auto_start.append(True)
 				mach_type.append('sut')
 			else:
-				auto_start.append(True)
 				mach_type.append('none')
 		f.close
 		tasks = tasks_for_this_cfg.union(tasks)
@@ -1174,17 +1157,16 @@ for vm in range(0, int(required_number_of_test_machines)):
 		clients[-1].scp_put('./{}_{}_parameters{}.lua'.format(env,test_file, vm+1), rundir + '/parameters.lua')
 		if not configonly:
 			if prox_launch_exit[vm]:
-				log.debug("Starting PROX on VM%d"%(vm+1))
-				if auto_start[vm]:
-					cmd = 'sudo ' + rundir + '/prox -t -o cli -f ' + rundir + '/%s'%config_file[vm]
-				else:
+				if mach_type[vm] == 'gen':
 					cmd = 'sudo ' + rundir + '/prox -e -t -o cli -f ' + rundir + '/%s'%config_file[vm]
+				else:
+					cmd = 'sudo ' + rundir + '/prox -t -o cli -f ' + rundir + '/%s'%config_file[vm]
+				log.debug("Starting PROX on VM{}: {}".format((vm+1),cmd))
 				clients[-1].fork_cmd(cmd, 'PROX Testing on TestM%d'%(vm+1))
 			socks_control.append(prox_launch_exit[vm])
 			socks.append(connect_socket(clients[-1]))
 			sock_type.append(mach_type[vm])
 			sock_monitor.append(monitor[vm])
-atexit.register(exit_handler)
 monitor_gen = monitor_sut = False
 background_gen_socks =[]
 for index, sock in enumerate(socks, start=0):
@@ -1205,9 +1187,6 @@ for index, sock in enumerate(socks, start=0):
 		else:
 			monitor_sut = True
 			sutsock_index = index
-if not(monitor_gen and monitor_sut):
-	log.exception("No generator and/or sut to monitor")
-	raise Exception("No generator and/or sut to monitor")
 if configonly:
 	sys.exit()
 ####################################################
