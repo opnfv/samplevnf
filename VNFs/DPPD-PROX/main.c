@@ -748,19 +748,21 @@ static void setup_mempools_unique_per_socket(void)
 	for (int i = 0 ; i < MAX_SOCKETS; i++) {
 		if (mbuf_count[i] != 0) {
 			sprintf(name, "socket_%u_pool", i);
-			pool[i] = rte_mempool_create(name,
+			if ((pool[i] = rte_mempool_lookup(name)) == NULL) {
+				pool[i] = rte_mempool_create(name,
 						     mbuf_count[i] - 1, mbuf_size[i],
 						     nb_cache_mbuf[i],
 						     sizeof(struct rte_pktmbuf_pool_private),
 						     rte_pktmbuf_pool_init, NULL,
 						     prox_pktmbuf_init, NULL,
 						     i, flags);
-			PROX_PANIC(pool[i] == NULL, "\t\tError: cannot create mempool for socket %u\n", i);
-			plog_info("\t\tMempool %p size = %u * %u cache %u, socket %d\n", pool[i],
-				  mbuf_count[i], mbuf_size[i], nb_cache_mbuf[i], i);
+				PROX_PANIC(pool[i] == NULL, "\t\tError: cannot create mempool for socket %u\n", i);
+				plog_info("\tMempool %p size = %u * %u cache %u, socket %d\n", pool[i],
+				  	mbuf_count[i], mbuf_size[i], nb_cache_mbuf[i], i);
 
-			if (prox_cfg.flags & DSF_SHUFFLE) {
-				shuffle_mempool(pool[i], mbuf_count[i]);
+				if (prox_cfg.flags & DSF_SHUFFLE) {
+					shuffle_mempool(pool[i], mbuf_count[i]);
+				}
 			}
 		}
 	}
@@ -775,7 +777,7 @@ static void setup_mempools_unique_per_socket(void)
 			targ->pool = pool[socket];
 			/* Set the number of mbuf to the number of the unique mempool, so that the used and free work */
 			targ->nb_mbuf = mbuf_count[socket];
-			plog_info("\t\tMempool %p size = %u * %u cache %u, socket %d\n", targ->pool,
+			plog_info("\tMempool %p size = %u * %u cache %u, socket %d\n", targ->pool,
 				  targ->nb_mbuf, mbuf_size[socket], targ->nb_cache_mbuf, socket);
 		}
 	}
@@ -797,7 +799,7 @@ static void setup_mempool_for_rx_task(struct lcore_cfg *lconf, struct task_args 
 	PROX_ASSERT(targ->nb_mbuf != 0);
 
 	if (targ->pool_name[0] == '\0') {
-		sprintf(name, "core_%u_port_%u_pool", lconf->id, targ->id);
+		sprintf(name, "core_%u_task_%u_pool", lconf->id, targ->id);
 	}
 
 	snprintf(memzone_name, sizeof(memzone_name)-1, "MP_%s", targ->pool_name);
@@ -830,7 +832,7 @@ static void setup_mempool_for_rx_task(struct lcore_cfg *lconf, struct task_args 
 	   receiving from if one core receives from multiple
 	   ports, all the ports use the same mempool */
 	if (targ->pool == NULL) {
-		plog_info("\t\tCreating mempool with name '%s'\n", name);
+		plog_info("\tCreating mempool with name '%s' on socket %d\n", name, socket);
 		targ->pool = rte_mempool_create(name,
 						targ->nb_mbuf - 1, targ->mbuf_size,
 						targ->nb_cache_mbuf,
@@ -841,9 +843,9 @@ static void setup_mempool_for_rx_task(struct lcore_cfg *lconf, struct task_args 
 	}
 
 	PROX_PANIC(targ->pool == NULL,
-		   "\t\tError: cannot create mempool for core %u port %u: %s\n", lconf->id, targ->id, rte_strerror(rte_errno));
+		   "\tError: cannot create mempool for core %u port %u: %s\n", lconf->id, targ->id, rte_strerror(rte_errno));
 
-	plog_info("\t\tMempool %p size = %u * %u cache %u, socket %d\n", targ->pool,
+	plog_info("\tMempool %p size = %u * %u cache %u, socket %d\n", targ->pool,
 		  targ->nb_mbuf, targ->mbuf_size, targ->nb_cache_mbuf, socket);
 	if (prox_cfg.flags & DSF_SHUFFLE) {
 		shuffle_mempool(targ->pool, targ->nb_mbuf);
@@ -1230,5 +1232,6 @@ int main(int argc, char **argv)
 	if (setup_prox(argc, argv) != 0)
 		return EXIT_FAILURE;
 	run(prox_cfg.flags);
+
 	return EXIT_SUCCESS;
 }

@@ -113,6 +113,15 @@ static inline void build_igmp_message(struct task_base *tbase, struct rte_mbuf *
 	prox_ip_udp_cksum(mbuf, ip_hdr, sizeof(prox_rte_ether_hdr), sizeof(prox_rte_ipv4_hdr), task->offload_crc);
 }
 
+static void stop_swap(struct task_base *tbase)
+{
+	struct task_swap *task = (struct task_swap *)tbase;
+	if (task->igmp_pool) {
+		rte_mempool_free(task->igmp_pool);
+		task->igmp_pool = NULL;
+	}
+}
+
 static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts)
 {
 	struct task_swap *task = (struct task_swap *)tbase;
@@ -378,6 +387,7 @@ static struct task_init task_init_swap = {
 	.handle = handle_swap_bulk,
 	.flag_features = 0,
 	.size = sizeof(struct task_swap),
+	.stop_last = stop_swap
 };
 
 __attribute__((constructor)) static void reg_task_swap(void)

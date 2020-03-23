@@ -137,6 +137,15 @@ static struct cfg_section core_cfg = {
 	.error  = 0
 };
 
+struct deferred_port {
+	struct task_args *targ;
+	char name[256];
+	uint8_t is_rx_port;
+};
+
+static struct deferred_port deferred_port[PROX_MAX_PORTS];
+static int n_deferred_ports = 0;
+
 static void set_errf(const char *format, ...)
 {
 	va_list ap;
@@ -889,7 +898,17 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 		uint32_t ports[PROX_MAX_PORTS];
 
 		if(parse_port_name_list(ports, &n_if, PROX_MAX_PORTS, pkey)) {
-			return -1;
+			// Port name not found, but could be a virtual device of a secondary process
+			// As DPDK not started yet, we can only check the config file to see whether we are a secondary process
+			if (rte_cfg.eal &&
+					(strstr(rte_cfg.eal, "secondary") || strstr(rte_cfg.eal, "auto")) &&
+					(n_deferred_ports < PROX_MAX_PORTS)) {
+				prox_strncpy(deferred_port[n_deferred_ports].name, pkey, sizeof(deferred_port[n_deferred_ports].name));
+				deferred_port[n_deferred_ports].is_rx_port = 0;
+				deferred_port[n_deferred_ports++].targ = targ;
+				return 0;
+			} else
+				return -1;
 		}
 
 		PROX_ASSERT(n_if-1 < PROX_MAX_PORTS);
@@ -1099,7 +1118,17 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 		uint32_t n_if;
 
                 if (parse_port_name_list(vals, &n_if, PROX_MAX_PORTS, pkey)) {
-                        return -1;
+			// Port name not found, but could be a virtual device of a secondary process
+			// As DPDK not started yet, we can only check the config file to see whether we are a secondary process
+			if (rte_cfg.eal &&
+					(strstr(rte_cfg.eal, "secondary") || strstr(rte_cfg.eal, "auto")) &&
+					(n_deferred_ports < PROX_MAX_PORTS)) {
+				prox_strncpy(deferred_port[n_deferred_ports].name, pkey, sizeof(deferred_port[n_deferred_ports].name));
+				deferred_port[n_deferred_ports].is_rx_port = 1;
+				deferred_port[n_deferred_ports++].targ = targ;
+				return 0;
+			} else
+				return -1;
                 }
 
                 for (uint8_t i = 0; i < n_if; ++i) {
@@ -2082,6 +2111,21 @@ int prox_setup_rte(const char *prog_name)
 		else if (lcore_cfg_init[lcore_id].n_tasks_all != 0 && !rte_lcore_is_enabled(lcore_id)) {
 			plog_err("\tFailed to enable lcore %u\n", lcore_id);
 			return -1;
+		}
+	}
+	uint16_t port_id;
+	for (int i = 0; i < n_deferred_ports; i++) {
+		if (rte_eth_dev_get_port_by_name(deferred_port[i].name, &port_id) != 0) {
+			plog_err("Did not find port name %s used while reading %s\n", deferred_port[i].name, deferred_port[i].is_rx_port ? "rx port" : "tx_port");
+			return -1;
+		}
+		plog_info("\tport %s is port id %d\n", deferred_port[i].name, port_id);
+		if (deferred_port[i].is_rx_port) {
+			deferred_port[i].targ->rx_port_queue[0].port = port_id;
+			deferred_port[i].targ->nb_rxports = 1;
+		} else {
+			deferred_port[i].targ->tx_port_queue[0].port = port_id;
+			deferred_port[i].targ->nb_txports = 1;
 		}
 	}
 	return 0;

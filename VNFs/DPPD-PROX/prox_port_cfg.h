@@ -78,6 +78,7 @@ struct prox_port_cfg {
 	uint16_t min_tx_desc;
 	uint16_t max_tx_desc;
 	uint32_t nb_mc_addr;
+	uint8_t available;
 	prox_rte_ether_addr mc_addr[NB_MCAST_ADDR];
 };
 
