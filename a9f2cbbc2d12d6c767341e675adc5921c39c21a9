@@ -1,0 +1,44 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "23358dca_937667f6",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 48,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-03-24T18:00:09Z",
+      "side": 1,
+      "message": "This can be removed in next revision, once confirmed that the \"~\" shortcut properly works.",
+      "revId": "a9f2cbbc2d12d6c767341e675adc5921c39c21a9",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "1c87b34f_813df5ad",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/runrapid.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 644,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2020-03-24T18:00:09Z",
+      "side": 1,
+      "message": "Can be removed, since it has been cleared on L619.\nThen L619 can be removed too, because gen_warning is not used elsewhere in this else block.\nUltimately, gen_warning would only appear in the elif block between L587 and L616.",
+      "range": {
+        "startLine": 644,
+        "startChar": 313,
+        "endLine": 644,
+        "endChar": 324
+      },
+      "revId": "a9f2cbbc2d12d6c767341e675adc5921c39c21a9",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    }
+  ]
+}
