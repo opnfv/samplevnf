@@ -778,7 +778,7 @@ static inline void dump_pkts(struct task_base *tbase, struct rte_mbuf **mbufs, u
 		for (uint32_t i = 0; i < n_trace; ++i) {
 			plogdx_info(mbufs[i], "TX: ");
 		}
-		tbase->aux->task_rt_dump.n_trace - n_trace;
+		tbase->aux->task_rt_dump.n_trace -= n_trace;
 	}
 }
 

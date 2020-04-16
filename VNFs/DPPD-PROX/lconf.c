@@ -264,9 +264,8 @@ int lconf_do_flags(struct lcore_cfg *lconf)
 		t = lconf->tasks_all[lconf->msg.task_id];
 
 		if (lconf->msg.val) {
-			t->aux->task_rt_dump.n_trace = lconf->msg.val;
-
 			if (task_base_get_original_rx_pkt_function(t) != rx_pkt_dummy) {
+				t->aux->task_rt_dump.n_trace = lconf->msg.val;
 				task_base_add_rx_pkt_function(t, rx_pkt_trace);
 				if (t->tx_pkt == tx_pkt_l3) {
 					if (t->aux->tx_pkt_orig)
