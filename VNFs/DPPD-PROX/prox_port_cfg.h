@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -56,6 +56,7 @@ struct prox_port_cfg {
 	enum addr_type    type;
 	prox_rte_ether_addr eth_addr;    /* port MAC address */
 	char name[MAX_NAME_SIZE];
+	char vdev[MAX_NAME_SIZE];
 	char short_name[MAX_NAME_SIZE];
 	char driver_name[MAX_NAME_SIZE];
 	char rx_ring[MAX_NAME_SIZE];
@@ -79,6 +80,9 @@ struct prox_port_cfg {
 	uint16_t max_tx_desc;
 	uint32_t nb_mc_addr;
 	prox_rte_ether_addr mc_addr[NB_MCAST_ADDR];
+	int dpdk_mapping;
+	uint32_t ip;
+	int fd;
 };
 
 extern rte_atomic32_t lsc;

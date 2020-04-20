@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -253,6 +253,7 @@ void task_start_l3(struct task_base *tbase, struct task_args *targ)
 			tbase->local_ipv4 = rte_be_to_cpu_32(targ->local_ipv4);
 			register_ip_to_ctrl_plane(tbase->l3.tmaster, tbase->local_ipv4, tbase->l3.reachable_port_id, targ->lconf->id, targ->id);
         	}
+		master_init_vdev(tbase->l3.tmaster, tbase->l3.reachable_port_id, targ->lconf->id, targ->id);
 		name[3]++;
 		struct rte_mempool *ret = rte_mempool_create(name, NB_ARP_MBUF, ARP_MBUF_SIZE, NB_CACHE_ARP_MBUF,
 			sizeof(struct rte_pktmbuf_pool_private), rte_pktmbuf_pool_init, NULL, rte_pktmbuf_init, 0,
@@ -333,6 +334,7 @@ void handle_ctrl_plane_pkts(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 			break;
 		case ARP_REPLY_FROM_CTRL:
 		case ARP_REQ_FROM_CTRL:
+		case PKT_FROM_TAP:
 			out[0] = 0;
 			// tx_ctrlplane_pkt does not drop packets
 			tbase->aux->tx_ctrlplane_pkt(tbase, &mbufs[j], 1, out);
