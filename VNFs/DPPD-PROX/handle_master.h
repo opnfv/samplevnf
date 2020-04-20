@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ enum arp_actions {
 	ARP_REPLY_FROM_CTRL,
 	ARP_TO_CTRL,
 	REQ_MAC_TO_CTRL,
+	PKT_FROM_TAP,
 	MAX_ACTIONS
 };
 
@@ -40,4 +41,9 @@ static inline void tx_drop(struct rte_mbuf *mbuf)
 	rte_pktmbuf_free(mbuf);
 }
 
+struct vdev {
+	int port_id;
+	struct rte_ring *ring;
+};
 void register_ip_to_ctrl_plane(struct task_base *task, uint32_t ip, uint8_t port_id, uint8_t core_id, uint8_t task_id);
+void master_init_vdev(struct task_base *task, uint8_t port_id, uint8_t core_id, uint8_t task_id);

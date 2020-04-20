@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
+
+#include <fcntl.h>
 
 #include <rte_hash.h>
 #include <rte_hash_crc.h>
@@ -35,10 +37,12 @@
 #include "lconf.h"
 #include "input.h"
 #include "tx_pkt.h"
+#include "defines.h"
 
 #define PROX_MAX_ARP_REQUESTS	32	// Maximum number of tasks requesting the same MAC address
+#define SET_NON_BLOCKING(X) fcntl(X, F_SETFL, fcntl(X, F_GETFL) | O_NONBLOCK);
 
-const char *actions_string[] = {"UPDATE_FROM_CTRL", "SEND_ARP_REQUEST_FROM_CTRL", "SEND_ARP_REPLY_FROM_CTRL", "HANDLE_ARP_TO_CTRL", "REQ_MAC_TO_CTRL"};
+const char *actions_string[] = {"UPDATE_FROM_CTRL", "SEND_ARP_REQUEST_FROM_CTRL", "SEND_ARP_REPLY_FROM_CTRL", "HANDLE_ARP_TO_CTRL", "REQ_MAC_TO_CTRL", "PKT_FROM_TAP"};
 
 static struct my_arp_t arp_reply = {
 	.htype = 0x100,
@@ -83,6 +87,8 @@ struct task_master {
 	struct rte_hash  *external_ip_hash;
 	struct rte_hash  *internal_ip_hash;
 	struct port_table internal_port_table[PROX_MAX_PORTS];
+	struct vdev all_vdev[PROX_MAX_PORTS];
+	int max_vdev_id;
 };
 
 struct ip_port {
@@ -111,11 +117,36 @@ static inline uint32_t get_ip(struct rte_mbuf *mbuf)
 	return (mbuf->udata64 >> 32) & 0xFFFFFFFF;
 }
 
+void master_init_vdev(struct task_base *tbase, uint8_t port_id, uint8_t core_id, uint8_t task_id)
+{
+	struct task_master *task = (struct task_master *)tbase;
+	uint8_t vdev_port = prox_port_cfg[port_id].dpdk_mapping;
+	int rc;
+	if (vdev_port != NO_VDEV_PORT) {
+		task->all_vdev[task->max_vdev_id].port_id = vdev_port;
+	 	task->all_vdev[task->max_vdev_id].ring = task->ctrl_tx_rings[core_id * MAX_TASKS_PER_CORE + task_id];
+
+		struct sockaddr_in dst, src;
+		src.sin_family = AF_INET;
+		src.sin_addr.s_addr = prox_port_cfg[vdev_port].ip;
+		src.sin_port = 5000;
+
+		int fd = socket(AF_INET,  SOCK_DGRAM, 0);
+		PROX_PANIC(fd < 0, "Failed to open socket(AF_INET,  SOCK_DGRAM, 0)\n");
+		prox_port_cfg[vdev_port].fd = fd;
+		rc = bind(fd,(struct sockaddr *)&src, sizeof(struct sockaddr_in));
+		PROX_PANIC(rc, "Failed to bind("IPv4_BYTES_FMT":%d): errno = %d\n", IPv4_BYTES(((uint8_t*)&src.sin_addr.s_addr)), src.sin_port, errno);
+		plog_info("DPDK port %d bound("IPv4_BYTES_FMT":%d) to fd %d\n", port_id, IPv4_BYTES(((uint8_t*)&src.sin_addr.s_addr)), src.sin_port, fd);
+		SET_NON_BLOCKING(fd);
+		task->max_vdev_id++;
+	}
+}
+
 void register_ip_to_ctrl_plane(struct task_base *tbase, uint32_t ip, uint8_t port_id, uint8_t core_id, uint8_t task_id)
 {
 	struct task_master *task = (struct task_master *)tbase;
 	struct ip_port key;
-	plogx_dbg("\tregistering IP %d.%d.%d.%d with port %d core %d and task %d\n", IP4(ip), port_id, core_id, task_id);
+	plogx_info("\tregistering IP %d.%d.%d.%d with port %d core %d and task %d\n", IP4(ip), port_id, core_id, task_id);
 
 	if (port_id >= PROX_MAX_PORTS) {
 		plog_err("Unable to register ip %d.%d.%d.%d, port %d\n", IP4(ip), port_id);
@@ -273,13 +304,22 @@ static inline void handle_unknown_ip(struct task_base *tbase, struct rte_mbuf *m
 
 static inline void handle_message(struct task_base *tbase, struct rte_mbuf *mbuf, int ring_id)
 {
+	struct task_master *task = (struct task_master *)tbase;
 	struct ether_hdr_arp *hdr_arp = rte_pktmbuf_mtod(mbuf, struct ether_hdr_arp *);
 	int command = get_command(mbuf);
+	uint8_t port = get_port(mbuf);
 	uint32_t ip;
+	uint8_t vdev_port = prox_port_cfg[port].dpdk_mapping;
 	plogx_dbg("\tMaster received %s (%x) from mbuf %p\n", actions_string[command], command, mbuf);
 
 	switch(command) {
 	case ARP_TO_CTRL:
+		if (vdev_port != NO_VDEV_PORT) {
+			// If a virtual (net_tap) device is attached, send the (ARP) packet to this device
+			// The kernel will receive and handle it.
+			int n = rte_eth_tx_burst(prox_port_cfg[port].dpdk_mapping, 0, &mbuf, 1);
+			return;
+		}
 		if (hdr_arp->ether_hdr.ether_type != ETYPE_ARP) {
 			tx_drop(mbuf);
 			plog_err("\tUnexpected message received: ARP_TO_CTRL with ether_type %x\n", hdr_arp->ether_hdr.ether_type);
@@ -300,6 +340,26 @@ static inline void handle_message(struct task_base *tbase, struct rte_mbuf *mbuf
 		}
 		break;
 	case REQ_MAC_TO_CTRL:
+		if (vdev_port != NO_VDEV_PORT) {
+			// We send a packet to the kernel with the proper destnation IP address and our src IP address
+			// This means that if a generator sends packets from many sources all ARP will still
+			// be sent from the same IP src. This might be a limitation.
+			// This prevent to have to open as many sockets as there are sources MAC addresses
+			// We also always use the same UDP ports - as the packet will finally not leave the system anyhow
+			// Content of udp might be garbage - we do not care.
+
+			prox_rte_ether_hdr *hdr = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
+			prox_rte_ipv4_hdr *ip_hdr = (prox_rte_ipv4_hdr *)(hdr + 1);
+			prox_rte_udp_hdr *udp = (prox_rte_udp_hdr *)(ip_hdr + 1);
+
+			struct sockaddr_in dst;
+			dst.sin_family = AF_INET;
+			dst.sin_addr.s_addr = ip_hdr->dst_addr;
+			dst.sin_port = 5000;
+			int n = sendto(prox_port_cfg[vdev_port].fd, (char*)(udp + 1), 18, 0,  (struct sockaddr *)&dst, sizeof(struct sockaddr_in));
+			plog_dbg("Sent %d bytes to "IPv4_BYTES_FMT" using fd %d\n", n, IPv4_BYTES(((uint8_t*)&ip_hdr->dst_addr)), prox_port_cfg[vdev_port].fd);
+			break;
+		}
 		handle_unknown_ip(tbase, mbuf);
 		break;
 	default:
@@ -343,7 +403,7 @@ void init_ctrl_plane(struct task_base *tbase)
 
 static int handle_ctrl_plane_f(struct task_base *tbase, __attribute__((unused)) struct rte_mbuf **mbuf, uint16_t n_pkts)
 {
-	int ring_id = 0, j, ret = 0;
+	int ring_id = 0, j, ret = 0, n = 0;
 	struct rte_mbuf *mbufs[MAX_RING_BURST];
 	struct task_master *task = (struct task_master *)tbase;
 
@@ -355,6 +415,14 @@ static int handle_ctrl_plane_f(struct task_base *tbase, __attribute__((unused)) 
 	ret = ring_deq(task->ctrl_rx_ring, mbufs);
 	for (j = 0; j < ret; j++) {
 		handle_message(tbase, mbufs[j], ring_id);
+	}
+	for (int vdev_id = 0; vdev_id < task->max_vdev_id; vdev_id++) {
+		struct vdev *vdev = &task->all_vdev[vdev_id];
+		n = rte_eth_rx_burst(vdev->port_id, 0, mbufs, MAX_PKT_BURST);
+		for (j = 0; j < n; j++) {
+			tx_ring(tbase, vdev->ring, PKT_FROM_TAP, mbufs[j]);
+		}
+		ret +=n;
 	}
 	return ret;
 }
