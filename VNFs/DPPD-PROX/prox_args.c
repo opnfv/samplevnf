@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -552,6 +552,12 @@ static int get_port_cfg(unsigned sindex, char *str, void *data)
 			return -1;
 		}
 		cfg->lsc_val = val;
+	}
+	else if (STR_EQ(str, "local ipv4")) {
+		return parse_ip(&cfg->ip, pkey);
+	}
+	else if (STR_EQ(str, "vdev")) {
+		prox_strncpy(cfg->vdev, pkey, MAX_NAME_SIZE);
 	}
 #if RTE_VERSION >= RTE_VERSION_NUM(18,8,0,1)
 	else if (STR_EQ(str, "disable tx offload")) {

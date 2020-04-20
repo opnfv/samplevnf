@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,6 +30,9 @@
 #endif
 #endif
 #endif
+
+#include <sys/ioctl.h>
+#include <net/if.h>
 
 #include "prox_port_cfg.h"
 #include "prox_globals.h"
@@ -161,14 +164,70 @@ void prox_pktmbuf_reinit(void *arg, void *start, __attribute__((unused)) void *e
         }\
 
 
+static void set_ip_address (char *devname, uint32_t *ip)
+{
+	struct ifreq ifreq;
+	struct sockaddr_in in_addr;
+	int fd, rc;
+
+	memset(&ifreq, 0, sizeof(struct ifreq));
+	memset(&in_addr, 0, sizeof(struct sockaddr_in));
+
+	in_addr.sin_family = AF_INET;
+	in_addr.sin_addr = *(struct in_addr *)ip;
+	fd = socket(in_addr.sin_family, SOCK_DGRAM, 0);
+
+	strncpy(ifreq.ifr_name, devname, IFNAMSIZ);
+	ifreq.ifr_addr = *(struct sockaddr *)&in_addr;
+	rc = ioctl(fd, SIOCSIFADDR, &ifreq);
+	PROX_PANIC(rc < 0, "Failed to set IP address %d on device %s: error = %d\n", *ip, devname, errno);
+	close(fd);
+}
+
 /* initialize rte devices and check the number of available ports */
 void init_rte_dev(int use_dummy_devices)
 {
 	uint8_t nb_ports, port_id_max;
-	int port_id_last;
+	int port_id_last, rc = 0;
 	struct rte_eth_dev_info dev_info;
 	const struct rte_pci_device *pci_dev;
 
+	for (uint8_t port_id = 0; port_id < PROX_MAX_PORTS; ++port_id) {
+		if (!prox_port_cfg[port_id].active) {
+			continue;
+		}
+		struct prox_port_cfg* port_cfg = &prox_port_cfg[port_id];
+		if (port_cfg->vdev[0]) {
+#if (RTE_VERSION > RTE_VERSION_NUM(17,5,0,1))
+			char name[MAX_NAME_SIZE], tap[MAX_NAME_SIZE];
+			snprintf(tap, MAX_NAME_SIZE, "net_tap%d", port_id);
+			snprintf(name, MAX_NAME_SIZE, "iface=%s", port_cfg->vdev);
+			rc = rte_vdev_init(tap, name);
+#else
+			rc = eth_dev_null_create(tap, name, PROX_RTE_ETHER_MIN_LEN, 0);
+#endif
+			PROX_PANIC(rc != 0, "Unable to create device %s %s\n", "net tap", port_cfg->vdev);
+			int vdev_port_id = rte_eth_dev_count() - 1;
+			PROX_PANIC(vdev_port_id >= PROX_MAX_PORTS, "Too many port defined %d >= %d\n", vdev_port_id, PROX_MAX_PORTS);
+			plog_info("\tCreating device %s, port %d\n", port_cfg->vdev, vdev_port_id);
+			prox_port_cfg[vdev_port_id].active = 1;
+			prox_port_cfg[vdev_port_id].dpdk_mapping = port_id;
+			prox_port_cfg[vdev_port_id].n_txq = 1;
+			strncpy(prox_port_cfg[vdev_port_id].name, port_cfg->vdev, MAX_NAME_SIZE);
+			prox_port_cfg[port_id].dpdk_mapping = vdev_port_id;
+			prox_port_cfg[vdev_port_id].ip = rte_be_to_cpu_32(prox_port_cfg[port_id].ip);
+			prox_port_cfg[port_id].ip = 0;	// So only vdev has an IP associated
+			prox_port_cfg[vdev_port_id].type = prox_port_cfg[port_id].type;
+			if (prox_port_cfg[vdev_port_id].type == PROX_PORT_MAC_HW) {
+				// If DPDK port MAC set to HW, then make sure the vdev has the same MAC as DPDK port
+				prox_port_cfg[vdev_port_id].type = PROX_PORT_MAC_SET;
+				rte_eth_macaddr_get(port_id, &prox_port_cfg[vdev_port_id].eth_addr);
+				plog_info("\tDPDK port %d MAC address pre-configured to MAC from port %d: "MAC_BYTES_FMT"\n",
+					vdev_port_id, port_id, MAC_BYTES(prox_port_cfg[vdev_port_id].eth_addr.addr_bytes));
+			} else
+				memcpy(&prox_port_cfg[vdev_port_id].eth_addr, &prox_port_cfg[port_id].eth_addr, sizeof(prox_port_cfg[port_id].eth_addr));
+		}
+	}
 	nb_ports = prox_rte_eth_dev_count_avail();
 	/* get available ports configuration */
 	PROX_PANIC(use_dummy_devices && nb_ports, "Can't use dummy devices while there are also real ports\n");
@@ -681,6 +740,9 @@ static void init_port(struct prox_port_cfg *port_cfg)
 	PROX_PANIC(ret < 0, "\n\t\t\trte_eth_dev_start() failed on port %u: error %d\n", port_id, ret);
 	plog_info(" done: ");
 
+	if (prox_port_cfg[port_id].ip) {
+		set_ip_address(prox_port_cfg[port_id].name, &prox_port_cfg[port_id].ip);
+	}
 	/* Getting link status can be done without waiting if Link
 	   State Interrupt is enabled since in that case, if the link
 	   is recognized as being down, an interrupt will notify that
@@ -782,6 +844,7 @@ void init_port_addr(void)
 			prox_rte_eth_random_addr(port_cfg->eth_addr.addr_bytes);
 			break;
 		case PROX_PORT_MAC_SET:
+			plog_info("Setting MAC to "MAC_BYTES_FMT"\n", MAC_BYTES(port_cfg->eth_addr.addr_bytes));
 			if ((rc = rte_eth_dev_default_mac_addr_set(port_id, &port_cfg->eth_addr)) != 0)
 				plog_warn("port %u: failed to set mac address. Error = %d\n", port_id, rc);
 			break;
