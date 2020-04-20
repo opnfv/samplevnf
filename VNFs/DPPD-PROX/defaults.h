@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -62,5 +62,6 @@ void set_port_defaults(void);
 #define TX_MBUF_SIZE (PROX_RTE_ETHER_MAX_LEN + (unsigned)sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM +  2 * PROX_VLAN_TAG_SIZE)
 
 #define PROX_MTU   PROX_RTE_ETHER_MAX_LEN - PROX_RTE_ETHER_HDR_LEN - PROX_RTE_ETHER_CRC_LEN
+#define NO_VDEV_PORT	0xFF
 
 #endif /* _DEFAULTS_H_ */
