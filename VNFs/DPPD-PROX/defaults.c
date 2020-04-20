@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -194,6 +194,7 @@ void set_port_defaults(void)
 		prox_port_cfg[i].rx_ring[0] = '\0';
 		prox_port_cfg[i].tx_ring[0] = '\0';
 		prox_port_cfg[i].mtu = PROX_MTU;
+		prox_port_cfg[i].dpdk_mapping = NO_VDEV_PORT;
 
 		// CRC_STRIP becoming the default behavior in DPDK 18.08, and
 		// DEV_RX_OFFLOAD_CRC_STRIP define has been deleted
