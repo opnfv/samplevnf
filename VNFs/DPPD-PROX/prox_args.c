@@ -338,6 +338,9 @@ static int get_global_cfg(__attribute__((unused))unsigned sindex, char *str, voi
 	if (STR_EQ(str, "enable bypass")) {
 		return parse_flag(&pset->flags, DSF_ENABLE_BYPASS, pkey);
 	}
+	if (STR_EQ(str, "poll timeout")) {
+		return parse_int(&pset->poll_timeout, pkey);
+	}
 	if (STR_EQ(str, "heartbeat timeout")) {
 		return parse_int(&pset->heartbeat_timeout, pkey);
 	}

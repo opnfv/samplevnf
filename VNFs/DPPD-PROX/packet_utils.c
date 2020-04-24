@@ -21,6 +21,7 @@
 #include "lconf.h"
 #include "prefetch.h"
 #include "log.h"
+#include "defines.h"
 #include "handle_master.h"
 #include "prox_port_cfg.h"
 
@@ -277,6 +278,29 @@ void task_set_local_ip(struct task_base *tbase, uint32_t ip)
 	tbase->local_ipv4 = ip;
 }
 
+static void reset_arp_update_time(struct l3_base *l3, uint32_t ip)
+{
+	uint32_t idx;
+	plogx_info("\tMAC entry for IP "IPv4_BYTES_FMT" timeout in kernel\n", IP4(ip));
+	if (ip == l3->gw.ip) {
+		l3->gw.arp_update_time = 0;
+	} else if (l3->n_pkts < 4) {
+		for (idx = 0; idx < l3->n_pkts; idx++) {
+			uint32_t ip_dst = l3->optimized_arp_table[idx].ip;
+			if (ip_dst == ip)
+				break;
+		}
+		if (idx < l3->n_pkts) {
+			l3->optimized_arp_table[idx].arp_update_time = 0;
+		}
+	} else {
+		int ret = rte_hash_lookup(l3->ip_hash, (const void *)&ip);
+		if (ret >= 0)
+			l3->arp_table[ret].arp_update_time = 0;
+	}
+	return;
+}
+
 void handle_ctrl_plane_pkts(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts)
 {
 	uint8_t out[1];
@@ -287,6 +311,7 @@ void handle_ctrl_plane_pkts(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 	struct ether_hdr_arp *hdr;
 	struct l3_base *l3 = &tbase->l3;
 	uint64_t tsc= rte_rdtsc();
+	uint64_t update_time = l3->arp_timeout * hz / 1000;
 
 	for (j = 0; j < n_pkts; ++j) {
 		PREFETCH0(mbufs[j]);
@@ -304,11 +329,21 @@ void handle_ctrl_plane_pkts(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 			hdr = rte_pktmbuf_mtod(mbufs[j], struct ether_hdr_arp *);
 			ip = (mbufs[j]->udata64 >> 32) & 0xFFFFFFFF;
 
+			if (prox_rte_is_zero_ether_addr(&hdr->arp.data.sha)) {
+				// MAC timeout or deleted from kernel table => reset update_time
+				// This will cause us to send new ARP request
+				// However, as arp_timeout not touched, we should continue sending our regular IP packets
+				reset_arp_update_time(l3, ip);
+				plogx_info("\tTimeout for MAC entry for IP "IPv4_BYTES_FMT"\n", IP4(ip));
+				return;
+			} else
+				plogx_dbg("\tUpdating MAC entry for IP "IPv4_BYTES_FMT" with MAC "MAC_BYTES_FMT"\n",
+					IP4(ip), MAC_BYTES(hdr->arp.data.sha.addr_bytes));
 			if (ip == l3->gw.ip) {
 				// MAC address of the gateway
 				memcpy(&l3->gw.mac, &hdr->arp.data.sha, 6);
 				l3->flags |= FLAG_DST_MAC_KNOWN;
-				l3->gw.arp_timeout = tsc + l3->arp_timeout * hz / 1000;
+				l3->gw.arp_timeout = tsc + update_time;
 			} else if (l3->n_pkts < 4) {
 				// Few packets tracked - should be faster to loop through them thean using a hash table
 				for (idx = 0; idx < l3->n_pkts; idx++) {
@@ -317,9 +352,8 @@ void handle_ctrl_plane_pkts(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 						break;
 				}
 				if (idx < l3->n_pkts) {
-					// IP not found; this is a reply while we never asked for the request!
 					memcpy(&l3->optimized_arp_table[idx].mac, &(hdr->arp.data.sha), sizeof(prox_rte_ether_addr));
-					l3->optimized_arp_table[idx].arp_timeout = tsc + l3->arp_timeout * hz / 1000;
+					l3->optimized_arp_table[idx].arp_timeout = tsc + update_time;
 				}
 			} else {
 				int ret = rte_hash_add_key(l3->ip_hash, (const void *)&ip);
@@ -327,16 +361,18 @@ void handle_ctrl_plane_pkts(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 					plogx_info("Unable add ip %d.%d.%d.%d in mac_hash\n", IP4(ip));
 				} else {
 					memcpy(&l3->arp_table[ret].mac, &(hdr->arp.data.sha), sizeof(prox_rte_ether_addr));
-					l3->arp_table[ret].arp_timeout = tsc + l3->arp_timeout * hz / 1000;
+					l3->arp_table[ret].arp_timeout = tsc + update_time;
 				}
 			}
 			tx_drop(mbufs[j]);
 			break;
 		case ARP_REPLY_FROM_CTRL:
+		case ICMP_FROM_CTRL:
 		case ARP_REQ_FROM_CTRL:
 		case PKT_FROM_TAP:
 			out[0] = 0;
 			// tx_ctrlplane_pkt does not drop packets
+			plogx_dbg("\tForwarding (ARP/PING) packet from master\n");
 			tbase->aux->tx_ctrlplane_pkt(tbase, &mbufs[j], 1, out);
 			TASK_STATS_ADD_TX_NON_DP(&tbase->aux->stats, 1);
 			break;
