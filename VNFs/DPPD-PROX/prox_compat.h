@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -172,6 +172,7 @@ typedef struct ether_hdr prox_rte_ether_hdr;
 typedef struct vlan_hdr prox_rte_vlan_hdr;
 typedef struct udp_hdr prox_rte_udp_hdr;
 typedef struct tcp_hdr prox_rte_tcp_hdr;
+typedef struct icmp_hdr prox_rte_icmp_hdr;
 
 #ifndef RTE_SCHED_BE_QUEUES_PER_PIPE
 #define RTE_SCHED_BE_QUEUES_PER_PIPE RTE_SCHED_QUEUES_PER_PIPE
@@ -179,6 +180,7 @@ typedef struct tcp_hdr prox_rte_tcp_hdr;
 
 #define PROX_RTE_IS_IPV4_MCAST IS_IPV4_MCAST
 #define prox_rte_is_same_ether_addr is_same_ether_addr
+#define prox_rte_is_zero_ether_addr is_zero_ether_addr
 #else
 
 #define PROX_RTE_ETHER_CRC_LEN RTE_ETHER_CRC_LEN
@@ -201,9 +203,11 @@ typedef struct rte_vlan_hdr prox_rte_vlan_hdr;
 typedef struct rte_vxlan_gpe_hdr prox_rte_vxlan_gpe_hdr;
 typedef struct rte_udp_hdr prox_rte_udp_hdr;
 typedef struct rte_tcp_hdr prox_rte_tcp_hdr;
+typedef struct rte_icmp_hdr prox_rte_icmp_hdr;
 
 #define PROX_RTE_IS_IPV4_MCAST  RTE_IS_IPV4_MCAST
 #define prox_rte_is_same_ether_addr rte_is_same_ether_addr
+#define prox_rte_is_zero_ether_addr rte_is_zero_ether_addr
 
 #endif
 

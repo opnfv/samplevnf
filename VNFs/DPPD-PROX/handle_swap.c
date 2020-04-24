@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@
 #include "qinq.h"
 #include "gre.h"
 #include "prefetch.h"
+#include "defines.h"
 #include "igmp.h"
 #include "prox_cksum.h"
 #include "prox_compat.h"
@@ -38,6 +39,10 @@ struct task_swap {
 	uint8_t src_dst_mac[12];
 	uint32_t local_ipv4;
 	int offload_crc;
+	uint64_t last_echo_req_rcvd_tsc;
+	uint64_t last_echo_rep_rcvd_tsc;
+	uint32_t n_echo_req;
+	uint32_t n_echo_rep;
 };
 
 #define NB_IGMP_MBUF  		1024
@@ -77,6 +82,21 @@ static inline void build_mcast_mac(uint32_t ip, prox_rte_ether_addr *dst_mac)
 	// MAC address is 01:00:5e followed by 23 LSB of IP address
 	uint64_t mac = 0x0000005e0001L | ((ip & 0xFFFF7F00L) << 16);
 	memcpy(dst_mac, &mac, sizeof(prox_rte_ether_addr));
+}
+
+static inline void build_icmp_reply_message(struct task_base *tbase, struct rte_mbuf *mbuf)
+{
+	struct task_swap *task = (struct task_swap *)tbase;
+	prox_rte_ether_hdr *hdr = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
+	prox_rte_ether_addr dst_mac;
+	prox_rte_ether_addr_copy(&hdr->s_addr, &dst_mac);
+	prox_rte_ether_addr_copy(&hdr->d_addr, &hdr->s_addr);
+	prox_rte_ether_addr_copy(&dst_mac, &hdr->d_addr);
+	prox_rte_ipv4_hdr *ip_hdr = (prox_rte_ipv4_hdr *)(hdr + 1);
+	ip_hdr->dst_addr = ip_hdr->src_addr;
+	ip_hdr->src_addr = task->local_ipv4;
+	struct icmp_hdr *picmp = (struct icmp_hdr *)(ip_hdr + 1);
+	picmp->icmp_type = IP_ICMP_ECHO_REPLY;
 }
 
 static inline void build_igmp_message(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t ip, uint8_t igmp_message)
@@ -131,6 +151,7 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 	prox_rte_vlan_hdr *vlan;
 	uint16_t j;
 	struct igmpv2_hdr *pigmp;
+	struct icmp_hdr *picmp;
 	uint8_t type;
 
 	for (j = 0; j < n_pkts; ++j) {
@@ -238,6 +259,39 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 			udp_hdr->dst_port = udp_hdr->src_port;
 			udp_hdr->src_port = port;
 			write_src_and_dst_mac(task, mbufs[j]);
+			break;
+		case IPPROTO_ICMP:
+			picmp = (struct icmp_hdr *)(ip_hdr + 1);
+			type = picmp->icmp_type;
+			if (type == IP_ICMP_ECHO_REQUEST) {
+				if (ip_hdr->dst_addr == task->local_ipv4) {
+					task->n_echo_req++;
+					if (rte_rdtsc() - task->last_echo_req_rcvd_tsc > rte_get_tsc_hz()) {
+						plog_info("Received %u Echo Request on IP "IPv4_BYTES_FMT" (last received from IP "IPv4_BYTES_FMT")\n", task->n_echo_req, IPv4_BYTES(((uint8_t*)&ip_hdr->dst_addr)), IPv4_BYTES(((uint8_t*)&ip_hdr->src_addr)));
+						task->n_echo_req = 0;
+						task->last_echo_req_rcvd_tsc = rte_rdtsc();
+					}
+					build_icmp_reply_message(tbase, mbufs[j]);
+				} else {
+					out[j] = OUT_DISCARD;
+					continue;
+				}
+			} else if (type == IP_ICMP_ECHO_REPLY) {
+				if (ip_hdr->dst_addr == task->local_ipv4) {
+					task->n_echo_rep++;
+					if (rte_rdtsc() - task->last_echo_rep_rcvd_tsc > rte_get_tsc_hz()) {
+						plog_info("Received %u Echo Reply on IP "IPv4_BYTES_FMT" (last received from IP "IPv4_BYTES_FMT")\n", task->n_echo_rep, IPv4_BYTES(((uint8_t*)&ip_hdr->dst_addr)), IPv4_BYTES(((uint8_t*)&ip_hdr->src_addr)));
+						task->n_echo_rep = 0;
+						task->last_echo_rep_rcvd_tsc = rte_rdtsc();
+					}
+				} else {
+					out[j] = OUT_DISCARD;
+					continue;
+				}
+			} else {
+				out[j] = OUT_DISCARD;
+				continue;
+			}
 			break;
 		case IPPROTO_IGMP:
 			pigmp = (struct igmpv2_hdr *)(ip_hdr + 1);
