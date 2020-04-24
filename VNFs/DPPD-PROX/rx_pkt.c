@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -125,16 +125,27 @@ static uint16_t rx_pkt_hw_param(struct task_base *tbase, struct rte_mbuf ***mbuf
 	if (l3) {
 		struct rte_mbuf **mbufs = *mbufs_ptr;
 		int i;
-		struct ether_hdr_arp *hdr[MAX_PKT_BURST];
+		struct ether_hdr_arp *hdr_arp[MAX_PKT_BURST];
+		prox_rte_ether_hdr *hdr;
 		for (i = 0; i < nb_rx; i++) {
 			PREFETCH0(mbufs[i]);
 		}
 		for (i = 0; i < nb_rx; i++) {
-			hdr[i] = rte_pktmbuf_mtod(mbufs[i], struct ether_hdr_arp *);
-			PREFETCH0(hdr[i]);
+			hdr_arp[i] = rte_pktmbuf_mtod(mbufs[i], struct ether_hdr_arp *);
+			PREFETCH0(hdr_arp[i]);
 		}
 		for (i = 0; i < nb_rx; i++) {
-			if (unlikely(hdr[i]->ether_hdr.ether_type == ETYPE_ARP)) {
+			if (likely(hdr_arp[i]->ether_hdr.ether_type == ETYPE_IPv4)) {
+				hdr = (prox_rte_ether_hdr *)hdr_arp[i];
+				prox_rte_ipv4_hdr *pip = (prox_rte_ipv4_hdr *)(hdr + 1);
+				if (pip->next_proto_id == IPPROTO_ICMP) {
+					dump_l3(tbase, mbufs[i]);
+					tx_ring(tbase, tbase->l3.ctrl_plane_ring, ICMP_TO_CTRL, mbufs[i]);
+					skip++;
+				} else if (unlikely(skip)) {
+					mbufs[i - skip] = mbufs[i];
+				}
+			} else if (unlikely(hdr_arp[i]->ether_hdr.ether_type == ETYPE_ARP)) {
 				dump_l3(tbase, mbufs[i]);
 				tx_ring(tbase, tbase->l3.ctrl_plane_ring, ARP_TO_CTRL, mbufs[i]);
 				skip++;
@@ -181,16 +192,27 @@ static inline uint16_t rx_pkt_hw1_param(struct task_base *tbase, struct rte_mbuf
 	if (l3) {
 		struct rte_mbuf **mbufs = *mbufs_ptr;
 		int i;
-		struct ether_hdr_arp *hdr[MAX_PKT_BURST];
+		struct ether_hdr_arp *hdr_arp[MAX_PKT_BURST];
+		prox_rte_ether_hdr *hdr;
 		for (i = 0; i < nb_rx; i++) {
 			PREFETCH0(mbufs[i]);
 		}
 		for (i = 0; i < nb_rx; i++) {
-			hdr[i] = rte_pktmbuf_mtod(mbufs[i], struct ether_hdr_arp *);
-			PREFETCH0(hdr[i]);
+			hdr_arp[i] = rte_pktmbuf_mtod(mbufs[i], struct ether_hdr_arp *);
+			PREFETCH0(hdr_arp[i]);
 		}
 		for (i = 0; i < nb_rx; i++) {
-			if (unlikely(hdr[i]->ether_hdr.ether_type == ETYPE_ARP)) {
+			if (likely(hdr_arp[i]->ether_hdr.ether_type == ETYPE_IPv4)) {
+				hdr = (prox_rte_ether_hdr *)hdr_arp[i];
+				prox_rte_ipv4_hdr *pip = (prox_rte_ipv4_hdr *)(hdr + 1);
+				if (pip->next_proto_id == IPPROTO_ICMP) {
+					dump_l3(tbase, mbufs[i]);
+					tx_ring(tbase, tbase->l3.ctrl_plane_ring, ICMP_TO_CTRL, mbufs[i]);
+					skip++;
+				} else if (unlikely(skip)) {
+					mbufs[i - skip] = mbufs[i];
+				}
+			} else if (unlikely(hdr_arp[i]->ether_hdr.ether_type == ETYPE_ARP)) {
 				dump_l3(tbase, mbufs[i]);
 				tx_ring(tbase, tbase->l3.ctrl_plane_ring, ARP_TO_CTRL, mbufs[i]);
 				skip++;
