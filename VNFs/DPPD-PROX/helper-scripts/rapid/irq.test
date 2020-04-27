@@ -14,20 +14,18 @@
 ## limitations under the License.
 ##
 
-[DEFAULT]
-name = BasicSwapTesting
+[TestParameters]
+name = IRQTesting
 number_of_tests = 1
 total_number_of_test_machines = 2
-prox_socket = true
-prox_launch_exit = true
 
 [TestM1]
-name = InterruptTesting
+name = InterruptTestMachine1
 config_file = irq.cfg
 cores = [1,2,3]
 
 [TestM2]
-name = InterruptTesting
+name = InterruptTestMachine2
 config_file = irq.cfg
 cores = [1,2,3]
 
