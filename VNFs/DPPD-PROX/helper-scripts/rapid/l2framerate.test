@@ -14,12 +14,10 @@
 ## limitations under the License.
 ##
 
-[DEFAULT]
+[TestParameters]
 name = L2BasicSwapTesting
 number_of_tests = 1
 total_number_of_test_machines = 2
-prox_socket = true
-prox_launch_exit = true
 
 [TestM1]
 name = Generator
@@ -27,7 +25,6 @@ config_file = l2gen.cfg
 dest_vm = 2
 gencores = [1]
 latcores = [3]
-startspeed = 10
 
 [TestM2]
 name = Swap
@@ -36,6 +33,11 @@ cores = [1]
 
 [test1]
 test=fixed_rate
+# Following parameter defines the success criterium for the test.
+# When this test uses multiple combinations of packet size and flows,
+# all combinations must be meeting the same threshold
+# The threshold is expressed in Mpps
+pass_threshold=0.1
+startspeed = 10
 packetsizes=[256]
 flows=[64]
-speed=10

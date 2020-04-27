@@ -14,12 +14,10 @@
 ## limitations under the License.
 ##
 
-[DEFAULT]
+[TestParameters]
 name = CoreStatistics
 number_of_tests = 1
 total_number_of_test_machines = 1
-prox_socket = true
-prox_launch_exit = true
 
 [TestM1]
 name = Swap
