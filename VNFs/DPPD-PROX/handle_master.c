@@ -582,7 +582,7 @@ static int handle_ctrl_plane_f(struct task_base *tbase, __attribute__((unused)) 
 		}
 		ret +=n;
 	}
-	if (poll(&task->arp_fds, 1, prox_cfg.poll_timeout) == POLL_IN) {
+	if ((task->max_vdev_id) && (poll(&task->arp_fds, 1, prox_cfg.poll_timeout) == POLL_IN)) {
 		struct nlmsghdr * nl_hdr;
 		int fd = task->arp_fds.fd;
 		int len;
@@ -592,15 +592,15 @@ static int handle_ctrl_plane_f(struct task_base *tbase, __attribute__((unused)) 
 		len = recv(fd, netlink_buf, sizeof(netlink_buf), 0);
 		if (len < 0) {
 			plog_err("Failed to recv from netlink: %d\n", errno);
-			return errno;
+			return ret;
 		}
 		nl_hdr = (struct nlmsghdr *)netlink_buf;
 		if (nl_hdr->nlmsg_flags & NLM_F_MULTI) {
 			plog_err("Unexpected multipart netlink message\n");
-			return -1;
+			return ret;
 		}
 		if ((nl_hdr->nlmsg_type != RTM_NEWNEIGH) && (nl_hdr->nlmsg_type != RTM_DELNEIGH))
-			return 0;
+			return ret;
 
 		struct ndmsg *ndmsg = (struct ndmsg *)NLMSG_DATA(nl_hdr);
 		int ndm_family = ndmsg->ndm_family;
@@ -618,52 +618,51 @@ static int handle_ctrl_plane_f(struct task_base *tbase, __attribute__((unused)) 
 				break;
 			}
 		}
-		ret = rte_hash_lookup(task->external_ip_hash, (const void *)&ip);
-		if (unlikely(ret < 0)) {
+		int idx = rte_hash_lookup(task->external_ip_hash, (const void *)&ip);
+		if (unlikely(idx < 0)) {
 			// entry not found for this IP: we did not ask a request.
 			// This can happen if the kernel updated the ARP table when receiving an ARP_REQUEST
 			// We must record this, as the ARP entry is now in the kernel table
 			if (prox_rte_is_zero_ether_addr(&mac)) {
 				// Timeout or MAC deleted from kernel MAC table
-				int ret = rte_hash_del_key(task->external_ip_hash, (const void *)&ip);
+				idx = rte_hash_del_key(task->external_ip_hash, (const void *)&ip);
 				plogx_dbg("ip "IPv4_BYTES_FMT" removed from external_ip_hash\n", IP4(ip));
-				return 0;
+				return ret;
 			}
-			int ret = rte_hash_add_key(task->external_ip_hash, (const void *)&ip);
-			if (unlikely(ret < 0)) {
+			idx = rte_hash_add_key(task->external_ip_hash, (const void *)&ip);
+			if (unlikely(idx < 0)) {
 				// entry not found for this IP: Ignore the reply. This can happen for instance for
 				// an IP used by management plane.
 				plogx_dbg("IP "IPv4_BYTES_FMT" not found in external_ip_hash and unable to add it\n", IP4(ip));
-				return -1;
+				return ret;
 			}
-			memcpy(&task->external_ip_table[ret].mac, &mac, sizeof(prox_rte_ether_addr));
+			memcpy(&task->external_ip_table[idx].mac, &mac, sizeof(prox_rte_ether_addr));
 			plogx_dbg("ip "IPv4_BYTES_FMT" added in external_ip_hash with mac "MAC_BYTES_FMT"\n", IP4(ip), MAC_BYTES(mac.addr_bytes));
-			return 0;
+			return ret;
 		}
 
 		// entry found for this IP
-		uint16_t nb_requests = task->external_ip_table[ret].nb_requests;
+		uint16_t nb_requests = task->external_ip_table[idx].nb_requests;
 		if (nb_requests == 0) {
-			return 0;
+			return ret;
 		}
 
-		memcpy(&task->external_ip_table[ret].mac, &mac, sizeof(prox_rte_ether_addr));
+		memcpy(&task->external_ip_table[idx].mac, &mac, sizeof(prox_rte_ether_addr));
 
 		// If we receive a request from multiple task for the same IP, then we update all tasks
-		ret = rte_mempool_get(tbase->l3.arp_pool, (void **)mbufs);
-		if (unlikely(ret != 0)) {
+		if (unlikely(rte_mempool_get(tbase->l3.arp_pool, (void **)mbufs) != 0)) {
 			plog_err("Unable to allocate a mbuf for master to core communication\n");
-			return -1;
+			return ret;
 		}
 		rte_mbuf_refcnt_set(mbufs[0], nb_requests);
 		for (int i = 0; i < nb_requests; i++) {
-			struct rte_ring *ring = task->external_ip_table[ret].rings[i];
+			struct rte_ring *ring = task->external_ip_table[idx].rings[i];
 			struct ether_hdr_arp *hdr = rte_pktmbuf_mtod(mbufs[0], struct ether_hdr_arp *);
 			memcpy(&hdr->arp.data.sha, &mac, sizeof(prox_rte_ether_addr));
 			tx_ring_ip(tbase, ring, UPDATE_FROM_CTRL, mbufs[0], ip);
 			plog_dbg("UPDATE_FROM_CTRL ip "IPv4_BYTES_FMT" with mac "MAC_BYTES_FMT"\n", IP4(ip), MAC_BYTES(mac.addr_bytes));
 		}
-		task->external_ip_table[ret].nb_requests = 0;
+		task->external_ip_table[idx].nb_requests = 0;
 	}
 	return ret;
 }
