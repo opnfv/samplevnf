@@ -60,13 +60,22 @@ struct l3_base {
 	struct rte_hash *ip_hash;
 	struct arp_table *arp_table;
 	struct rte_mempool *arp_pool;
+	uint seed;
 };
 
 void task_init_l3(struct task_base *tbase, struct task_args *targ);
 void task_start_l3(struct task_base *tbase, struct task_args *targ);
-int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_dst);
+int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_dst, uint64_t **time);
 void task_set_gateway_ip(struct task_base *tbase, uint32_t ip);
 void task_set_local_ip(struct task_base *tbase, uint32_t ip);
 void handle_ctrl_plane_pkts(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts);
+static inline void update_arp_update_time(struct l3_base *l3, uint64_t *ptr, uint32_t base)
+{
+	// randomize timers - from 0.5 to 1.5 * configured time
+	const uint64_t hz = rte_get_tsc_hz();
+	uint64_t tsc = rte_rdtsc();
+	uint64_t rand = 500 + (1000L * rand_r(&l3->seed)) / RAND_MAX;
+	*ptr = tsc + (base * rand / 1000) * hz / 1000;
+}
 
 #endif /* _PACKET_UTILS_H_ */
