@@ -229,11 +229,11 @@ void task_init_l3(struct task_base *tbase, struct task_args *targ)
 	tbase->l3.core_id = targ->lconf->id;
 	tbase->l3.task_id = targ->id;
 	tbase->l3.tmaster = targ->tmaster;
-	if (tbase->l3.arp_timeout != 0)
+	if (targ->arp_timeout != 0)
 		tbase->l3.arp_timeout = targ->arp_timeout;
 	else
 		tbase->l3.arp_timeout = DEFAULT_ARP_TIMEOUT;
-	if (tbase->l3.arp_update_time != 0)
+	if (targ->arp_update_time != 0)
 		tbase->l3.arp_update_time = targ->arp_update_time;
 	else
 		tbase->l3.arp_update_time = DEFAULT_ARP_UPDATE_TIME;
