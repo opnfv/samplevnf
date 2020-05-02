@@ -22,6 +22,13 @@
 struct task_base;
 struct rte_mbuf;
 
+struct prox_headroom {
+	uint64_t command;
+	uint32_t ip;
+	uint32_t prefix;
+	uint32_t gateway_ip;
+} __attribute__((packed));
+
 void flush_queues_hw(struct task_base *tbase);
 void flush_queues_sw(struct task_base *tbase);
 
@@ -85,5 +92,15 @@ int tx_pkt_l3(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts,
 int tx_ring_cti(struct task_base *tbase, struct rte_ring *ring, uint16_t command, struct rte_mbuf *mbuf, uint8_t core_id, uint8_t task_id, uint32_t ip);
 void tx_ring_ip(struct task_base *tbase, struct rte_ring *ring, uint16_t command, struct rte_mbuf *mbuf, uint32_t ip);
 void tx_ring(struct task_base *tbase, struct rte_ring *ring, uint16_t command, struct rte_mbuf *mbuf);
+
+void ctrl_ring_set_command(struct rte_mbuf *mbuf, uint64_t udata64);
+uint64_t ctrl_ring_get_command(struct rte_mbuf *mbuf);
+void ctrl_ring_set_ip(struct rte_mbuf *mbuf, uint32_t udata32);
+uint32_t ctrl_ring_get_ip(struct rte_mbuf *mbuf);
+void ctrl_ring_set_gateway_ip(struct rte_mbuf *mbuf, uint32_t udata32);
+uint32_t ctrl_ring_get_gateway_ip(struct rte_mbuf *mbuf);
+void ctrl_ring_set_prefix(struct rte_mbuf *mbuf, uint32_t udata32);
+uint32_t ctrl_ring_get_prefix(struct rte_mbuf *mbuf);
+void tx_ring_route(struct task_base *tbase, struct rte_ring *ring, int add, struct rte_mbuf *mbuf, uint32_t ip, uint32_t gateway_ip, uint32_t prefix);
 
 #endif /* _TX_PKT_H_ */
