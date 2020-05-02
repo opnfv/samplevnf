@@ -20,6 +20,7 @@
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
 #include <poll.h>
+#include <net/if.h>
 
 #include <rte_hash.h>
 #include <rte_hash_crc.h>
@@ -51,11 +52,15 @@ static char netlink_buf[NETLINK_BUF_SIZE];
 
 const char *actions_string[] = {
 	"UPDATE_FROM_CTRL",		// Controlplane sending a MAC update to dataplane
+	"ROUTE_ADD_FROM_CTRL",		// Controlplane sending a new route to dataplane
+	"ROUTE_DEL_FROM_CTRL",		// Controlplane deleting a new route from dataplane
 	"SEND_ARP_REQUEST_FROM_CTRL",	// Controlplane requesting dataplane to send ARP request
 	"SEND_ARP_REPLY_FROM_CTRL",	// Controlplane requesting dataplane to send ARP reply
 	"SEND_ICMP_FROM_CTRL",		// Controlplane requesting dataplane to send ICMP message
+	"SEND_BGP_FROM_CTRL",		// Controlplane requesting dataplane to send BGP message
 	"ARP_TO_CTRL",			// ARP sent by datplane to Controlpane for handling
 	"ICMP_TO_CTRL",			// ICMP sent by datplane to Controlpane for handling
+	"BGP_TO_CTRL",			// BGP sent by datplane to Controlpane for handling
 	"REQ_MAC_TO_CTRL",		// Dataplane requesting MAC resolution to Controlplane
 	"PKT_FROM_TAP"			// Packet received by Controlplane from kernel and forwarded to dataplane for sending
 };
@@ -110,6 +115,7 @@ struct task_master {
 	struct vdev all_vdev[PROX_MAX_PORTS];
 	int max_vdev_id;
 	struct pollfd arp_fds;
+	struct pollfd route_fds;
 };
 
 struct ip_port {
@@ -278,7 +284,6 @@ static inline int record_request(struct task_base *tbase, uint32_t ip_dst, uint8
 	int i;
 
 	if (unlikely(ret < 0)) {
-		// entry not found for this IP: delete the reply
 		plogx_dbg("Unable to add IP "IPv4_BYTES_FMT" in external_ip_hash\n", IP4(ip_dst));
 		return -1;
 	}
@@ -417,6 +422,16 @@ static inline void handle_message(struct task_base *tbase, struct rte_mbuf *mbuf
 	plogx_dbg("\tMaster received %s (%x) from mbuf %p\n", actions_string[command], command, mbuf);
 
 	switch(command) {
+	case BGP_TO_CTRL:
+		if (vdev_port != NO_VDEV_PORT) {
+			// If a virtual (net_tap) device is attached, send the (BGP) packet to this device
+			// The kernel will receive and handle it.
+			plogx_dbg("\tMaster forwarding BGP packet to TAP\n");
+			int n = rte_eth_tx_burst(prox_port_cfg[port].dpdk_mapping, 0, &mbuf, 1);
+			return;
+		}
+		tx_drop(mbuf);
+		break;
 	case ICMP_TO_CTRL:
 		if (vdev_port != NO_VDEV_PORT) {
 			// If a virtual (net_tap) device is attached, send the (PING) packet to this device
@@ -545,6 +560,20 @@ void init_ctrl_plane(struct task_base *tbase)
 	task->arp_fds.fd = fd;
 	task->arp_fds.events = POLL_IN;
 	plog_info("\tRTMGRP_NEIGH netlink group bound; fd = %d\n", fd);
+
+	fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+	PROX_PANIC(fd < 0, "Failed to open netlink socket: %d\n", errno);
+	fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
+	struct sockaddr_nl sockaddr2;
+	memset(&sockaddr2, 0, sizeof(struct sockaddr_nl));
+	sockaddr2.nl_family = AF_NETLINK;
+	sockaddr2.nl_groups = RTMGRP_IPV6_ROUTE | RTMGRP_IPV4_ROUTE | RTMGRP_NOTIFY;
+	rc = bind(fd, (struct sockaddr *)&sockaddr2, sizeof(struct sockaddr_nl));
+	PROX_PANIC(rc < 0, "Failed to bind to RTMGRP_NEIGH netlink group\n");
+	task->route_fds.fd = fd;
+	task->route_fds.events = POLL_IN;
+	plog_info("\tRTMGRP_IPV4_ROUTE netlink group bound; fd = %d\n", fd);
+
 	static char name[] = "master_arp_pool";
 	const int NB_ARP_MBUF = 1024;
 	const int ARP_MBUF_SIZE = 2048;
@@ -557,6 +586,161 @@ void init_ctrl_plane(struct task_base *tbase)
 	plog_info("\t\tMempool %p (%s) size = %u * %u cache %u, socket %d\n", ret, name, NB_ARP_MBUF,
 		ARP_MBUF_SIZE, NB_CACHE_ARP_MBUF, rte_socket_id());
 	tbase->l3.arp_pool = ret;
+}
+
+static void handle_route_event(struct task_base *tbase)
+{
+	struct task_master *task = (struct task_master *)tbase;
+	struct rte_mbuf *mbufs[MAX_RING_BURST];
+	int fd = task->route_fds.fd, interface_index, mask = -1;
+	char interface_name[IF_NAMESIZE] = {0};
+	int len = recv(fd, netlink_buf, sizeof(netlink_buf), 0);
+	uint32_t ip = 0, gw_ip = 0;
+	if (len < 0) {
+		plog_err("Failed to recv from netlink: %d\n", errno);
+		return;
+	}
+	struct nlmsghdr * nl_hdr = (struct nlmsghdr *)netlink_buf;
+	if (nl_hdr->nlmsg_flags & NLM_F_MULTI) {
+		plog_err("Unexpected multipart netlink message\n");
+		return;
+	}
+	if ((nl_hdr->nlmsg_type != RTM_NEWROUTE) && (nl_hdr->nlmsg_type != RTM_DELROUTE))
+		return;
+
+	struct rtmsg *rtmsg = (struct rtmsg *)NLMSG_DATA(nl_hdr);
+	int rtm_family = rtmsg->rtm_family;
+	if ((rtm_family == AF_INET) && (rtmsg->rtm_table != RT_TABLE_MAIN) &&(rtmsg->rtm_table != RT_TABLE_LOCAL))
+		return;
+	int dst_len = rtmsg->rtm_dst_len;
+
+	struct rtattr *rta = (struct rtattr *)RTM_RTA(rtmsg);
+	int rtl = RTM_PAYLOAD(nl_hdr);
+	for (; RTA_OK(rta, rtl); rta = RTA_NEXT(rta, rtl)) {
+		switch (rta->rta_type) {
+		case RTA_DST:
+			ip = *((uint32_t *)RTA_DATA(rta));
+			break;
+		case RTA_OIF:
+			interface_index = *((int *)RTA_DATA(rta));
+			if (if_indextoname(interface_index, interface_name) == NULL) {
+				plog_info("Unknown Interface Index %d\n", interface_index);
+			}
+			break;
+		case RTA_METRICS:
+			mask = *((int *)RTA_DATA(rta));
+			break;
+		case RTA_GATEWAY:
+			gw_ip = *((uint32_t *)RTA_DATA(rta));
+			break;
+		default:
+			break;
+		}
+	}
+	int dpdk_vdev_port = -1;
+	for (int i = 0; i< rte_eth_dev_count(); i++) {
+		if (strcmp(prox_port_cfg[i].name, interface_name) == 0)
+			dpdk_vdev_port = i;
+	}
+	if (dpdk_vdev_port != -1) {
+		plogx_info("Received netlink message on tap interface %s for IP "IPv4_BYTES_FMT"/%d, Gateway  "IPv4_BYTES_FMT"\n", interface_name, IP4(ip), dst_len, IP4(gw_ip));
+		int ret1 = rte_mempool_get(tbase->l3.arp_pool, (void **)mbufs);
+		if (unlikely(ret1 != 0)) {
+			plog_err("Unable to allocate a mbuf for master to core communication\n");
+			return;
+		}
+		int dpdk_port = prox_port_cfg[dpdk_vdev_port].dpdk_mapping;
+		tx_ring_route(tbase, task->internal_port_table[dpdk_port].ring, (nl_hdr->nlmsg_type == RTM_NEWROUTE), mbufs[0], ip, gw_ip, dst_len);
+	} else
+		plog_info("Received netlink message on unknown interface %s for IP "IPv4_BYTES_FMT"/%d, Gateway  "IPv4_BYTES_FMT"\n", interface_name[0] ? interface_name:"", IP4(ip), dst_len, IP4(gw_ip));
+	return;
+}
+
+static void handle_arp_event(struct task_base *tbase)
+{
+	struct task_master *task = (struct task_master *)tbase;
+	struct rte_mbuf *mbufs[MAX_RING_BURST];
+	struct nlmsghdr * nl_hdr;
+	int fd = task->arp_fds.fd;
+	int len, ret;
+	uint32_t ip = 0;
+	prox_rte_ether_addr mac;
+	memset(&mac, 0, sizeof(mac));
+	len = recv(fd, netlink_buf, sizeof(netlink_buf), 0);
+	if (len < 0) {
+		plog_err("Failed to recv from netlink: %d\n", errno);
+		return;
+	}
+	nl_hdr = (struct nlmsghdr *)netlink_buf;
+	if (nl_hdr->nlmsg_flags & NLM_F_MULTI) {
+		plog_err("Unexpected multipart netlink message\n");
+		return;
+	}
+	if ((nl_hdr->nlmsg_type != RTM_NEWNEIGH) && (nl_hdr->nlmsg_type != RTM_DELNEIGH))
+		return;
+
+	struct ndmsg *ndmsg = (struct ndmsg *)NLMSG_DATA(nl_hdr);
+	int ndm_family = ndmsg->ndm_family;
+	struct rtattr *rta = (struct rtattr *)RTM_RTA(ndmsg);
+	int rtl = RTM_PAYLOAD(nl_hdr);
+	for (; RTA_OK(rta, rtl); rta = RTA_NEXT(rta, rtl)) {
+		switch (rta->rta_type) {
+		case NDA_DST:
+			ip = *((uint32_t *)RTA_DATA(rta));
+			break;
+		case NDA_LLADDR:
+			mac = *((prox_rte_ether_addr *)(uint64_t *)RTA_DATA(rta));
+			break;
+		default:
+			break;
+		}
+	}
+	plogx_info("Received netlink ip "IPv4_BYTES_FMT" with mac "MAC_BYTES_FMT"\n", IP4(ip), MAC_BYTES(mac.addr_bytes));
+	ret = rte_hash_lookup(task->external_ip_hash, (const void *)&ip);
+	if (unlikely(ret < 0)) {
+		// entry not found for this IP: we did not ask a request.
+		// This can happen if the kernel updated the ARP table when receiving an ARP_REQUEST
+		// We must record this, as the ARP entry is now in the kernel table
+		if (prox_rte_is_zero_ether_addr(&mac)) {
+			// Timeout or MAC deleted from kernel MAC table
+			int ret = rte_hash_del_key(task->external_ip_hash, (const void *)&ip);
+			plogx_dbg("ip "IPv4_BYTES_FMT" removed from external_ip_hash\n", IP4(ip));
+			return;
+		}
+		int ret = rte_hash_add_key(task->external_ip_hash, (const void *)&ip);
+		if (unlikely(ret < 0)) {
+			plogx_dbg("IP "IPv4_BYTES_FMT" not found in external_ip_hash and unable to add it\n", IP4(ip));
+			return;
+		}
+		memcpy(&task->external_ip_table[ret].mac, &mac, sizeof(prox_rte_ether_addr));
+		plogx_dbg("ip "IPv4_BYTES_FMT" added in external_ip_hash with mac "MAC_BYTES_FMT"\n", IP4(ip), MAC_BYTES(mac.addr_bytes));
+		return;
+	}
+
+	// entry found for this IP
+	uint16_t nb_requests = task->external_ip_table[ret].nb_requests;
+	if (nb_requests == 0) {
+		return;
+	}
+
+	memcpy(&task->external_ip_table[ret].mac, &mac, sizeof(prox_rte_ether_addr));
+
+	// If we receive a request from multiple task for the same IP, then we update all tasks
+	int ret1 = rte_mempool_get(tbase->l3.arp_pool, (void **)mbufs);
+	if (unlikely(ret1 != 0)) {
+		plog_err("Unable to allocate a mbuf for master to core communication\n");
+		return;
+	}
+	rte_mbuf_refcnt_set(mbufs[0], nb_requests);
+	for (int i = 0; i < nb_requests; i++) {
+		struct rte_ring *ring = task->external_ip_table[ret].rings[i];
+		struct ether_hdr_arp *hdr = rte_pktmbuf_mtod(mbufs[0], struct ether_hdr_arp *);
+		memcpy(&hdr->arp.data.sha, &mac, sizeof(prox_rte_ether_addr));
+		tx_ring_ip(tbase, ring, UPDATE_FROM_CTRL, mbufs[0], ip);
+		plog_dbg("UPDATE_FROM_CTRL ip "IPv4_BYTES_FMT" with mac "MAC_BYTES_FMT"\n", IP4(ip), MAC_BYTES(mac.addr_bytes));
+	}
+	task->external_ip_table[ret].nb_requests = 0;
+	return;
 }
 
 static int handle_ctrl_plane_f(struct task_base *tbase, __attribute__((unused)) struct rte_mbuf **mbuf, uint16_t n_pkts)
@@ -582,88 +766,11 @@ static int handle_ctrl_plane_f(struct task_base *tbase, __attribute__((unused)) 
 		}
 		ret +=n;
 	}
-	if (poll(&task->arp_fds, 1, prox_cfg.poll_timeout) == POLL_IN) {
-		struct nlmsghdr * nl_hdr;
-		int fd = task->arp_fds.fd;
-		int len;
-		uint32_t ip = 0;
-		prox_rte_ether_addr mac;
-		memset(&mac, 0, sizeof(mac));
-		len = recv(fd, netlink_buf, sizeof(netlink_buf), 0);
-		if (len < 0) {
-			plog_err("Failed to recv from netlink: %d\n", errno);
-			return errno;
-		}
-		nl_hdr = (struct nlmsghdr *)netlink_buf;
-		if (nl_hdr->nlmsg_flags & NLM_F_MULTI) {
-			plog_err("Unexpected multipart netlink message\n");
-			return -1;
-		}
-		if ((nl_hdr->nlmsg_type != RTM_NEWNEIGH) && (nl_hdr->nlmsg_type != RTM_DELNEIGH))
-			return 0;
-
-		struct ndmsg *ndmsg = (struct ndmsg *)NLMSG_DATA(nl_hdr);
-		int ndm_family = ndmsg->ndm_family;
-		struct rtattr *rta = (struct rtattr *)RTM_RTA(ndmsg);
-		int rtl = RTM_PAYLOAD(nl_hdr);
-		for (; RTA_OK(rta, rtl); rta = RTA_NEXT(rta, rtl)) {
-			switch (rta->rta_type) {
-			case NDA_DST:
-				ip = *((uint32_t *)RTA_DATA(rta));
-				break;
-			case NDA_LLADDR:
-				mac = *((prox_rte_ether_addr *)(uint64_t *)RTA_DATA(rta));
-				break;
-			default:
-				break;
-			}
-		}
-		ret = rte_hash_lookup(task->external_ip_hash, (const void *)&ip);
-		if (unlikely(ret < 0)) {
-			// entry not found for this IP: we did not ask a request.
-			// This can happen if the kernel updated the ARP table when receiving an ARP_REQUEST
-			// We must record this, as the ARP entry is now in the kernel table
-			if (prox_rte_is_zero_ether_addr(&mac)) {
-				// Timeout or MAC deleted from kernel MAC table
-				int ret = rte_hash_del_key(task->external_ip_hash, (const void *)&ip);
-				plogx_dbg("ip "IPv4_BYTES_FMT" removed from external_ip_hash\n", IP4(ip));
-				return 0;
-			}
-			int ret = rte_hash_add_key(task->external_ip_hash, (const void *)&ip);
-			if (unlikely(ret < 0)) {
-				// entry not found for this IP: Ignore the reply. This can happen for instance for
-				// an IP used by management plane.
-				plogx_dbg("IP "IPv4_BYTES_FMT" not found in external_ip_hash and unable to add it\n", IP4(ip));
-				return -1;
-			}
-			memcpy(&task->external_ip_table[ret].mac, &mac, sizeof(prox_rte_ether_addr));
-			plogx_dbg("ip "IPv4_BYTES_FMT" added in external_ip_hash with mac "MAC_BYTES_FMT"\n", IP4(ip), MAC_BYTES(mac.addr_bytes));
-			return 0;
-		}
-
-		// entry found for this IP
-		uint16_t nb_requests = task->external_ip_table[ret].nb_requests;
-		if (nb_requests == 0) {
-			return 0;
-		}
-
-		memcpy(&task->external_ip_table[ret].mac, &mac, sizeof(prox_rte_ether_addr));
-
-		// If we receive a request from multiple task for the same IP, then we update all tasks
-		ret = rte_mempool_get(tbase->l3.arp_pool, (void **)mbufs);
-		if (unlikely(ret != 0)) {
-			plog_err("Unable to allocate a mbuf for master to core communication\n");
-			return -1;
-		}
-		rte_mbuf_refcnt_set(mbufs[0], nb_requests);
-		for (int i = 0; i < nb_requests; i++) {
-			struct rte_ring *ring = task->external_ip_table[ret].rings[i];
-			struct ether_hdr_arp *hdr = rte_pktmbuf_mtod(mbufs[0], struct ether_hdr_arp *);
-			memcpy(&hdr->arp.data.sha, &mac, sizeof(prox_rte_ether_addr));
-			tx_ring_ip(tbase, ring, UPDATE_FROM_CTRL, mbufs[0], ip);
-			plog_dbg("UPDATE_FROM_CTRL ip "IPv4_BYTES_FMT" with mac "MAC_BYTES_FMT"\n", IP4(ip), MAC_BYTES(mac.addr_bytes));
-		}
-		task->external_ip_table[ret].nb_requests = 0;
+	if ((task->max_vdev_id) && (poll(&task->arp_fds, 1, prox_cfg.poll_timeout) == POLL_IN)) {
+		handle_arp_event(tbase);
+	}
+	if (poll(&task->route_fds, 1, prox_cfg.poll_timeout) == POLL_IN) {
+		handle_route_event(tbase);
 	}
 	return ret;
 }

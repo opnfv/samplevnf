@@ -129,6 +129,7 @@ struct task_args {
 	uint32_t               gateway_ipv4;
 	uint32_t               local_ipv4;
 	uint32_t               remote_ipv4;
+	uint32_t               local_prefix;
 	uint32_t               arp_timeout;
 	uint32_t               arp_update_time;
 	struct ipv6_addr       local_ipv6;    /* For IPv6 Tunnel, it's the local tunnel endpoint address */
