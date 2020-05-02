@@ -37,6 +37,12 @@ struct prox_rte_table_params {
 	uint64_t seed;
 };
 
+#if RTE_VERSION < RTE_VERSION_NUM(16,4,0,1)
+typedef uint8_t prox_next_hop_index_type;
+#else
+typedef uint32_t prox_next_hop_index_type;
+#endif
+
 #if RTE_VERSION < RTE_VERSION_NUM(17,11,0,0)
 
 static void *prox_rte_table_create(struct prox_rte_table_params *params, int socket_id, uint32_t entry_size)
