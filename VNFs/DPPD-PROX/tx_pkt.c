@@ -845,3 +845,73 @@ void tx_ring(struct task_base *tbase, struct rte_ring *ring, uint16_t command,  
 		rte_pktmbuf_free(mbuf);
 	}
 }
+
+void tx_ring_route(struct task_base *tbase, struct rte_ring *ring, int add, struct rte_mbuf *mbuf, uint32_t ip, uint32_t gateway_ip, uint32_t prefix)
+{
+	uint8_t command;
+	if (add)
+		command = ROUTE_ADD_FROM_CTRL;
+	else
+		command = ROUTE_DEL_FROM_CTRL;
+
+	plogx_dbg("\tSending command %s to ring %p using mbuf %p - ring size now %d\n", actions_string[command], ring, mbuf, rte_ring_free_count(ring));
+	ctrl_ring_set_command(mbuf, command);
+	ctrl_ring_set_ip(mbuf, ip);
+	ctrl_ring_set_gateway_ip(mbuf, gateway_ip);
+	ctrl_ring_set_prefix(mbuf, prefix);
+	if (tbase->aux->task_rt_dump.cur_trace) {
+		trace_one_rx_pkt(tbase, mbuf);
+	}
+	int ret = rte_ring_enqueue(ring, mbuf);
+	if (unlikely(ret != 0)) {
+		plogx_dbg("\tFail to send command %s to ring %p using mbuf %p - ring size now %d\n", actions_string[command], ring, mbuf, rte_ring_free_count(ring));
+		TASK_STATS_ADD_DROP_DISCARD(&tbase->aux->stats, 1);
+		rte_pktmbuf_free(mbuf);
+	}
+}
+
+void ctrl_ring_set_command(struct rte_mbuf *mbuf, uint64_t udata64)
+{
+	mbuf->udata64 = udata64;
+}
+
+uint64_t ctrl_ring_get_command(struct rte_mbuf *mbuf)
+{
+	return mbuf->udata64;
+}
+
+void ctrl_ring_set_ip(struct rte_mbuf *mbuf, uint32_t udata32)
+{
+	struct prox_headroom *prox_headroom = (struct prox_headroom *)(rte_pktmbuf_mtod(mbuf, uint8_t*) - sizeof(struct prox_headroom));
+	prox_headroom->ip = udata32;
+}
+
+uint32_t  ctrl_ring_get_ip(struct rte_mbuf *mbuf)
+{
+	struct prox_headroom *prox_headroom = (struct prox_headroom *)(rte_pktmbuf_mtod(mbuf, uint8_t*) - sizeof(struct prox_headroom));
+	return prox_headroom->ip;
+}
+
+void ctrl_ring_set_gateway_ip(struct rte_mbuf *mbuf, uint32_t udata32)
+{
+	struct prox_headroom *prox_headroom = (struct prox_headroom *)(rte_pktmbuf_mtod(mbuf, uint8_t*) - sizeof(struct prox_headroom));
+	prox_headroom->gateway_ip = udata32;
+}
+
+uint32_t ctrl_ring_get_gateway_ip(struct rte_mbuf *mbuf)
+{
+	struct prox_headroom *prox_headroom = (struct prox_headroom *)(rte_pktmbuf_mtod(mbuf, uint8_t*) - sizeof(struct prox_headroom));
+	return prox_headroom->gateway_ip;
+}
+
+void ctrl_ring_set_prefix(struct rte_mbuf *mbuf, uint32_t udata32)
+{
+	struct prox_headroom *prox_headroom = (struct prox_headroom *)(rte_pktmbuf_mtod(mbuf, uint8_t*) - sizeof(struct prox_headroom));
+	prox_headroom->prefix = udata32;
+}
+
+uint32_t ctrl_ring_get_prefix(struct rte_mbuf *mbuf)
+{
+	struct prox_headroom *prox_headroom = (struct prox_headroom *)(rte_pktmbuf_mtod(mbuf, uint8_t*) - sizeof(struct prox_headroom));
+	return prox_headroom->prefix;
+}

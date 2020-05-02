@@ -437,11 +437,11 @@ int lua_to_next_hop(struct lua_State *L, enum lua_place from, const char *name, 
 	while (lua_next(L, -2)) {
 		if (lua_to_int(L, TABLE, "id", &next_hop_index) ||
 		    lua_to_int(L, TABLE, "port_id", &port_id) ||
-		    lua_to_ip(L, TABLE, "ip", &ip) ||
-		    lua_to_mac(L, TABLE, "mac", &mac) ||
-		    lua_to_int(L, TABLE, "mpls", &mpls))
+		    lua_to_ip(L, TABLE, "ip", &ip))
 			return -1;
 
+		lua_to_mac(L, TABLE, "mac", &mac);
+		lua_to_int(L, TABLE, "mpls", &mpls);
 		PROX_PANIC(port_id >= PROX_MAX_PORTS, "Port id too high (only supporting %d ports)\n", PROX_MAX_PORTS);
 		PROX_PANIC(next_hop_index >= MAX_HOP_INDEX, "Next-hop to high (only supporting %d next hops)\n", MAX_HOP_INDEX);
 
@@ -504,6 +504,7 @@ int lua_to_next_hop6(struct lua_State *L, enum lua_place from, const char *name,
 	return 0;
 }
 
+#define MAX_NEW_RULES	128
 int lua_to_routes4(struct lua_State *L, enum lua_place from, const char *name, uint8_t socket, struct lpm4 *lpm)
 {
 	struct ip4_subnet dst;
@@ -514,11 +515,12 @@ int lua_to_routes4(struct lua_State *L, enum lua_place from, const char *name, u
 	char lpm_name[64];
 	int ret;
 	int pop;
+	static int count = 1;
 
 	if ((pop = lua_getfrom(L, from, name)) < 0)
 		return -1;
 
-	snprintf(lpm_name, sizeof(lpm_name), "IPv4_lpm_s%u", socket);
+	snprintf(lpm_name, sizeof(lpm_name), "IPv4_lpm_s%u_%d", socket, count++);
 
 	if (!lua_istable(L, -1)) {
 		set_err("Data is not a table\n");
@@ -531,12 +533,12 @@ int lua_to_routes4(struct lua_State *L, enum lua_place from, const char *name, u
 	lua_pop(L, 1);
 #if RTE_VERSION >= RTE_VERSION_NUM(16,4,0,1)
 	struct rte_lpm_config conf;
-	conf.max_rules = 2 * n_tot_rules;
+	conf.max_rules = 2 * n_tot_rules + MAX_NEW_RULES;
 	conf.number_tbl8s = 256;
 	conf.flags = 0;
 	new_lpm = rte_lpm_create(lpm_name, socket, &conf);
 #else
-	new_lpm = rte_lpm_create(lpm_name, socket, 2 * n_tot_rules, 0);
+	new_lpm = rte_lpm_create(lpm_name, socket, 2 * n_tot_rules + MAX_NEW_RULES, 0);
 #endif
 	PROX_PANIC(NULL == new_lpm, "Failed to allocate lpm\n");
 

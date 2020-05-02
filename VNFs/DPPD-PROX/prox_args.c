@@ -1389,10 +1389,23 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 	if (STR_EQ(str, "gateway ipv4")) { /* Gateway IP address used when generating */
 		if ((targ->flags & TASK_ARG_L3) == 0)
 			plog_warn("gateway ipv4 configured but L3 sub mode not enabled\n");
+		if (targ->local_ipv4)
+			targ->local_prefix = 32;
 		return parse_ip(&targ->gateway_ipv4, pkey);
 	}
 	if (STR_EQ(str, "local ipv4")) { /* source IP address to be used for packets */
-		return parse_ip(&targ->local_ipv4, pkey);
+		struct ip4_subnet cidr;
+		if (parse_ip4_cidr(&cidr, pkey) != 0) {
+			if (targ->gateway_ipv4)
+				targ->local_prefix = 32;
+			else
+				targ->local_prefix = 0;
+			return parse_ip(&targ->local_ipv4, pkey);
+		} else {
+			targ->local_ipv4 = cidr.ip;
+			targ->local_prefix = cidr.prefix;
+			return 0;
+		}
 	}
 	if (STR_EQ(str, "remote ipv4")) { /* source IP address to be used for packets */
 		return parse_ip(&targ->remote_ipv4, pkey);
