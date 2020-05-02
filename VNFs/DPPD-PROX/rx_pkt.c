@@ -30,6 +30,8 @@
 #include "handle_master.h"
 #include "input.h" /* Needed for callback on dump */
 
+#define TCP_PORT_BGP	179
+
 /* _param version of the rx_pkt_hw functions are used to create two
    instances of very similar variations of these functions. The
    variations are specified by the "multi" parameter which significies
@@ -138,9 +140,14 @@ static uint16_t rx_pkt_hw_param(struct task_base *tbase, struct rte_mbuf ***mbuf
 			if (likely(hdr_arp[i]->ether_hdr.ether_type == ETYPE_IPv4)) {
 				hdr = (prox_rte_ether_hdr *)hdr_arp[i];
 				prox_rte_ipv4_hdr *pip = (prox_rte_ipv4_hdr *)(hdr + 1);
+				prox_rte_tcp_hdr *tcp = (prox_rte_tcp_hdr *)(pip + 1);
 				if (pip->next_proto_id == IPPROTO_ICMP) {
 					dump_l3(tbase, mbufs[i]);
 					tx_ring(tbase, tbase->l3.ctrl_plane_ring, ICMP_TO_CTRL, mbufs[i]);
+					skip++;
+				} else if ((tcp->src_port == TCP_PORT_BGP) || (tcp->dst_port == TCP_PORT_BGP)) {
+					dump_l3(tbase, mbufs[i]);
+					tx_ring(tbase, tbase->l3.ctrl_plane_ring, BGP_TO_CTRL, mbufs[i]);
 					skip++;
 				} else if (unlikely(skip)) {
 					mbufs[i - skip] = mbufs[i];
@@ -205,9 +212,14 @@ static inline uint16_t rx_pkt_hw1_param(struct task_base *tbase, struct rte_mbuf
 			if (likely(hdr_arp[i]->ether_hdr.ether_type == ETYPE_IPv4)) {
 				hdr = (prox_rte_ether_hdr *)hdr_arp[i];
 				prox_rte_ipv4_hdr *pip = (prox_rte_ipv4_hdr *)(hdr + 1);
+				prox_rte_tcp_hdr *tcp = (prox_rte_tcp_hdr *)(pip + 1);
 				if (pip->next_proto_id == IPPROTO_ICMP) {
 					dump_l3(tbase, mbufs[i]);
 					tx_ring(tbase, tbase->l3.ctrl_plane_ring, ICMP_TO_CTRL, mbufs[i]);
+					skip++;
+				} else if ((tcp->src_port == TCP_PORT_BGP) || (tcp->dst_port == TCP_PORT_BGP)) {
+					dump_l3(tbase, mbufs[i]);
+					tx_ring(tbase, tbase->l3.ctrl_plane_ring, BGP_TO_CTRL, mbufs[i]);
 					skip++;
 				} else if (unlikely(skip)) {
 					mbufs[i - skip] = mbufs[i];
