@@ -107,11 +107,78 @@ static inline void dump_l3(struct task_base *tbase, struct rte_mbuf *mbuf)
 	}
 }
 
+static inline void handle_ipv4(struct task_base *tbase, struct rte_mbuf **mbufs, int i, prox_rte_ipv4_hdr *pip, int *skip)
+{
+	prox_rte_tcp_hdr *tcp = (prox_rte_tcp_hdr *)(pip + 1);
+	if (pip->next_proto_id == IPPROTO_ICMP) {
+		dump_l3(tbase, mbufs[i]);
+		tx_ring(tbase, tbase->l3.ctrl_plane_ring, ICMP_TO_CTRL, mbufs[i]);
+		(*skip)++;
+	} else if ((tcp->src_port == TCP_PORT_BGP) || (tcp->dst_port == TCP_PORT_BGP)) {
+		dump_l3(tbase, mbufs[i]);
+		tx_ring(tbase, tbase->l3.ctrl_plane_ring, BGP_TO_CTRL, mbufs[i]);
+		(*skip)++;
+	} else if (unlikely(*skip)) {
+		mbufs[i - *skip] = mbufs[i];
+	}
+}
+static inline int handle_l3(struct task_base *tbase, uint16_t nb_rx, struct rte_mbuf ***mbufs_ptr)
+{
+	struct rte_mbuf **mbufs = *mbufs_ptr;
+	int i;
+	struct ether_hdr_arp *hdr_arp[MAX_PKT_BURST];
+	prox_rte_ether_hdr *hdr;
+	prox_rte_ipv4_hdr *pip;
+	prox_rte_vlan_hdr *vlan;
+	int skip = 0;
+
+	for (i = 0; i < nb_rx; i++) {
+		PREFETCH0(mbufs[i]);
+	}
+
+	for (i = 0; i < nb_rx; i++) {
+		hdr_arp[i] = rte_pktmbuf_mtod(mbufs[i], struct ether_hdr_arp *);
+		PREFETCH0(hdr_arp[i]);
+	}
+	for (i = 0; i < nb_rx; i++) {
+		if (likely(hdr_arp[i]->ether_hdr.ether_type == ETYPE_IPv4)) {
+			hdr = (prox_rte_ether_hdr *)hdr_arp[i];
+			pip = (prox_rte_ipv4_hdr *)(hdr + 1);
+			handle_ipv4(tbase, mbufs, i, pip, &skip);
+		} else {
+			switch (hdr_arp[i]->ether_hdr.ether_type) {
+			case ETYPE_VLAN:
+				hdr = (prox_rte_ether_hdr *)hdr_arp[i];
+				vlan = (prox_rte_vlan_hdr *)(hdr + 1);
+				if (vlan->eth_proto == ETYPE_IPv4) {
+					pip = (prox_rte_ipv4_hdr *)(vlan + 1);
+					handle_ipv4(tbase, mbufs, i, pip, &skip);
+				} else if (vlan->eth_proto == ETYPE_ARP) {
+					dump_l3(tbase, mbufs[i]);
+					tx_ring(tbase, tbase->l3.ctrl_plane_ring, ARP_TO_CTRL, mbufs[i]);
+					skip++;
+				}
+				break;
+			case ETYPE_ARP:
+				dump_l3(tbase, mbufs[i]);
+				tx_ring(tbase, tbase->l3.ctrl_plane_ring, ARP_TO_CTRL, mbufs[i]);
+				skip++;
+				break;
+			default:
+				if (unlikely(skip)) {
+					mbufs[i - skip] = mbufs[i];
+				}
+			}
+		}
+	}
+	return skip;
+}
+
 static uint16_t rx_pkt_hw_param(struct task_base *tbase, struct rte_mbuf ***mbufs_ptr, int multi,
 				void (*next)(struct rx_params_hw *rx_param_hw), int l3)
 {
 	uint8_t last_read_portid;
-	uint16_t nb_rx;
+	uint16_t nb_rx, ret;
 	int skip = 0;
 
 	START_EMPTY_MEASSURE();
@@ -124,43 +191,8 @@ static uint16_t rx_pkt_hw_param(struct task_base *tbase, struct rte_mbuf ***mbuf
 	nb_rx = rx_pkt_hw_port_queue(pq, *mbufs_ptr, multi);
 	next(&tbase->rx_params_hw);
 
-	if (l3) {
-		struct rte_mbuf **mbufs = *mbufs_ptr;
-		int i;
-		struct ether_hdr_arp *hdr_arp[MAX_PKT_BURST];
-		prox_rte_ether_hdr *hdr;
-		for (i = 0; i < nb_rx; i++) {
-			PREFETCH0(mbufs[i]);
-		}
-		for (i = 0; i < nb_rx; i++) {
-			hdr_arp[i] = rte_pktmbuf_mtod(mbufs[i], struct ether_hdr_arp *);
-			PREFETCH0(hdr_arp[i]);
-		}
-		for (i = 0; i < nb_rx; i++) {
-			if (likely(hdr_arp[i]->ether_hdr.ether_type == ETYPE_IPv4)) {
-				hdr = (prox_rte_ether_hdr *)hdr_arp[i];
-				prox_rte_ipv4_hdr *pip = (prox_rte_ipv4_hdr *)(hdr + 1);
-				prox_rte_tcp_hdr *tcp = (prox_rte_tcp_hdr *)(pip + 1);
-				if (pip->next_proto_id == IPPROTO_ICMP) {
-					dump_l3(tbase, mbufs[i]);
-					tx_ring(tbase, tbase->l3.ctrl_plane_ring, ICMP_TO_CTRL, mbufs[i]);
-					skip++;
-				} else if ((tcp->src_port == TCP_PORT_BGP) || (tcp->dst_port == TCP_PORT_BGP)) {
-					dump_l3(tbase, mbufs[i]);
-					tx_ring(tbase, tbase->l3.ctrl_plane_ring, BGP_TO_CTRL, mbufs[i]);
-					skip++;
-				} else if (unlikely(skip)) {
-					mbufs[i - skip] = mbufs[i];
-				}
-			} else if (unlikely(hdr_arp[i]->ether_hdr.ether_type == ETYPE_ARP)) {
-				dump_l3(tbase, mbufs[i]);
-				tx_ring(tbase, tbase->l3.ctrl_plane_ring, ARP_TO_CTRL, mbufs[i]);
-				skip++;
-			} else if (unlikely(skip)) {
-				mbufs[i - skip] = mbufs[i];
-			}
-		}
-	}
+	if (l3)
+		skip = handle_l3(tbase, nb_rx, mbufs_ptr);
 
 	if (skip)
 		TASK_STATS_ADD_RX_NON_DP(&tbase->aux->stats, skip);
@@ -196,44 +228,10 @@ static inline uint16_t rx_pkt_hw1_param(struct task_base *tbase, struct rte_mbuf
 		}
 	}
 
-	if (l3) {
-		struct rte_mbuf **mbufs = *mbufs_ptr;
-		int i;
-		struct ether_hdr_arp *hdr_arp[MAX_PKT_BURST];
-		prox_rte_ether_hdr *hdr;
-		for (i = 0; i < nb_rx; i++) {
-			PREFETCH0(mbufs[i]);
-		}
-		for (i = 0; i < nb_rx; i++) {
-			hdr_arp[i] = rte_pktmbuf_mtod(mbufs[i], struct ether_hdr_arp *);
-			PREFETCH0(hdr_arp[i]);
-		}
-		for (i = 0; i < nb_rx; i++) {
-			// plog_info("ether_type = %x\n", hdr_arp[i]->ether_hdr.ether_type);
-			if (likely(hdr_arp[i]->ether_hdr.ether_type == ETYPE_IPv4)) {
-				hdr = (prox_rte_ether_hdr *)hdr_arp[i];
-				prox_rte_ipv4_hdr *pip = (prox_rte_ipv4_hdr *)(hdr + 1);
-				prox_rte_tcp_hdr *tcp = (prox_rte_tcp_hdr *)(pip + 1);
-				if (pip->next_proto_id == IPPROTO_ICMP) {
-					dump_l3(tbase, mbufs[i]);
-					tx_ring(tbase, tbase->l3.ctrl_plane_ring, ICMP_TO_CTRL, mbufs[i]);
-					skip++;
-				} else if ((tcp->src_port == TCP_PORT_BGP) || (tcp->dst_port == TCP_PORT_BGP)) {
-					dump_l3(tbase, mbufs[i]);
-					tx_ring(tbase, tbase->l3.ctrl_plane_ring, BGP_TO_CTRL, mbufs[i]);
-					skip++;
-				} else if (unlikely(skip)) {
-					mbufs[i - skip] = mbufs[i];
-				}
-			} else if (unlikely(hdr_arp[i]->ether_hdr.ether_type == ETYPE_ARP)) {
-				dump_l3(tbase, mbufs[i]);
-				tx_ring(tbase, tbase->l3.ctrl_plane_ring, ARP_TO_CTRL, mbufs[i]);
-				skip++;
-			} else if (unlikely(skip)) {
-				mbufs[i - skip] = mbufs[i];
-			}
-		}
-	}
+	if (nb_rx == 0)
+		return 0;
+	if (l3)
+		skip = handle_l3(tbase, nb_rx, mbufs_ptr);
 
 	if (skip)
 		TASK_STATS_ADD_RX_NON_DP(&tbase->aux->stats, skip);

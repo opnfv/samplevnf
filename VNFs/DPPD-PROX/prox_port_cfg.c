@@ -213,7 +213,17 @@ void init_rte_dev(int use_dummy_devices)
 			prox_port_cfg[vdev_port_id].active = 1;
 			prox_port_cfg[vdev_port_id].dpdk_mapping = port_id;
 			prox_port_cfg[vdev_port_id].n_txq = 1;
-			strncpy(prox_port_cfg[vdev_port_id].name, port_cfg->vdev, MAX_NAME_SIZE);
+
+			if (prox_port_cfg[port_id].vlan_tag) {
+				char command[1024];
+				snprintf(prox_port_cfg[vdev_port_id].name, MAX_NAME_SIZE, "%s_%d", port_cfg->vdev, prox_port_cfg[port_id].vlan_tag);
+				sprintf(command, "ip link add link %s name %s type vlan id %d", port_cfg->vdev, prox_port_cfg[vdev_port_id].name, prox_port_cfg[port_id].vlan_tag);
+				system(command);
+				plog_info("Running %s\n", command);
+				plog_info("Using vlan tag %d - added device %s\n", prox_port_cfg[port_id].vlan_tag, prox_port_cfg[vdev_port_id].name);
+			} else
+				strncpy(prox_port_cfg[vdev_port_id].name, port_cfg->vdev, MAX_NAME_SIZE);
+
 			prox_port_cfg[port_id].dpdk_mapping = vdev_port_id;
 			prox_port_cfg[vdev_port_id].ip = rte_be_to_cpu_32(prox_port_cfg[port_id].ip);
 			prox_port_cfg[port_id].ip = 0;	// So only vdev has an IP associated
