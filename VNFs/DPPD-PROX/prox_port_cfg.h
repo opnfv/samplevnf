@@ -83,6 +83,7 @@ struct prox_port_cfg {
 	int dpdk_mapping;
 	uint32_t ip;
 	int fd;
+	uint32_t vlan_tag;
 };
 
 extern rte_atomic32_t lsc;

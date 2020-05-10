@@ -592,6 +592,9 @@ static int get_port_cfg(unsigned sindex, char *str, void *data)
 #endif
 
 	}
+	else if (STR_EQ(str, "vlan tag")) {
+		return parse_int(&cfg->vlan_tag, pkey);
+	}
 	else if (STR_EQ(str, "vlan")) {
 #if RTE_VERSION >= RTE_VERSION_NUM(18,8,0,1)
 		uint32_t val;
