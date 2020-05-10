@@ -120,14 +120,14 @@ static inline int update_mac_and_send_mbuf(struct arp_table *entry, prox_rte_eth
 	return DROP_MBUF;
 }
 
-int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_dst, uint64_t **time)
+int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_dst, uint64_t **time, uint64_t tsc)
 {
 	const uint64_t hz = rte_get_tsc_hz();
 	struct ether_hdr_arp *packet = rte_pktmbuf_mtod(mbuf, struct ether_hdr_arp *);
 	prox_rte_ether_addr *mac = &packet->ether_hdr.d_addr;
 	prox_next_hop_index_type next_hop_index;
+	static uint64_t last_tsc = 0, n_no_route = 0;
 
-	uint64_t tsc = rte_rdtsc();
 	struct l3_base *l3 = &(tbase->l3);
 
 	// First find the next hop
@@ -141,27 +141,30 @@ int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_d
 			return SEND_MBUF;
 		}
 		if (unlikely(rte_lpm_lookup(l3->ipv4_lpm, rte_bswap32(*ip_dst), &next_hop_index) != 0)) {
-			plog_err("No route to IP "IPv4_BYTES_FMT"\n", IP4(*ip_dst));
+			// Prevent printing too many messages
+			n_no_route++;
+			if (tsc > last_tsc + rte_get_tsc_hz()) {
+				plog_err("No route to IP "IPv4_BYTES_FMT" (%ld times)\n", IP4(*ip_dst), n_no_route);
+				last_tsc = tsc;
+				n_no_route = 0;
+			}
 			return DROP_MBUF;
 		}
 		struct arp_table *entry = &l3->next_hops[next_hop_index];
 
 		if (entry->ip) {
 			*ip_dst = entry->ip;
-		} else {
-			// no next ip: this is a local route
-			next_hop_index = MAX_HOP_INDEX;
+			return update_mac_and_send_mbuf(entry, mac, tsc, hz, l3->arp_update_time, time);
 		}
+
+		// no next ip: this is a local route
 		// Find IP in lookup table. Send ARP if not found
 		int ret = rte_hash_lookup(l3->ip_hash, (const void *)ip_dst);
 		if (unlikely(ret < 0)) {
 			// IP not found, try to send an ARP
-			return add_key_and_send_arp(l3->ip_hash, ip_dst, l3->arp_table, tsc, hz, l3->arp_update_time, next_hop_index, time);
+			return add_key_and_send_arp(l3->ip_hash, ip_dst, l3->arp_table, tsc, hz, l3->arp_update_time, MAX_HOP_INDEX, time);
 		} else {
-			if (entry->ip)
-				return update_mac_and_send_mbuf(entry, mac, tsc, hz, l3->arp_update_time, time);
-			else
-				return update_mac_and_send_mbuf(&l3->arp_table[ret], mac, tsc, hz, l3->arp_update_time, time);
+			return update_mac_and_send_mbuf(&l3->arp_table[ret], mac, tsc, hz, l3->arp_update_time, time);
 		}
 		return 0;
 	}

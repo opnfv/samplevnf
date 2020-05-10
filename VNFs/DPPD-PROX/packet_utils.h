@@ -69,7 +69,7 @@ struct l3_base {
 
 void task_init_l3(struct task_base *tbase, struct task_args *targ);
 void task_start_l3(struct task_base *tbase, struct task_args *targ);
-int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_dst, uint64_t **time);
+int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_dst, uint64_t **time, uint64_t tsc);
 void task_set_gateway_ip(struct task_base *tbase, uint32_t ip);
 void task_set_local_ip(struct task_base *tbase, uint32_t ip);
 void handle_ctrl_plane_pkts(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts);
