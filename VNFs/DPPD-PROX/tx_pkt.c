@@ -57,11 +57,12 @@ int tx_pkt_l3(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts,
 	const struct port_queue *port_queue = &tbase->tx_params_hw.tx_port_queue[0];
 	struct rte_mbuf *arp_mbuf = NULL;       // used when one need to send both an ARP and a mbuf
 	uint64_t *time;
+	uint64_t tsc = rte_rdtsc();
 
 	for (int j = 0; j < n_pkts; j++) {
 		if ((out) && (out[j] >= OUT_HANDLED))
 			continue;
-		if (unlikely((rc = write_dst_mac(tbase, mbufs[j], &ip_dst, &time)) != SEND_MBUF)) {
+		if (unlikely((rc = write_dst_mac(tbase, mbufs[j], &ip_dst, &time, tsc)) != SEND_MBUF)) {
 			if (j - first) {
 				ret = tbase->aux->tx_pkt_l2(tbase, mbufs + first, j - first, out);
 				ok += ret;
