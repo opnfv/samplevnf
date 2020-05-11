@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2019 Intel Corporation
+// Copyright (c) 2010-2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -384,7 +384,7 @@ static int parse_cmd_count(const char *str, struct input *input)
 	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
 		for (unsigned int i = 0; i < nb_cores; i++) {
 			lcore_id = lcores[i];
-			if ((!task_is_mode_and_submode(lcore_id, task_id, "gen", "")) && (!task_is_mode_and_submode(lcore_id, task_id, "gen", "l3"))) {
+			if (!task_is_mode(lcore_id, task_id, "gen")) {
 				plog_err("Core %u task %u is not generating packets\n", lcore_id, task_id);
 			}
 			else {
@@ -413,7 +413,7 @@ static int parse_cmd_set_probability(const char *str, struct input *input)
 	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
 		for (unsigned int i = 0; i < nb_cores; i++) {
 			lcore_id = lcores[i];
-			if ((!task_is_mode_and_submode(lcore_id, task_id, "impair", "")) && (!task_is_mode_and_submode(lcore_id, task_id, "impair", "l3"))){
+			if (!task_is_mode(lcore_id, task_id, "impair")) {
 				plog_err("Core %u task %u is not impairing packets\n", lcore_id, task_id);
 			} else {
 				struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
@@ -438,7 +438,7 @@ static int parse_cmd_delay_us(const char *str, struct input *input)
 	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
 		for (unsigned int i = 0; i < nb_cores; i++) {
 			lcore_id = lcores[i];
-			if ((!task_is_mode_and_submode(lcore_id, task_id, "impair", "")) && (!task_is_mode_and_submode(lcore_id, task_id, "impair", "l3"))){
+			if (!task_is_mode(lcore_id, task_id, "impair")) {
 				plog_err("Core %u task %u is not impairing packets\n", lcore_id, task_id);
 			} else {
 				struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
@@ -463,7 +463,7 @@ static int parse_cmd_random_delay_us(const char *str, struct input *input)
 	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
 		for (unsigned int i = 0; i < nb_cores; i++) {
 			lcore_id = lcores[i];
-			if ((!task_is_mode_and_submode(lcore_id, task_id, "impair", "")) && (!task_is_mode_and_submode(lcore_id, task_id, "impair", "l3"))){
+			if (!task_is_mode(lcore_id, task_id, "impair")) {
 				plog_err("Core %u task %u is not impairing packets\n", lcore_id, task_id);
 			} else {
 				struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
@@ -525,7 +525,7 @@ static int parse_cmd_pkt_size(const char *str, struct input *input)
 	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
 		for (unsigned int i = 0; i < nb_cores; i++) {
 			lcore_id = lcores[i];
-			if ((!task_is_mode_and_submode(lcore_id, task_id, "gen", "")) && (!task_is_mode_and_submode(lcore_id, task_id, "gen", "l3"))) {
+			if (!task_is_mode(lcore_id, task_id, "gen")) {
 				plog_err("Core %u task %u is not generating packets\n", lcore_id, task_id);
 			} else {
 				struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
@@ -597,7 +597,7 @@ static int parse_cmd_speed(const char *str, struct input *input)
 
 	for (i = 0; i < nb_cores; i++) {
 		lcore_id = lcores[i];
-		if ((!task_is_mode_and_submode(lcore_id, task_id, "gen", "")) && (!task_is_mode_and_submode(lcore_id, task_id, "gen", "l3"))) {
+			if (!task_is_mode(lcore_id, task_id, "gen")) {
 			plog_err("Core %u task %u is not generating packets\n", lcore_id, task_id);
 		}
 		else if (speed > 1000.0f || speed < 0.0f) {	// Up to 100 Gbps
@@ -631,7 +631,7 @@ static int parse_cmd_speed_byte(const char *str, struct input *input)
 		for (unsigned int i = 0; i < nb_cores; i++) {
 			lcore_id = lcores[i];
 
-			if ((!task_is_mode_and_submode(lcore_id, task_id, "gen", "")) && (!task_is_mode_and_submode(lcore_id, task_id, "gen", "l3"))) {
+			if (!task_is_mode(lcore_id, task_id, "gen")) {
 				plog_err("Core %u task %u is not generating packets\n", lcore_id, task_id);
 			}
 			else if (bps > 12500000000) {	// Up to 100Gbps
@@ -657,7 +657,7 @@ static int parse_cmd_reset_randoms_all(const char *str, struct input *input)
 	unsigned task_id, lcore_id = -1;
 	while (prox_core_next(&lcore_id, 0) == 0) {
 		for (task_id = 0; task_id < lcore_cfg[lcore_id].n_tasks_all; task_id++) {
-			if ((task_is_mode_and_submode(lcore_id, task_id, "gen", "")) || (task_is_mode_and_submode(lcore_id, task_id, "gen", "l3"))) {
+			if (!task_is_mode(lcore_id, task_id, "gen")) {
 				struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
 				uint32_t n_rands = task_gen_get_n_randoms(tbase);
 
@@ -678,7 +678,7 @@ static int parse_cmd_reset_values_all(const char *str, struct input *input)
 	unsigned task_id, lcore_id = -1;
 	while (prox_core_next(&lcore_id, 0) == 0) {
 		for (task_id = 0; task_id < lcore_cfg[lcore_id].n_tasks_all; task_id++) {
-			if ((task_is_mode_and_submode(lcore_id, task_id, "gen", "")) || (task_is_mode_and_submode(lcore_id, task_id, "gen", "l3"))) {
+			if (!task_is_mode(lcore_id, task_id, "gen")) {
 				struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
 
 				plog_info("Resetting values on core %d task %d\n", lcore_id, task_id);
@@ -699,7 +699,7 @@ static int parse_cmd_reset_values(const char *str, struct input *input)
 	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
 		for (unsigned int i = 0; i < nb_cores; i++) {
 			lcore_id = lcores[i];
-			if ((!task_is_mode_and_submode(lcore_id, task_id, "gen", "")) && (!task_is_mode_and_submode(lcore_id, task_id, "gen", "l3"))) {
+			if (!task_is_mode(lcore_id, task_id, "gen")) {
 				plog_err("Core %u task %u is not generating packets\n", lcore_id, task_id);
 			}
 			else {
@@ -730,7 +730,7 @@ static int parse_cmd_set_value(const char *str, struct input *input)
 	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
 		for (unsigned int i = 0; i < nb_cores; i++) {
 			lcore_id = lcores[i];
-			if ((!task_is_mode_and_submode(lcore_id, task_id, "gen", "")) && (!task_is_mode_and_submode(lcore_id, task_id, "gen", "l3"))) {
+			if (!task_is_mode(lcore_id, task_id, "gen")) {
 				plog_err("Core %u task %u is not generating packets\n", lcore_id, task_id);
 			}
 			// do not check offset here - gen knows better than us the maximum frame size
@@ -769,7 +769,7 @@ static int parse_cmd_set_random(const char *str, struct input *input)
 	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
 		for (unsigned int i = 0; i < nb_cores; i++) {
 			lcore_id = lcores[i];
-			if ((!task_is_mode_and_submode(lcore_id, task_id, "gen", "")) && (!task_is_mode_and_submode(lcore_id, task_id, "gen", "l3"))) {
+			if (!task_is_mode(lcore_id, task_id, "gen")) {
 				plog_err("Core %u task %u is not generating packets\n", lcore_id, task_id);
 			}
 			else if (offset > PROX_RTE_ETHER_MAX_LEN) {

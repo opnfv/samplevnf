@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,15 +18,19 @@
 #define _TX_PKT_H_
 
 #include <inttypes.h>
+#include <string.h>
+#include <rte_mbuf.h>
+#include "ip6_addr.h"
 
 struct task_base;
-struct rte_mbuf;
 
 struct prox_headroom {
 	uint64_t command;
 	uint32_t ip;
 	uint32_t prefix;
 	uint32_t gateway_ip;
+	uint64_t data64;
+	struct ipv6_addr ipv6_addr;
 } __attribute__((packed));
 
 void flush_queues_hw(struct task_base *tbase);
@@ -88,19 +92,108 @@ uint16_t tx_try_self(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t 
    sink. */
 int tx_pkt_drop_all(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts, uint8_t *out);
 int tx_pkt_l3(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts, uint8_t *out);
+int tx_pkt_ndp(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts, uint8_t *out);
 
-int tx_ring_cti(struct task_base *tbase, struct rte_ring *ring, uint16_t command, struct rte_mbuf *mbuf, uint8_t core_id, uint8_t task_id, uint32_t ip);
-void tx_ring_ip(struct task_base *tbase, struct rte_ring *ring, uint16_t command, struct rte_mbuf *mbuf, uint32_t ip);
+static inline uint8_t get_command(struct rte_mbuf *mbuf)
+{
+	struct prox_headroom *prox_headroom = (struct prox_headroom *)(rte_pktmbuf_mtod(mbuf, uint8_t*) - sizeof(struct prox_headroom));
+	return prox_headroom->command & 0xFF;
+}
+static inline uint8_t get_task(struct rte_mbuf *mbuf)
+{
+	struct prox_headroom *prox_headroom = (struct prox_headroom *)(rte_pktmbuf_mtod(mbuf, uint8_t*) - sizeof(struct prox_headroom));
+	return (prox_headroom->command >> 8) & 0xFF;
+}
+static inline uint8_t get_core(struct rte_mbuf *mbuf)
+{
+	struct prox_headroom *prox_headroom = (struct prox_headroom *)(rte_pktmbuf_mtod(mbuf, uint8_t*) - sizeof(struct prox_headroom));
+	return (prox_headroom->command >> 16) & 0xFF;
+}
+static inline uint32_t get_ip(struct rte_mbuf *mbuf)
+{
+	struct prox_headroom *prox_headroom = (struct prox_headroom *)(rte_pktmbuf_mtod(mbuf, uint8_t*) - sizeof(struct prox_headroom));
+	return (prox_headroom->command >> 32) & 0xFFFFFFFF;
+}
+
+static inline void ctrl_ring_set_command_core_task_ip(struct rte_mbuf *mbuf, uint64_t udata64)
+{
+	struct prox_headroom *prox_headroom = (struct prox_headroom *)(rte_pktmbuf_mtod(mbuf, uint8_t*) - sizeof(struct prox_headroom));
+	prox_headroom->command = udata64;
+}
+
+static inline void ctrl_ring_set_command(struct rte_mbuf *mbuf, uint8_t command)
+{
+	struct prox_headroom *prox_headroom = (struct prox_headroom *)(rte_pktmbuf_mtod(mbuf, uint8_t*) - sizeof(struct prox_headroom));
+	prox_headroom->command = command;
+}
+
+static inline void ctrl_ring_set_ip(struct rte_mbuf *mbuf, uint32_t udata32)
+{
+	struct prox_headroom *prox_headroom = (struct prox_headroom *)(rte_pktmbuf_mtod(mbuf, uint8_t*) - sizeof(struct prox_headroom));
+	prox_headroom->ip = udata32;
+}
+
+static inline uint32_t ctrl_ring_get_ip(struct rte_mbuf *mbuf)
+{
+	struct prox_headroom *prox_headroom = (struct prox_headroom *)(rte_pktmbuf_mtod(mbuf, uint8_t*) - sizeof(struct prox_headroom));
+	return prox_headroom->ip;
+}
+
+static inline void ctrl_ring_set_gateway_ip(struct rte_mbuf *mbuf, uint32_t udata32)
+{
+	struct prox_headroom *prox_headroom = (struct prox_headroom *)(rte_pktmbuf_mtod(mbuf, uint8_t*) - sizeof(struct prox_headroom));
+	prox_headroom->gateway_ip = udata32;
+}
+
+static inline uint32_t ctrl_ring_get_gateway_ip(struct rte_mbuf *mbuf)
+{
+	struct prox_headroom *prox_headroom = (struct prox_headroom *)(rte_pktmbuf_mtod(mbuf, uint8_t*) - sizeof(struct prox_headroom));
+	return prox_headroom->gateway_ip;
+}
+
+static inline void ctrl_ring_set_prefix(struct rte_mbuf *mbuf, uint32_t udata32)
+{
+	struct prox_headroom *prox_headroom = (struct prox_headroom *)(rte_pktmbuf_mtod(mbuf, uint8_t*) - sizeof(struct prox_headroom));
+	prox_headroom->prefix = udata32;
+}
+
+static inline uint32_t ctrl_ring_get_prefix(struct rte_mbuf *mbuf)
+{
+	struct prox_headroom *prox_headroom = (struct prox_headroom *)(rte_pktmbuf_mtod(mbuf, uint8_t*) - sizeof(struct prox_headroom));
+	return prox_headroom->prefix;
+}
+
+static inline void ctrl_ring_set_data(struct rte_mbuf *mbuf, uint64_t data)
+{
+	struct prox_headroom *prox_headroom = (struct prox_headroom *)(rte_pktmbuf_mtod(mbuf, uint8_t*) - sizeof(struct prox_headroom));
+	prox_headroom->data64 = data;
+}
+
+static inline uint64_t ctrl_ring_get_data(struct rte_mbuf *mbuf)
+{
+	struct prox_headroom *prox_headroom = (struct prox_headroom *)(rte_pktmbuf_mtod(mbuf, uint8_t*) - sizeof(struct prox_headroom));
+	return prox_headroom->data64;
+}
+
+static inline void ctrl_ring_set_ipv6_addr(struct rte_mbuf *mbuf, struct ipv6_addr *ip)
+{
+	struct prox_headroom *prox_headroom = (struct prox_headroom *)(rte_pktmbuf_mtod(mbuf, uint8_t*) - sizeof(struct prox_headroom));
+	memcpy(&prox_headroom->ipv6_addr, ip, sizeof(struct ipv6_addr));
+}
+
+static inline struct ipv6_addr *ctrl_ring_get_ipv6_addr(struct rte_mbuf *mbuf)
+{
+	struct prox_headroom *prox_headroom = (struct prox_headroom *)(rte_pktmbuf_mtod(mbuf, uint8_t*) - sizeof(struct prox_headroom));
+	return &prox_headroom->ipv6_addr;
+}
+
+int tx_ring_cti(struct task_base *tbase, struct rte_ring *ring, uint8_t command, struct rte_mbuf *mbuf, uint8_t core_id, uint8_t task_id, uint32_t ip);
+void tx_ring_cti6(struct task_base *tbase, struct rte_ring *ring, uint8_t command, struct rte_mbuf *mbuf, uint8_t core_id, uint8_t task_id, struct ipv6_addr *ip);
+void tx_ring_ip(struct task_base *tbase, struct rte_ring *ring, uint8_t command, struct rte_mbuf *mbuf, uint32_t ip);
+void tx_ring_ip6(struct task_base *tbase, struct rte_ring *ring, uint8_t command,  struct rte_mbuf *mbuf, struct ipv6_addr *ip);
+void tx_ring_ip6_data(struct task_base *tbase, struct rte_ring *ring, uint8_t command,  struct rte_mbuf *mbuf, struct ipv6_addr *ip, uint64_t data);
 void tx_ring(struct task_base *tbase, struct rte_ring *ring, uint16_t command, struct rte_mbuf *mbuf);
-
-void ctrl_ring_set_command(struct rte_mbuf *mbuf, uint64_t udata64);
-uint64_t ctrl_ring_get_command(struct rte_mbuf *mbuf);
-void ctrl_ring_set_ip(struct rte_mbuf *mbuf, uint32_t udata32);
-uint32_t ctrl_ring_get_ip(struct rte_mbuf *mbuf);
-void ctrl_ring_set_gateway_ip(struct rte_mbuf *mbuf, uint32_t udata32);
-uint32_t ctrl_ring_get_gateway_ip(struct rte_mbuf *mbuf);
-void ctrl_ring_set_prefix(struct rte_mbuf *mbuf, uint32_t udata32);
-uint32_t ctrl_ring_get_prefix(struct rte_mbuf *mbuf);
 void tx_ring_route(struct task_base *tbase, struct rte_ring *ring, int add, struct rte_mbuf *mbuf, uint32_t ip, uint32_t gateway_ip, uint32_t prefix);
+static void store_packet(struct task_base *tbase, struct rte_mbuf *mbufs);
 
 #endif /* _TX_PKT_H_ */

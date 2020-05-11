@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,8 +18,11 @@
 #define _PROX_CFG_H
 
 #include <inttypes.h>
+#include <rte_ether.h>
 
 #include "prox_globals.h"
+#include "ip6_addr.h"
+#include "prox_compat.h"
 
 #define PROX_CM_STR_LEN (2 + 2 * sizeof(prox_cfg.core_mask) + 1)
 #define PROX_CM_DIM     (RTE_MAX_LCORE/(sizeof(uint64_t) * 8))
@@ -40,7 +43,9 @@
 #define DSF_DISABLE_CMT           0x00002000      /* CMT disabled */
 #define DSF_LIST_TASK_MODES       0x00004000      /* list supported task modes and exit */
 #define DSF_ENABLE_BYPASS         0x00008000      /* Use Multi Producer rings to enable ring bypass */
-#define DSF_CTRL_PLANE_ENABLED    0x00010000      /* ctrl plane enabled */
+#define DSF_L3_ENABLED            0x00010000      /* ctrl plane enabled for IPv4 */
+#define DSF_NDP_ENABLED           0x00020000      /* ctrl plane enabled for IPv6 */
+#define DSF_CTRL_PLANE_ENABLED (DSF_L3_ENABLED|DSF_NDP_ENABLED)  /* ctrl plane enabled */
 
 #define MAX_PATH_LEN 1024
 
@@ -69,6 +74,11 @@ struct prox_cfg {
 	uint32_t        heartbeat_timeout;
 	uint32_t        poll_timeout;
 	uint64_t        heartbeat_tsc;
+	struct ipv6_addr all_routers_ipv6_mcast_addr;
+	struct ipv6_addr all_nodes_ipv6_mcast_addr;
+	struct ipv6_addr random_ip;
+	prox_rte_ether_addr all_routers_mac_addr;
+	prox_rte_ether_addr all_nodes_mac_addr;
 };
 
 extern struct prox_cfg prox_cfg;
