@@ -47,6 +47,7 @@ class prox_ctrl(object):
         retrying, and raise RuntimeError exception otherwise.
         """
         return self.run_cmd('true', True)
+
     def connect(self):
         attempts = 1
         RapidLog.debug("Trying to connect to VM which was just launched on %s, attempt: %d" % (self._ip, attempts))

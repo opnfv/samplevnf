@@ -16,4 +16,16 @@
 ## This code will help in using tshark to decode packets that were dumped
 ## in the prox.log file as a result of dump, dump_tx or dump_rx commands
 
-egrep  '^[0-9]{4}|^[0-9]+\.' prox.log | text2pcap -q - - | tshark -r -
+#egrep  '^[0-9]{4}|^[0-9]+\.' prox.log | text2pcap -q - - | tshark -r -
+while read -r line ; do
+    if [[ $line =~ (^[0-9]{4}\s.*) ]] ;
+    then
+        echo "$line" >> tempshark.log
+    fi
+    if [[ $line =~ (^[0-9]+\.[0-9]+)(.*) ]] ;
+    then
+        date -d@"${BASH_REMATCH[1]}" -u +%H:%M:%S.%N >> tempshark.log
+    fi
+done < <(cat prox.log)
+text2pcap -t "%H:%M:%S." -q tempshark.log - | tshark -r -
+rm tempshark.log

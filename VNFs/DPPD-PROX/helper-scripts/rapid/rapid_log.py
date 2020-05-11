@@ -41,7 +41,7 @@ class RapidLog(object):
     log = None
 
     @staticmethod
-    def log_init(test_params):
+    def log_init(log_file, loglevel, screenloglevel, version):
         # create formatters
         screen_formatter = logging.Formatter("%(message)s")
         file_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
@@ -51,7 +51,7 @@ class RapidLog(object):
         # BUT PREVENT IT from propagating messages to the root logger
         #
         log = logging.getLogger()
-        numeric_level = getattr(logging, test_params['loglevel'].upper(), None)
+        numeric_level = getattr(logging, loglevel.upper(), None)
         if not isinstance(numeric_level, int):
             raise ValueError('Invalid log level: %s' % loglevel)
         log.setLevel(numeric_level)
@@ -62,7 +62,7 @@ class RapidLog(object):
         # 
         console_handler = logging.StreamHandler(sys.stdout)
         #console_handler.setLevel(logging.INFO)
-        numeric_screenlevel = getattr(logging, test_params['screenloglevel'].upper(), None)
+        numeric_screenlevel = getattr(logging, screenloglevel.upper(), None)
         if not isinstance(numeric_screenlevel, int):
             raise ValueError('Invalid screenlog level: %s' % screenloglevel)
         console_handler.setLevel(numeric_screenlevel)
@@ -71,7 +71,6 @@ class RapidLog(object):
         # create a file handler
         # and set its log level
         #
-        log_file = 'RUN{}.{}.log'.format(test_params['environment_file'],test_params['test_file'])
         file_handler = logging.handlers.RotatingFileHandler(log_file, backupCount=10)
         #file_handler = log.handlers.TimedRotatingFileHandler(log_file, 'D', 1, 5)
         file_handler.setLevel(numeric_level)
@@ -97,7 +96,7 @@ class RapidLog(object):
         # Add timestamp
         log.debug('\n---------\nLog started on %s.\n---------\n' % time.asctime())
 
-        log.debug("runrapid.py version: " + test_params['version'])
+        log.debug("runrapid.py version: " + version)
         RapidLog.log = log
 
     @staticmethod

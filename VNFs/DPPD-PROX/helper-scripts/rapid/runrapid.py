@@ -46,7 +46,6 @@ class RapidTestManager(object):
 
     @staticmethod
     def run_tests(test_params):
-        RapidLog.log_init(test_params)
         test_params = RapidConfigParser.parse_config(test_params)
         RapidLog.debug(test_params)
         monitor_gen = monitor_sut = False
@@ -55,7 +54,9 @@ class RapidTestManager(object):
         machines = []
         for machine_params in test_params['machines']:
             if 'gencores' in machine_params.keys():
-                machine = RapidGeneratorMachine(test_params['key'], test_params['user'], test_params['vim_type'], test_params['rundir'], machine_params)
+                machine = RapidGeneratorMachine(test_params['key'],
+                        test_params['user'], test_params['vim_type'],
+                        test_params['rundir'], machine_params)
                 if machine_params['monitor']:
                     if monitor_gen:
                         RapidLog.exception("Can only monitor 1 generator")
@@ -66,7 +67,9 @@ class RapidTestManager(object):
                 else:
                     background_machines.append(machine)
             else:
-                machine = RapidMachine(test_params['key'], test_params['user'], test_params['vim_type'], test_params['rundir'], machine_params)
+                machine = RapidMachine(test_params['key'], test_params['user'],
+                        test_params['vim_type'], test_params['rundir'],
+                        machine_params)
                 if machine_params['monitor']:
                     if monitor_sut:
                         RapidLog.exception("Can only monitor 1 sut")
@@ -82,7 +85,8 @@ class RapidTestManager(object):
         result = True
         for test_param in test_params['tests']:
             RapidLog.info(test_param['test'])
-            if test_param['test'] in ['flowsizetest', 'TST009test', 'fixed_rate']:
+            if test_param['test'] in ['flowsizetest', 'TST009test',
+                    'fixed_rate']:
                 test = FlowSizeTest(test_param, test_params['lat_percentile'],
                         test_params['runtime'], test_params['pushgateway'],
                         test_params['environment_file'], gen_machine,
@@ -115,10 +119,14 @@ class RapidTestManager(object):
 def main():
     """Main function.
     """
-    test_params = RapidDefaults.test_params
+    test_params = RapidTestManager.get_defaults()
     # When no cli is used, the process_cli can be replaced by code modifying
     # test_params
     test_params = RapidCli.process_cli(test_params)
+    log_file = 'RUN{}.{}.log'.format(test_params['environment_file'],
+            test_params['test_file'])
+    RapidLog.log_init(log_file, test_params['loglevel'],
+            test_params['screenloglevel'] , test_params['version']  )
     test_result = RapidTestManager.run_tests(test_params)
     RapidLog.info('Test result is : {}'.format(test_result))
 

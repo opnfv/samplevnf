@@ -78,15 +78,15 @@ class RapidGeneratorMachine(RapidMachine):
         speed_per_gen_core = speed / len(self.machine_params['gencores']) 
         self.socket.speed(speed_per_gen_core, self.machine_params['gencores'])
 
-    def set_udp_packet_size(self, size):
+    def set_udp_packet_size(self, frame_size):
         # We should check the gen.cfg to make sure we only send UDP packets
-        # Frame size is PROX pkt size + 4 bytes CRC
-        # PROX "pkt_size" i.e.  14-bytes L2 frame header + VLAN 4 bytes header + IP packet size
-        self.socket.set_size(self.machine_params['gencores'], 0, size)
+        # Frame size = PROX pkt size + 4 bytes CRC
+        # The set_size function takes the PROX packet size as a parameter
+        self.socket.set_size(self.machine_params['gencores'], 0, frame_size - 4)
         # 18 is the difference between the frame size and IP size = size of (MAC addresses, ethertype and FCS)
-        self.socket.set_value(self.machine_params['gencores'], 0, 16, size-18, 2)
+        self.socket.set_value(self.machine_params['gencores'], 0, 16, frame_size-18, 2)
         # 38 is the difference between the frame size and UDP size = 18 + size of IP header (=20)
-        self.socket.set_value(self.machine_params['gencores'], 0, 38, size-38, 2)
+        self.socket.set_value(self.machine_params['gencores'], 0, 38, frame_size-38, 2)
 
     def set_flows(self, number_of_flows):
         source_port,destination_port = RandomPortBits.get_bitmap(number_of_flows)

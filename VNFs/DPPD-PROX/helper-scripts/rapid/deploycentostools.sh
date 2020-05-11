@@ -90,7 +90,19 @@ function os_cfg()
 	${SUDO} cp -r ${WORK_DIR}/check-prox-system-setup.service /etc/systemd/system/
 	${SUDO} systemctl daemon-reload
 	${SUDO} systemctl enable check-prox-system-setup.service
-
+    # Following lines are added to fix the following issue: When the VM gets
+    # instantiated, the rapid scripts will try to ssh into the VM to start
+    # the testing. Once the script connects with ssh, it starts downloading
+    # config files and then start prox, etc... The problem is that when the VM
+    # boots, check_prox_system_setup.sh will check for some things and
+    # potentially reboot, resulting in loosing the ssh connection again.
+    # To fix this issue, the following lines are disabling ssh access for the 
+    # centos user. The script will not be able to connect to the VM till ssh
+    # access is restored after a reboot. Restoring ssh is now done by
+    # check-prox-system-setup.service
+	printf "\nMatch User centos\n" | ${SUDO} tee -a /etc/ssh/sshd_config
+	printf "%sPubkeyAuthentication no\n" "    " | ${SUDO} tee -a /etc/ssh/sshd_config
+	printf "%sPasswordAuthentication no\n" "    " | ${SUDO} tee -a /etc/ssh/sshd_config
 	popd > /dev/null 2>&1
 }
 

@@ -26,6 +26,8 @@ then
                 case $line in
                         isolated_cores=1-$MAXCOREID*)
                                 echo "Isolated CPU(s) OK, no reboot: $line">>$logfile
+                                sed -i 's/PubkeyAuthentication no/PubkeyAuthentication yes/g' /etc/ssh/sshd_config
+                                service sshd restart
                                 modprobe uio
                                 insmod /home/centos/dpdk/build/kmod/igb_uio.ko
                                 exit 0
