@@ -208,7 +208,7 @@ void init_rte_dev(int use_dummy_devices)
 			rc = eth_dev_null_create(tap, name, PROX_RTE_ETHER_MIN_LEN, 0);
 #endif
 			PROX_PANIC(rc != 0, "Unable to create device %s %s\n", "net tap", port_cfg->vdev);
-			int vdev_port_id = rte_eth_dev_count() - 1;
+			int vdev_port_id = prox_rte_eth_dev_count_avail() - 1;
 			PROX_PANIC(vdev_port_id >= PROX_MAX_PORTS, "Too many port defined %d >= %d\n", vdev_port_id, PROX_MAX_PORTS);
 			plog_info("\tCreating device %s, port %d\n", port_cfg->vdev, vdev_port_id);
 			prox_port_cfg[vdev_port_id].active = 1;

@@ -638,7 +638,7 @@ static void handle_route_event(struct task_base *tbase)
 		}
 	}
 	int dpdk_vdev_port = -1;
-	for (int i = 0; i< rte_eth_dev_count(); i++) {
+	for (int i = 0; i< prox_rte_eth_dev_count_avail(); i++) {
 		if (strcmp(prox_port_cfg[i].name, interface_name) == 0)
 			dpdk_vdev_port = i;
 	}

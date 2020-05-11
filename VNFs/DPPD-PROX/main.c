@@ -750,12 +750,12 @@ static void setup_mempools_unique_per_socket(void)
 			sprintf(name, "socket_%u_pool", i);
 			if ((pool[i] = rte_mempool_lookup(name)) == NULL) {
 				pool[i] = rte_mempool_create(name,
-						     mbuf_count[i] - 1, mbuf_size[i],
-						     nb_cache_mbuf[i],
-						     sizeof(struct rte_pktmbuf_pool_private),
-						     rte_pktmbuf_pool_init, NULL,
-						     prox_pktmbuf_init, NULL,
-						     i, flags);
+					mbuf_count[i] - 1, mbuf_size[i],
+					nb_cache_mbuf[i],
+					sizeof(struct rte_pktmbuf_pool_private),
+					rte_pktmbuf_pool_init, NULL,
+					prox_pktmbuf_init, NULL,
+					i, flags);
 				PROX_PANIC(pool[i] == NULL, "\t\tError: cannot create mempool for socket %u\n", i);
 				plog_info("\tMempool %p size = %u * %u cache %u, socket %d\n", pool[i],
 				  	mbuf_count[i], mbuf_size[i], nb_cache_mbuf[i], i);
