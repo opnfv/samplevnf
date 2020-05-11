@@ -142,6 +142,38 @@ static void stop_swap(struct task_base *tbase)
 	}
 }
 
+static void handle_ipv6(struct task_swap *task, struct rte_mbuf *mbufs, prox_rte_ipv6_hdr *ipv6_hdr, uint8_t *out)
+{
+	__m128i ip =  _mm_loadu_si128((__m128i*)&(ipv6_hdr->src_addr));
+	uint16_t port;
+	uint16_t payload_len;
+	prox_rte_udp_hdr *udp_hdr;
+
+	rte_mov16((uint8_t *)&(ipv6_hdr->src_addr), (uint8_t *)&(ipv6_hdr->dst_addr));	// Copy dst into src
+	rte_mov16((uint8_t *)&(ipv6_hdr->dst_addr), (uint8_t *)&ip);			// Copy src into dst
+	switch(ipv6_hdr->proto) {
+		case IPPROTO_TCP:
+		case IPPROTO_UDP:
+			payload_len = ipv6_hdr->payload_len;
+			udp_hdr = (prox_rte_udp_hdr *)(ipv6_hdr + 1);
+			if (unlikely(udp_hdr->dgram_len < payload_len)) {
+				plog_warn("Unexpected L4 len (%u) versus L3 payload len (%u) in IPv6 packet\n", udp_hdr->dgram_len, payload_len);
+				*out = OUT_DISCARD;
+				break;
+			}
+			port = udp_hdr->dst_port;
+			udp_hdr->dst_port = udp_hdr->src_port;
+			udp_hdr->src_port = port;
+			write_src_and_dst_mac(task, mbufs);
+			*out = 0;
+			break;
+		default:
+			plog_warn("Unsupported next hop %u in IPv6 packet\n", ipv6_hdr->proto);
+			*out = OUT_DISCARD;
+			break;
+	}
+}
+
 static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts)
 {
 	struct task_swap *task = (struct task_swap *)tbase;
@@ -149,6 +181,7 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 	prox_rte_ether_addr mac;
 	prox_rte_ipv4_hdr *ip_hdr;
 	prox_rte_udp_hdr *udp_hdr;
+	prox_rte_ipv6_hdr *ipv6_hdr;
 	struct gre_hdr *pgre;
 	prox_rte_ipv4_hdr *inner_ip_hdr;
 	uint32_t ip;
@@ -183,6 +216,11 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 			}
 			mpls_len += sizeof(struct mpls_hdr);
 			ip_hdr = (prox_rte_ipv4_hdr *)(mpls + 1);
+			if (unlikely((ip_hdr->version_ihl >> 4) == 6)) {
+				ipv6_hdr = (prox_rte_ipv6_hdr *)(ip_hdr);
+				handle_ipv6(task, mbufs[j], ipv6_hdr, &out[j]);
+				continue;
+			}
 			break;
 		case ETYPE_8021ad:
 			qinq = (struct qinq_hdr *)hdr;
@@ -191,20 +229,34 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 				out[j] = OUT_DISCARD;
 				continue;
 			}
-			ip_hdr = (prox_rte_ipv4_hdr *)(qinq + 1);
+			if (qinq->ether_type == ETYPE_IPv4) {
+				ip_hdr = (prox_rte_ipv4_hdr *)(qinq + 1);
+			} else if (qinq->ether_type == ETYPE_IPv6) {
+				ipv6_hdr = (prox_rte_ipv6_hdr *)(qinq + 1);
+				handle_ipv6(task, mbufs[j], ipv6_hdr, &out[j]);
+				continue;
+			} else {
+				plog_warn("Unsupported packet type\n");
+				out[j] = OUT_DISCARD;
+				continue;
+			}
 			break;
 		case ETYPE_VLAN:
 			vlan = (prox_rte_vlan_hdr *)(hdr + 1);
 			if (vlan->eth_proto == ETYPE_IPv4) {
 				ip_hdr = (prox_rte_ipv4_hdr *)(vlan + 1);
+			} else if (vlan->eth_proto == ETYPE_IPv6) {
+				ipv6_hdr = (prox_rte_ipv6_hdr *)(vlan + 1);
+				handle_ipv6(task, mbufs[j], ipv6_hdr, &out[j]);
+				continue;
 			} else if (vlan->eth_proto == ETYPE_VLAN) {
 				vlan = (prox_rte_vlan_hdr *)(vlan + 1);
 				if (vlan->eth_proto == ETYPE_IPv4) {
 					ip_hdr = (prox_rte_ipv4_hdr *)(vlan + 1);
 				}
 				else if (vlan->eth_proto == ETYPE_IPv6) {
-					plog_warn("Unsupported IPv6\n");
-					out[j] = OUT_DISCARD;
+					ipv6_hdr = (prox_rte_ipv6_hdr *)(vlan + 1);
+					handle_ipv6(task, mbufs[j], ipv6_hdr, &out[j]);
 					continue;
 				}
 				else {
@@ -222,8 +274,8 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 			ip_hdr = (prox_rte_ipv4_hdr *)(hdr + 1);
 			break;
 		case ETYPE_IPv6:
-			plog_warn("Unsupported IPv6\n");
-			out[j] = OUT_DISCARD;
+			ipv6_hdr = (prox_rte_ipv6_hdr *)(hdr + 1);
+			handle_ipv6(task, mbufs[j], ipv6_hdr, &out[j]);
 			continue;
 		case ETYPE_LLDP:
 			out[j] = OUT_DISCARD;
@@ -234,7 +286,13 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 			continue;
 		}
 		// TODO 2 : check packet is long enough for Ethernet + IP + UDP + extra header (VLAN, MPLS, ...)
+		// IPv4 packet
+
 		ip = ip_hdr->dst_addr;
+		if (unlikely((ip_hdr->version_ihl >> 4) != 4)) {
+			out[j] = OUT_DISCARD;
+			continue;
+		}
 
 		switch (ip_hdr->next_proto_id) {
 		case IPPROTO_GRE:
@@ -256,7 +314,7 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 			break;
 		case IPPROTO_UDP:
 		case IPPROTO_TCP:
-			if (task->igmp_address && PROX_RTE_IS_IPV4_MCAST(rte_be_to_cpu_32(ip))) {
+			if (unlikely(task->igmp_address && PROX_RTE_IS_IPV4_MCAST(rte_be_to_cpu_32(ip)))) {
 				out[j] = OUT_DISCARD;
 				continue;
 			}

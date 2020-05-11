@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -155,7 +155,7 @@ static void check_missing_rx(void)
 {
 	struct lcore_cfg *lconf = NULL, *rx_lconf = NULL, *tx_lconf = NULL;
 	struct task_args *targ, *rx_targ = NULL, *tx_targ = NULL;
-	uint8_t port_id, rx_port_id, ok;
+	uint8_t port_id, rx_port_id, ok, l3, ndp;
 
 	while (core_targ_next(&lconf, &targ, 0) == 0) {
 		PROX_PANIC((targ->flags & TASK_ARG_RX_RING) && targ->rx_rings[0] == 0 && !targ->tx_opt_ring_task,
@@ -168,12 +168,17 @@ static void check_missing_rx(void)
 
 	lconf = NULL;
 	while (core_targ_next(&lconf, &targ, 0) == 0) {
-		if (strcmp(targ->sub_mode_str, "l3") != 0)
+		l3 = ndp = 0;
+		if (strcmp(targ->sub_mode_str, "l3") == 0)
+			l3 = 1;
+		else if (strcmp(targ->sub_mode_str, "ndp") == 0)
+			ndp = 1;
+		else
 			continue;
 
-		PROX_PANIC((targ->nb_rxports == 0) && (targ->nb_txports == 0), "L3 task must have a RX or a TX port\n");
-		// If the L3 sub_mode receives from a port, check that there is at least one core/task
-		// transmitting to this port in L3 sub_mode
+		PROX_PANIC((targ->nb_rxports == 0) && (targ->nb_txports == 0), "L3/NDP task must have a RX or a TX port\n");
+		// If the L3/NDP sub_mode receives from a port, check that there is at least one core/task
+		// transmitting to this port in L3/NDP sub_mode
 		for (uint8_t i = 0; i < targ->nb_rxports; ++i) {
 			rx_port_id = targ->rx_port_queue[i].port;
 			ok = 0;
@@ -181,35 +186,40 @@ static void check_missing_rx(void)
 			while (core_targ_next(&tx_lconf, &tx_targ, 0) == 0) {
 				if ((port_id = tx_targ->tx_port_queue[0].port) == OUT_DISCARD)
 					continue;
-				if ((rx_port_id == port_id) && (tx_targ->flags & TASK_ARG_L3)){
+				if ((rx_port_id == port_id) &&
+					( ((tx_targ->flags & TASK_ARG_L3) && l3) ||
+					  ((tx_targ->flags & TASK_ARG_NDP) && ndp) ) ) {
 					ok = 1;
 					break;
 				}
 			}
-			PROX_PANIC(ok == 0, "RX L3 sub mode for port %d on core %d task %d, but no core/task transmitting on that port\n", rx_port_id, lconf->id, targ->id);
+			PROX_PANIC(ok == 0, "RX %s sub mode for port %d on core %d task %d, but no core/task transmitting on that port\n", l3 ? "l3":"ndp", rx_port_id, lconf->id, targ->id);
 		}
 
-		// If the L3 sub_mode transmits to a port, check that there is at least one core/task
-		// receiving from that port in L3 sub_mode.
+		// If the L3/NDP sub_mode transmits to a port, check that there is at least one core/task
+		// receiving from that port in L3/NDP sub_mode.
 		if ((port_id = targ->tx_port_queue[0].port) == OUT_DISCARD)
 			continue;
 		rx_lconf = NULL;
 		ok = 0;
-		plog_info("\tCore %d task %d transmitting to port %d in L3 mode\n", lconf->id, targ->id, port_id);
+		plog_info("\tCore %d task %d transmitting to port %d in %s submode\n", lconf->id, targ->id, port_id, l3 ? "l3":"ndp");
 		while (core_targ_next(&rx_lconf, &rx_targ, 0) == 0) {
 			for (uint8_t i = 0; i < rx_targ->nb_rxports; ++i) {
 				rx_port_id = rx_targ->rx_port_queue[i].port;
-				if ((rx_port_id == port_id) && (rx_targ->flags & TASK_ARG_L3)){
+				if ((rx_port_id == port_id) &&
+					( ((rx_targ->flags & TASK_ARG_L3) && l3) ||
+					((rx_targ->flags & TASK_ARG_NDP) && ndp) ) ){
 					ok = 1;
 					break;
 				}
 			}
 			if (ok == 1) {
-				plog_info("\tCore %d task %d has found core %d task %d receiving from port %d\n", lconf->id, targ->id, rx_lconf->id, rx_targ->id, port_id);
+				plog_info("\tCore %d task %d has found core %d task %d receiving from port %d in %s submode\n", lconf->id, targ->id, rx_lconf->id, rx_targ->id, port_id,
+					((rx_targ->flags & TASK_ARG_L3) && l3) ? "l3":"ndp");
 				break;
 			}
 		}
-		PROX_PANIC(ok == 0, "L3 sub mode for port %d on core %d task %d, but no core/task receiving on that port\n", port_id, lconf->id, targ->id);
+		PROX_PANIC(ok == 0, "%s sub mode for port %d on core %d task %d, but no core/task receiving on that port\n", l3 ? "l3":"ndp", port_id, lconf->id, targ->id);
 	}
 }
 
@@ -629,7 +639,7 @@ static void init_rings(void)
 	lconf = NULL;
 	struct prox_port_cfg *port;
 	while (core_targ_next(&lconf, &starg, 1) == 0) {
-		if ((starg->task_init) && (starg->flags & TASK_ARG_L3)) {
+		if ((starg->task_init) && (starg->flags & (TASK_ARG_L3|TASK_ARG_NDP))) {
 			struct core_task ct;
 			ct.core = prox_cfg.master;
 			ct.task = 0;
@@ -750,12 +760,12 @@ static void setup_mempools_unique_per_socket(void)
 			sprintf(name, "socket_%u_pool", i);
 			if ((pool[i] = rte_mempool_lookup(name)) == NULL) {
 				pool[i] = rte_mempool_create(name,
-						     mbuf_count[i] - 1, mbuf_size[i],
-						     nb_cache_mbuf[i],
-						     sizeof(struct rte_pktmbuf_pool_private),
-						     rte_pktmbuf_pool_init, NULL,
-						     prox_pktmbuf_init, NULL,
-						     i, flags);
+					mbuf_count[i] - 1, mbuf_size[i],
+					nb_cache_mbuf[i],
+					sizeof(struct rte_pktmbuf_pool_private),
+					rte_pktmbuf_pool_init, NULL,
+					prox_pktmbuf_init, NULL,
+					i, flags);
 				PROX_PANIC(pool[i] == NULL, "\t\tError: cannot create mempool for socket %u\n", i);
 				plog_info("\tMempool %p size = %u * %u cache %u, socket %d\n", pool[i],
 				  	mbuf_count[i], mbuf_size[i], nb_cache_mbuf[i], i);

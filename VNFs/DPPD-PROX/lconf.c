@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -246,7 +246,7 @@ int lconf_do_flags(struct lcore_cfg *lconf)
 			if (lconf->msg.type == LCONF_MSG_DUMP ||
 			    lconf->msg.type == LCONF_MSG_DUMP_TX) {
 				t->aux->task_rt_dump.n_print_tx = lconf->msg.val;
-				if (t->tx_pkt == tx_pkt_l3) {
+				if ((t->tx_pkt == tx_pkt_l3) || (t->tx_pkt == tx_pkt_ndp)) {
 					if (t->aux->tx_pkt_orig)
 						t->aux->tx_pkt_l2 = t->aux->tx_pkt_orig;
 					t->aux->tx_pkt_orig = t->aux->tx_pkt_l2;
@@ -267,7 +267,7 @@ int lconf_do_flags(struct lcore_cfg *lconf)
 			if (task_base_get_original_rx_pkt_function(t) != rx_pkt_dummy) {
 				t->aux->task_rt_dump.n_trace = lconf->msg.val;
 				task_base_add_rx_pkt_function(t, rx_pkt_trace);
-				if (t->tx_pkt == tx_pkt_l3) {
+				if ((t->tx_pkt == tx_pkt_l3) || (t->tx_pkt == tx_pkt_ndp)) {
 					if (t->aux->tx_pkt_orig)
 						t->aux->tx_pkt_l2 = t->aux->tx_pkt_orig;
 					t->aux->tx_pkt_orig = t->aux->tx_pkt_l2;
@@ -280,7 +280,7 @@ int lconf_do_flags(struct lcore_cfg *lconf)
 				}
 			} else {
 				t->aux->task_rt_dump.n_print_tx = lconf->msg.val;
-				if (t->tx_pkt == tx_pkt_l3) {
+				if ((t->tx_pkt == tx_pkt_l3) || (t->tx_pkt == tx_pkt_ndp)) {
 					if (t->aux->tx_pkt_orig)
 						t->aux->tx_pkt_l2 = t->aux->tx_pkt_orig;
 					t->aux->tx_pkt_orig = t->aux->tx_pkt_l2;
@@ -306,7 +306,7 @@ int lconf_do_flags(struct lcore_cfg *lconf)
 		for (uint8_t task_id = 0; task_id < lconf->n_tasks_all; ++task_id) {
 			t = lconf->tasks_all[task_id];
 
-			if (t->tx_pkt == tx_pkt_l3) {
+			if ((t->tx_pkt == tx_pkt_l3) || (t->tx_pkt == tx_pkt_ndp)) {
 				t->aux->tx_pkt_orig = t->aux->tx_pkt_l2;
 				t->aux->tx_pkt_l2 = tx_pkt_distr;
 			} else {
@@ -328,7 +328,7 @@ int lconf_do_flags(struct lcore_cfg *lconf)
 		for (uint8_t task_id = 0; task_id < lconf->n_tasks_all; ++task_id) {
 			t = lconf->tasks_all[task_id];
 			if (t->aux->tx_pkt_orig) {
-				if (t->tx_pkt == tx_pkt_l3) {
+				if ((t->tx_pkt == tx_pkt_l3) || (t->tx_pkt == tx_pkt_ndp)) {
 					t->aux->tx_pkt_l2 = t->aux->tx_pkt_orig;
 					t->aux->tx_pkt_orig = NULL;
 				} else {
@@ -371,7 +371,7 @@ int lconf_do_flags(struct lcore_cfg *lconf)
 		for (uint8_t task_id = 0; task_id < lconf->n_tasks_all; ++task_id) {
 			t = lconf->tasks_all[task_id];
 
-			if (t->tx_pkt == tx_pkt_l3) {
+			if ((t->tx_pkt == tx_pkt_l3) || (t->tx_pkt == tx_pkt_ndp)) {
 				t->aux->tx_pkt_orig = t->aux->tx_pkt_l2;
 				t->aux->tx_pkt_l2 = tx_pkt_bw;
 			} else {
@@ -385,7 +385,7 @@ int lconf_do_flags(struct lcore_cfg *lconf)
 		for (uint8_t task_id = 0; task_id < lconf->n_tasks_all; ++task_id) {
 			t = lconf->tasks_all[task_id];
 			if (t->aux->tx_pkt_orig) {
-				if (t->tx_pkt == tx_pkt_l3) {
+				if ((t->tx_pkt == tx_pkt_l3) || (t->tx_pkt == tx_pkt_ndp)) {
 					t->aux->tx_pkt_l2 = t->aux->tx_pkt_orig;
 					t->aux->tx_pkt_orig = NULL;
 				} else {

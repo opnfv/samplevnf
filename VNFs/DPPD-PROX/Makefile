@@ -213,7 +213,7 @@ SRCS-y += stats_port.c stats_mempool.c stats_ring.c stats_l4gen.c
 SRCS-y += stats_latency.c stats_global.c stats_core.c stats_task.c stats_prio.c stats_irq.c
 SRCS-y += cmd_parser.c input.c prox_shared.c prox_lua_types.c
 SRCS-y += genl4_bundle.c heap.c genl4_stream_tcp.c genl4_stream_udp.c cdf.c
-SRCS-y += stats.c stats_cons_log.c stats_cons_cli.c stats_parser.c hash_set.c prox_lua.c prox_malloc.c
+SRCS-y += stats.c stats_cons_log.c stats_cons_cli.c stats_parser.c hash_set.c prox_lua.c prox_malloc.c prox_ipv6.c prox_compat.c
 
 ifeq ($(FIRST_PROX_MAKE),)
 MAKEFLAGS += --no-print-directory

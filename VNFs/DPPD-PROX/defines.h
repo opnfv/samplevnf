@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -40,6 +40,13 @@
 	addr[4],  addr[5],  addr[6],  addr[7],	\
 	addr[8],  addr[9],  addr[10], addr[11],	\
 	addr[12], addr[13], addr[14], addr[15]
+#endif
+
+#ifndef IPv6_PREFIX
+#define IPv6_PREFIX_FMT  "%02x%02x:%02x%02x:%02x%02x:%02x%02x"
+#define IPv6_PREFIX(addr)                        \
+        addr[0],  addr[1],  addr[2],  addr[3],  \
+        addr[4],  addr[5],  addr[6],  addr[7]
 #endif
 
 #ifndef MAC_BYTES
