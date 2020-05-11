@@ -36,6 +36,8 @@ enum arp_actions {
 #define HANDLE_RANDOM_IP_FLAG	1
 #define RANDOM_IP		0xffffffff
 
+#define PROX_PSEUDO_PKT_PORT 0xdead
+
 const char *actions_string[MAX_ACTIONS];
 
 void init_ctrl_plane(struct task_base *tbase);
