@@ -28,7 +28,8 @@
 #include "arp.h"
 #include "tx_pkt.h"
 #include "handle_master.h"
-#include "input.h" /* Needed for callback on dump */
+#include "input.h"
+#include "prox_ipv6.h" /* Needed for callback on dump */
 
 #define TCP_PORT_BGP	rte_cpu_to_be_16(179)
 
@@ -44,7 +45,9 @@
    packets are received if the dequeue step involves finding 32 packets.
 */
 
-#define MIN_PMD_RX 32
+#define MIN_PMD_RX 	32
+#define PROX_L3		1
+#define PROX_NDP	2
 
 static uint16_t rx_pkt_hw_port_queue(struct port_queue *pq, struct rte_mbuf **mbufs, int multi)
 {
@@ -112,11 +115,11 @@ static inline void handle_ipv4(struct task_base *tbase, struct rte_mbuf **mbufs,
 	prox_rte_tcp_hdr *tcp = (prox_rte_tcp_hdr *)(pip + 1);
 	if (pip->next_proto_id == IPPROTO_ICMP) {
 		dump_l3(tbase, mbufs[i]);
-		tx_ring(tbase, tbase->l3.ctrl_plane_ring, ICMP_TO_CTRL, mbufs[i]);
+		tx_ring(tbase, tbase->l3.ctrl_plane_ring, ICMP_TO_MASTER, mbufs[i]);
 		(*skip)++;
 	} else if ((tcp->src_port == TCP_PORT_BGP) || (tcp->dst_port == TCP_PORT_BGP)) {
 		dump_l3(tbase, mbufs[i]);
-		tx_ring(tbase, tbase->l3.ctrl_plane_ring, BGP_TO_CTRL, mbufs[i]);
+		tx_ring(tbase, tbase->l3.ctrl_plane_ring, BGP_TO_MASTER, mbufs[i]);
 		(*skip)++;
 	} else if (unlikely(*skip)) {
 		mbufs[i - *skip] = mbufs[i];
@@ -155,13 +158,13 @@ static inline int handle_l3(struct task_base *tbase, uint16_t nb_rx, struct rte_
 					handle_ipv4(tbase, mbufs, i, pip, &skip);
 				} else if (vlan->eth_proto == ETYPE_ARP) {
 					dump_l3(tbase, mbufs[i]);
-					tx_ring(tbase, tbase->l3.ctrl_plane_ring, ARP_TO_CTRL, mbufs[i]);
+					tx_ring(tbase, tbase->l3.ctrl_plane_ring, ARP_PKT_FROM_NET_TO_MASTER, mbufs[i]);
 					skip++;
 				}
 				break;
 			case ETYPE_ARP:
 				dump_l3(tbase, mbufs[i]);
-				tx_ring(tbase, tbase->l3.ctrl_plane_ring, ARP_TO_CTRL, mbufs[i]);
+				tx_ring(tbase, tbase->l3.ctrl_plane_ring, ARP_PKT_FROM_NET_TO_MASTER, mbufs[i]);
 				skip++;
 				break;
 			default:
@@ -174,8 +177,35 @@ static inline int handle_l3(struct task_base *tbase, uint16_t nb_rx, struct rte_
 	return skip;
 }
 
+static inline int handle_ndp(struct task_base *tbase, uint16_t nb_rx, struct rte_mbuf ***mbufs_ptr)
+{
+	struct rte_mbuf **mbufs = *mbufs_ptr;
+	int i;
+	prox_rte_ether_hdr *hdr[MAX_PKT_BURST];
+	int skip = 0;
+
+	for (i = 0; i < nb_rx; i++) {
+		PREFETCH0(mbufs[i]);
+	}
+	for (i = 0; i < nb_rx; i++) {
+		hdr[i] = rte_pktmbuf_mtod(mbufs[i], prox_rte_ether_hdr *);
+		PREFETCH0(hdr[i]);
+	}
+	for (i = 0; i < nb_rx; i++) {
+		prox_rte_ipv6_hdr *ipv6_hdr = (prox_rte_ipv6_hdr *)(hdr[i] + 1);
+		if (unlikely((hdr[i]->ether_type == ETYPE_IPv6) && (ipv6_hdr->proto == ICMPv6))) {
+			dump_l3(tbase, mbufs[i]);
+			tx_ring(tbase, tbase->l3.ctrl_plane_ring, NDP_PKT_FROM_NET_TO_MASTER, mbufs[i]);
+			skip++;
+		} else if (unlikely(skip)) {
+			mbufs[i - skip] = mbufs[i];
+		}
+	}
+	return skip;
+}
+
 static uint16_t rx_pkt_hw_param(struct task_base *tbase, struct rte_mbuf ***mbufs_ptr, int multi,
-				void (*next)(struct rx_params_hw *rx_param_hw), int l3)
+				void (*next)(struct rx_params_hw *rx_param_hw), int l3_ndp)
 {
 	uint8_t last_read_portid;
 	uint16_t nb_rx, ret;
@@ -191,8 +221,10 @@ static uint16_t rx_pkt_hw_param(struct task_base *tbase, struct rte_mbuf ***mbuf
 	nb_rx = rx_pkt_hw_port_queue(pq, *mbufs_ptr, multi);
 	next(&tbase->rx_params_hw);
 
-	if (l3)
+	if (l3_ndp == PROX_L3)
 		skip = handle_l3(tbase, nb_rx, mbufs_ptr);
+	else if (l3_ndp == PROX_NDP)
+		skip = handle_ndp(tbase, nb_rx, mbufs_ptr);
 
 	if (skip)
 		TASK_STATS_ADD_RX_NON_DP(&tbase->aux->stats, skip);
@@ -204,7 +236,7 @@ static uint16_t rx_pkt_hw_param(struct task_base *tbase, struct rte_mbuf ***mbuf
 	return 0;
 }
 
-static inline uint16_t rx_pkt_hw1_param(struct task_base *tbase, struct rte_mbuf ***mbufs_ptr, int multi, int l3)
+static inline uint16_t rx_pkt_hw1_param(struct task_base *tbase, struct rte_mbuf ***mbufs_ptr, int multi, int l3_ndp)
 {
 	uint16_t nb_rx, n;
 	int skip = 0;
@@ -230,8 +262,11 @@ static inline uint16_t rx_pkt_hw1_param(struct task_base *tbase, struct rte_mbuf
 
 	if (nb_rx == 0)
 		return 0;
-	if (l3)
+
+	if (l3_ndp == PROX_L3)
 		skip = handle_l3(tbase, nb_rx, mbufs_ptr);
+	else if (l3_ndp == PROX_NDP)
+		skip = handle_ndp(tbase, nb_rx, mbufs_ptr);
 
 	if (skip)
 		TASK_STATS_ADD_RX_NON_DP(&tbase->aux->stats, skip);
@@ -275,32 +310,62 @@ uint16_t rx_pkt_hw1_multi(struct task_base *tbase, struct rte_mbuf ***mbufs)
 
 uint16_t rx_pkt_hw_l3(struct task_base *tbase, struct rte_mbuf ***mbufs)
 {
-	return rx_pkt_hw_param(tbase, mbufs, 0, next_port, 1);
+	return rx_pkt_hw_param(tbase, mbufs, 0, next_port, PROX_L3);
+}
+
+uint16_t rx_pkt_hw_ndp(struct task_base *tbase, struct rte_mbuf ***mbufs)
+{
+	return rx_pkt_hw_param(tbase, mbufs, 0, next_port, PROX_NDP);
 }
 
 uint16_t rx_pkt_hw_pow2_l3(struct task_base *tbase, struct rte_mbuf ***mbufs)
 {
-	return rx_pkt_hw_param(tbase, mbufs, 0, next_port_pow2, 1);
+	return rx_pkt_hw_param(tbase, mbufs, 0, next_port_pow2, PROX_L3);
+}
+
+uint16_t rx_pkt_hw_pow2_ndp(struct task_base *tbase, struct rte_mbuf ***mbufs)
+{
+	return rx_pkt_hw_param(tbase, mbufs, 0, next_port_pow2, PROX_NDP);
 }
 
 uint16_t rx_pkt_hw1_l3(struct task_base *tbase, struct rte_mbuf ***mbufs)
 {
-	return rx_pkt_hw1_param(tbase, mbufs, 0, 1);
+	return rx_pkt_hw1_param(tbase, mbufs, 0, PROX_L3);
+}
+
+uint16_t rx_pkt_hw1_ndp(struct task_base *tbase, struct rte_mbuf ***mbufs)
+{
+	return rx_pkt_hw1_param(tbase, mbufs, 0, PROX_NDP);
 }
 
 uint16_t rx_pkt_hw_multi_l3(struct task_base *tbase, struct rte_mbuf ***mbufs)
 {
-	return rx_pkt_hw_param(tbase, mbufs, 1, next_port, 1);
+	return rx_pkt_hw_param(tbase, mbufs, 1, next_port, PROX_L3);
+}
+
+uint16_t rx_pkt_hw_multi_ndp(struct task_base *tbase, struct rte_mbuf ***mbufs)
+{
+	return rx_pkt_hw_param(tbase, mbufs, 1, next_port, PROX_NDP);
 }
 
 uint16_t rx_pkt_hw_pow2_multi_l3(struct task_base *tbase, struct rte_mbuf ***mbufs)
 {
-	return rx_pkt_hw_param(tbase, mbufs, 1, next_port_pow2, 1);
+	return rx_pkt_hw_param(tbase, mbufs, 1, next_port_pow2, PROX_L3);
+}
+
+uint16_t rx_pkt_hw_pow2_multi_ndp(struct task_base *tbase, struct rte_mbuf ***mbufs)
+{
+	return rx_pkt_hw_param(tbase, mbufs, 1, next_port_pow2, PROX_NDP);
 }
 
 uint16_t rx_pkt_hw1_multi_l3(struct task_base *tbase, struct rte_mbuf ***mbufs)
 {
-	return rx_pkt_hw1_param(tbase, mbufs, 1, 1);
+	return rx_pkt_hw1_param(tbase, mbufs, 1, PROX_L3);
+}
+
+uint16_t rx_pkt_hw1_multi_ndp(struct task_base *tbase, struct rte_mbuf ***mbufs)
+{
+	return rx_pkt_hw1_param(tbase, mbufs, 1, PROX_NDP);
 }
 
 /* The following functions implement ring access */

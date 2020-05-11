@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,9 +29,9 @@
 
 #define IP4(x) x & 0xff, (x >> 8) & 0xff, (x >> 16) & 0xff, x >> 24	// From Network (BE)
 enum {
-	SEND_MBUF_AND_ARP,
+	SEND_MBUF_AND_ARP_ND,
 	SEND_MBUF,
-	SEND_ARP,
+	SEND_ARP_ND,
 	DROP_MBUF
 };
 #define DEFAULT_ARP_TIMEOUT	(1000 * 3600 * 24 * 15)	// ~15 days = disabled by default
@@ -39,42 +39,50 @@ enum {
 
 struct task_base;
 struct task_args;
+struct task_master;
 struct arp_table {
-	uint64_t arp_update_time;
-	uint64_t arp_timeout;
+	uint64_t arp_ndp_retransmit_timeout;
+	uint64_t reachable_timeout;
 	uint32_t ip;
 	uint32_t nh;
 	prox_rte_ether_addr mac;
+	struct ipv6_addr ip6;
 };
 struct l3_base {
 	struct rte_ring *ctrl_plane_ring;
 	struct task_base *tmaster;
 	uint32_t flags;
 	uint32_t n_pkts;
+	uint32_t local_ipv4;
 	uint8_t reachable_port_id;
 	uint8_t core_id;
 	uint8_t task_id;
-	uint32_t arp_timeout;
-	uint32_t arp_update_time;
 	uint seed;
 	prox_next_hop_index_type nb_gws;
+	uint32_t arp_ndp_retransmit_timeout;
+	uint32_t reachable_timeout;
 	struct arp_table gw;
 	struct arp_table optimized_arp_table[4];
 	struct rte_hash *ip_hash;
+	struct rte_hash *ip6_hash;
 	struct arp_table *arp_table;
-	struct rte_mempool *arp_pool;
 	struct rte_lpm *ipv4_lpm;
 	struct arp_table *next_hops;
+	struct rte_mempool *arp_nd_pool;
+	struct ipv6_addr local_ipv6;
+	struct ipv6_addr global_ipv6;
+	uint8_t prefix_printed;
 };
 
 void task_init_l3(struct task_base *tbase, struct task_args *targ);
 void task_start_l3(struct task_base *tbase, struct task_args *targ);
 int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_dst, uint64_t **time, uint64_t tsc);
+int write_ip6_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, struct ipv6_addr *ip_dst);
 void task_set_gateway_ip(struct task_base *tbase, uint32_t ip);
 void task_set_local_ip(struct task_base *tbase, uint32_t ip);
 void handle_ctrl_plane_pkts(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts);
 
-static inline void update_arp_update_time(struct l3_base *l3, uint64_t *ptr, uint32_t base)
+static inline void update_arp_ndp_retransmit_timeout(struct l3_base *l3, uint64_t *ptr, uint32_t base)
 {
 	// randomize timers - from 0.5 to 1.5 * configured time
 	const uint64_t hz = rte_get_tsc_hz();
@@ -82,4 +90,9 @@ static inline void update_arp_update_time(struct l3_base *l3, uint64_t *ptr, uin
 	uint64_t rand = 500 + (1000L * rand_r(&l3->seed)) / RAND_MAX;
 	*ptr = tsc + (base * rand / 1000) * hz / 1000;
 }
+static inline uint8_t get_port(struct rte_mbuf *mbuf)
+{
+        return mbuf->port;
+}
+
 #endif /* _PACKET_UTILS_H_ */

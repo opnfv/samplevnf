@@ -20,7 +20,6 @@
 #include <rte_hash_crc.h>
 #include <rte_cryptodev.h>
 #include "hash_utils.h"
-#include "quit.h"
 
 /* This is a copy of the rte_table_hash_params from DPDK 17.11  *
  * So if DPDK decides to change the structure the modifications *
@@ -221,16 +220,8 @@ typedef struct rte_icmp_hdr prox_rte_icmp_hdr;
 
 #endif
 
-static inline char *prox_strncpy(char * dest, const char * src, size_t count)
-{
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpragmas"
-#pragma GCC diagnostic ignored "-Wstringop-truncation"
-	strncpy(dest, src, count);
-#pragma GCC diagnostic pop
-	PROX_PANIC(dest[count - 1] != 0, "\t\tError in strncpy: buffer overrun (%lu bytes)", count);
-	return dest;
-}
+char *prox_strncpy(char * dest, const char * src, size_t count);
+
 #ifdef RTE_LIBRTE_PMD_AESNI_MB
 #if RTE_VERSION < RTE_VERSION_NUM(19,5,0,0)
 //RFC4303

@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2010-2017 Intel Corporation
+// Copyright (c) 2010-2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -47,6 +47,8 @@
 #include "arp.h"
 #include "tx_pkt.h"
 #include "handle_master.h"
+#include "defines.h"
+#include "prox_ipv6.h"
 
 struct pkt_template {
 	uint16_t len;
@@ -172,11 +174,11 @@ static void parse_l2_l3_len(uint8_t *pkt, uint16_t *l2_len, uint16_t *l3_len, ui
 	case ETYPE_MPLSM:
 		*l2_len +=4;
 		break;
+	case ETYPE_IPv6:
 	case ETYPE_IPv4:
 		break;
 	case ETYPE_EoGRE:
 	case ETYPE_ARP:
-	case ETYPE_IPv6:
 		*l2_len = 0;
 		break;
 	default:
@@ -187,7 +189,8 @@ static void parse_l2_l3_len(uint8_t *pkt, uint16_t *l2_len, uint16_t *l3_len, ui
 
 	if (*l2_len) {
 		prox_rte_ipv4_hdr *ip = (prox_rte_ipv4_hdr *)(pkt + *l2_len);
-		*l3_len = ipv4_get_hdr_len(ip);
+		if (ip->version_ihl >> 4 == 4)
+			*l3_len = ipv4_get_hdr_len(ip);
 	}
 }
 
@@ -196,9 +199,20 @@ static void checksum_packet(uint8_t *hdr, struct rte_mbuf *mbuf, struct pkt_temp
 	uint16_t l2_len = pkt_template->l2_len;
 	uint16_t l3_len = pkt_template->l3_len;
 
-	if (l2_len) {
-		prox_rte_ipv4_hdr *ip = (prox_rte_ipv4_hdr*)(hdr + l2_len);
+	prox_rte_ipv4_hdr *ip = (prox_rte_ipv4_hdr*)(hdr + l2_len);
+	if (l3_len) {
 		prox_ip_udp_cksum(mbuf, ip, l2_len, l3_len, cksum_offload);
+	} else if (ip->version_ihl >> 4 == 6) {
+		prox_rte_ipv6_hdr *ip6 = (prox_rte_ipv6_hdr *)(hdr + l2_len);
+		if (ip6->proto == IPPROTO_UDP) {
+			prox_rte_udp_hdr *udp = (prox_rte_udp_hdr *)(ip6 + 1);
+			udp->dgram_cksum = 0;
+			udp->dgram_cksum = rte_ipv6_udptcp_cksum(ip6, udp);
+		} else if (ip6->proto == IPPROTO_TCP) {
+			prox_rte_tcp_hdr *tcp = (prox_rte_tcp_hdr *)(ip6 + 1);
+			tcp->cksum = 0;
+			tcp->cksum = rte_ipv6_udptcp_cksum(ip6, tcp);
+		}
 	}
 }
 
@@ -758,23 +772,45 @@ static inline void build_value(struct task_gen *task, uint32_t mask, int bit_pos
 		register_ip_to_ctrl_plane(tbase->l3.tmaster, rte_cpu_to_be_32(val | fixed_bits), tbase->l3.reachable_port_id, tbase->l3.core_id, tbase->l3.task_id);
 	}
 }
+
+static inline void build_value_ipv6(struct task_gen *task, uint32_t mask, int var_bit_pos, int init_var_bit_pos, struct ipv6_addr val, struct ipv6_addr fixed_bits)
+{
+	struct task_base *tbase = (struct task_base *)task;
+	if (var_bit_pos < 32) {
+		build_value_ipv6(task, mask >> 1, var_bit_pos + 1, init_var_bit_pos, val, fixed_bits);
+		if (mask & 1) {
+			int byte_pos = (var_bit_pos + init_var_bit_pos) / 8;
+			int bit_pos = (var_bit_pos + init_var_bit_pos) % 8;
+			val.bytes[byte_pos] = val.bytes[byte_pos] | (1 << bit_pos);
+			build_value_ipv6(task, mask >> 1, var_bit_pos + 1, init_var_bit_pos, val, fixed_bits);
+		}
+	} else {
+		for (uint i = 0; i < sizeof(struct ipv6_addr) / 8; i++)
+			val.bytes[i] = val.bytes[i] | fixed_bits.bytes[i];
+		register_node_to_ctrl_plane(tbase->l3.tmaster, &null_addr, &val, tbase->l3.reachable_port_id, tbase->l3.core_id, tbase->l3.task_id);
+	}
+}
+
 static inline void register_all_ip_to_ctrl_plane(struct task_gen *task)
 {
 	struct task_base *tbase = (struct task_base *)task;
 	int i, len, fixed;
 	unsigned int offset;
-	uint32_t mask;
+	uint32_t mask, ip_len;
+	struct ipv6_addr *ip6_src = NULL;
+	uint32_t *ip_src;
 
 	for (uint32_t i = 0; i < task->n_pkts; ++i) {
 		struct pkt_template *pktpl = &task->pkt_template[i];
 		unsigned int ip_src_pos = 0;
-		int maybe_ipv4 = 0;
+		int ipv4 = 0;
 		unsigned int l2_len = sizeof(prox_rte_ether_hdr);
 
 		uint8_t *pkt = pktpl->buf;
 		prox_rte_ether_hdr *eth_hdr = (prox_rte_ether_hdr*)pkt;
 		uint16_t ether_type = eth_hdr->ether_type;
 		prox_rte_vlan_hdr *vlan_hdr;
+		prox_rte_ipv4_hdr *ip;
 
 		// Unstack VLAN tags
 		while (((ether_type == ETYPE_8021ad) || (ether_type == ETYPE_VLAN)) && (l2_len + sizeof(prox_rte_vlan_hdr) < pktpl->len)) {
@@ -784,19 +820,38 @@ static inline void register_all_ip_to_ctrl_plane(struct task_gen *task)
 		}
 		if ((ether_type == ETYPE_MPLSU) || (ether_type == ETYPE_MPLSM)) {
 			l2_len +=4;
-			maybe_ipv4 = 1;
-		}
-		if ((ether_type != ETYPE_IPv4) && !maybe_ipv4)
+			ip = (prox_rte_ipv4_hdr *)(pkt + l2_len);
+			if (ip->version_ihl >> 4 == 4)
+				ipv4 = 1;
+			else if (ip->version_ihl >> 4 != 6)	// Version field at same location for IPv4 and IPv6
+				continue;
+		} else if (ether_type == ETYPE_IPv4) {
+			ip = (prox_rte_ipv4_hdr *)(pkt + l2_len);
+			PROX_PANIC(ip->version_ihl >> 4 != 4, "IPv4 ether_type but IP version = %d != 4", ip->version_ihl >> 4);	// Invalid Packet
+			ipv4 = 1;
+		} else if (ether_type == ETYPE_IPv6) {
+			ip = (prox_rte_ipv4_hdr *)(pkt + l2_len);
+			PROX_PANIC(ip->version_ihl >> 4 != 6, "IPv6 ether_type but IP version = %d != 6", ip->version_ihl >> 4);	// Invalid Packet
+		} else {
 			continue;
+		}
 
-		prox_rte_ipv4_hdr *ip = (prox_rte_ipv4_hdr *)(pkt + l2_len);
-		PROX_PANIC(ip->version_ihl >> 4 != 4, "IPv4 ether_type but IP version = %d != 4", ip->version_ihl >> 4);
-
-		// Even if IPv4 header contains options, options are after ip src and dst
-		ip_src_pos = l2_len + sizeof(prox_rte_ipv4_hdr) - 2 * sizeof(uint32_t);
-		uint32_t *ip_src = ((uint32_t *)(pktpl->buf + ip_src_pos));
-		plog_info("\tip_src_pos = %d, ip_src = %x\n", ip_src_pos, *ip_src);
-		register_ip_to_ctrl_plane(tbase->l3.tmaster, *ip_src, tbase->l3.reachable_port_id, tbase->l3.core_id, tbase->l3.task_id);
+		PROX_PANIC(ipv4 && ((prox_cfg.flags & DSF_L3_ENABLED) == 0), "Trying to generate an IPv4 packet in NDP mode => not supported\n");
+		PROX_PANIC((ipv4 == 0) && ((prox_cfg.flags & DSF_NDP_ENABLED) == 0), "Trying to generate an IPv6 packet in L3 (IPv4) mode => not supported\n");
+		if (ipv4) {
+			// Even if IPv4 header contains options, options are after ip src and dst
+			ip_src_pos = l2_len + sizeof(prox_rte_ipv4_hdr) - 2 * sizeof(uint32_t);
+			ip_src = ((uint32_t *)(pktpl->buf + ip_src_pos));
+			plog_info("\tip_src_pos = %d, ip_src = %x\n", ip_src_pos, *ip_src);
+			register_ip_to_ctrl_plane(tbase->l3.tmaster, *ip_src, tbase->l3.reachable_port_id, tbase->l3.core_id, tbase->l3.task_id);
+			ip_len = sizeof(uint32_t);
+		} else {
+			ip_src_pos = l2_len + sizeof(prox_rte_ipv6_hdr) - 2 * sizeof(struct ipv6_addr);
+			ip6_src = ((struct ipv6_addr *)(pktpl->buf + ip_src_pos));
+			plog_info("\tip_src_pos = %d, ip6_src = "IPv6_BYTES_FMT"\n", ip_src_pos, IPv6_BYTES(ip6_src->bytes));
+			register_node_to_ctrl_plane(tbase->l3.tmaster, ip6_src, &null_addr, tbase->l3.reachable_port_id, tbase->l3.core_id, tbase->l3.task_id);
+			ip_len = sizeof(struct ipv6_addr);
+		}
 
 		for (int j = 0; j < task->n_rands; j++) {
 			offset = task->rand[j].rand_offset;
@@ -804,7 +859,12 @@ static inline void register_all_ip_to_ctrl_plane(struct task_gen *task)
 			mask = task->rand[j].rand_mask;
 			fixed = task->rand[j].fixed_bits;
 			plog_info("offset = %d, len = %d, mask = %x, fixed = %x\n", offset, len, mask, fixed);
-			if ((offset < ip_src_pos + 4) && (offset + len >= ip_src_pos)) {
+			if (offset >= ip_src_pos + ip_len)	// First random bit after IP
+				continue;
+			if (offset + len < ip_src_pos)		// Last random bit before IP
+				continue;
+
+			if (ipv4) {
 				if (offset >= ip_src_pos) {
 					int32_t ip_src_mask = (1 << (4 + ip_src_pos - offset) * 8) - 1;
 					mask = mask & ip_src_mask;
@@ -816,6 +876,28 @@ static inline void register_all_ip_to_ctrl_plane(struct task_gen *task)
 					fixed = (fixed << bits) | (rte_be_to_cpu_32(*ip_src) & ((1 << bits) - 1));
 					build_value(task, mask, 0, 0, fixed);
 				}
+			} else {
+				// We do not support when random partially covers IP - either starting before or finishing after
+				if (offset + len >= ip_src_pos + ip_len) { // len over the ip
+					plog_err("Not supported: random_offset = %d, random_len = %d, ip_src_pos = %d, ip_len = %d\n", offset, len, ip_src_pos, ip_len);
+					continue;
+				}
+				if (offset < ip_src_pos) {
+					plog_err("Not supported: random_offset = %d, random_len = %d, ip_src_pos = %d, ip_len = %d\n", offset, len, ip_src_pos, ip_len);
+					continue;
+				}
+				// Even for IPv6 the random mask supported by PROX are 32 bits only
+				struct ipv6_addr fixed_ipv6;
+				uint init_var_byte_pos = (offset - ip_src_pos);
+				for (uint i = 0; i < sizeof(struct ipv6_addr); i++) {
+					if (i < init_var_byte_pos)
+						fixed_ipv6.bytes[i] = ip6_src->bytes[i];
+					else if (i < init_var_byte_pos + len)
+						fixed_ipv6.bytes[i] = (fixed >> (i - init_var_byte_pos)) & 0xFF;
+					else
+						fixed_ipv6.bytes[i] = ip6_src->bytes[i];
+				}
+				build_value_ipv6(task, mask, 0, init_var_byte_pos * 8, null_addr, fixed_ipv6);
 			}
 		}
 	}
@@ -999,17 +1081,29 @@ static void task_gen_pkt_template_recalc_checksum(struct task_gen *task)
 		if (template->l2_len == 0)
 			continue;
 		ip = (prox_rte_ipv4_hdr *)(template->buf + template->l2_len);
-
-		ip->hdr_checksum = 0;
-		prox_ip_cksum_sw(ip);
-		uint32_t l4_len = rte_bswap16(ip->total_length) - template->l3_len;
-
-		if (ip->next_proto_id == IPPROTO_UDP) {
-			prox_rte_udp_hdr *udp = (prox_rte_udp_hdr *)(((uint8_t *)ip) + template->l3_len);
-			prox_udp_cksum_sw(udp, l4_len, ip->src_addr, ip->dst_addr);
-		} else if (ip->next_proto_id == IPPROTO_TCP) {
-			prox_rte_tcp_hdr *tcp = (prox_rte_tcp_hdr *)(((uint8_t *)ip) + template->l3_len);
-			prox_tcp_cksum_sw(tcp, l4_len, ip->src_addr, ip->dst_addr);
+		if (ip->version_ihl >> 4 == 4) {
+			ip->hdr_checksum = 0;
+			prox_ip_cksum_sw(ip);
+			uint32_t l4_len = rte_bswap16(ip->total_length) - template->l3_len;
+			if (ip->next_proto_id == IPPROTO_UDP) {
+				prox_rte_udp_hdr *udp = (prox_rte_udp_hdr *)(((uint8_t *)ip) + template->l3_len);
+				prox_udp_cksum_sw(udp, l4_len, ip->src_addr, ip->dst_addr);
+			} else if (ip->next_proto_id == IPPROTO_TCP) {
+				prox_rte_tcp_hdr *tcp = (prox_rte_tcp_hdr *)(((uint8_t *)ip) + template->l3_len);
+				prox_tcp_cksum_sw(tcp, l4_len, ip->src_addr, ip->dst_addr);
+			}
+		} else if (ip->version_ihl >> 4 == 6) {
+			prox_rte_ipv6_hdr *ip6;
+			ip6 = (prox_rte_ipv6_hdr *)(template->buf + template->l2_len);
+			if (ip6->proto == IPPROTO_UDP) {
+				prox_rte_udp_hdr *udp = (prox_rte_udp_hdr *)(ip6 + 1);
+				udp->dgram_cksum = 0;
+				udp->dgram_cksum = rte_ipv6_udptcp_cksum(ip6, udp);
+			} else if (ip6->proto == IPPROTO_TCP) {
+				prox_rte_tcp_hdr *tcp = (prox_rte_tcp_hdr *)(ip6 + 1);
+				tcp->cksum = 0;
+				tcp->cksum = rte_ipv6_udptcp_cksum(ip6, tcp);
+			}
 		}
 
 		/* The current implementation avoids checksum
@@ -1130,7 +1224,7 @@ static struct rte_mempool *task_gen_create_mempool(struct task_args *targ, uint1
 	uint32_t mbuf_size = TX_MBUF_SIZE;
 	if (max_frame_size + (unsigned)sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM > mbuf_size)
 		mbuf_size = max_frame_size + (unsigned)sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM;
-	plog_info("\t\tCreating mempool with name '%s'\n", name);
+	plog_info("\tCreating mempool with name '%s'\n", name);
 	ret = rte_mempool_create(name, targ->nb_mbuf - 1, mbuf_size,
 				 targ->nb_cache_mbuf, sizeof(struct rte_pktmbuf_pool_private),
 				 rte_pktmbuf_pool_init, NULL, rte_pktmbuf_init, 0,
@@ -1138,7 +1232,7 @@ static struct rte_mempool *task_gen_create_mempool(struct task_args *targ, uint1
 	PROX_PANIC(ret == NULL, "Failed to allocate dummy memory pool on socket %u with %u elements\n",
 		   sock_id, targ->nb_mbuf - 1);
 
-        plog_info("\t\tMempool %p size = %u * %u cache %u, socket %d\n", ret,
+        plog_info("\tMempool %p size = %u * %u cache %u, socket %d\n", ret,
                   targ->nb_mbuf - 1, mbuf_size, targ->nb_cache_mbuf, sock_id);
 
 	return ret;
