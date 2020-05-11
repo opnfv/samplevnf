@@ -164,7 +164,7 @@ void master_init_vdev(struct task_base *tbase, uint8_t port_id, uint8_t core_id,
 		struct sockaddr_in dst, src;
 		src.sin_family = AF_INET;
 		src.sin_addr.s_addr = prox_port_cfg[vdev_port].ip;
-		src.sin_port = rte_cpu_to_be_16(5000);
+		src.sin_port = rte_cpu_to_be_16(PROX_PSEUDO_PKT_PORT);
 
 		int fd = socket(AF_INET,  SOCK_DGRAM, 0);
 		PROX_PANIC(fd < 0, "Failed to open socket(AF_INET,  SOCK_DGRAM, 0)\n");
@@ -498,7 +498,7 @@ static inline void handle_message(struct task_base *tbase, struct rte_mbuf *mbuf
 			struct sockaddr_in dst;
 			dst.sin_family = AF_INET;
 			dst.sin_addr.s_addr = ip;
-			dst.sin_port = rte_cpu_to_be_16(5000);
+			dst.sin_port = rte_cpu_to_be_16(PROX_PSEUDO_PKT_PORT);
 			int n = sendto(prox_port_cfg[vdev_port].fd, (char*)(&ip), 0, 0,  (struct sockaddr *)&dst, sizeof(struct sockaddr_in));
 			plogx_dbg("\tSent %d bytes to TAP IP "IPv4_BYTES_FMT" using fd %d\n", n, IPv4_BYTES(((uint8_t*)&ip)), prox_port_cfg[vdev_port].fd);
 
