@@ -1,0 +1,117 @@
+heat_template_version: 2015-10-15
+
+description: >
+  Template for deploying n PROX instances. Teh template allows for deploying
+  multiple groups of PROX VMs. You can create a first group with certain
+  flavors, availability groups, etc... Another group can be created with
+  different characteristics.
+
+parameters:
+  public_net_name: {description: Public network to allocate (floating) IPs to VMs', type: string, default: admin_floating_net}
+  mgmt_net_name: {description: Name of PROX mgmt network to be created, type: string, default: admin_internal_net}
+  PROX_image: {description: Image name to use for PROX, type: string, default: rapidVM}
+  PROX_key: {description: DO NOT CHANGE THIS DEFAULT KEY NAME, type: string, default: rapid_key}
+  my_availability_zone: {description: availability_zone for Hosting VMs, type: string, default: nova}
+  security_group: {description: Security Group to use, type: string, default: prox_security_group}
+  PROXVM_count: {description: Total number of testVMs to create, type: number, default: 2}
+  PROX2VM_count: {description: Total number of testVMs to create, type: number, default: 1}
+
+# The following paramters are not used, but are here in case you want to also
+# create the management and dataplane networks in this template
+  mgmt_net_cidr: {description: PROX mgmt network CIDR, type: string, default: 20.20.1.0/24}
+  mgmt_net_gw: {description: PROX mgmt network gateway address, type: string, default: 20.20.1.1}
+  mgmt_net_pool_start: {description: Start of mgmt network IP address allocation pool, type: string, default: 20.20.1.100}
+  mgmt_net_pool_end: {description: End of mgmt network IP address allocation pool, type: string, default: 20.20.1.200}
+  data_net_name: {description: Name of PROX private network to be created, type: string, default: dataplane-network}
+  data_net_cidr: {description: PROX private network CIDR,type: string, default: 30.30.1.0/24}
+  data_net_pool_start: {description: Start of private network IP address allocation pool, type: string, default: 30.30.1.100}
+  data_net_pool_end: {description: End of private network IP address allocation pool, type: string, default: 30.30.1.200}
+  dns:
+    type: comma_delimited_list
+    label: DNS nameservers
+    description: Comma separated list of DNS nameservers for the management network.
+    default: '8.8.8.8'
+
+resources:
+  PROXVMs:
+    type: OS::Heat::ResourceGroup
+    description: Group of PROX VMs according to specs described in this section
+    properties:
+      count: { get_param: PROXVM_count }
+      resource_def:
+        type: rapid-openstack-server.yaml
+        properties:
+          PROX_availability_zone : {get_param: my_availability_zone}
+          PROX_security_group : {get_param: security_group}
+          PROX_image: {get_param: PROX_image}
+          PROX_key: {get_param: PROX_key}
+          PROX_server_name: rapidVM-%index%
+          PROX_public_net: {get_param: public_net_name}
+          PROX_mgmt_net_id: {get_param: mgmt_net_name}
+          PROX_data_net_id: {get_param: data_net_name}
+          PROX_config: {get_resource: MyConfig}
+    depends_on: MyConfig
+  
+  PROX2VMs:
+    type: OS::Heat::ResourceGroup
+    description: Group of PROX VMs according to specs described in this section
+    properties:
+      count: { get_param: PROX2VM_count }
+      resource_def:
+        type: rapid-openstack-server.yaml
+        properties:
+          PROX_availability_zone : {get_param: my_availability_zone}
+          PROX_security_group : {get_param: security_group}
+          PROX_image: {get_param: PROX_image}
+          PROX_key: {get_param: PROX_key}
+          PROX_server_name: rapidType2VM-%index%
+          PROX_public_net: {get_param: public_net_name}
+          PROX_mgmt_net_id: {get_param: mgmt_net_name}
+          PROX_data_net_id: {get_param: data_net_name}
+          PROX_config: {get_resource: MyConfig}
+    depends_on: MyConfig
+  
+  MyConfig:
+    type: OS::Heat::CloudConfig
+    properties:
+      cloud_config:
+        users:
+        - default
+        - name: rapid
+          groups: "users,root"
+          lock-passwd: false
+          passwd: 'test'
+          shell: "/bin/bash"
+          sudo: "ALL=(ALL) NOPASSWD:ALL"
+        ssh_pwauth: true
+        chpasswd:
+          list:  |
+              rapid:rapid
+          expire: False
+
+outputs:
+  number_of_servers:
+    description: List of number or PROX instance
+    value: 
+      - {get_param: PROXVM_count}
+      - {get_param: PROX2VM_count}
+  server_name:
+    description: List of list of names of the PROX instances
+    value: 
+      - {get_attr: [PROXVMs, name]}
+      - {get_attr: [PROX2VMs, name]}
+  mngmt_ips:
+    description: List of list of Management IPs of the VMs
+    value: 
+      - {get_attr: [PROXVMs, mngmt_ip]}
+      - {get_attr: [PROX2VMs, mngmt_ip]}
+  data_plane_ips:
+    description: List of list of list of DataPlane IPs of the VMs
+    value: 
+      - {get_attr: [PROXVMs, data_plane_ip]}
+      - {get_attr: [PROX2VMs, data_plane_ip]}
+  data_plane_macs:
+    description: List of list of list of DataPlane MACs of the VMs
+    value: 
+      - {get_attr: [PROXVMs, data_plane_mac]}
+      - {get_attr: [PROX2VMs, data_plane_mac]}

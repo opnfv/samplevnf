@@ -197,7 +197,7 @@ class FlowSizeTest(RapidTest):
                         endabs_tx = abs_tx
                         endabs_rx = abs_rx
                         if lat_warning or gen_warning or retry_warning:
-                            endwarning = '|        | {:177.177} |'.format(retry_warning + lat_warning + gen_warning)
+                            endwarning = '|        | {:186.186} |'.format(retry_warning + lat_warning + gen_warning)
                         success = True
                         success_message=' SUCCESS'
                         speed_prefix = lat_avg_prefix = lat_perc_prefix = lat_max_prefix = abs_drop_rate_prefix = drop_rate_prefix = bcolors.ENDC

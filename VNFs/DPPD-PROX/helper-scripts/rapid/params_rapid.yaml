@@ -1,0 +1,5 @@
+parameters:
+  public_net_name: admin_floating_net
+  PROX_image: rapidVM
+  my_availability_zone: nova
+  security_group: prox_security_group

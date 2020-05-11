@@ -87,7 +87,7 @@ class RapidConfigParser(object):
                 section = 'TestM%d'%test_machine
                 options = testconfig.options(section)
                 for option in options:
-                    if option in ['prox_socket','prox_launch_exit']:
+                    if option in ['prox_socket','prox_launch_exit','monitor']:
                         machine[option] = testconfig.getboolean(section, option)
                     elif option in ['cores', 'gencores','latcores']:
                         machine[option] = ast.literal_eval(testconfig.get(section, option))
@@ -96,41 +96,41 @@ class RapidConfigParser(object):
                     for key in ['prox_socket','prox_launch_exit']:
                        if key not in machine.keys():
                            machine[key] = True
+                if 'monitor' not in machine.keys():
+                    machine['monitor'] = True
                 index = int(machine_map.get('TestM%d'%test_machine, 'machine_index'))
                 section = 'M%d'%index
                 options = config.options(section)
                 for option in options:
                     machine[option] = config.get(section, option)
-                if 'monitor' not in machine.keys():
-                    machine['monitor'] = True
-                else:    
-                    machine['monitor'] = config.getboolean(section, option)
                 machines.append(dict(machine))
         for machine in machines:
             dp_ports = []
             if 'dest_vm' in machine.keys():
                 index = 1
-                dp_ip_key = 'dp_ip{}'.format(index)
-                dp_mac_key = 'dp_mac{}'.format(index)
-                if dp_ip_key in machines[int(machine['dest_vm'])-1].keys() and \
-                        dp_mac_key in machines[int(machine['dest_vm'])-1].keys():
-                    dp_port = {'ip': machines[int(machine['dest_vm'])-1][dp_ip_key],
-                            'mac' : machines[int(machine['dest_vm'])-1][dp_mac_key]}
-                    dp_ports.append(dict(dp_port))
-                    index += 1
-                else:
-                    break
-                machine['dest_ports'] = list(dp_ports)
+                while True: 
+                    dp_ip_key = 'dp_ip{}'.format(index)
+                    dp_mac_key = 'dp_mac{}'.format(index)
+                    if dp_ip_key in machines[int(machine['dest_vm'])-1].keys() and \
+                            dp_mac_key in machines[int(machine['dest_vm'])-1].keys():
+                        dp_port = {'ip': machines[int(machine['dest_vm'])-1][dp_ip_key],
+                                'mac' : machines[int(machine['dest_vm'])-1][dp_mac_key]}
+                        dp_ports.append(dict(dp_port))
+                        index += 1
+                    else:
+                        break
+                    machine['dest_ports'] = list(dp_ports)
             gw_ips = []
             if 'gw_vm' in machine.keys():
                 index = 1
-                gw_ip_key = 'dp_ip{}'.format(index)
-                if gw_ip_key in machines[int(machine['gw_vm'])-1].keys():
-                    gw_ip = machines[int(machine['dest_vm'])-1][gw_ip_key]
-                    gw_ips.append(gw_ip)
-                    index += 1
-                else:
-                    break
-                machine['gw_ips'] = list(gw_ips)
+                while True:
+                    gw_ip_key = 'dp_ip{}'.format(index)
+                    if gw_ip_key in machines[int(machine['gw_vm'])-1].keys():
+                        gw_ip = machines[int(machine['dest_vm'])-1][gw_ip_key]
+                        gw_ips.append(gw_ip)
+                        index += 1
+                    else:
+                        break
+                    machine['gw_ips'] = list(gw_ips)
         test_params['machines'] = machines
         return (test_params)

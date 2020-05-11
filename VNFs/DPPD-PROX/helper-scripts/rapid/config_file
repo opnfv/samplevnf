@@ -1,0 +1,8 @@
+[OpenStack]
+cloud_name = openstackL6
+stack_name = rapid
+heat_template = openstack-rapid.yaml
+heat_param = params_rapid.yaml
+keypair_name = prox_key
+user = centos
+push_gateway = None

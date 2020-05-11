@@ -1,0 +1,82 @@
+heat_template_version: 2014-10-16
+
+description: single server resource used by resource groups.
+
+parameters:
+  PROX_public_net:
+    type: string
+  PROX_mgmt_net_id:
+    type: string
+  PROX_data_net_id:
+    type: string
+  PROX_server_name:
+    type: string
+  PROX_availability_zone:
+    type: string
+  PROX_security_group:
+    type: string
+  PROX_image:
+    type: string
+  PROX_key:
+    type: string
+  PROX_config:
+    type: string
+
+resources:
+  PROX_instance:
+    type: OS::Nova::Server
+    properties:
+      name: { get_param: PROX_server_name }
+      availability_zone : {get_param: PROX_availability_zone}
+      flavor: {get_resource: PROX_flavor}
+      image: {get_param: PROX_image}
+      key_name: {get_param: PROX_key}
+      networks:
+        - port: {get_resource: mgmt_port }
+        - port: {get_resource: data_port }
+      user_data: {get_param: PROX_config}    
+      user_data_format: RAW
+
+  PROX_flavor:
+    type: OS::Nova::Flavor
+    properties:
+      ram: 4096
+      vcpus: 4
+      disk: 80
+      extra_specs: {"hw:mem_page_size": "large","hw:cpu_policy": "dedicated","hw:cpu_thread_policy":"isolate"}
+
+  mgmt_port:
+    type: OS::Neutron::Port
+    properties:
+      network_id: { get_param: PROX_mgmt_net_id }
+      security_groups:
+        - {get_param: PROX_security_group}
+
+  floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: {get_param: PROX_public_net}
+      port_id: {get_resource: mgmt_port}
+
+  data_port:
+    type: OS::Neutron::Port
+    properties:
+      network_id: { get_param: PROX_data_net_id }
+      security_groups:
+        - {get_param: PROX_security_group}
+
+outputs:
+  name:
+    description: Name of the PROX instance
+    value: {get_attr: [PROX_instance, name]}
+  mngmt_ip:
+    description: Management IP of the VM
+    value: {get_attr: [floating_ip, floating_ip_address ]}
+  data_plane_ip:
+    description: List of DataPlane IPs of the VM
+    value:
+        - {get_attr: [data_port, fixed_ips, 0, ip_address]}
+  data_plane_mac:
+    description: List of DataPlane MACs of the VM
+    value:
+        - {get_attr: [data_port, mac_address]}
