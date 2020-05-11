@@ -414,11 +414,14 @@ void handle_ctrl_plane_pkts(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 	prox_next_hop_index_type gateway_index;
 	int j, ret, modified_route;
 	uint16_t command;
-	struct ether_hdr_arp *hdr;
+	prox_rte_ether_hdr *hdr;
+	struct ether_hdr_arp *hdr_arp;
 	struct l3_base *l3 = &tbase->l3;
 	uint64_t tsc= rte_rdtsc();
 	uint64_t arp_timeout = l3->arp_timeout * hz / 1000;
 	uint32_t nh;
+	prox_rte_ipv4_hdr *pip;
+	prox_rte_udp_hdr *udp_hdr;
 
 	for (j = 0; j < n_pkts; ++j) {
 		PREFETCH0(mbufs[j]);
@@ -428,6 +431,8 @@ void handle_ctrl_plane_pkts(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 	}
 
 	for (j = 0; j < n_pkts; ++j) {
+		pip = NULL;
+		udp_hdr = NULL;
 		out[0] = OUT_HANDLED;
 		command = mbufs[j]->udata64 & 0xFFFF;
 		plogx_dbg("\tReceived %s mbuf %p\n", actions_string[command], mbufs[j]);
@@ -450,6 +455,7 @@ void handle_ctrl_plane_pkts(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 			else {
 				plogx_dbg("Added new route to "IPv4_BYTES_FMT"/%d using "IPv4_BYTES_FMT"(index = %d)\n", IP4(ip), prefix, IP4(gateway_ip), gateway_index);
 			}
+			tx_drop(mbufs[j]);
 			break;
 		case ROUTE_DEL_FROM_CTRL:
 			ip = ctrl_ring_get_ip(mbufs[j]);
@@ -463,12 +469,13 @@ void handle_ctrl_plane_pkts(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 				}
 				plog_info("Deleting route to "IPv4_BYTES_FMT"/%d\n", IP4(ip), prefix);
 			}
+			tx_drop(mbufs[j]);
 			break;
 		case UPDATE_FROM_CTRL:
-			hdr = rte_pktmbuf_mtod(mbufs[j], struct ether_hdr_arp *);
+			hdr_arp = rte_pktmbuf_mtod(mbufs[j], struct ether_hdr_arp *);
 			ip = (mbufs[j]->udata64 >> 32) & 0xFFFFFFFF;
 
-			if (prox_rte_is_zero_ether_addr(&hdr->arp.data.sha)) {
+			if (prox_rte_is_zero_ether_addr(&hdr_arp->arp.data.sha)) {
 				// MAC timeout or deleted from kernel table => reset update_time
 				// This will cause us to send new ARP request
 				// However, as arp_timeout not touched, we should continue sending our regular IP packets
@@ -476,7 +483,7 @@ void handle_ctrl_plane_pkts(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 				return;
 			} else
 				plogx_dbg("\tUpdating MAC entry for IP "IPv4_BYTES_FMT" with MAC "MAC_BYTES_FMT"\n",
-					IP4(ip), MAC_BYTES(hdr->arp.data.sha.addr_bytes));
+					IP4(ip), MAC_BYTES(hdr_arp->arp.data.sha.addr_bytes));
 
 			if (l3->ipv4_lpm) {
 				uint32_t nh;
@@ -486,18 +493,18 @@ void handle_ctrl_plane_pkts(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 					plogx_info("Unable add ip "IPv4_BYTES_FMT" in mac_hash\n", IP4(ip));
 				} else if ((nh = l3->arp_table[ret].nh) != MAX_HOP_INDEX) {
 					entry = &l3->next_hops[nh];
-					memcpy(&entry->mac, &(hdr->arp.data.sha), sizeof(prox_rte_ether_addr));
+					memcpy(&entry->mac, &(hdr_arp->arp.data.sha), sizeof(prox_rte_ether_addr));
 					entry->arp_timeout = tsc + arp_timeout;
 					update_arp_update_time(l3, &entry->arp_update_time, l3->arp_update_time);
 				} else {
-					memcpy(&l3->arp_table[ret].mac, &(hdr->arp.data.sha), sizeof(prox_rte_ether_addr));
+					memcpy(&l3->arp_table[ret].mac, &(hdr_arp->arp.data.sha), sizeof(prox_rte_ether_addr));
 					l3->arp_table[ret].arp_timeout = tsc + arp_timeout;
 					update_arp_update_time(l3, &l3->arp_table[ret].arp_update_time, l3->arp_update_time);
 				}
 			}
 			else if (ip == l3->gw.ip) {
 				// MAC address of the gateway
-				memcpy(&l3->gw.mac, &hdr->arp.data.sha, 6);
+				memcpy(&l3->gw.mac, &hdr_arp->arp.data.sha, 6);
 				l3->flags |= FLAG_DST_MAC_KNOWN;
 				l3->gw.arp_timeout = tsc + arp_timeout;
 				update_arp_update_time(l3, &l3->gw.arp_update_time, l3->arp_update_time);
@@ -509,7 +516,7 @@ void handle_ctrl_plane_pkts(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 						break;
 				}
 				if (idx < l3->n_pkts) {
-					memcpy(&l3->optimized_arp_table[idx].mac, &(hdr->arp.data.sha), sizeof(prox_rte_ether_addr));
+					memcpy(&l3->optimized_arp_table[idx].mac, &(hdr_arp->arp.data.sha), sizeof(prox_rte_ether_addr));
 					l3->optimized_arp_table[idx].arp_timeout = tsc + arp_timeout;
 					update_arp_update_time(l3, &l3->optimized_arp_table[idx].arp_update_time, l3->arp_update_time);
 				}
@@ -518,7 +525,7 @@ void handle_ctrl_plane_pkts(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 				if (ret < 0) {
 					plogx_info("Unable add ip "IPv4_BYTES_FMT" in mac_hash\n", IP4(ip));
 				} else {
-					memcpy(&l3->arp_table[ret].mac, &(hdr->arp.data.sha), sizeof(prox_rte_ether_addr));
+					memcpy(&l3->arp_table[ret].mac, &(hdr_arp->arp.data.sha), sizeof(prox_rte_ether_addr));
 					l3->arp_table[ret].arp_timeout = tsc + arp_timeout;
 					update_arp_update_time(l3, &l3->arp_table[ret].arp_update_time, l3->arp_update_time);
 				}
@@ -541,9 +548,39 @@ void handle_ctrl_plane_pkts(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 			TASK_STATS_ADD_TX_NON_DP(&tbase->aux->stats, 1);
 			break;
 		case PKT_FROM_TAP:
+			// Drop Pseudo packets sent to generate ARP requests
+			// There are other IPv4 packets sent from TAP which we cannot delete e.g. BGP packets
 			out[0] = 0;
+			hdr = rte_pktmbuf_mtod(mbufs[j], prox_rte_ether_hdr *);
+			if (hdr->ether_type == ETYPE_IPv4) {
+				pip = (prox_rte_ipv4_hdr *)(hdr + 1);
+			} else if (hdr->ether_type == ETYPE_VLAN) {
+				prox_rte_vlan_hdr *vlan = (prox_rte_vlan_hdr *)(hdr + 1);
+				vlan = (prox_rte_vlan_hdr *)(hdr + 1);
+				if (vlan->eth_proto == ETYPE_IPv4) {
+					pip = (prox_rte_ipv4_hdr *)(vlan + 1);
+				}
+			}
+			if (pip && (pip->next_proto_id == IPPROTO_UDP)) {
+				udp_hdr = (prox_rte_udp_hdr *)(pip + 1);
+				if ((udp_hdr->dst_port == rte_cpu_to_be_16(PROX_PSEUDO_PKT_PORT)) &&
+					(udp_hdr->src_port == rte_cpu_to_be_16(PROX_PSEUDO_PKT_PORT)) &&
+					(rte_be_to_cpu_16(udp_hdr->dgram_len) == 8)) {
+					plogx_dbg("Dropping PROX packet\n");
+					tx_drop(mbufs[j]);
+					return;
+				}
+			}
+/* Debugging ...
+			uint16_t src_port = 0, dst_port = 0, len = 0;
+			if (udp_hdr) {
+				src_port = udp_hdr->src_port;
+				dst_port = udp_hdr->dst_port;
+				len = rte_be_to_cpu_16(udp_hdr->dgram_len);
+			}
+			plogx_dbg("tForwarding TAP packet from master. Type = %x, pip=%p, udp = %p, udp = {src = %x, dst = %x, len = %d}\n", hdr->ether_type, pip, udp_hdr, src_port, dst_port,len );
+*/
 			// tx_ctrlplane_pkt does not drop packets
-			plogx_dbg("\tForwarding TAP packet from master\n");
 			tbase->aux->tx_ctrlplane_pkt(tbase, &mbufs[j], 1, out);
 			TASK_STATS_ADD_TX_NON_DP(&tbase->aux->stats, 1);
 			break;
