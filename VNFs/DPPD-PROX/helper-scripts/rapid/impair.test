@@ -40,13 +40,13 @@ cores = [1]
 [test1]
 test=warmuptest
 flowsize=1024
-packetsize=64
+imix=[64]
 warmupspeed=10
 warmuptime=2
 
 [test2]
 test=impairtest
-packetsize=64
+imix=[64]
 flowsize=64
 drop_rate_threshold = 0.1
 lat_avg_threshold = 500

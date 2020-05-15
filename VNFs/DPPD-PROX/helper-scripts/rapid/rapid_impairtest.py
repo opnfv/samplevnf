@@ -40,7 +40,8 @@ class ImpairTest(RapidTest):
     #    fieldnames = ['Flows','PacketSize','RequestedPPS','GeneratedPPS','SentPPS','ForwardedPPS','ReceivedPPS','AvgLatencyUSEC','MaxLatencyUSEC','Dropped','DropRate']
     #    writer = csv.DictWriter(data_csv_file, fieldnames=fieldnames)
     #    writer.writeheader()
-        size = self.test['packetsize']
+        imix = self.test['imix']
+        size = mean (imix)
         flow_number = self.test['flowsize']
         RapidLog.info("+-----------------------------------------------------------------------------------------------------------------------------------------------------------------+")
         RapidLog.info("| Generator is sending UDP ("+'{:>5}'.format(flow_number)+" flow) packets ("+ '{:>5}'.format(size) +" bytes) to SUT via GW dropping and delaying packets. SUT sends packets back. Use ctrl-c to stop the test    |")
@@ -48,7 +49,7 @@ class ImpairTest(RapidTest):
         RapidLog.info("| Test   |  Speed requested   | Sent to NIC    |  Sent by Gen   | Forward by SUT |  Rec. by Gen   |  Avg. Latency  |  Max. Latency  |  Packets Lost  | Loss Ratio |")
         RapidLog.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+")
         attempts = 0
-        self.gen_machine.set_udp_packet_size(size)
+        self.gen_machine.set_udp_packet_size(imix)
         self.gen_machine.set_flows(flow_number)
         self.gen_machine.start_latency_cores()
         speed = self.test['startspeed']

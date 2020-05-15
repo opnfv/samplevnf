@@ -38,7 +38,7 @@ cores = [1,2]
 [test1]
 test=warmuptest
 flowsize=512
-packetsize=64
+imix=[64]
 warmupspeed=1
 warmuptime=2
 
@@ -49,7 +49,7 @@ test=flowsizetest
 # all combinations must be meeting the same threshold
 # The threshold is expressed in Mpps
 pass_threshold=0.1
-packetsizes=[64,128]
+imixs=[[64], [64,800],[128]]
 # the number of flows in the list need to be powers of 2, max 2^30
 # If not a power of 2, we will use the lowest power of 2 that is larger than
 # the requested number of flows. e.g. 9 will result in 16 flows

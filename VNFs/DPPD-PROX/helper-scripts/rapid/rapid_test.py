@@ -52,9 +52,10 @@ class RapidTest(object):
             machine.set_generator_speed(speed)
 
     @staticmethod
-    def set_background_size(background_machines, size):
+    def set_background_size(background_machines, imix):
+        # imixs is a list of packet sizes
         for machine in background_machines:
-            machine.set_udp_packet_size(size)
+            machine.set_udp_packet_size(imix)
 
     @staticmethod
     def start_background_traffic(background_machines):

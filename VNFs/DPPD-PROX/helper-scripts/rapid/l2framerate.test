@@ -39,5 +39,5 @@ test=fixed_rate
 # The threshold is expressed in Mpps
 pass_threshold=0.1
 startspeed = 10
-packetsizes=[256]
+imixs=[[256]]
 flows=[64]

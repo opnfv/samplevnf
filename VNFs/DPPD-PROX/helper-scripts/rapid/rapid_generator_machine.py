@@ -78,20 +78,37 @@ class RapidGeneratorMachine(RapidMachine):
         speed_per_gen_core = speed / len(self.machine_params['gencores']) 
         self.socket.speed(speed_per_gen_core, self.machine_params['gencores'])
 
-    def set_udp_packet_size(self, frame_size):
+    def set_udp_packet_size(self, imix_frame_sizes):
         # We should check the gen.cfg to make sure we only send UDP packets
-        # Frame size = PROX pkt size + 4 bytes CRC
-        # The set_size function takes the PROX packet size as a parameter
-        self.socket.set_size(self.machine_params['gencores'], 0, frame_size - 4)
-        # 18 is the difference between the frame size and IP size = size of (MAC addresses, ethertype and FCS)
-        self.socket.set_value(self.machine_params['gencores'], 0, 16, frame_size-18, 2)
-        # 38 is the difference between the frame size and UDP size = 18 + size of IP header (=20)
-        self.socket.set_value(self.machine_params['gencores'], 0, 38, frame_size-38, 2)
+        # If only 1 packet size, still using the 'old' way of setting the 
+        # packet sizes in PROX. Otherwise, using the 'new' way which
+        # automatically sets IP and UDP sizes. We should switch to the new way
+        # eventually for all cases.
+        if len(imix_frame_sizes) == 1:
+            # Frame size = PROX pkt size + 4 bytes CRC
+            # The set_size function takes the PROX packet size as a parameter
+            self.socket.set_size(self.machine_params['gencores'], 0,
+                    imix_frame_sizes[0] - 4)
+            # 18 is the difference between the frame size and IP size =
+            # size of (MAC addresses, ethertype and FCS)
+            self.socket.set_value(self.machine_params['gencores'], 0, 16,
+                    imix_frame_sizes[0] - 18, 2)
+            # 38 is the difference between the frame size and UDP size = 
+            # 18 + size of IP header (=20)
+            self.socket.set_value(self.machine_params['gencores'], 0, 38,
+                    imix_frame_sizes[0] - 38, 2)
+        else:
+            prox_sizes = [frame_size - 4 for frame_size in imix_frame_sizes]
+            self.socket.set_imix(self.machine_params['gencores'], 0,
+                    prox_sizes)
 
     def set_flows(self, number_of_flows):
-        source_port,destination_port = RandomPortBits.get_bitmap(number_of_flows)
-        self.socket.set_random(self.machine_params['gencores'],0,34,source_port,2)
-        self.socket.set_random(self.machine_params['gencores'],0,36,destination_port,2)
+        source_port,destination_port = RandomPortBits.get_bitmap(
+                number_of_flows)
+        self.socket.set_random(self.machine_params['gencores'],0,34,
+                source_port,2)
+        self.socket.set_random(self.machine_params['gencores'],0,36,
+                destination_port,2)
 
     def start_gen_cores(self):
         self.socket.start(self.machine_params['gencores'])

@@ -20,6 +20,7 @@
 import sys
 import time
 from math import ceil
+from statistics import mean
 from past.utils import old_div
 from rapid_log import RapidLog
 from rapid_log import bcolors
@@ -107,13 +108,14 @@ class FlowSizeTest(RapidTest):
     #    writer.writeheader()
         self.gen_machine.start_latency_cores()
         TestPassed = True
-        for size in self.test['packetsizes']:
-            self.gen_machine.set_udp_packet_size(size)
+        for imix in self.test['imixs']:
+            size = mean(imix)
+            self.gen_machine.set_udp_packet_size(imix)
             if self.background_machines:
                 backgroundinfo = '{}Running {} x background traffic not represented in the table{}'.format(bcolors.FLASH,len(self.background_machines),bcolors.ENDC)
             else:
                 backgroundinfo = '{}{}'.format(bcolors.FLASH,bcolors.ENDC)
-            self.set_background_size(self.background_machines, size)
+            self.set_background_size(self.background_machines, imix)
             RapidLog.info("+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+")
             RapidLog.info('| UDP, {:>5} bytes, different number of flows by randomizing SRC & DST UDP port. {:116.116}|'.format(size, backgroundinfo))
             RapidLog.info("+--------+------------------+-------------+-------------+-------------+------------------------+----------+----------+----------+-----------+-----------+-----------+-----------+-------+----+")

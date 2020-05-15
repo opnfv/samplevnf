@@ -59,9 +59,9 @@ class RapidConfigParser(object):
             section = 'test%d'%test_index
             options = testconfig.options(section)
             for option in options:
-                if option in ['packetsizes','flows']:
+                if option in ['imix','imixs','flows']:
                     test[option] = ast.literal_eval(testconfig.get(section, option))
-                    test[option] = [int(i) for i in test[option]]
+#                    test[option] = [int(i) for i in test[option]]
                 elif option in ['maxframespersecondallingress','stepsize']:
                     test[option] = int(testconfig.get(section, option))
                 elif option in ['startspeed','drop_rate_threshold','lat_avg_threshold','lat_perc_threshold','lat_max_threshold','accuracy','maxr','maxz','pass_threshold']:

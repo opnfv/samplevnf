@@ -321,6 +321,9 @@ class prox_sock(object):
     def set_size(self, cores, task, pkt_size):
         self._send('pkt_size %s %s %s' % (','.join(map(str, cores)), task, pkt_size))
 
+    def set_imix(self, cores, task, imix):
+        self._send('imix %s %s %s' % (','.join(map(str, cores)), task, ','.join(map(str,imix))))
+
     def set_value(self, cores, task, offset, value, length):
         self._send('set value %s %s %s %s %s' % (','.join(map(str, cores)), task, offset, value, length))
 

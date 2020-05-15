@@ -25,8 +25,12 @@ DPDK_VERSION="19.05"
 PROX_COMMIT="b71a4cfd"
 PROX_CHECKOUT="git checkout ${PROX_COMMIT}"
 ## Next line is overruling the PROX_COMMIT and will replace the version with a very specific patch. Should be commented out
-## 	if you want to use a committed version of PROX
+## 	if you want to use a committed version of PROX with the COMMIT ID specified above
 ##PROX_CHECKOUT="git fetch \"https://gerrit.opnfv.org/gerrit/samplevnf\" refs/changes/75/69475/2 && git checkout FETCH_HEAD"
+##Following line has the commit for testing IMIX
+#PROX_CHECKOUT="git fetch \"https://gerrit.opnfv.org/gerrit/samplevnf\" refs/changes/88/69488/3 && git checkout FETCH_HEAD"
+##Following line has the commit for testing IMIX, IPV6, ... It is the merge of all PROX commits on May 12th
+PROX_CHECKOUT="git fetch \"https://gerrit.opnfv.org/gerrit/samplevnf\" refs/changes/59/69859/7 && git checkout FETCH_HEAD"
 MULTI_BUFFER_LIB_VER="0.52"
 export RTE_SDK="${BUILD_DIR}/dpdk-${DPDK_VERSION}"
 export RTE_TARGET="x86_64-native-linuxapp-gcc"
@@ -95,7 +99,7 @@ function os_cfg()
     # the testing. Once the script connects with ssh, it starts downloading
     # config files and then start prox, etc... The problem is that when the VM
     # boots, check_prox_system_setup.sh will check for some things and
-    # potentially reboot, resulting in loosing the ssh connection again.
+    # potentially reboot, resulting in losing the ssh connection again.
     # To fix this issue, the following lines are disabling ssh access for the 
     # centos user. The script will not be able to connect to the VM till ssh
     # access is restored after a reboot. Restoring ssh is now done by

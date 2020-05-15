@@ -34,13 +34,13 @@ cores = [1]
 [test1]
 test=warmuptest
 flowsize=512
-packetsize=64
+imix=[64]
 warmupspeed=1
 warmuptime=2
 
 [test2]
 test=flowsizetest
-packetsizes=[64]
+imixs=[[64]]
 # the number of flows in the list need to be powers of 2, max 2^20
 # Select from following numbers: 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576
 flows=[512,1]
