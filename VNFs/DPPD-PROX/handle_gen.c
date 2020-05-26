@@ -712,6 +712,9 @@ static int task_gen_set_eth_ip_udp_sizes(struct task_gen *task, uint32_t n_orig_
 			template = &task->pkt_template[k];
 			template->len = pkt_sizes[j];
        			rte_memcpy(template->buf, task->pkt_template_orig[i].buf, pkt_sizes[j]);
+			if (task->flags & TASK_OVERWRITE_SRC_MAC_WITH_PORT_MAC) {
+				rte_memcpy(&template->buf[sizeof(prox_rte_ether_addr)], &task->src_mac, sizeof(prox_rte_ether_addr));
+			}
 			parse_l2_l3_len(template->buf, &template->l2_len, &template->l3_len, template->len);
 			if (template->l2_len == 0)
 				continue;
