@@ -260,8 +260,10 @@ static inline uint16_t rx_pkt_hw1_param(struct task_base *tbase, struct rte_mbuf
 		}
 	}
 
-	if (nb_rx == 0)
+	if (unlikely(nb_rx == 0)) {
+		TASK_STATS_ADD_IDLE(&tbase->aux->stats, rte_rdtsc() - cur_tsc);
 		return 0;
+	}
 
 	if (l3_ndp == PROX_L3)
 		skip = handle_l3(tbase, nb_rx, mbufs_ptr);
@@ -270,12 +272,9 @@ static inline uint16_t rx_pkt_hw1_param(struct task_base *tbase, struct rte_mbuf
 
 	if (skip)
 		TASK_STATS_ADD_RX_NON_DP(&tbase->aux->stats, skip);
-	if (likely(nb_rx > 0)) {
-		TASK_STATS_ADD_RX(&tbase->aux->stats, nb_rx);
-		return nb_rx - skip;
-	}
-	TASK_STATS_ADD_IDLE(&tbase->aux->stats, rte_rdtsc() - cur_tsc);
-	return 0;
+
+	TASK_STATS_ADD_RX(&tbase->aux->stats, nb_rx);
+	return nb_rx - skip;
 }
 
 uint16_t rx_pkt_hw(struct task_base *tbase, struct rte_mbuf ***mbufs)
