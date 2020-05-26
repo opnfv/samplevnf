@@ -45,6 +45,7 @@
 #include "stats_irq.h"
 #include "prox_compat.h"
 #include "rte_ethdev.h"
+#include "lconf.h"
 
 struct prox_port_cfg prox_port_cfg[PROX_MAX_PORTS];
 
@@ -856,6 +857,16 @@ void close_ports_atexit(void)
 		}
 		plog_info("Closing port %u\n", portid);
 		rte_eth_dev_close(portid);
+	}
+
+	struct lcore_cfg *lconf = NULL;
+	struct task_args *targ;
+	while (core_targ_next(&lconf, &targ, 0) == 0) {
+		if (targ->pool) {
+			rte_mempool_free(targ->pool);
+			plog_info("freeing pool %p\n", targ->pool);
+			targ->pool = NULL;
+		}
 	}
 }
 
