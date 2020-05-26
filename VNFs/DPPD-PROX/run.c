@@ -277,15 +277,6 @@ void __attribute__((noreturn)) run(uint32_t flags)
 		stop_core_all(-1);
 	}
 
-	struct lcore_cfg *lconf = NULL;
-	struct task_args *targ;
-	while (core_targ_next(&lconf, &targ, 0) == 0) {
-		if (targ->pool) {
-			rte_mempool_free(targ->pool);
-			plog_info("freeing pool %p\n", targ->pool);
-			targ->pool = NULL;
-		}
-	}
 	if (prox_cfg.logbuf) {
 		file_print(prox_cfg.logbuf);
 	}
