@@ -138,6 +138,12 @@ struct task_gen {
 	uint32_t new_imix_nb_pkts;
 } __rte_cache_aligned;
 
+static void task_gen_set_pkt_templates_len(struct task_gen *task, uint32_t *pkt_sizes);
+static void task_gen_reset_pkt_templates_content(struct task_gen *task);
+static void task_gen_pkt_template_recalc_metadata(struct task_gen *task);
+static int check_all_pkt_size(struct task_gen *task, int do_panic);
+static int check_all_fields_in_bounds(struct task_gen *task, int do_panic);
+
 static inline uint8_t ipv4_get_hdr_len(prox_rte_ipv4_hdr *ip)
 {
 	/* Optimize for common case of IPv4 header without options. */
@@ -710,12 +716,6 @@ static int task_gen_set_eth_ip_udp_sizes(struct task_gen *task, uint32_t n_orig_
 		for (size_t i = 0; i < n_orig_pkts; ++i) {
 			k = j * n_orig_pkts + i;
 			template = &task->pkt_template[k];
-			template->len = pkt_sizes[j];
-       			rte_memcpy(template->buf, task->pkt_template_orig[i].buf, pkt_sizes[j]);
-			if (task->flags & TASK_OVERWRITE_SRC_MAC_WITH_PORT_MAC) {
-				rte_memcpy(&template->buf[sizeof(prox_rte_ether_addr)], &task->src_mac, sizeof(prox_rte_ether_addr));
-			}
-			parse_l2_l3_len(template->buf, &template->l2_len, &template->l3_len, template->len);
 			if (template->l2_len == 0)
 				continue;
 			ip = (prox_rte_ipv4_hdr *)(template->buf + template->l2_len);
@@ -750,6 +750,11 @@ static int task_gen_apply_imix(struct task_gen *task, int do_panic)
 	task->n_pkts = n_pkts;
 	if (task->pkt_idx >= n_pkts)
 		task->pkt_idx = 0;
+	task_gen_set_pkt_templates_len(task, task->imix_pkt_sizes);
+	task_gen_reset_pkt_templates_content(task);
+	task_gen_pkt_template_recalc_metadata(task);
+	check_all_pkt_size(task, DO_NOT_PANIC);
+	check_all_fields_in_bounds(task, DO_NOT_PANIC);
 	task_gen_set_eth_ip_udp_sizes(task, task->orig_n_pkts, task->imix_nb_pkts, task->imix_pkt_sizes);
 	return 0;
 }
@@ -1128,6 +1133,18 @@ static void task_gen_pkt_template_recalc_all(struct task_gen *task)
 	task_gen_pkt_template_recalc_checksum(task);
 }
 
+static void task_gen_set_pkt_templates_len(struct task_gen *task, uint32_t *pkt_sizes)
+{
+	struct pkt_template *src, *dst;
+
+	for (size_t j = 0; j < task->n_pkts / task->orig_n_pkts; ++j) {
+		for (size_t i = 0; i < task->orig_n_pkts; ++i) {
+			dst = &task->pkt_template[j * task->orig_n_pkts + i];
+			dst->len = pkt_sizes[j];
+		}
+	}
+}
+
 static void task_gen_reset_pkt_templates_len(struct task_gen *task)
 {
 	struct pkt_template *src, *dst;
@@ -1150,6 +1167,9 @@ static void task_gen_reset_pkt_templates_content(struct task_gen *task)
 			src = &task->pkt_template_orig[i];
 			dst = &task->pkt_template[j * task->orig_n_pkts + i];
 			memcpy(dst->buf, src->buf, RTE_MAX(src->len, dst->len));
+			if (task->flags & TASK_OVERWRITE_SRC_MAC_WITH_PORT_MAC) {
+				rte_memcpy(&dst->buf[sizeof(prox_rte_ether_addr)], &task->src_mac, sizeof(prox_rte_ether_addr));
+			}
 			task_gen_apply_sig(task, dst);
 		}
 	}
