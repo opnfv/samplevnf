@@ -126,7 +126,7 @@ class FlowSizeTest(RapidTest):
                 self.gen_machine.reset_stats()
                 if self.sut_machine:
                     self.sut_machine.reset_stats()
-                self.gen_machine.set_flows(flow_number)
+                flow_number = self.gen_machine.set_flows(flow_number)
                 self.set_background_flows(self.background_machines, flow_number)
                 endspeed = None
                 speed = self.get_start_speed_and_init(size)

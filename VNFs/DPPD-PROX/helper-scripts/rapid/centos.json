@@ -19,28 +19,28 @@
    {
    "type": "file",
    "source": "./check_prox_system_setup.sh",
-   "destination": "/home/centos/"
+   "destination": "~/"
    },
    {
    "type": "file",
    "source": "./check-prox-system-setup.service",
-   "destination": "/home/centos/"
+   "destination": "~/"
    },
    {
    "type": "file",
    "source": "./sharkproxlog.sh",
-   "destination": "/home/centos/"
+   "destination": "~/"
    },
    {
    "type": "file",
    "source": "./deploycentostools.sh",
-   "destination": "/home/centos/"
+   "destination": "~/"
    },
    {
    "type": "shell",
    "inline": [
-     "chmod a+x /home/centos/deploycentostools.sh",
-     "/home/centos/deploycentostools.sh -u deploy" ]
+     "chmod a+x ~/deploycentostools.sh",
+     "~/deploycentostools.sh -u deploy" ]
    }
 ]
 }

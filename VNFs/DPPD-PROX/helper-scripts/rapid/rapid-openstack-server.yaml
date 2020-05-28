@@ -72,7 +72,7 @@ outputs:
   mngmt_ip:
     description: Management IP of the VM
     value: {get_attr: [floating_ip, floating_ip_address ]}
-  data_plane_ip:
+  data_plane_ips:
     description: List of DataPlane IPs of the VM
     value:
         - {get_attr: [data_port, fixed_ips, 0, ip_address]}

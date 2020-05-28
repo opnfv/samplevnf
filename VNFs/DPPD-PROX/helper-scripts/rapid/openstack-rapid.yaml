@@ -108,8 +108,8 @@ outputs:
   data_plane_ips:
     description: List of list of list of DataPlane IPs of the VMs
     value: 
-      - {get_attr: [PROXVMs, data_plane_ip]}
-      - {get_attr: [PROX2VMs, data_plane_ip]}
+      - {get_attr: [PROXVMs, data_plane_ips]}
+      - {get_attr: [PROX2VMs, data_plane_ips]}
   data_plane_macs:
     description: List of list of list of DataPlane MACs of the VMs
     value: 

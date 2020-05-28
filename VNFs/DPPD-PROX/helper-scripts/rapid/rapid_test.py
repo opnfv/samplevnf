@@ -29,22 +29,34 @@ class RapidTest(object):
     @staticmethod
     def get_percentageof10Gbps(pps_speed,size):
         # speed is given in pps, returning % of 10Gb/s
-        return (pps_speed / 1000000.0 * 0.08 * (size+28))
+        # 12 bytes is the inter packet gap 
+        # pre-amble is 7 bytes
+        # SFD (start of frame delimiter) is 1 byte
+        # Total of 20 bytes overhead per packet
+        return (pps_speed / 1000000.0 * 0.08 * (size+20))
 
     @staticmethod
     def get_pps(speed,size):
         # speed is given in % of 10Gb/s, returning Mpps
-        return (speed * 100.0 / (8*(size+28)))
+        # 12 bytes is the inter packet gap 
+        # pre-amble is 7 bytes
+        # SFD (start of frame delimiter) is 1 byte
+        # Total of 20 bytes overhead per packet
+        return (speed * 100.0 / (8*(size+20)))
 
     @staticmethod
     def get_speed(packet_speed,size):
         # return speed in Gb/s
-        return (packet_speed / 1000.0 * (8*(size+28)))
+        # 12 bytes is the inter packet gap 
+        # pre-amble is 7 bytes
+        # SFD (start of frame delimiter) is 1 byte
+        # Total of 20 bytes overhead per packet
+        return (packet_speed / 1000.0 * (8*(size+20)))
 
     @staticmethod
     def set_background_flows(background_machines, number_of_flows):
         for machine in background_machines:
-            machine.set_flows(number_of_flows)
+            _ = machine.set_flows(number_of_flows)
 
     @staticmethod
     def set_background_speed(background_machines, speed):

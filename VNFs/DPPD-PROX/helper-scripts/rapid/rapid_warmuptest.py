@@ -42,7 +42,7 @@ class WarmupTest(RapidTest):
         self.gen_machine.set_generator_speed(WARMUPSPEED)
         self.gen_machine.set_udp_packet_size(imix)
     #    gen_machine['socket'].set_value(gencores,0,56,1,1)
-        self.gen_machine.set_flows(FLOWSIZE)
+        _ = self.gen_machine.set_flows(FLOWSIZE)
         self.gen_machine.start()
         time.sleep(WARMUPTIME)
         self.gen_machine.stop()

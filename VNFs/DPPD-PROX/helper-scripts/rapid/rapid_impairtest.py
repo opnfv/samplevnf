@@ -43,15 +43,15 @@ class ImpairTest(RapidTest):
         imix = self.test['imix']
         size = mean (imix)
         flow_number = self.test['flowsize']
+        attempts = 0
+        self.gen_machine.set_udp_packet_size(imix)
+        flow_number = self.gen_machine.set_flows(flow_number)
+        self.gen_machine.start_latency_cores()
         RapidLog.info("+-----------------------------------------------------------------------------------------------------------------------------------------------------------------+")
         RapidLog.info("| Generator is sending UDP ("+'{:>5}'.format(flow_number)+" flow) packets ("+ '{:>5}'.format(size) +" bytes) to SUT via GW dropping and delaying packets. SUT sends packets back. Use ctrl-c to stop the test    |")
         RapidLog.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+")
         RapidLog.info("| Test   |  Speed requested   | Sent to NIC    |  Sent by Gen   | Forward by SUT |  Rec. by Gen   |  Avg. Latency  |  Max. Latency  |  Packets Lost  | Loss Ratio |")
         RapidLog.info("+--------+--------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+------------+")
-        attempts = 0
-        self.gen_machine.set_udp_packet_size(imix)
-        self.gen_machine.set_flows(flow_number)
-        self.gen_machine.start_latency_cores()
         speed = self.test['startspeed']
         self.gen_machine.set_generator_speed(speed)
         while True:

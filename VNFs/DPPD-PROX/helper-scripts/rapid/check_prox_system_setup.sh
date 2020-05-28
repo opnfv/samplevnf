@@ -18,37 +18,38 @@ NCPUS="$(lscpu | egrep '^CPU\(s\):' | awk '{ print $2 }')"
 MAXCOREID="$((NCPUS-1))"
 
 filename="/etc/tuned/realtime-virtual-guest-variables.conf"
-logfile="/home/centos/prox_system_setup.log"
+#logfile="/home/centos/prox_system_setup.log"
+logfile="/opt/rapid/prox_system_setup.log"
 if [ -f "$filename" ]
 then
-        while read -r line
-        do
-                case $line in
-                        isolated_cores=1-$MAXCOREID*)
-                                echo "Isolated CPU(s) OK, no reboot: $line">>$logfile
-                                sed -i 's/PubkeyAuthentication no/PubkeyAuthentication yes/g' /etc/ssh/sshd_config
-                                service sshd restart
-                                modprobe uio
-                                insmod /home/centos/dpdk/build/kmod/igb_uio.ko
-                                exit 0
-                        ;;
-                        isolated_cores=*)
-                                echo "Isolated CPU(s) NOK, change the config and reboot: $line">>$logfile
-                                sed -i "/^isolated_cores=.*/c\isolated_cores=1-$MAXCOREID" $filename
-                                tuned-adm profile realtime-virtual-guest
-                                reboot
-                                exit 0
-                        ;;
-                        *)
-                                echo "$line"
-                        ;;
-                esac
-        done < "$filename"
-        echo "isolated_cores=1-$MAXCOREID" >> $filename
-        echo "No Isolated CPU(s) defined in config, line added: $line">>$logfile
-        tuned-adm profile realtime-virtual-guest
-        reboot
+    while read -r line
+    do
+        case $line in
+            isolated_cores=1-$MAXCOREID*)
+                echo "Isolated CPU(s) OK, no reboot: $line">>$logfile
+                sed -i 's/PubkeyAuthentication no/PubkeyAuthentication yes/g' /etc/ssh/sshd_config
+                service sshd restart
+                modprobe uio
+                insmod /opt/rapid/dpdk/build/kmod/igb_uio.ko
+                exit 0
+            ;;
+            isolated_cores=*)
+                echo "Isolated CPU(s) NOK, change the config and reboot: $line">>$logfile
+                sed -i "/^isolated_cores=.*/c\isolated_cores=1-$MAXCOREID" $filename
+                tuned-adm profile realtime-virtual-guest
+                reboot
+                exit 0
+            ;;
+            *)
+                echo "$line"
+            ;;
+        esac
+    done < "$filename"
+    echo "isolated_cores=1-$MAXCOREID" >> $filename
+    echo "No Isolated CPU(s) defined in config, line added: $line">>$logfile
+    tuned-adm profile realtime-virtual-guest
+    reboot
 else
-        echo "$filename not found.">>$logfile
+    echo "$filename not found.">>$logfile
 fi
 

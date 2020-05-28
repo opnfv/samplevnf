@@ -37,32 +37,43 @@ class RandomPortBits(object):
             # and that might be an invalid UDP port and result in 
             # packets begin discarded
         src_number_of_random_bits = number_of_random_bits // 2
-        dst_number_of_random_bits = number_of_random_bits - src_number_of_random_bits
-        src_port_bitmap = '1000000000000000'.replace ('0','X',src_number_of_random_bits)
-        dst_port_bitmap = '1000000000000000'.replace ('0','X',dst_number_of_random_bits)
-        return [src_port_bitmap, dst_port_bitmap]
+        dst_number_of_random_bits = (number_of_random_bits -
+                src_number_of_random_bits)
+        src_port_bitmap = '1000000000000000'.replace ('0','X',
+                src_number_of_random_bits)
+        dst_port_bitmap = '1000000000000000'.replace ('0','X',
+                dst_number_of_random_bits)
+        return [src_port_bitmap, dst_port_bitmap, 1<<number_of_random_bits]
 
 class RapidGeneratorMachine(RapidMachine):
     """
     Class to deal with rapid configuration files
     """
     def get_cores(self):
-        return (self.machine_params['gencores'] + self.machine_params['latcores'])
+        return (self.machine_params['gencores'] +
+                self.machine_params['latcores'])
 
     def generate_lua(self, vim):
-        appendix = 'gencores="%s"\n'% ','.join(map(str, self.machine_params['gencores']))
-        appendix = appendix + 'latcores="%s"\n'% ','.join(map(str, self.machine_params['latcores']))
+        appendix = 'gencores="%s"\n'% ','.join(map(str,
+            self.machine_params['gencores']))
+        appendix = appendix + 'latcores="%s"\n'% ','.join(map(str,
+            self.machine_params['latcores']))
         if 'gw_vm' in self.machine_params.keys():
-            for index, gw_ip in enumerate(self.machine_params['gw_ips'], start = 1):
+            for index, gw_ip in enumerate(self.machine_params['gw_ips'],
+                    start = 1):
                 appendix = appendix + 'gw_ip{}="{}"\n'.format(index, gw_ip)
-                appendix = appendix + 'gw_hex_ip{}="{}"\n'.format(index, self.ip2hex(gw_ip))
+                appendix = (appendix +
+                        'gw_hex_ip{}=convertIPToHex(gw_ip{})\n'.format(index,
+                            index))
         if 'bucket_size_exp' in self.machine_params.keys():
             self.bucket_size_exp = self.machine_params['bucket_size_exp']
         else:
             self.bucket_size_exp = 11
-        appendix = appendix + 'bucket_size_exp="{}"\n'.format(self.bucket_size_exp)
+        appendix = (appendix +
+                'bucket_size_exp="{}"\n'.format(self.bucket_size_exp))
         if 'heartbeat' in self.machine_params.keys():
-            appendix = appendix + 'heartbeat="%s"\n'% self.machine_params['heartbeat']
+            appendix = (appendix +
+                    'heartbeat="%s"\n'% self.machine_params['heartbeat'])
         else:
             appendix = appendix + 'heartbeat="60"\n'
         super().generate_lua(vim, appendix)
@@ -103,12 +114,13 @@ class RapidGeneratorMachine(RapidMachine):
                     prox_sizes)
 
     def set_flows(self, number_of_flows):
-        source_port,destination_port = RandomPortBits.get_bitmap(
+        source_port, destination_port, actualflows = RandomPortBits.get_bitmap(
                 number_of_flows)
         self.socket.set_random(self.machine_params['gencores'],0,34,
                 source_port,2)
         self.socket.set_random(self.machine_params['gencores'],0,36,
                 destination_port,2)
+        return actualflows
 
     def start_gen_cores(self):
         self.socket.start(self.machine_params['gencores'])

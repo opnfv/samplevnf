@@ -17,20 +17,13 @@
 
 # Directory for package build
 BUILD_DIR="/opt/rapid"
-# Directory where the packer tool has copied some files (e.g. check_prox_system_setup.sh)
-# Runtime scripts are assuming ${WORK_DIR} as the directory for PROX. Check the rundir variable in runrapid.py. Should be the same!
-# This variable is defined in 4 different places and should have the same value: centos.json, deploycentostools.sh, check_prox_system_setup.sh and runrapid.py
-WORK_DIR="/home/centos"
 DPDK_VERSION="19.05"
 PROX_COMMIT="b71a4cfd"
 PROX_CHECKOUT="git checkout ${PROX_COMMIT}"
 ## Next line is overruling the PROX_COMMIT and will replace the version with a very specific patch. Should be commented out
 ## 	if you want to use a committed version of PROX with the COMMIT ID specified above
-##PROX_CHECKOUT="git fetch \"https://gerrit.opnfv.org/gerrit/samplevnf\" refs/changes/75/69475/2 && git checkout FETCH_HEAD"
-##Following line has the commit for testing IMIX
-#PROX_CHECKOUT="git fetch \"https://gerrit.opnfv.org/gerrit/samplevnf\" refs/changes/88/69488/3 && git checkout FETCH_HEAD"
-##Following line has the commit for testing IMIX, IPV6, ... It is the merge of all PROX commits on May 12th
-PROX_CHECKOUT="git fetch \"https://gerrit.opnfv.org/gerrit/samplevnf\" refs/changes/59/69859/7 && git checkout FETCH_HEAD"
+##Following line has the commit for testing IMIX, IPV6, ... It is the merge of all PROX commits on May 27th 2020
+PROX_CHECKOUT="git fetch \"https://gerrit.opnfv.org/gerrit/samplevnf\" refs/changes/23/70223/1 && git checkout FETCH_HEAD"
 MULTI_BUFFER_LIB_VER="0.52"
 export RTE_SDK="${BUILD_DIR}/dpdk-${DPDK_VERSION}"
 export RTE_TARGET="x86_64-native-linuxapp-gcc"
@@ -89,9 +82,9 @@ function os_cfg()
 
 	# Install the check_tuned_params service to make sure that the grub cmd line has the right cpus in isolcpu. The actual number of cpu's
 	# assigned to this VM depends on the flavor used. We don't know at this time what that will be.
-	${SUDO} chmod +x ${WORK_DIR}/check_prox_system_setup.sh
-	${SUDO} cp -r ${WORK_DIR}/check_prox_system_setup.sh /usr/local/libexec/
-	${SUDO} cp -r ${WORK_DIR}/check-prox-system-setup.service /etc/systemd/system/
+	${SUDO} chmod +x ${HOME}/check_prox_system_setup.sh
+	${SUDO} mv ${HOME}/check_prox_system_setup.sh /usr/local/libexec/
+	${SUDO} mv ${HOME}/check-prox-system-setup.service /etc/systemd/system/
 	${SUDO} systemctl daemon-reload
 	${SUDO} systemctl enable check-prox-system-setup.service
     # Following lines are added to fix the following issue: When the VM gets
@@ -155,7 +148,7 @@ function dpdk_install()
 	tar -xf ./dpdk-${DPDK_VERSION}.tar.xz
 	popd > /dev/null 2>&1
 
-	${SUDO} ln -s ${RTE_SDK} ${WORK_DIR}/dpdk
+	${SUDO} ln -s ${RTE_SDK} ${BUILD_DIR}/dpdk
 
 	pushd ${RTE_SDK} > /dev/null 2>&1
 	make config T=${RTE_TARGET}
@@ -184,6 +177,7 @@ function prox_compile()
 	# Compile PROX
 	pushd ${BUILD_DIR}/samplevnf/VNFs/DPPD-PROX
 	make -j`getconf _NPROCESSORS_ONLN`
+	${SUDO} cp ${BUILD_DIR}/samplevnf/VNFs/DPPD-PROX/build/app/prox ${HOME}/prox
 	popd > /dev/null 2>&1
 }
 
@@ -193,10 +187,9 @@ function prox_install()
 	pushd ${BUILD_DIR} > /dev/null 2>&1
 	git clone https://git.opnfv.org/samplevnf
 	pushd ${BUILD_DIR}/samplevnf/VNFs/DPPD-PROX > /dev/null 2>&1
-	${PROX_CHECKOUT}
+	bash -c "${PROX_CHECKOUT}"
 	popd > /dev/null 2>&1
 	prox_compile
-	${SUDO} cp ${BUILD_DIR}/samplevnf/VNFs/DPPD-PROX/build/app/prox ${WORK_DIR}/prox
 	popd > /dev/null 2>&1
 }
 
@@ -206,16 +199,16 @@ function port_info_build()
 
 	pushd ${BUILD_DIR}/port_info > /dev/null 2>&1
 	make
-	${SUDO} cp ${BUILD_DIR}/port_info/build/app/port_info ${WORK_DIR}/port_info
+	${SUDO} cp ${BUILD_DIR}/port_info/build/app/port_info ${HOME}/port_info
 	popd > /dev/null 2>&1
 }
 
 function create_minimal_install()
 {
-	ldd ${WORK_DIR}/prox | awk '{ if ($(NF-1) != "=>") print $(NF-1) }' >> ${BUILD_DIR}/list_of_install_components
+	ldd ${HOME}/prox | awk '{ if ($(NF-1) != "=>") print $(NF-1) }' >> ${BUILD_DIR}/list_of_install_components
 
-	echo "${WORK_DIR}/prox" >> ${BUILD_DIR}/list_of_install_components
-	echo "${WORK_DIR}/port_info" >> ${BUILD_DIR}/list_of_install_components
+	echo "${HOME}/prox" >> ${BUILD_DIR}/list_of_install_components
+	echo "${HOME}/port_info" >> ${BUILD_DIR}/list_of_install_components
 
 	tar -czvhf ${BUILD_DIR}/install_components.tgz -T ${BUILD_DIR}/list_of_install_components
 }

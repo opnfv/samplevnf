@@ -22,7 +22,7 @@ lat_percentile = 99
 
 [TestM1]
 name = Generator
-config_file = gen.cfg
+config_file = genv6.cfg
 dest_vm = 2
 gencores = [1]
 latcores = [3]
@@ -30,7 +30,7 @@ latcores = [3]
 
 [TestM2]
 name = Swap
-config_file = swap.cfg
+config_file = swapv6.cfg
 cores = [1,2]
 #prox_socket = true
 #prox_launch_exit = true
@@ -49,11 +49,7 @@ test=flowsizetest
 # all combinations must be meeting the same threshold
 # The threshold is expressed in Mpps
 pass_threshold=0.1
-# Each element in the imix list will result in a separate test. Each element
-# is on its turn a list of packet sizes which will be used during one test
-# execution. If you only want to test 1 size, define a list with only one
-# element.
-imixs=[[64],[64,250,800,800]]
+imixs=[[64], [128]]
 # the number of flows in the list need to be powers of 2, max 2^30
 # If not a power of 2, we will use the lowest power of 2 that is larger than
 # the requested number of flows. e.g. 9 will result in 16 flows

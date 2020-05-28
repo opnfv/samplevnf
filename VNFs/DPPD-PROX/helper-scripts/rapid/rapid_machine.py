@@ -24,11 +24,6 @@ class RapidMachine(object):
     """
     Class to deal with rapid configuration files
     """
-    @staticmethod
-    def ip2hex(ip):
-        ip = ip.split('.')
-        return(hex(int(ip[0]))[2:].zfill(2) + ' ' + hex(int(ip[1]))[2:].zfill(2) + ' ' + hex(int(ip[2]))[2:].zfill(2) + ' ' + hex(int(ip[3]))[2:].zfill(2))
-
     def __init__(self, key, user, vim, rundir, machine_params):
         self.name = machine_params['name']
         self.ip = machine_params['admin_ip']
@@ -78,10 +73,11 @@ class RapidMachine(object):
         self.all_tasks_for_this_cfg = set(re.findall("task\s*=\s*(\d+)",PROXConfig))
         self.LuaFileName = 'parameters-{}.lua'.format(self.ip)
         with open(self.LuaFileName, "w") as LuaFile:
+            LuaFile.write('require "helper"\n')
             LuaFile.write('name="%s"\n'% self.name)
             for index, dp_port in enumerate(self.dp_ports, start = 1):
                 LuaFile.write('local_ip{}="{}"\n'.format(index, dp_port['ip']))
-                LuaFile.write('local_hex_ip{}="{}"\n'.format(index, self.ip2hex(dp_port['ip'])))
+                LuaFile.write('local_hex_ip{}=convertIPToHex(local_ip{})\n'.format(index, index))
             if vim in ['kubernetes']:
                 LuaFile.write("eal=\"--socket-mem=512,0 --file-prefix %s --pci-whitelist %s\"\n" % (self.name, self.machine_params['dp_pci_dev']))
             else:
@@ -93,11 +89,11 @@ class RapidMachine(object):
             if 'dest_ports' in self.machine_params.keys():
                 for index, dest_port in enumerate(self.machine_params['dest_ports'], start = 1):
                     LuaFile.write('dest_ip{}="{}"\n'.format(index, dest_port['ip']))
-                    LuaFile.write('dest_hex_ip{}="{}"\n'.format(index, self.ip2hex(dest_port['ip'])))
-                    LuaFile.write('dest_hex_ip{}="{}"\n'.format(index, self.ip2hex(dest_port['ip'])))
+                    LuaFile.write('dest_hex_ip{}=convertIPToHex(dest_ip{})\n'.format(index, index))
                     LuaFile.write('dest_hex_mac{}="{}"\n'.format(index , dest_port['mac'].replace(':',' ')))
             LuaFile.write(appendix)
         self._client.scp_put(self.LuaFileName, self.rundir + '/parameters.lua')
+        self._client.scp_put('helper.lua', self.rundir + '/helper.lua')
 
     def start_prox(self, autostart=''):
         if self.machine_params['prox_launch_exit']:
