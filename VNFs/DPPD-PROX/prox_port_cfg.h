@@ -83,6 +83,7 @@ struct prox_port_cfg {
 	prox_rte_ether_addr mc_addr[NB_MCAST_ADDR];
 	int dpdk_mapping;
 	uint32_t ip;
+	uint8_t netmask;
 	int fd;
 	uint32_t vlan_tag;
 };

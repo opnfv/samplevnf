@@ -46,7 +46,7 @@ static void task_update_config(struct task_arp *task)
 
 static void handle_arp(struct task_arp *task, struct ether_hdr_arp *hdr, prox_rte_ether_addr *s_addr)
 {
-	build_arp_reply(hdr, s_addr);
+	build_arp_reply((prox_rte_ether_hdr *)hdr, s_addr, &hdr->arp);
 }
 
 static int handle_arp_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts)
@@ -61,7 +61,7 @@ static int handle_arp_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 	for (uint16_t j = 0; j < n_pkts; ++j) {
 		hdr = rte_pktmbuf_mtod(mbufs[j], struct ether_hdr_arp *);
 		if (hdr->ether_hdr.ether_type == ETYPE_ARP) {
-			if (arp_is_gratuitous(hdr)) {
+			if (arp_is_gratuitous(&hdr->arp)) {
 				out[n_other_pkts] = OUT_DISCARD;
 				n_other_pkts++;
 				plog_info("Received gratuitous packet \n");
@@ -71,7 +71,7 @@ static int handle_arp_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 					out[n_arp_pkts] = task->arp_replies_ring;
 					n_arp_pkts++;
 				} else if (task->ip == 0) {
-					create_mac(hdr, &s_addr);
+					create_mac(&hdr->arp, &s_addr);
 					handle_arp(task, hdr, &s_addr);
 					replies_mbufs[n_arp_reply_pkts] = mbufs[j];
 					out[n_arp_reply_pkts] = 0;

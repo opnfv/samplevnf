@@ -311,7 +311,7 @@ int parse_ip(uint32_t *addr, const char *str2)
 	return 0;
 }
 
-int parse_ip4_cidr(struct ip4_subnet *val, const char *str2)
+int parse_ip4_and_prefix(struct ip4_subnet *val, const char *str2)
 {
 	char str[MAX_STR_LEN_PROC];
 	char *slash;
@@ -341,10 +341,16 @@ int parse_ip4_cidr(struct ip4_subnet *val, const char *str2)
 	if (parse_ip(&val->ip, str))
 		return -2;
 
-	/* Apply mask making all bits outside the prefix zero */
-	val->ip &= ((int)(1 << 31)) >> (prefix - 1);
-
 	return 0;
+}
+
+int parse_ip4_cidr(struct ip4_subnet *val, const char *str2)
+{
+	int rc = parse_ip4_and_prefix(val, str2);
+	/* Apply mask making all bits outside the prefix zero */
+	val->ip &= ((int)(1 << 31)) >> (val->prefix - 1);
+
+	return rc;
 }
 
 int parse_ip6_cidr(struct ip6_subnet *val, const char *str2)

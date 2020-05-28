@@ -66,11 +66,12 @@ int tx_pkt_ndp(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts
 	int first = 0, ret, ok = 0, rc;
 	const struct port_queue *port_queue = &tbase->tx_params_hw.tx_port_queue[0];
 	struct rte_mbuf *mbuf = NULL;       // used when one need to send both an ARP and a mbuf
+	uint16_t vlan;
 
 	for (int j = 0; j < n_pkts; j++) {
 		if ((out) && (out[j] >= OUT_HANDLED))
 			continue;
-		if (unlikely((rc = write_ip6_dst_mac(tbase, mbufs[j], &ip_dst)) != SEND_MBUF)) {
+		if (unlikely((rc = write_ip6_dst_mac(tbase, mbufs[j], &ip_dst, &vlan)) != SEND_MBUF)) {
 			if (j - first) {
 				ret = tbase->aux->tx_pkt_l2(tbase, mbufs + first, j - first, out);
 				ok += ret;
@@ -83,7 +84,7 @@ int tx_pkt_ndp(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts
 				if (likely(ret == 0))   {
 					store_packet(tbase, mbufs[j]);
 					mbuf->port = tbase->l3.reachable_port_id;
-					tx_ring_cti6(tbase, tbase->l3.ctrl_plane_ring, IP6_REQ_MAC_TO_MASTER, mbuf, tbase->l3.core_id, tbase->l3.task_id, &ip_dst);
+					tx_ring_cti6(tbase, tbase->l3.ctrl_plane_ring, IP6_REQ_MAC_TO_MASTER, mbuf, tbase->l3.core_id, tbase->l3.task_id, &ip_dst, vlan);
 				} else {
 					plog_err("Failed to get a mbuf from arp/nd mempool\n");
 					tx_drop(mbufs[j]);
@@ -95,7 +96,7 @@ int tx_pkt_ndp(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts
 				ret = rte_mempool_get(tbase->l3.arp_nd_pool, (void **)&mbuf);
 				if (likely(ret == 0))   {
 					mbuf->port = tbase->l3.reachable_port_id;
-					tx_ring_cti6(tbase, tbase->l3.ctrl_plane_ring, IP6_REQ_MAC_TO_MASTER, mbuf, tbase->l3.core_id, tbase->l3.task_id, &ip_dst);
+					tx_ring_cti6(tbase, tbase->l3.ctrl_plane_ring, IP6_REQ_MAC_TO_MASTER, mbuf, tbase->l3.core_id, tbase->l3.task_id, &ip_dst, vlan);
 				} else {
 					plog_err("Failed to get a mbuf from arp/nd mempool\n");
 					// We still send the initial mbuf
@@ -118,6 +119,7 @@ int tx_pkt_ndp(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts
 int tx_pkt_l3(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts, uint8_t *out)
 {
 	uint32_t ip_dst;
+	uint16_t vlan;
 	int first = 0, ret, ok = 0, rc;
 	const struct port_queue *port_queue = &tbase->tx_params_hw.tx_port_queue[0];
 	struct rte_mbuf *arp_mbuf = NULL;       // used when one need to send both an ARP and a mbuf
@@ -127,7 +129,7 @@ int tx_pkt_l3(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts,
 	for (int j = 0; j < n_pkts; j++) {
 		if ((out) && (out[j] >= OUT_HANDLED))
 			continue;
-		if (unlikely((rc = write_dst_mac(tbase, mbufs[j], &ip_dst, &time, tsc)) != SEND_MBUF)) {
+		if (unlikely((rc = write_dst_mac(tbase, mbufs[j], &ip_dst, &vlan, &time, tsc)) != SEND_MBUF)) {
 			if (j - first) {
 				ret = tbase->aux->tx_pkt_l2(tbase, mbufs + first, j - first, out);
 				ok += ret;
@@ -137,7 +139,7 @@ int tx_pkt_l3(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts,
 			case SEND_ARP_ND:
 				// We re-use the mbuf - no need to create a arp_mbuf and delete the existing mbuf
 				mbufs[j]->port = tbase->l3.reachable_port_id;
-				if (tx_ring_cti(tbase, tbase->l3.ctrl_plane_ring, IP4_REQ_MAC_TO_MASTER, mbufs[j], tbase->l3.core_id, tbase->l3.task_id, ip_dst) == 0)
+				if (tx_ring_cti(tbase, tbase->l3.ctrl_plane_ring, IP4_REQ_MAC_TO_MASTER, mbufs[j], tbase->l3.core_id, tbase->l3.task_id, ip_dst, vlan) == 0)
 					update_arp_ndp_retransmit_timeout(&tbase->l3, time, 1000);
 				else
 					update_arp_ndp_retransmit_timeout(&tbase->l3, time, 100);
@@ -147,7 +149,7 @@ int tx_pkt_l3(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts,
 				ret = rte_mempool_get(tbase->l3.arp_nd_pool, (void **)&arp_mbuf);
 				if (likely(ret == 0))   {
 					arp_mbuf->port = tbase->l3.reachable_port_id;
-					if (tx_ring_cti(tbase, tbase->l3.ctrl_plane_ring, IP4_REQ_MAC_TO_MASTER, arp_mbuf, tbase->l3.core_id, tbase->l3.task_id, ip_dst) == 0)
+					if (tx_ring_cti(tbase, tbase->l3.ctrl_plane_ring, IP4_REQ_MAC_TO_MASTER, arp_mbuf, tbase->l3.core_id, tbase->l3.task_id, ip_dst, vlan) == 0)
 						update_arp_ndp_retransmit_timeout(&tbase->l3, time, 1000);
 					else
 						update_arp_ndp_retransmit_timeout(&tbase->l3, time, 100);
@@ -878,9 +880,10 @@ static inline int tx_ring_all(struct task_base *tbase, struct rte_ring *ring, ui
 	return rte_ring_enqueue(ring, mbuf);
 }
 
-int tx_ring_cti(struct task_base *tbase, struct rte_ring *ring, uint8_t command,  struct rte_mbuf *mbuf, uint8_t core_id, uint8_t task_id, uint32_t ip)
+int tx_ring_cti(struct task_base *tbase, struct rte_ring *ring, uint8_t command,  struct rte_mbuf *mbuf, uint8_t core_id, uint8_t task_id, uint32_t ip, uint16_t vlan)
 {
 	plogx_dbg("\tSending command %s with ip %d.%d.%d.%d to ring %p using mbuf %p, core %d and task %d - ring size now %d\n", actions_string[command], IP4(ip), ring, mbuf, core_id, task_id, rte_ring_free_count(ring));
+	ctrl_ring_set_vlan(mbuf, vlan);
 	int ret = tx_ring_all(tbase, ring, command,  mbuf, core_id, task_id, ip);
 	if (unlikely(ret != 0)) {
 		plogx_dbg("\tFail to send command %s with ip %d.%d.%d.%d to ring %p using mbuf %p, core %d and task %d - ring size now %d\n", actions_string[command], IP4(ip), ring, mbuf, core_id, task_id, rte_ring_free_count(ring));
@@ -936,7 +939,7 @@ void tx_ring_route(struct task_base *tbase, struct rte_ring *ring, int add, stru
 	}
 }
 
-void tx_ring_cti6(struct task_base *tbase, struct rte_ring *ring, uint8_t command,  struct rte_mbuf *mbuf, uint8_t core_id, uint8_t task_id, struct ipv6_addr *ip)
+void tx_ring_cti6(struct task_base *tbase, struct rte_ring *ring, uint8_t command,  struct rte_mbuf *mbuf, uint8_t core_id, uint8_t task_id, struct ipv6_addr *ip, uint16_t vlan)
 {
 	int ret;
 	plogx_dbg("\tSending command %s with ip "IPv6_BYTES_FMT" to ring %p using mbuf %p, core %d and task %d - ring size now %d\n", actions_string[command], IPv6_BYTES(ip->bytes), ring, mbuf, core_id, task_id, rte_ring_free_count(ring));
@@ -945,6 +948,7 @@ void tx_ring_cti6(struct task_base *tbase, struct rte_ring *ring, uint8_t comman
 	}
 	ctrl_ring_set_command_core_task_ip(mbuf, (core_id << 16) | (task_id << 8) | command);
 	ctrl_ring_set_ipv6_addr(mbuf, ip);
+	ctrl_ring_set_vlan(mbuf, vlan);
 	ret = rte_ring_enqueue(ring, mbuf);
 
 	if (unlikely(ret != 0)) {

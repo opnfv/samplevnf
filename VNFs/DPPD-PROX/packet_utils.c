@@ -36,7 +36,7 @@
 #include "prox_ipv6.h"
 #include "tx_pkt.h"
 
-static inline int find_ip(struct ether_hdr_arp *pkt, uint16_t len, uint32_t *ip_dst)
+static inline int find_ip(struct ether_hdr_arp *pkt, uint16_t len, uint32_t *ip_dst, uint16_t *vlan)
 {
 	prox_rte_vlan_hdr *vlan_hdr;
 	prox_rte_ether_hdr *eth_hdr = (prox_rte_ether_hdr*)pkt;
@@ -44,11 +44,13 @@ static inline int find_ip(struct ether_hdr_arp *pkt, uint16_t len, uint32_t *ip_
 	uint16_t ether_type = eth_hdr->ether_type;
 	uint16_t l2_len = sizeof(prox_rte_ether_hdr);
 
+	*vlan = 0;
 	// Unstack VLAN tags
 	while (((ether_type == ETYPE_8021ad) || (ether_type == ETYPE_VLAN)) && (l2_len + sizeof(prox_rte_vlan_hdr) < len)) {
 		vlan_hdr = (prox_rte_vlan_hdr *)((uint8_t *)pkt + l2_len);
 		l2_len +=4;
 		ether_type = vlan_hdr->eth_proto;
+		*vlan = rte_be_to_cpu_16(vlan_hdr->vlan_tci & 0xFF0F);	// Store VLAN, or CVLAN if QinQ
 	}
 
 	switch (ether_type) {
@@ -79,18 +81,20 @@ static inline int find_ip(struct ether_hdr_arp *pkt, uint16_t len, uint32_t *ip_
 	return -1;
 }
 
-static inline struct ipv6_addr *find_ip6(prox_rte_ether_hdr *pkt, uint16_t len, struct ipv6_addr *ip_dst)
+static inline struct ipv6_addr *find_ip6(prox_rte_ether_hdr *pkt, uint16_t len, struct ipv6_addr *ip_dst, uint16_t *vlan)
 {
 	prox_rte_vlan_hdr *vlan_hdr;
 	prox_rte_ipv6_hdr *ip;
 	uint16_t ether_type = pkt->ether_type;
 	uint16_t l2_len = sizeof(prox_rte_ether_hdr);
 
+	*vlan = 0;
 	// Unstack VLAN tags
 	while (((ether_type == ETYPE_8021ad) || (ether_type == ETYPE_VLAN)) && (l2_len + sizeof(prox_rte_vlan_hdr) < len)) {
 		vlan_hdr = (prox_rte_vlan_hdr *)((uint8_t *)pkt + l2_len);
 		l2_len +=4;
 		ether_type = vlan_hdr->eth_proto;
+		*vlan = rte_be_to_cpu_16(vlan_hdr->vlan_tci & 0xFF0F);	// Store VLAN, or CVLAN if QinQ
 	}
 
 	switch (ether_type) {
@@ -199,7 +203,7 @@ static inline int update_mac_and_send_mbuf(struct arp_table *entry, prox_rte_eth
 	return DROP_MBUF;
 }
 
-int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_dst, uint64_t **time, uint64_t tsc)
+int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_dst, uint16_t *vlan, uint64_t **time, uint64_t tsc)
 {
 	const uint64_t hz = rte_get_tsc_hz();
 	struct ether_hdr_arp *packet = rte_pktmbuf_mtod(mbuf, struct ether_hdr_arp *);
@@ -215,7 +219,7 @@ int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_d
 		// If a gw (gateway_ipv4) is also specified, it is used as default gw only i.e. lowest priority (shortest prefix)
 		// This is implemented automatically through lpm
 		uint16_t len = rte_pktmbuf_pkt_len(mbuf);
-		if (find_ip(packet, len, ip_dst) != 0) {
+		if (find_ip(packet, len, ip_dst, vlan) != 0) {
 			// Unable to find IP address => non IP packet => send it as it
 			return SEND_MBUF;
 		}
@@ -223,7 +227,7 @@ int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_d
 			// Prevent printing too many messages
 			n_no_route++;
 			if (tsc > last_tsc + rte_get_tsc_hz()) {
-				plog_err("No route to IP "IPv4_BYTES_FMT" (%ld times)\n", IP4(*ip_dst), n_no_route);
+				plogx_err("No route to IP "IPv4_BYTES_FMT" (%ld times)\n", IP4(*ip_dst), n_no_route);
 				last_tsc = tsc;
 				n_no_route = 0;
 			}
@@ -275,7 +279,7 @@ int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_d
 	}
 
 	uint16_t len = rte_pktmbuf_pkt_len(mbuf);
-	if (find_ip(packet, len, ip_dst) != 0) {
+	if (find_ip(packet, len, ip_dst, vlan) != 0) {
 		// Unable to find IP address => non IP packet => send it as it
 		return SEND_MBUF;
 	}
@@ -324,7 +328,7 @@ int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_d
 	return DROP_MBUF;
 }
 
-int write_ip6_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, struct ipv6_addr *ip_dst)
+int write_ip6_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, struct ipv6_addr *ip_dst, uint16_t *vlan)
 {
 	const uint64_t hz = rte_get_tsc_hz();
 	prox_rte_ether_hdr *packet = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
@@ -335,7 +339,7 @@ int write_ip6_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, struct ipv
 	uint16_t len = rte_pktmbuf_pkt_len(mbuf);
 
 	struct ipv6_addr *pkt_src_ip6;
-	if ((pkt_src_ip6 = find_ip6(packet, len, ip_dst)) == NULL) {
+	if ((pkt_src_ip6 = find_ip6(packet, len, ip_dst, vlan)) == NULL) {
 		// Unable to find IP address => non IP packet => send it as it
 		return SEND_MBUF;
 	}
