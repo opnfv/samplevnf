@@ -173,7 +173,7 @@ void master_init_vdev(struct task_base *tbase, uint8_t port_id, uint8_t core_id,
 		PROX_PANIC(fd < 0, "Failed to open socket(AF_INET,  SOCK_DGRAM, 0)\n");
 		prox_port_cfg[vdev_port].fd = fd;
 		rc = bind(fd,(struct sockaddr *)&src, sizeof(struct sockaddr_in));
-		PROX_PANIC(rc, "Failed to bind("IPv4_BYTES_FMT":%d): errno = %d\n", IPv4_BYTES(((uint8_t*)&src.sin_addr.s_addr)), src.sin_port, errno);
+		PROX_PANIC(rc, "Failed to bind("IPv4_BYTES_FMT":%d): errno = %d (%s)\n", IPv4_BYTES(((uint8_t*)&src.sin_addr.s_addr)), src.sin_port, errno, strerror(errno));
 		plog_info("DPDK port %d bound("IPv4_BYTES_FMT":%d) to fd %d\n", port_id, IPv4_BYTES(((uint8_t*)&src.sin_addr.s_addr)), src.sin_port, fd);
 		fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
 		task->max_vdev_id++;
@@ -214,12 +214,11 @@ void register_ip_to_ctrl_plane(struct task_base *tbase, uint32_t ip, uint8_t por
 	task->internal_ip_table[ret].ring = task->ctrl_tx_rings[core_id * MAX_TASKS_PER_CORE + task_id];
 }
 
-static inline void handle_arp_reply(struct task_base *tbase, struct rte_mbuf *mbuf)
+static inline void handle_arp_reply(struct task_base *tbase, struct rte_mbuf *mbuf, struct my_arp_t *arp)
 {
 	struct task_master *task = (struct task_master *)tbase;
-	struct ether_hdr_arp *hdr_arp = rte_pktmbuf_mtod(mbuf, struct ether_hdr_arp *);
 	int i, ret;
-	uint32_t key = hdr_arp->arp.data.spa;
+	uint32_t key = arp->data.spa;
 	plogx_dbg("\tMaster handling ARP reply for ip "IPv4_BYTES_FMT"\n", IP4(key));
 
 	ret = rte_hash_lookup(task->external_ip_hash, (const void *)&key);
@@ -243,23 +242,23 @@ static inline void handle_arp_reply(struct task_base *tbase, struct rte_mbuf *mb
 	}
 }
 
-static inline void handle_arp_request(struct task_base *tbase, struct rte_mbuf *mbuf)
+static inline void handle_arp_request(struct task_base *tbase, struct rte_mbuf *mbuf, struct my_arp_t *arp)
 {
 	struct task_master *task = (struct task_master *)tbase;
-	struct ether_hdr_arp *hdr_arp = rte_pktmbuf_mtod(mbuf, struct ether_hdr_arp *);
+	prox_rte_ether_hdr *ether_hdr = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 	int i, ret;
 	uint8_t port = get_port(mbuf);
 
 	struct ip_port key;
-	key.ip = hdr_arp->arp.data.tpa;
+	key.ip = arp->data.tpa;
 	key.port = port;
 	if (task->internal_port_table[port].flags & HANDLE_RANDOM_IP_FLAG) {
 		prox_rte_ether_addr mac;
 		plogx_dbg("\tMaster handling ARP request for ip "IPv4_BYTES_FMT" on port %d which supports random ip\n", IP4(key.ip), key.port);
 		struct rte_ring *ring = task->internal_port_table[port].ring;
-		create_mac(hdr_arp, &mac);
+		create_mac(arp, &mac);
 		mbuf->ol_flags &= ~(PKT_TX_IP_CKSUM|PKT_TX_UDP_CKSUM);
-		build_arp_reply(hdr_arp, &mac);
+		build_arp_reply(ether_hdr, &mac, arp);
 		tx_ring(tbase, ring, SEND_ARP_REPLY_FROM_MASTER, mbuf);
 		return;
 	}
@@ -269,12 +268,12 @@ static inline void handle_arp_request(struct task_base *tbase, struct rte_mbuf *
 	ret = rte_hash_lookup(task->internal_ip_hash, (const void *)&key);
 	if (unlikely(ret < 0)) {
 		// entry not found for this IP.
-		plogx_dbg("Master ignoring ARP REQUEST received on un-registered IP "IPv4_BYTES_FMT" on port %d\n", IP4(hdr_arp->arp.data.tpa), port);
+		plogx_dbg("Master ignoring ARP REQUEST received on un-registered IP "IPv4_BYTES_FMT" on port %d\n", IP4(arp->data.tpa), port);
 		tx_drop(mbuf);
 	} else {
 		struct rte_ring *ring = task->internal_ip_table[ret].ring;
 		mbuf->ol_flags &= ~(PKT_TX_IP_CKSUM|PKT_TX_UDP_CKSUM);
-		build_arp_reply(hdr_arp, &task->internal_ip_table[ret].mac);
+		build_arp_reply(ether_hdr, &task->internal_ip_table[ret].mac, arp);
 		tx_ring(tbase, ring, SEND_ARP_REPLY_FROM_MASTER, mbuf);
 	}
 }
@@ -316,6 +315,7 @@ static inline void handle_unknown_ip(struct task_base *tbase, struct rte_mbuf *m
 	struct ether_hdr_arp *hdr_arp = rte_pktmbuf_mtod(mbuf, struct ether_hdr_arp *);
 	uint8_t port = get_port(mbuf);
 	uint32_t ip_dst = get_ip(mbuf);
+	uint16_t vlan = ctrl_ring_get_vlan(mbuf);
 
 	plogx_dbg("\tMaster handling unknown ip "IPv4_BYTES_FMT" for port %d\n", IP4(ip_dst), port);
 	if (unlikely(port >= PROX_MAX_PORTS)) {
@@ -338,7 +338,7 @@ static inline void handle_unknown_ip(struct task_base *tbase, struct rte_mbuf *m
 	}
 	// We send an ARP request even if one was just sent (and not yet answered) by another task
 	mbuf->ol_flags &= ~(PKT_TX_IP_CKSUM|PKT_TX_UDP_CKSUM);
-	build_arp_request(mbuf, &task->internal_port_table[port].mac, ip_dst, ip_src);
+	build_arp_request(mbuf, &task->internal_port_table[port].mac, ip_dst, ip_src, vlan);
 	tx_ring(tbase, ring, SEND_ARP_REQUEST_FROM_MASTER, mbuf);
 }
 
@@ -710,14 +710,15 @@ static inline void handle_na(struct task_base *tbase, struct rte_mbuf *mbuf)
 static inline void handle_message(struct task_base *tbase, struct rte_mbuf *mbuf, int ring_id)
 {
 	struct task_master *task = (struct task_master *)tbase;
-	struct ether_hdr_arp *hdr_arp;
-	prox_rte_ether_hdr *hdr;
+	prox_rte_ether_hdr *ether_hdr;
 	struct icmpv6 *icmpv6;
 	int command = get_command(mbuf);
 	uint8_t port = get_port(mbuf);
 	uint32_t ip;
+	uint16_t vlan, ether_type;
 	uint8_t vdev_port = prox_port_cfg[port].dpdk_mapping;
 	plogx_dbg("\tMaster received %s (%x) from mbuf %p\n", actions_string[command], command, mbuf);
+	struct my_arp_t *arp;
 
 	switch(command) {
 	case BGP_TO_MASTER:
@@ -748,22 +749,32 @@ static inline void handle_message(struct task_base *tbase, struct rte_mbuf *mbuf
 			int n = rte_eth_tx_burst(prox_port_cfg[port].dpdk_mapping, 0, &mbuf, 1);
 			return;
 		}
-		hdr_arp = rte_pktmbuf_mtod(mbuf, struct ether_hdr_arp *);
-		if (hdr_arp->ether_hdr.ether_type != ETYPE_ARP) {
-			plog_err("\tUnexpected message received: ARP_PKT_FROM_NET_TO_MASTER with ether_type %x\n", hdr_arp->ether_hdr.ether_type);
+		ether_hdr = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
+		ether_type = ether_hdr->ether_type;
+		if (ether_type == ETYPE_VLAN) {
+			prox_rte_vlan_hdr *vlan_hdr = (prox_rte_vlan_hdr *)(ether_hdr + 1);
+			arp = (struct my_arp_t *)(vlan_hdr + 1);
+			ether_type = vlan_hdr->eth_proto;
+		}  else {
+			arp = (struct my_arp_t *)(ether_hdr + 1);
+		}
+
+		if (ether_type != ETYPE_ARP) {
+			plog_err("\tUnexpected message received: ARP_PKT_FROM_NET_TO_MASTER with ether_type %x\n", ether_type);
 			tx_drop(mbuf);
 			return;
-		} else if (arp_is_gratuitous(hdr_arp)) {
+		}
+		if (arp_is_gratuitous(arp)) {
 			plog_info("\tReceived gratuitous packet \n");
 			tx_drop(mbuf);
 			return;
-		} else if (memcmp(&hdr_arp->arp, &arp_reply, 8) == 0) {
-			uint32_t ip = hdr_arp->arp.data.spa;
-			handle_arp_reply(tbase, mbuf);
-		} else if (memcmp(&hdr_arp->arp, &arp_request, 8) == 0) {
-			handle_arp_request(tbase, mbuf);
+		} else if (memcmp(arp, &arp_reply, 8) == 0) {
+			// uint32_t ip = arp->data.spa;
+			handle_arp_reply(tbase, mbuf, arp);
+		} else if (memcmp(arp, &arp_request, 8) == 0) {
+			handle_arp_request(tbase, mbuf, arp);
 		} else {
-			plog_info("\tReceived unexpected ARP operation %d\n", hdr_arp->arp.oper);
+			plog_info("\tReceived unexpected ARP operation %d\n", arp->oper);
 			tx_drop(mbuf);
 			return;
 		}
@@ -798,8 +809,12 @@ static inline void handle_message(struct task_base *tbase, struct rte_mbuf *mbuf
 			dst.sin_family = AF_INET;
 			dst.sin_addr.s_addr = ip;
 			dst.sin_port = rte_cpu_to_be_16(PROX_PSEUDO_PKT_PORT);
-			int n = sendto(prox_port_cfg[vdev_port].fd, (char*)(&ip), 0, 0,  (struct sockaddr *)&dst, sizeof(struct sockaddr_in));
-			plogx_dbg("\tSent %d bytes to TAP IP "IPv4_BYTES_FMT" using fd %d\n", n, IPv4_BYTES(((uint8_t*)&ip)), prox_port_cfg[vdev_port].fd);
+			// TODO VLAN: find the right fd based on the VLAN
+			int n = sendto(prox_port_cfg[vdev_port].fd, (char*)(&ip), 0, MSG_DONTROUTE,  (struct sockaddr *)&dst, sizeof(struct sockaddr_in));
+			if (n < 0) {
+				plogx_info("\tFailed to send to TAP IP "IPv4_BYTES_FMT" using fd %d, error = %d (%s)\n", IPv4_BYTES(((uint8_t*)&ip)), prox_port_cfg[vdev_port].fd, errno, strerror(errno));
+			} else
+				plogx_dbg("\tSent %d bytes to TAP IP "IPv4_BYTES_FMT" using fd %d\n", n, IPv4_BYTES(((uint8_t*)&ip)), prox_port_cfg[vdev_port].fd);
 
 			record_request(tbase, ip, port, ring);
 			tx_drop(mbuf);
@@ -811,14 +826,14 @@ static inline void handle_message(struct task_base *tbase, struct rte_mbuf *mbuf
 		handle_unknown_ip6(tbase, mbuf);
 		break;
 	case NDP_PKT_FROM_NET_TO_MASTER:
-		hdr = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
-		prox_rte_ipv6_hdr *ipv6_hdr = (prox_rte_ipv6_hdr *)(hdr + 1);
-		if (unlikely((hdr->ether_type != ETYPE_IPv6) || (ipv6_hdr->proto != ICMPv6))) {
+		ether_hdr = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
+		prox_rte_ipv6_hdr *ipv6_hdr = (prox_rte_ipv6_hdr *)(ether_hdr + 1);
+		if (unlikely((ether_hdr->ether_type != ETYPE_IPv6) || (ipv6_hdr->proto != ICMPv6))) {
 			// Should not happen
-			if (hdr->ether_type != ETYPE_IPv6)
-				plog_err("\tUnexpected message received: NDP_PKT_FROM_NET_TO_MASTER with ether_type %x\n", hdr->ether_type);
+			if (ether_hdr->ether_type != ETYPE_IPv6)
+				plog_err("\tUnexpected message received: NDP_PKT_FROM_NET_TO_MASTER with ether_type %x\n", ether_hdr->ether_type);
 			else
-				plog_err("\tUnexpected message received: NDP_PKT_FROM_NET_TO_MASTER with ether_type %x and proto %x\n", hdr->ether_type, ipv6_hdr->proto);
+				plog_err("\tUnexpected message received: NDP_PKT_FROM_NET_TO_MASTER with ether_type %x and proto %x\n", ether_hdr->ether_type, ipv6_hdr->proto);
 			tx_drop(mbuf);
 			return;
 		}

@@ -85,6 +85,8 @@ struct prox_port_cfg {
 	uint32_t ip;
 	int fd;
 	uint32_t vlan_tag;
+	uint8_t prefix;
+	uint8_t is_vdev;
 };
 
 extern rte_atomic32_t lsc;

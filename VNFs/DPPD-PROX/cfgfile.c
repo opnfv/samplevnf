@@ -274,6 +274,11 @@ int cfg_parse(struct cfg_file *pcfg, struct cfg_section *psec)
 			do {
 
 				ret = fgets(buffer, sizeof(buffer), pcfg->pfile);
+				/* remove comments */
+				if (*ret == ';') {
+					*ret = '\0';
+				}
+
 				if (ret && *ret != '[') {
 					size_t l = strlen(buffer);
 					prox_strncpy(lines, buffer, max_len);

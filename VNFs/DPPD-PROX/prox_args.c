@@ -568,7 +568,15 @@ static int get_port_cfg(unsigned sindex, char *str, void *data)
 		cfg->lsc_val = val;
 	}
 	else if (STR_EQ(str, "local ipv4")) {
-		return parse_ip(&cfg->ip, pkey);
+		struct ip4_subnet cidr;
+		if (parse_ip4_and_prefix(&cidr, pkey) != 0) {
+			cfg->prefix = 24;
+			return parse_ip(&cfg->ip, pkey);
+		} else {
+			cfg->ip = cidr.ip;
+			cfg->prefix = cidr.prefix;
+			return 0;
+		}
 	}
 	else if (STR_EQ(str, "vdev")) {
 		prox_strncpy(cfg->vdev, pkey, MAX_NAME_SIZE);
@@ -1474,7 +1482,7 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 	}
 	if (STR_EQ(str, "local ipv4")) { /* source IP address to be used for packets */
 		struct ip4_subnet cidr;
-		if (parse_ip4_cidr(&cidr, pkey) != 0) {
+		if (parse_ip4_and_prefix(&cidr, pkey) != 0) {
 			if (targ->gateway_ipv4)
 				targ->local_prefix = 32;
 			else
