@@ -1,0 +1,89 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5604e38e_fd9cad29",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/prox_ctrl.py",
+        "patchSetId": 2
+      },
+      "lineNbr": 52,
+      "author": {
+        "id": 7520
+      },
+      "writtenOn": "2020-05-28T15:55:45Z",
+      "side": 1,
+      "message": "Probably use \"connect to instance\" instead of \"connect to VM\" as we can run it in containers too?",
+      "revId": "4d932aced6931d756e07dbce6ab7cf04799ba5f4",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "a9306eac_8c0975fa",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/prox_ctrl.py",
+        "patchSetId": 2
+      },
+      "lineNbr": 60,
+      "author": {
+        "id": 7520
+      },
+      "writtenOn": "2020-05-28T15:55:45Z",
+      "side": 1,
+      "message": "Same here VM -\u003e instance?",
+      "revId": "4d932aced6931d756e07dbce6ab7cf04799ba5f4",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "81952efb_781eb6c5",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/prox_ctrl.py",
+        "patchSetId": 2
+      },
+      "lineNbr": 61,
+      "author": {
+        "id": 7520
+      },
+      "writtenOn": "2020-05-28T15:55:45Z",
+      "side": 1,
+      "message": "VM -\u003e instance?",
+      "revId": "4d932aced6931d756e07dbce6ab7cf04799ba5f4",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "9ef0b5e3_af9ef9b6",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/prox_ctrl.py",
+        "patchSetId": 2
+      },
+      "lineNbr": 63,
+      "author": {
+        "id": 7520
+      },
+      "writtenOn": "2020-05-28T15:55:45Z",
+      "side": 1,
+      "message": "VM -\u003e instance?",
+      "revId": "4d932aced6931d756e07dbce6ab7cf04799ba5f4",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "41877f0b_3300884a",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/prox_ctrl.py",
+        "patchSetId": 2
+      },
+      "lineNbr": 64,
+      "author": {
+        "id": 7520
+      },
+      "writtenOn": "2020-05-28T15:55:45Z",
+      "side": 1,
+      "message": "VM -\u003e instance?",
+      "revId": "4d932aced6931d756e07dbce6ab7cf04799ba5f4",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    }
+  ]
+}
