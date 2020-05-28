@@ -26,10 +26,11 @@ struct task_base;
 
 struct prox_headroom {
 	uint64_t command;
+	uint64_t data64;
 	uint32_t ip;
 	uint32_t prefix;
 	uint32_t gateway_ip;
-	uint64_t data64;
+	uint16_t vlan;
 	struct ipv6_addr ipv6_addr;
 } __attribute__((packed));
 
@@ -187,8 +188,20 @@ static inline struct ipv6_addr *ctrl_ring_get_ipv6_addr(struct rte_mbuf *mbuf)
 	return &prox_headroom->ipv6_addr;
 }
 
-int tx_ring_cti(struct task_base *tbase, struct rte_ring *ring, uint8_t command, struct rte_mbuf *mbuf, uint8_t core_id, uint8_t task_id, uint32_t ip);
-void tx_ring_cti6(struct task_base *tbase, struct rte_ring *ring, uint8_t command, struct rte_mbuf *mbuf, uint8_t core_id, uint8_t task_id, struct ipv6_addr *ip);
+static inline void ctrl_ring_set_vlan(struct rte_mbuf *mbuf, uint32_t udata16)
+{
+	struct prox_headroom *prox_headroom = (struct prox_headroom *)(rte_pktmbuf_mtod(mbuf, uint8_t*) - sizeof(struct prox_headroom));
+	prox_headroom->vlan = udata16;
+}
+
+static inline uint16_t ctrl_ring_get_vlan(struct rte_mbuf *mbuf)
+{
+	struct prox_headroom *prox_headroom = (struct prox_headroom *)(rte_pktmbuf_mtod(mbuf, uint8_t*) - sizeof(struct prox_headroom));
+	return prox_headroom->vlan;
+}
+
+int tx_ring_cti(struct task_base *tbase, struct rte_ring *ring, uint8_t command, struct rte_mbuf *mbuf, uint8_t core_id, uint8_t task_id, uint32_t ip, uint16_t vlan);
+void tx_ring_cti6(struct task_base *tbase, struct rte_ring *ring, uint8_t command, struct rte_mbuf *mbuf, uint8_t core_id, uint8_t task_id, struct ipv6_addr *ip, uint16_t vlan);
 void tx_ring_ip(struct task_base *tbase, struct rte_ring *ring, uint8_t command, struct rte_mbuf *mbuf, uint32_t ip);
 void tx_ring_ip6(struct task_base *tbase, struct rte_ring *ring, uint8_t command,  struct rte_mbuf *mbuf, struct ipv6_addr *ip);
 void tx_ring_ip6_data(struct task_base *tbase, struct rte_ring *ring, uint8_t command,  struct rte_mbuf *mbuf, struct ipv6_addr *ip, uint64_t data);

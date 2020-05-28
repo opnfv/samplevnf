@@ -46,6 +46,7 @@ int parse_range(uint32_t* lo, uint32_t* hi, const char *saddr);
 
 /* parses CIDR notation. Note that bits within the address that are
    outside the subnet (as specified by the prefix) are set to 0. */
+int parse_ip4_and_prefix(struct ip4_subnet *val, const char *saddr);
 int parse_ip4_cidr(struct ip4_subnet *val, const char *saddr);
 int parse_ip6_cidr(struct ip6_subnet *val, const char *saddr);
 
