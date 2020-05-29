@@ -25,7 +25,8 @@ finer grained network functions like QoS, Routing, load-balancing...
 Compiling and running this application
 --------------------------------------
 This application supports DPDK 16.04, 16.11, 16.11.1, 17.02, 17.05, 17.08, 
-17.11, 18.02, 18.05, 18.08, 18.11, 19.02, 19.05, 19.08 and 19.11.
+17.11, 18.02, 18.05, 18.08, 18.11, 19.02, 19.05, 19.08, 19.11, 20.02 and
+20.05.
 
 The following commands assume that the following variables have been set:
 
