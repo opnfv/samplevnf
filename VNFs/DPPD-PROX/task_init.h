@@ -137,6 +137,7 @@ struct task_args {
 	uint32_t               arp_ndp_retransmit_timeout;
 	struct ipv6_addr       local_ipv6;    /* For IPv6 Tunnel, it's the local tunnel endpoint address */
 	struct ipv6_addr       global_ipv6;
+	struct ipv6_addr       gateway_ipv6;
 	struct ipv6_addr       router_prefix;
 	struct rte_ring        *rx_rings[MAX_RINGS_PER_TASK];
 	struct rte_ring        *tx_rings[MAX_RINGS_PER_TASK];

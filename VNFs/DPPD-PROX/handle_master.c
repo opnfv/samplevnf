@@ -24,6 +24,7 @@
 #include <rte_hash.h>
 #include <rte_hash_crc.h>
 #include <rte_ether.h>
+#include <rte_icmp.h>
 
 #include "prox_cfg.h"
 #include "prox_globals.h"

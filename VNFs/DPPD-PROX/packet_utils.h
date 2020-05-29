@@ -16,6 +16,8 @@
 #ifndef _PACKET_UTILS_H_
 #define _PACKET_UTILS_H_
 
+#include <rte_cycles.h>
+
 #include "prox_compat.h"
 #include "arp.h"
 #include "quit.h"

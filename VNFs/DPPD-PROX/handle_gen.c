@@ -614,9 +614,16 @@ static int task_gen_reallocate_templates(struct task_gen *task, uint32_t nb_pkts
 	}
 
 	size_t mem_size = nb_pkts * sizeof(*task->pkt_template);
+	size_t old_mem_size = task->n_pkts * sizeof(*task->pkt_template);
+	if (old_mem_size > mem_size)
+		old_mem_size = mem_size;
+
 	struct pkt_template *ptr;
+
 	// re-allocate memory for new pkt_template (this might allocate additional memory or free up some...)
-	if ((ptr = rte_realloc_socket(task->pkt_template, mem_size, RTE_CACHE_LINE_SIZE, task->socket_id)) != NULL) {
+	if ((ptr = rte_malloc_socket(NULL, mem_size, RTE_CACHE_LINE_SIZE, task->socket_id)) != NULL) {
+		memcpy(ptr, task->pkt_template, old_mem_size);
+		rte_free(task->pkt_template);
 		task->pkt_template = ptr;
 	} else {
 		plog_err_or_panic(do_panic, "Failed to allocate %lu bytes (in huge pages) for packet template for IMIX\n", mem_size);

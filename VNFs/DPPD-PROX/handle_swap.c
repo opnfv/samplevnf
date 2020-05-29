@@ -16,6 +16,7 @@
 
 #include <rte_mbuf.h>
 #include <rte_udp.h>
+#include <rte_icmp.h>
 
 #include "task_init.h"
 #include "task_base.h"
