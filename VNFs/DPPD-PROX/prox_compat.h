@@ -17,9 +17,12 @@
 #define _PROX_COMPAT_H_
 #include <rte_common.h>
 #include <rte_table_hash.h>
+#include <rte_ethdev.h>
 #include <rte_hash_crc.h>
 #include <rte_cryptodev.h>
+
 #include "hash_utils.h"
+#include "log.h"
 
 /* This is a copy of the rte_table_hash_params from DPDK 17.11  *
  * So if DPDK decides to change the structure the modifications *
@@ -36,10 +39,17 @@ struct prox_rte_table_params {
 	uint64_t seed;
 };
 
-#if RTE_VERSION < RTE_VERSION_NUM(16,4,0,1)
+#if RTE_VERSION < RTE_VERSION_NUM(16,4,0,0)
 typedef uint8_t prox_next_hop_index_type;
 #else
 typedef uint32_t prox_next_hop_index_type;
+#endif
+
+#if RTE_VERSION < RTE_VERSION_NUM(16,7,0,0)
+static void rte_mempool_free(struct rte_mempool *mp)
+{
+	plog_warn("rte_mempool_free not supported in this DPDK - upgrade DPDK to avoid memory leaks\n");
+}
 #endif
 
 #if RTE_VERSION < RTE_VERSION_NUM(17,11,0,0)
@@ -69,6 +79,16 @@ static void *prox_rte_table_create(struct prox_rte_table_params *params, int soc
 		return rte_table_hash_ext_dosig_ops.f_create(&dpdk17_08_params, socket_id, entry_size);
 	}
 };
+
+static inline int prox_rte_eth_dev_get_port_by_name(const char *name, uint16_t *port_id)
+{
+#if RTE_VERSION < RTE_VERSION_NUM(16,7,0,0)
+	plog_err("Not supported in DPDK version <= 16.04 by lack of rte_eth_dev_get_port_by_name support\n");
+	return -1;
+#else
+	return rte_eth_dev_get_port_by_name(name, (uint8_t *)port_id);
+#endif
+}
 
 #define prox_rte_table_free        rte_table_hash_ext_dosig_ops.f_free
 #define prox_rte_table_add         rte_table_hash_ext_dosig_ops.f_add
@@ -108,6 +128,8 @@ static void *prox_rte_table_create(struct prox_rte_table_params *params, int soc
 		return rte_table_hash_ext_ops.f_create(&dpdk_17_11_params, socket_id, entry_size);
 	}
 }
+
+#define prox_rte_eth_dev_get_port_by_name rte_eth_dev_get_port_by_name
 
 #define prox_rte_table_free        rte_table_hash_ext_ops.f_free
 #define prox_rte_table_add         rte_table_hash_ext_ops.f_add

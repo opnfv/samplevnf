@@ -215,13 +215,13 @@ void init_rte_dev(int use_dummy_devices)
 		}
 		struct prox_port_cfg* port_cfg = &prox_port_cfg[port_id];
 		if (port_cfg->vdev[0]) {
-#if (RTE_VERSION > RTE_VERSION_NUM(17,5,0,1))
 			char name[MAX_NAME_SIZE], tap[MAX_NAME_SIZE];
 			snprintf(tap, MAX_NAME_SIZE, "net_tap%d", port_id);
+#if (RTE_VERSION > RTE_VERSION_NUM(17,5,0,1))
 			snprintf(name, MAX_NAME_SIZE, "iface=%s", port_cfg->vdev);
 			rc = rte_vdev_init(tap, name);
 #else
-			rc = eth_dev_null_create(tap, name, PROX_RTE_ETHER_MIN_LEN, 0);
+			PROX_PANIC(1, "vdev not supported in DPDK < 17.05\n");
 #endif
 			PROX_PANIC(rc != 0, "Unable to create device %s %s\n", "net tap", port_cfg->vdev);
 			int vdev_port_id = prox_rte_eth_dev_count_avail() - 1;
@@ -289,6 +289,8 @@ void init_rte_dev(int use_dummy_devices)
 
 		nb_ports = PROX_MAX_PORTS;
 	}
+
+#if (RTE_VERSION >= RTE_VERSION_NUM(17,5,0,0))
 	port_id_max = -1;
 	uint16_t id;
 	RTE_ETH_FOREACH_DEV(id) {
@@ -304,18 +306,28 @@ void init_rte_dev(int use_dummy_devices)
 				port_id_max = id;
 		}
 	}
+#else
+	port_id_max = nb_ports - 1;
+#endif
+
 	port_id_last = prox_last_port_active();
 	PROX_PANIC(port_id_last > port_id_max,
 		   "\tError: invalid port(s) specified, last port index active: %d (max index is %d)\n",
 		   port_id_last, port_id_max);
 
 	/* Assign ports to PROX interfaces & Read max RX/TX queues per port */
+#if (RTE_VERSION >= RTE_VERSION_NUM(17,5,0,0))
 	for (uint8_t port_id = 0; port_id <= port_id_last; ++port_id) {
+#else
+	for (uint8_t port_id = 0; port_id <= nb_ports; ++port_id) {
+#endif
 		/* skip ports that are not enabled */
 		if (!prox_port_cfg[port_id].active) {
 			continue;
+#if (RTE_VERSION >= RTE_VERSION_NUM(17,5,0,0))
 		} else if (prox_port_cfg[port_id].available == 0) {
 			PROX_PANIC(1, "port %u enabled but not available\n", port_id);
+#endif
 		}
 		plog_info("\tGetting info for rte dev %u\n", port_id);
 		rte_eth_dev_info_get(port_id, &dev_info);
@@ -874,6 +886,9 @@ void close_ports_atexit(void)
 		plog_info("Closing port %u\n", portid);
 		rte_eth_dev_close(portid);
 	}
+
+	if (lcore_cfg == NULL)
+		return;
 
 	struct lcore_cfg *lconf = NULL;
 	struct task_args *targ;

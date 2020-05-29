@@ -2287,7 +2287,7 @@ int prox_setup_rte(const char *prog_name)
 	}
 	uint16_t port_id;
 	for (int i = 0; i < n_deferred_ports; i++) {
-		if (rte_eth_dev_get_port_by_name(deferred_port[i].name, &port_id) != 0) {
+		if (prox_rte_eth_dev_get_port_by_name(deferred_port[i].name, &port_id) != 0) {
 			plog_err("Did not find port name %s used while reading %s\n", deferred_port[i].name, deferred_port[i].is_rx_port ? "rx port" : "tx_port");
 			return -1;
 		}
