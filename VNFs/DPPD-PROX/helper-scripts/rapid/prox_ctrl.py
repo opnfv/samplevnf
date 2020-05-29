@@ -50,7 +50,8 @@ class prox_ctrl(object):
 
     def connect(self):
         attempts = 1
-        RapidLog.debug("Trying to connect to VM which was just launched on %s, attempt: %d" % (self._ip, attempts))
+        RapidLog.debug("Trying to connect to instance which was just launched \
+                on %s, attempt: %d" % (self._ip, attempts))
         while True:
             try:
                 self.test_connect()
@@ -58,15 +59,19 @@ class prox_ctrl(object):
             except RuntimeWarning as ex:
                 attempts += 1
                 if attempts > 20:
-                    RapidLog.exception("Failed to connect to VM after %d attempts:\n%s" % (attempts, ex))
-                    raise Exception("Failed to connect to VM after %d attempts:\n%s" % (attempts, ex))
+                    RapidLog.exception("Failed to connect to instance after %d\
+                            attempts:\n%s" % (attempts, ex))
+                    raise Exception("Failed to connect to instance after %d \
+                            attempts:\n%s" % (attempts, ex))
                 time.sleep(2)
-                RapidLog.debug("Trying to connect to VM which was just launched on %s, attempt: %d" % (self._ip, attempts))
-        RapidLog.debug("Connected to VM on %s" % self._ip)
+                RapidLog.debug("Trying to connect to instance which was just \
+                        launched on %s, attempt: %d" % (self._ip, attempts))
+        RapidLog.debug("Connected to instance on %s" % self._ip)
 
     def connect_socket(self):
         attempts = 1
-        RapidLog.debug("Trying to connect to PROX (just launched) on %s, attempt: %d" % (self._ip, attempts))
+        RapidLog.debug("Trying to connect to PROX (just launched) on %s, \
+                attempt: %d" % (self._ip, attempts))
         sock = None
         while True:
             sock = self.prox_sock()
@@ -74,10 +79,13 @@ class prox_ctrl(object):
                 break
             attempts += 1
             if attempts > 20:
-                RapidLog.exception("Failed to connect to PROX on %s after %d attempts" % (self._ip, attempts))
-                raise Exception("Failed to connect to PROX on %s after %d attempts" % (self._ip, attempts))
+                RapidLog.exception("Failed to connect to PROX on %s after %d \
+                        attempts" % (self._ip, attempts))
+                raise Exception("Failed to connect to PROX on %s after %d \
+                        attempts" % (self._ip, attempts))
             time.sleep(2)
-            RapidLog.debug("Trying to connect to PROX (just launched) on %s, attempt: %d" % (self._ip, attempts))
+            RapidLog.debug("Trying to connect to PROX (just launched) on %s, \
+                    attempt: %d" % (self._ip, attempts))
         RapidLog.info("Connected to PROX on %s" % self._ip)
         return sock
 
@@ -93,12 +101,14 @@ class prox_ctrl(object):
         for child in self._children:
             ret = os.waitpid(child[0], os.WNOHANG)
             if ret[0] == 0:
-                print("Waiting for child process '%s' to complete ..." % child[1])
+                print("Waiting for child process '%s' to complete ..." 
+                        % child[1])
                 ret = os.waitpid(child[0], 0)
             rc = ret[1]
             if os.WIFEXITED(rc):
                 if os.WEXITSTATUS(rc) == 0:
-                    print("Child process '%s' completed successfully" % child[1])
+                    print("Child process '%s' completed successfully" 
+                            % child[1])
                 else:
                     print("Child process '%s' returned exit status %d" % (
                             child[1], os.WEXITSTATUS(rc)))
@@ -231,14 +241,16 @@ class prox_sock(object):
         max_lat = avg_lat = 0
         number_tasks_returning_stats = 0
         buckets = [0] * 128
-        self._send('lat all stats %s %s' % (','.join(map(str, cores)), ','.join(map(str, tasks))))
+        self._send('lat all stats %s %s' % (','.join(map(str, cores)),
+            ','.join(map(str, tasks))))
         for core in cores:
             for task in tasks:
                 stats = self._recv().split(',')
             if 'is not measuring' in stats[0]:
                 continue
             if stats[0].startswith('error'):
-                RapidLog.critical("lat stats error: unexpected reply from PROX (potential incompatibility between scripts and PROX)")
+                RapidLog.critical("lat stats error: unexpected reply from PROX\
+                        (potential incompatibility between scripts and PROX)")
                 raise Exception("lat stats error")
             number_tasks_returning_stats += 1
             min_lat = min(int(stats[0]),min_lat)
@@ -246,13 +258,17 @@ class prox_sock(object):
             avg_lat += int(stats[2])
             #min_since begin = int(stats[3])
             #max_since_begin = int(stats[4])
-            tsc = int(stats[5]) # Taking the last tsc as the timestamp since PROX will return the same tsc for each core/task combination 
+            tsc = int(stats[5]) # Taking the last tsc as the timestamp since
+                                # PROX will return the same tsc for each 
+                                # core/task combination 
             hz = int(stats[6])
             #coreid = int(stats[7])
             #taskid = int(stats[8])
             stats = self._recv().split(':')
             if stats[0].startswith('error'):
-                RapidLog.critical("lat stats error: unexpected lat bucket reply (potential incompatibility between scripts and PROX)")
+                RapidLog.critical("lat stats error: unexpected lat bucket \
+                        reply (potential incompatibility between scripts \
+                        and PROX)")
                 raise Exception("lat bucket reply error")
             buckets[0] = int(stats[1])
             for i in range(1, 128):
@@ -263,10 +279,12 @@ class prox_sock(object):
         used = float(self._recv())
         self._send('stats latency(0).total')
         total = float(self._recv())
-        return min_lat, max_lat, avg_lat, (old_div(used,total)), tsc, hz, buckets
+        return (min_lat, max_lat, avg_lat, (old_div(used,total)), tsc, hz,
+                buckets)
 
     def irq_stats(self, core, bucket, task=0):
-        self._send('stats task.core(%s).task(%s).irq(%s)' % (core, task, bucket))
+        self._send('stats task.core(%s).task(%s).irq(%s)' % 
+                (core, task, bucket))
         stats = self._recv().split(',')
         return int(stats[0])
 
@@ -279,13 +297,16 @@ class prox_sock(object):
 
     def core_stats(self, cores, tasks=[0]):
         rx = tx = drop = tsc = hz = rx_non_dp = tx_non_dp = tx_fail = 0
-        self._send('dp core stats %s %s' % (','.join(map(str, cores)), ','.join(map(str, tasks))))
+        self._send('dp core stats %s %s' % (','.join(map(str, cores)), 
+            ','.join(map(str, tasks))))
         for core in cores:
             for task in tasks:
                 stats = self._recv().split(',')
                 if stats[0].startswith('error'):  
                     if stats[0].startswith('error: invalid syntax'):
-                        RapidLog.critical("dp core stats error: unexpected invalid syntax (potential incompatibility between scripts and PROX)")
+                        RapidLog.critical("dp core stats error: unexpected \
+                                invalid syntax (potential incompatibility \
+                                between scripts and PROX)")
                         raise Exception("dp core stats error")
                     continue
                 rx += int(stats[0])
@@ -303,7 +324,9 @@ class prox_sock(object):
         self._send('multi port stats %s' % (','.join(map(str, ports))))
         result = self._recv().split(';')
         if result[0].startswith('error'):  
-            RapidLog.critical("multi port stats error: unexpected invalid syntax (potential incompatibility between scripts and PROX)")
+            RapidLog.critical("multi port stats error: unexpected invalid \
+                    syntax (potential incompatibility between scripts and \
+                    PROX)")
             raise Exception("multi port stats error")
         for statistics in result:
             stats = statistics.split(',')
@@ -316,16 +339,20 @@ class prox_sock(object):
         return rx, tx, no_mbufs, errors, tsc
 
     def set_random(self, cores, task, offset, mask, length):
-        self._send('set random %s %s %s %s %s' % (','.join(map(str, cores)), task, offset, mask, length))
+        self._send('set random %s %s %s %s %s' % (','.join(map(str, cores)), 
+            task, offset, mask, length))
 
     def set_size(self, cores, task, pkt_size):
-        self._send('pkt_size %s %s %s' % (','.join(map(str, cores)), task, pkt_size))
+        self._send('pkt_size %s %s %s' % (','.join(map(str, cores)), task, 
+            pkt_size))
 
     def set_imix(self, cores, task, imix):
-        self._send('imix %s %s %s' % (','.join(map(str, cores)), task, ','.join(map(str,imix))))
+        self._send('imix %s %s %s' % (','.join(map(str, cores)), task, 
+            ','.join(map(str,imix))))
 
     def set_value(self, cores, task, offset, value, length):
-        self._send('set value %s %s %s %s %s' % (','.join(map(str, cores)), task, offset, value, length))
+        self._send('set value %s %s %s %s %s' % (','.join(map(str, cores)), 
+            task, offset, value, length))
 
     def _send(self, cmd):
         """Append LF and send command to the PROX instance."""
@@ -334,7 +361,7 @@ class prox_sock(object):
         self._sock.sendall(cmd.encode() + b'\n')
 
     def _recv(self):
-        """Receive response from PROX instance, and return it with LF removed."""
+        """Receive response from PROX instance, return it with LF removed."""
         if self._sock is None:
             raise RuntimeError("PROX socket closed, cannot receive anymore")
         pos = self._rcvd.find(b'\n')

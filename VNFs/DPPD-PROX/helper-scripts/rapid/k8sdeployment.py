@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.7
 
 ##
-## Copyright (c) 2019 Intel Corporation
+## Copyright (c) 2019-2020 Intel Corporation
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
 ## you may not use this file except in compliance with the License.
@@ -175,11 +175,11 @@ class K8sDeployment:
             self._runtime_config.set("M%d" % pod.get_id(),
                                      "admin_ip", pod.get_admin_ip())
             self._runtime_config.set("M%d" % pod.get_id(),
-                                     "dp_mac", pod.get_dp_mac())
+                                     "dp_mac1", pod.get_dp_mac())
             self._runtime_config.set("M%d" % pod.get_id(),
                                      "dp_pci_dev", pod.get_dp_pci_dev())
             self._runtime_config.set("M%d" % pod.get_id(),
-                                     "dp_ip", pod.get_dp_ip())
+                                     "dp_ip1", pod.get_dp_ip())
 
         # Section [Varia]
         self._runtime_config.add_section("Varia")
