@@ -1522,6 +1522,11 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 		}
 		return 0;
 	}
+	if (STR_EQ(str, "gateway ipv6")) { /* Gateway IP address used when generating */
+		if ((targ->flags & TASK_ARG_NDP) == 0)
+			plog_warn("gateway ipv6 configured but NDP sub mode not enabled\n");
+		return parse_ip6(&targ->gateway_ipv6, pkey);
+	}
 	if (STR_EQ(str, "local ipv4")) { /* source IP address to be used for packets */
 		struct ip4_subnet cidr;
 		if (parse_ip4_and_prefix(&cidr, pkey) != 0) {

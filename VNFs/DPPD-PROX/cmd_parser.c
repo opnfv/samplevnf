@@ -2162,6 +2162,29 @@ static int parse_cmd_join_igmp(const char *str, struct input *input)
 	return 0;
 }
 
+static int parse_cmd_send_unsollicited_na(const char *str, struct input *input)
+{
+	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
+
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
+		return -1;
+
+	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
+		for (unsigned int i = 0; i < nb_cores; i++) {
+			lcore_id = lcores[i];
+
+			if (!task_is_sub_mode(lcore_id, task_id, "ndp")) {
+				plog_err("Core %u task %u is not running ndp\n", lcore_id, task_id);
+			}
+			else {
+				struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
+				send_unsollicited_neighbour_advertisement(tbase);
+			}
+		}
+	}
+	return 0;
+}
+
 static int parse_cmd_rx_tx_info(const char *str, struct input *input)
 {
 	if (strcmp(str, "") != 0) {
@@ -2301,6 +2324,7 @@ static struct cmd_str cmd_strings[] = {
 	{"version", "", "Show version", parse_cmd_version},
 	{"join igmp", "<core_id> <task_id> <ip>", "Send igmp membership report for group <ip>", parse_cmd_join_igmp},
 	{"leave igmp", "<core_id> <task_id>", "Send igmp leave group", parse_cmd_leave_igmp},
+	{"send unsollicited na", "<core_id> <task_id>", "Send Unsollicited Neighbor Advertisement", parse_cmd_send_unsollicited_na},
 	{0,0,0,0},
 };
 

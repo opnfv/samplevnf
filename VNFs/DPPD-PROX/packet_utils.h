@@ -83,6 +83,7 @@ int write_ip6_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, struct ipv
 void task_set_gateway_ip(struct task_base *tbase, uint32_t ip);
 void task_set_local_ip(struct task_base *tbase, uint32_t ip);
 void handle_ctrl_plane_pkts(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts);
+void send_unsollicited_neighbour_advertisement(struct task_base *tbase);
 
 static inline void update_arp_ndp_retransmit_timeout(struct l3_base *l3, uint64_t *ptr, uint32_t base)
 {

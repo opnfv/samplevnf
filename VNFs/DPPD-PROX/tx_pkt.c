@@ -61,7 +61,6 @@ void store_packet(struct task_base *tbase, struct rte_mbuf *mbuf)
 
 int tx_pkt_ndp(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts, uint8_t *out)
 {
-	// TODO NDP
 	struct ipv6_addr ip_dst;
 	int first = 0, ret, ok = 0, rc;
 	const struct port_queue *port_queue = &tbase->tx_params_hw.tx_port_queue[0];
