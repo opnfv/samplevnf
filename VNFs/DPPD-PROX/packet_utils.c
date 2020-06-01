@@ -142,20 +142,38 @@ static inline struct ipv6_addr *find_ip6(prox_rte_ether_hdr *pkt, uint16_t len, 
 	return NULL;
 }
 
-static void send_unsollicited_neighbour_advertisement(struct task_base *tbase, struct task_args *targ)
+void send_unsollicited_neighbour_advertisement(struct task_base *tbase)
 {
 	int ret;
 	uint8_t out = 0, port_id = tbase->l3.reachable_port_id;
-	struct rte_mbuf *mbuf;
+	struct rte_mbuf *mbuf = NULL;
 
-	ret = rte_mempool_get(tbase->l3.arp_nd_pool, (void **)&mbuf);
-	if (likely(ret == 0)) {
-		mbuf->port = port_id;
-		build_neighbour_advertisement(tbase->l3.tmaster, mbuf, &prox_port_cfg[port_id].eth_addr, &targ->local_ipv6, PROX_UNSOLLICITED);
-		tbase->aux->tx_ctrlplane_pkt(tbase, &mbuf, 1, &out);
-		TASK_STATS_ADD_TX_NON_DP(&tbase->aux->stats, 1);
-	} else {
-		plog_err("Failed to get a mbuf from arp/ndp mempool\n");
+	if (memcmp(&tbase->l3.local_ipv6, &null_addr, 16) != 0) {
+		ret = rte_mempool_get(tbase->l3.arp_nd_pool, (void **)&mbuf);
+		if (likely(ret == 0)) {
+			mbuf->port = port_id;
+			build_neighbour_advertisement(tbase->l3.tmaster, mbuf, &prox_port_cfg[port_id].eth_addr, &tbase->l3.local_ipv6, PROX_UNSOLLICITED);
+			tbase->aux->tx_ctrlplane_pkt(tbase, &mbuf, 1, &out);
+			TASK_STATS_ADD_TX_NON_DP(&tbase->aux->stats, 1);
+		} else {
+			plog_err("Failed to get a mbuf from arp/ndp mempool\n");
+			return;
+		}
+	}
+	if (memcmp(&tbase->l3.global_ipv6, &null_addr, 16) != 0) {
+		ret = rte_mempool_get(tbase->l3.arp_nd_pool, (void **)&mbuf);
+		if (likely(ret == 0)) {
+			mbuf->port = port_id;
+			build_neighbour_advertisement(tbase->l3.tmaster, mbuf, &prox_port_cfg[port_id].eth_addr, &tbase->l3.global_ipv6, PROX_UNSOLLICITED);
+			tbase->aux->tx_ctrlplane_pkt(tbase, &mbuf, 1, &out);
+			TASK_STATS_ADD_TX_NON_DP(&tbase->aux->stats, 1);
+		} else {
+			plog_err("Failed to get a mbuf from arp/ndp mempool\n");
+			return;
+		}
+	}
+	if (mbuf == NULL) {
+		plog_err("No neighbor advertisement sent as no local or global ipv6\n");
 	}
 }
 
@@ -363,18 +381,27 @@ int write_ip6_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, struct ipv
 		return SEND_MBUF;
 	}
 	struct l3_base *l3 = &(tbase->l3);
+
+	// Configure source IP
 	if (memcmp(&l3->local_ipv6, ip_dst, 8) == 0) {
 		// Same prefix as local -> use local
 		used_ip_src = &l3->local_ipv6;
-	} else if (memcmp(&l3->global_ipv6 , &null_addr, 16) != 0) {
+	} else if (memcmp(&l3->global_ipv6 , ip_dst, 8) == 0) {
+		// Same prefix as global -> use global
+		used_ip_src = &l3->global_ipv6;
+	} else if (memcmp(&l3->gw.ip6 , &null_addr, sizeof(struct ipv6_addr)) != 0) {
+		used_ip_src = &l3->global_ipv6;
+		memcpy(ip_dst, &l3->gw.ip6, sizeof(struct ipv6_addr));
+	} else if (memcmp(&l3->global_ipv6 , &null_addr, sizeof(struct ipv6_addr)) != 0) {
 		// Global IP is defined -> use it
 		used_ip_src = &l3->global_ipv6;
 	} else {
 		plog_info("Error as trying to send a packet to "IPv6_BYTES_FMT" using "IPv6_BYTES_FMT" (local)\n", IPv6_BYTES(ip_dst->bytes), IPv6_BYTES(l3->local_ipv6.bytes));
 		return DROP_MBUF;
 	}
-
 	memcpy(pkt_src_ip6, used_ip_src, sizeof(struct ipv6_addr));
+
+	// Configure dst mac
 	if (likely(l3->n_pkts < 4)) {
 		for (unsigned int idx = 0; idx < l3->n_pkts; idx++) {
 			if (memcmp(ip_dst, &l3->optimized_arp_table[idx].ip6, sizeof(struct ipv6_addr)) == 0) {
@@ -504,6 +531,7 @@ void task_init_l3(struct task_base *tbase, struct task_args *targ)
 	targ->lconf->ctrl_func_p[targ->task] = handle_ctrl_plane_pkts;
 	targ->lconf->ctrl_timeout = freq_to_tsc(targ->ctrl_freq);
 	tbase->l3.gw.ip = rte_cpu_to_be_32(targ->gateway_ipv4);
+	memcpy(&tbase->l3.gw.ip6, &targ->gateway_ipv6, sizeof(struct ipv6_addr));
 	tbase->flags |= TASK_L3;
 	tbase->l3.core_id = targ->lconf->id;
 	tbase->l3.task_id = targ->id;
@@ -588,7 +616,7 @@ void task_start_l3(struct task_base *tbase, struct task_args *targ)
 
 		// Create IPv6 addr if none were configured
 		if (targ->flags & TASK_ARG_NDP) {
-			if (!memcmp(&targ->local_ipv6, &null_addr, 16)) {
+			if (!memcmp(&targ->local_ipv6, &null_addr, sizeof(struct ipv6_addr))) {
 				set_link_local(&targ->local_ipv6);
 				set_EUI(&targ->local_ipv6, &port->eth_addr);
 			}
@@ -626,7 +654,7 @@ void task_start_l3(struct task_base *tbase, struct task_args *targ)
 		}
 		if ((targ->flags & TASK_ARG_NDP) && (targ->flags & TASK_ARG_SEND_NA_AT_STARTUP)) {
 			plog_info("Sending unsollicited Neighbour Advertisement\n");
-			send_unsollicited_neighbour_advertisement(tbase, targ);
+			send_unsollicited_neighbour_advertisement(tbase);
 
 		}
 	}
