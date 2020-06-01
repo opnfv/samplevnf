@@ -125,7 +125,7 @@ static inline struct ipv6_addr *find_ip6(prox_rte_ether_hdr *pkt, uint16_t len, 
 	return NULL;
 }
 
-static void send_unsollicited_neighbour_advertisement(struct task_base *tbase, struct task_args *targ)
+void send_unsollicited_neighbour_advertisement(struct task_base *tbase)
 {
 	int ret;
 	uint8_t out = 0, port_id = tbase->l3.reachable_port_id;
@@ -134,9 +134,14 @@ static void send_unsollicited_neighbour_advertisement(struct task_base *tbase, s
 	ret = rte_mempool_get(tbase->l3.arp_nd_pool, (void **)&mbuf);
 	if (likely(ret == 0)) {
 		mbuf->port = port_id;
-		build_neighbour_advertisement(tbase->l3.tmaster, mbuf, &prox_port_cfg[port_id].eth_addr, &targ->local_ipv6, PROX_UNSOLLICITED);
+		build_neighbour_advertisement(tbase->l3.tmaster, mbuf, &prox_port_cfg[port_id].eth_addr, &tbase->l3.local_ipv6, PROX_UNSOLLICITED);
 		tbase->aux->tx_ctrlplane_pkt(tbase, &mbuf, 1, &out);
 		TASK_STATS_ADD_TX_NON_DP(&tbase->aux->stats, 1);
+		if (memcmp(&tbase->l3.global_ipv6, &null_addr, 16) != 0) {
+			build_neighbour_advertisement(tbase->l3.tmaster, mbuf, &prox_port_cfg[port_id].eth_addr, &tbase->l3.global_ipv6, PROX_UNSOLLICITED);
+			tbase->aux->tx_ctrlplane_pkt(tbase, &mbuf, 1, &out);
+			TASK_STATS_ADD_TX_NON_DP(&tbase->aux->stats, 1);
+		}
 	} else {
 		plog_err("Failed to get a mbuf from arp/ndp mempool\n");
 	}
@@ -334,6 +339,7 @@ int write_ip6_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, struct ipv
 	prox_rte_ether_hdr *packet = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 	prox_rte_ether_addr *mac = &packet->d_addr;
 	struct ipv6_addr *used_ip_src;
+	struct ipv6_addr *used_ip_dst_for_mac;
 
 	uint64_t tsc = rte_rdtsc();
 	uint16_t len = rte_pktmbuf_pkt_len(mbuf);
@@ -343,10 +349,19 @@ int write_ip6_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, struct ipv
 		// Unable to find IP address => non IP packet => send it as it
 		return SEND_MBUF;
 	}
+	used_ip_dst_for_mac = ip_dst;
 	struct l3_base *l3 = &(tbase->l3);
+
+	// Configure source IP
 	if (memcmp(&l3->local_ipv6, ip_dst, 8) == 0) {
 		// Same prefix as local -> use local
 		used_ip_src = &l3->local_ipv6;
+	} else if (memcmp(&l3->global_ipv6 , ip_dst, 8) != 0) {
+		// Same prefix as global -> use global
+		used_ip_src = &l3->global_ipv6;
+	} else if (memcmp(&l3->gw.ip6 , &null_addr, 16) != 0) {
+		used_ip_src = &l3->global_ipv6;
+		used_ip_dst_for_mac = &l3->gw.ip6;
 	} else if (memcmp(&l3->global_ipv6 , &null_addr, 16) != 0) {
 		// Global IP is defined -> use it
 		used_ip_src = &l3->global_ipv6;
@@ -354,11 +369,12 @@ int write_ip6_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, struct ipv
 		plog_info("Error as trying to send a packet to "IPv6_BYTES_FMT" using "IPv6_BYTES_FMT" (local)\n", IPv6_BYTES(ip_dst->bytes), IPv6_BYTES(l3->local_ipv6.bytes));
 		return DROP_MBUF;
 	}
-
 	memcpy(pkt_src_ip6, used_ip_src, sizeof(struct ipv6_addr));
+
+	// Configure dst mac
 	if (likely(l3->n_pkts < 4)) {
 		for (unsigned int idx = 0; idx < l3->n_pkts; idx++) {
-			if (memcmp(ip_dst, &l3->optimized_arp_table[idx].ip6, sizeof(struct ipv6_addr)) == 0) {
+			if (memcmp(used_ip_dst_for_mac, &l3->optimized_arp_table[idx].ip6, sizeof(struct ipv6_addr)) == 0) {
 				 // IP address already in table
 				if ((tsc < l3->optimized_arp_table[idx].arp_ndp_retransmit_timeout) && (tsc < l3->optimized_arp_table[idx].reachable_timeout)) {
 					// MAC address was recently updated in table, use it
@@ -386,7 +402,7 @@ int write_ip6_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, struct ipv
 			}
 		}
 		// IP address not found in table
-		memcpy(&l3->optimized_arp_table[l3->n_pkts].ip6, ip_dst, sizeof(struct ipv6_addr));
+		memcpy(&l3->optimized_arp_table[l3->n_pkts].ip6, used_ip_dst_for_mac, sizeof(struct ipv6_addr));
 		l3->optimized_arp_table[l3->n_pkts].arp_ndp_retransmit_timeout = tsc + l3->arp_ndp_retransmit_timeout * hz / 1000;
 		l3->n_pkts++;
 
@@ -411,16 +427,16 @@ int write_ip6_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, struct ipv
 		return SEND_ARP_ND;
 	} else {
 		// Find IP in lookup table. Send ND if not found
-		int ret = rte_hash_lookup(l3->ip6_hash, (const void *)ip_dst);
+		int ret = rte_hash_lookup(l3->ip6_hash, (const void *)used_ip_dst_for_mac);
 		if (unlikely(ret < 0)) {
 			// IP not found, try to send an ND
-			int ret = rte_hash_add_key(l3->ip6_hash, (const void *)ip_dst);
+			int ret = rte_hash_add_key(l3->ip6_hash, (const void *)used_ip_dst_for_mac);
 			if (ret < 0) {
 				// No reason to send NDP, as reply would be anyhow ignored
-				plogx_err("Unable to add ip "IPv6_BYTES_FMT" in mac_hash\n", IPv6_BYTES(ip_dst->bytes));
+				plogx_err("Unable to add ip "IPv6_BYTES_FMT" in mac_hash\n", IPv6_BYTES(used_ip_dst_for_mac->bytes));
 				return DROP_MBUF;
 			} else {
-				memcpy(&l3->arp_table[ret].ip6, ip_dst, sizeof(struct ipv6_addr));
+				memcpy(&l3->arp_table[ret].ip6, used_ip_dst_for_mac, sizeof(struct ipv6_addr));
 				l3->arp_table[ret].arp_ndp_retransmit_timeout = tsc + l3->arp_ndp_retransmit_timeout * hz / 1000;
 			}
 			return SEND_ARP_ND;
@@ -485,6 +501,7 @@ void task_init_l3(struct task_base *tbase, struct task_args *targ)
 	targ->lconf->ctrl_func_p[targ->task] = handle_ctrl_plane_pkts;
 	targ->lconf->ctrl_timeout = freq_to_tsc(targ->ctrl_freq);
 	tbase->l3.gw.ip = rte_cpu_to_be_32(targ->gateway_ipv4);
+	memcpy(&tbase->l3.gw.ip6, &targ->gateway_ipv6, sizeof(struct ipv6_addr));
 	tbase->flags |= TASK_L3;
 	tbase->l3.core_id = targ->lconf->id;
 	tbase->l3.task_id = targ->id;
@@ -569,7 +586,7 @@ void task_start_l3(struct task_base *tbase, struct task_args *targ)
 
 		// Create IPv6 addr if none were configured
 		if (targ->flags & TASK_ARG_NDP) {
-			if (!memcmp(&targ->local_ipv6, &null_addr, 16)) {
+			if (!memcmp(&targ->local_ipv6, &null_addr, sizeof(struct ipv6_addr))) {
 				set_link_local(&targ->local_ipv6);
 				set_EUI(&targ->local_ipv6, &port->eth_addr);
 			}
@@ -607,7 +624,7 @@ void task_start_l3(struct task_base *tbase, struct task_args *targ)
 		}
 		if ((targ->flags & TASK_ARG_NDP) && (targ->flags & TASK_ARG_SEND_NA_AT_STARTUP)) {
 			plog_info("Sending unsollicited Neighbour Advertisement\n");
-			send_unsollicited_neighbour_advertisement(tbase, targ);
+			send_unsollicited_neighbour_advertisement(tbase);
 
 		}
 	}
