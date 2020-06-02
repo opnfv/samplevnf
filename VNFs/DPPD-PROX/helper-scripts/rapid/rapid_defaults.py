@@ -29,6 +29,6 @@ class RapidDefaults(object):
         'screenloglevel' : 'INFO', # sets log level for writing to screen
         'runtime' : 10, # time in seconds for 1 test run
         'configonly' : False, # If True, the system will upload all the necessary config fiels to the VMs, but not start PROX and the actual testing
-        'rundir' : '~', # Directory where to find the tools in the machines running PROX
+        'rundir' : '/opt/rapid', # Directory where to find the tools in the machines running PROX
         'lat_percentile' : 0.99
         }

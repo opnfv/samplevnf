@@ -82,9 +82,9 @@ function os_cfg()
 
 	# Install the check_tuned_params service to make sure that the grub cmd line has the right cpus in isolcpu. The actual number of cpu's
 	# assigned to this VM depends on the flavor used. We don't know at this time what that will be.
-	${SUDO} chmod +x ${HOME}/check_prox_system_setup.sh
-	${SUDO} mv ${HOME}/check_prox_system_setup.sh /usr/local/libexec/
-	${SUDO} mv ${HOME}/check-prox-system-setup.service /etc/systemd/system/
+	${SUDO} chmod +x ${BUILD_DIR}/check_prox_system_setup.sh
+	${SUDO} mv ${BUILD_DIR}/check_prox_system_setup.sh /usr/local/libexec/
+	${SUDO} mv ${BUILD_DIR}/check-prox-system-setup.service /etc/systemd/system/
 	${SUDO} systemctl daemon-reload
 	${SUDO} systemctl enable check-prox-system-setup.service
     # Following lines are added to fix the following issue: When the VM gets
@@ -177,7 +177,7 @@ function prox_compile()
 	# Compile PROX
 	pushd ${BUILD_DIR}/samplevnf/VNFs/DPPD-PROX
 	make -j`getconf _NPROCESSORS_ONLN`
-	${SUDO} cp ${BUILD_DIR}/samplevnf/VNFs/DPPD-PROX/build/app/prox ${HOME}/prox
+	${SUDO} cp ${BUILD_DIR}/samplevnf/VNFs/DPPD-PROX/build/app/prox ${BUILD_DIR}/prox
 	popd > /dev/null 2>&1
 }
 

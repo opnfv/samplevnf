@@ -18,29 +18,40 @@
 "provisioners": [
    {
    "type": "file",
-   "source": "./check_prox_system_setup.sh",
-   "destination": "~/"
-   },
-   {
-   "type": "file",
-   "source": "./check-prox-system-setup.service",
-   "destination": "~/"
-   },
-   {
-   "type": "file",
-   "source": "./sharkproxlog.sh",
-   "destination": "~/"
-   },
-   {
-   "type": "file",
-   "source": "./deploycentostools.sh",
-   "destination": "~/"
+   "source": "./create_rapid_dir.sh",
+   "destination": "/tmp/"
    },
    {
    "type": "shell",
    "inline": [
-     "chmod a+x ~/deploycentostools.sh",
-     "~/deploycentostools.sh -u deploy" ]
+     "chmod a+x /tmp/create_rapid_dir.sh",
+     "/tmp/create_rapid_dir.sh -u deploy"]
+   },
+   {
+   "type": "file",
+   "source": "./check_prox_system_setup.sh",
+   "destination": "/opt/rapid/"
+   },
+   {
+   "type": "file",
+   "source": "./check-prox-system-setup.service",
+   "destination": "/opt/rapid/"
+   },
+   {
+   "type": "file",
+   "source": "./sharkproxlog.sh",
+   "destination": "/opt/rapid/"
+   },
+   {
+   "type": "file",
+   "source": "./deploycentostools.sh",
+   "destination": "/opt/rapid/"
+   },
+   {
+   "type": "shell",
+   "inline": [
+     "chmod a+x /opt/rapid/deploycentostools.sh",
+     "/opt/rapid/deploycentostools.sh -u deploy" ]
    }
 ]
 }
