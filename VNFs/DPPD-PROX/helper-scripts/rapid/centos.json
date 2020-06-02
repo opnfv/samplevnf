@@ -17,30 +17,36 @@
 ],
 "provisioners": [
    {
+   "type": "shell",
+   "inline": [
+     "sudo mkdir -p /opt/rapid",
+     "sudo chmod 0777 /opt/rapid" ]
+   },
+   {
    "type": "file",
    "source": "./check_prox_system_setup.sh",
-   "destination": "~/"
+   "destination": "/opt/rapid/"
    },
    {
    "type": "file",
    "source": "./check-prox-system-setup.service",
-   "destination": "~/"
+   "destination": "/opt/rapid/"
    },
    {
    "type": "file",
    "source": "./sharkproxlog.sh",
-   "destination": "~/"
+   "destination": "/opt/rapid/"
    },
    {
    "type": "file",
    "source": "./deploycentostools.sh",
-   "destination": "~/"
+   "destination": "/opt/rapid/"
    },
    {
    "type": "shell",
    "inline": [
-     "chmod a+x ~/deploycentostools.sh",
-     "~/deploycentostools.sh -u deploy" ]
+     "chmod a+x /opt/rapid/deploycentostools.sh",
+     "/opt/rapid/deploycentostools.sh -u deploy" ]
    }
 ]
 }

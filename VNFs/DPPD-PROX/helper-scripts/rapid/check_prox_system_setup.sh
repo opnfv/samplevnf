@@ -18,7 +18,6 @@ NCPUS="$(lscpu | egrep '^CPU\(s\):' | awk '{ print $2 }')"
 MAXCOREID="$((NCPUS-1))"
 
 filename="/etc/tuned/realtime-virtual-guest-variables.conf"
-#logfile="/home/centos/prox_system_setup.log"
 logfile="/opt/rapid/prox_system_setup.log"
 if [ -f "$filename" ]
 then
