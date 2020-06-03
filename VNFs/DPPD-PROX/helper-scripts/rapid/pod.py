@@ -167,7 +167,7 @@ class Pod:
         self._log.debug("Using first SRIOV VF %s" % self._sriov_vf)
 
         self._log.info("Getting MAC address for assigned SRIOV VF %s" % self._sriov_vf)
-        self._ssh_client.run_cmd("sudo /home/centos/port_info -n 4 -w %s" % self._sriov_vf)
+        self._ssh_client.run_cmd("sudo /opt/rapid/port_info_app -n 4 -w %s" % self._sriov_vf)
         if ret != 0:
             self._log.error("Failed to get MAC address!"
                             "Error %s" % self._ssh_client.get_error())

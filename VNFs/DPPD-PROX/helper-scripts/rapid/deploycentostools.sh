@@ -199,16 +199,16 @@ function port_info_build()
 
 	pushd ${BUILD_DIR}/port_info > /dev/null 2>&1
 	make
-	${SUDO} cp ${BUILD_DIR}/port_info/build/app/port_info ${HOME}/port_info
+	${SUDO} cp ${BUILD_DIR}/port_info/build/app/port_info_app ${BUILD_DIR}/port_info_app
 	popd > /dev/null 2>&1
 }
 
 function create_minimal_install()
 {
-	ldd ${HOME}/prox | awk '{ if ($(NF-1) != "=>") print $(NF-1) }' >> ${BUILD_DIR}/list_of_install_components
+	ldd ${BUILD_DIR}/prox | awk '{ if ($(NF-1) != "=>") print $(NF-1) }' >> ${BUILD_DIR}/list_of_install_components
 
-	echo "${HOME}/prox" >> ${BUILD_DIR}/list_of_install_components
-	echo "${HOME}/port_info" >> ${BUILD_DIR}/list_of_install_components
+	echo "${BUILD_DIR}/prox" >> ${BUILD_DIR}/list_of_install_components
+	echo "${BUILD_DIR}/port_info_app" >> ${BUILD_DIR}/list_of_install_components
 
 	tar -czvhf ${BUILD_DIR}/install_components.tgz -T ${BUILD_DIR}/list_of_install_components
 }

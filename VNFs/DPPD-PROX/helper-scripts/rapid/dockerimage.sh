@@ -24,12 +24,14 @@ DOCKER_REGISTRY="localhost:5000"
 
 USE_DOCKER_CACHE="n"
 
+IMAGE_BUILD_LOG="dockerimage-build.log"
+
 function create_ssh_key()
 {
 	if [ -f ./${RSA_KEY_FILE_NAME} ]; then
 		read -p "RSA key already exist! Do you want to remove it (yYnN)?" -n 1 -r
 
-		if [ "$REPLY" == "y" ] || [ "$REPLY" == "Y" ]; then
+		if [ "${REPLY}" == "y" ] || [ "${REPLY}" == "Y" ]; then
 			echo "Removing existing key..."
 			sleep 3
 
@@ -49,10 +51,10 @@ function build_prox_image()
 {
 	if [ "${USE_DOCKER_CACHE}" == "y" ]; then
 		echo "Building image using cache..."
-		docker build --rm -t ${PROX_IMAGE_NAME}:latest -f ${DOCKERFILE} ${PROX_DEPLOY_DIR}
+		docker build --rm -t ${PROX_IMAGE_NAME}:latest -f ${DOCKERFILE} ${PROX_DEPLOY_DIR} 2>&1 | tee ./${IMAGE_BUILD_LOG}
 	else
 		echo "Building image without cache..."
-		docker build --no-cache --rm -t ${PROX_IMAGE_NAME}:latest -f ${DOCKERFILE} ${PROX_DEPLOY_DIR}
+		docker build --no-cache --rm -t ${PROX_IMAGE_NAME}:latest -f ${DOCKERFILE} ${PROX_DEPLOY_DIR} 2>&1 | tee ./${IMAGE_BUILD_LOG}
 	fi
 }
 
