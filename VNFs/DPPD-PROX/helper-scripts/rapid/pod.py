@@ -82,8 +82,13 @@ class Pod:
         """
         if self._ssh_client is not None:
             self._ssh_client.disconnect()
-        self.k8s_CoreV1Api.delete_namespaced_pod(name = self._name,
-                                 namespace = self._namespace)
+
+        try:
+            self.k8s_CoreV1Api.delete_namespaced_pod(name = self._name,
+                                                     namespace = self._namespace)
+        except client.rest.ApiException as e:
+            if e.reason != "Not Found":
+                self._log.error("Couldn't delete POD %s!\n%s\n" % (self._name, e.reason))
 
     def update_admin_ip(self):
         """Check for admin IP address assigned by k8s.

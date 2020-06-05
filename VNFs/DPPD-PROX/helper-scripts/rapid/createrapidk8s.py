@@ -16,6 +16,7 @@
 ## limitations under the License.
 ##
 
+import argparse
 from k8sdeployment import K8sDeployment
 
 # Config file name for deployment creation
@@ -24,14 +25,29 @@ CREATE_CONFIG_FILE_NAME = "rapid.pods"
 # Config file name for runrapid script
 RUN_CONFIG_FILE_NAME = "rapid.env"
 
-# Create a new deployment
-deployment = K8sDeployment()
+def main():
+    # Parse command line arguments
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument("-c", "--clean", action = "store_true",
+                           help = "Terminate pod-rapid-* PODs. "
+                           "Clean up cluster before or after the testing.")
+    args = argparser.parse_args()
 
-# Load config file with test environment description
-deployment.load_create_config(CREATE_CONFIG_FILE_NAME)
+    # Create a new deployment
+    deployment = K8sDeployment()
 
-# Create PODs for test
-deployment.create_pods()
+    # Load config file with test environment description
+    deployment.load_create_config(CREATE_CONFIG_FILE_NAME)
 
-# Save config file for runrapid script
-deployment.save_runtime_config(RUN_CONFIG_FILE_NAME)
+    if args.clean:
+        deployment.delete_pods()
+        return
+
+    # Create PODs for test
+    deployment.create_pods()
+
+    # Save config file for runrapid script
+    deployment.save_runtime_config(RUN_CONFIG_FILE_NAME)
+
+if __name__ == "__main__":
+    main()
