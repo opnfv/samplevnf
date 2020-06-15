@@ -1,7 +1,7 @@
 heat_template_version: 2015-10-15
 
 description: >
-  Template for deploying n PROX instances. Teh template allows for deploying
+  Template for deploying n PROX instances. The template allows for deploying
   multiple groups of PROX VMs. You can create a first group with certain
   flavors, availability groups, etc... Another group can be created with
   different characteristics.

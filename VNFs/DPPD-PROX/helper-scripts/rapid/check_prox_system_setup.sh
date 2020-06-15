@@ -28,8 +28,13 @@ then
                 echo "Isolated CPU(s) OK, no reboot: $line">>$logfile
                 sed -i 's/PubkeyAuthentication no/PubkeyAuthentication yes/g' /etc/ssh/sshd_config
                 service sshd restart
-                modprobe uio
-                insmod /opt/rapid/dpdk/build/kmod/igb_uio.ko
+                # Select either vfio, either igb_uio in  the following lines
+                # Next 2 modprobe lines are used for vfio
+                modprobe vfio enable_unsafe_noiommu_mode=1
+                modprobe vfio-pci
+                # Next 2 lines are used for igb_uio
+                #modprobe uio
+                #insmod /opt/rapid/dpdk/build/kmod/igb_uio.ko
                 exit 0
             ;;
             isolated_cores=*)

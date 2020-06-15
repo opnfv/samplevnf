@@ -17,13 +17,13 @@
 
 # Directory for package build
 BUILD_DIR="/opt/rapid"
-DPDK_VERSION="19.05"
-PROX_COMMIT="b71a4cfd"
+DPDK_VERSION="20.05"
+PROX_COMMIT="7c3217fc16"
 PROX_CHECKOUT="git checkout ${PROX_COMMIT}"
 ## Next line is overruling the PROX_COMMIT and will replace the version with a very specific patch. Should be commented out
 ## 	if you want to use a committed version of PROX with the COMMIT ID specified above
 ##Following line has the commit for testing IMIX, IPV6, ... It is the merge of all PROX commits on May 27th 2020
-PROX_CHECKOUT="git fetch \"https://gerrit.opnfv.org/gerrit/samplevnf\" refs/changes/23/70223/1 && git checkout FETCH_HEAD"
+#PROX_CHECKOUT="git fetch \"https://gerrit.opnfv.org/gerrit/samplevnf\" refs/changes/23/70223/1 && git checkout FETCH_HEAD"
 MULTI_BUFFER_LIB_VER="0.52"
 export RTE_SDK="${BUILD_DIR}/dpdk-${DPDK_VERSION}"
 export RTE_TARGET="x86_64-native-linuxapp-gcc"
@@ -48,7 +48,7 @@ function os_pkgs_install()
 	${SUDO} yum install -y git wget gcc unzip libpcap-devel ncurses-devel \
 			 libedit-devel lua-devel kernel-devel iperf3 pciutils \
 			 numactl-devel vim tuna openssl-devel nasm wireshark \
-			 make
+			 make driverctl
 }
 
 function k8s_os_pkgs_runtime_install()
@@ -152,18 +152,16 @@ function dpdk_install()
 
 	pushd ${RTE_SDK} > /dev/null 2>&1
 	make config T=${RTE_TARGET}
-	# The next sed lines make sure that we can compile DPDK 17.11 with a relatively new OS. Using a newer DPDK (18.5) should also resolve this issue
-	#${SUDO} sed -i '/CONFIG_RTE_LIBRTE_KNI=y/c\CONFIG_RTE_LIBRTE_KNI=n' ${RTE_SDK}/build/.config
-	#${SUDO} sed -i '/CONFIG_RTE_LIBRTE_PMD_KNI=y/c\CONFIG_RTE_LIBRTE_PMD_KNI=n' ${RTE_SDK}/build/.config
-	#${SUDO} sed -i '/CONFIG_RTE_KNI_KMOD=y/c\CONFIG_RTE_KNI_KMOD=n' ${RTE_SDK}/build/.config
-	#${SUDO} sed -i '/CONFIG_RTE_KNI_PREEMPT_DEFAULT=y/c\CONFIG_RTE_KNI_PREEMPT_DEFAULT=n' ${RTE_SDK}/build/.config
+	# Starting from DPDK 20.05, the IGB_UIO driver is not compiled by default.
+    # Uncomment the sed command to enable the driver compilation
+    #${SUDO} sed -i 's/CONFIG_RTE_EAL_IGB_UIO=n/c\/CONFIG_RTE_EAL_IGB_UIO=y' ${RTE_SDK}/build/.config
 
 	# For Kubernetes environment we use host vfio module
 	if [ "${K8S_ENV}" == "y" ]; then
 		sed -i 's/CONFIG_RTE_EAL_IGB_UIO=y/CONFIG_RTE_EAL_IGB_UIO=n/g' ${RTE_SDK}/build/.config
 		sed -i 's/CONFIG_RTE_LIBRTE_KNI=y/CONFIG_RTE_LIBRTE_KNI=n/g' ${RTE_SDK}/build/.config
 		sed -i 's/CONFIG_RTE_KNI_KMOD=y/CONFIG_RTE_KNI_KMOD=n/g' ${RTE_SDK}/build/.config
-	fi
+    fi
 
 	# Compile with MB library
 	sed -i '/CONFIG_RTE_LIBRTE_PMD_AESNI_MB=n/c\CONFIG_RTE_LIBRTE_PMD_AESNI_MB=y' ${RTE_SDK}/build/.config

@@ -1,5 +1,5 @@
 [Unit]
-Description=Check PROX system setup (isolated_cores, uio)
+Description=Check PROX system setup (isolated_cores, vfio)
 DefaultDependencies=no
 After=multi-user.target
 
