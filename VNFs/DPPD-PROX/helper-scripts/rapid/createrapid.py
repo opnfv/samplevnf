@@ -32,6 +32,8 @@ class RapidStackManager(object):
         options = config.options(section)
         for option in options:
             rapid_stack_params[option] = config.get(section, option)
+        if 'push_gateway' not in rapid_stack_params.keys():
+            rapid_stack_params['push_gateway'] = None
         return (rapid_stack_params)
 
     @staticmethod

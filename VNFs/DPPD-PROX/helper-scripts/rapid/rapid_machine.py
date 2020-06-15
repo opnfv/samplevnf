@@ -115,4 +115,4 @@ class RapidMachine(object):
         return (self.socket.core_stats(self.get_cores(), self.all_tasks_for_this_cfg))
 
     def multi_port_stats(self):
-        return (self.socket.multi_port_stats(self.self.dpdk_port_index))
+        return (self.socket.multi_port_stats(self.dpdk_port_index))

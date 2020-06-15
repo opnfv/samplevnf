@@ -5,4 +5,4 @@ heat_template= openstack-rapid.yaml
 heat_param = params_rapid.yaml
 keypair_name = rapid_key
 user = centos
-push_gateway = None
+;push_gateway = http://192.168.36.61:9091/metrics/job/

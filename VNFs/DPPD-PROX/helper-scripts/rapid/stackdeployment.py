@@ -106,7 +106,8 @@ class StackDeployment(object):
             env_file.write('[Varia]\n')
             env_file.write('vim = OpenStack\n')
             env_file.write('stack = {}\n'.format(self.stack.stack_name))
-            env_file.write('pushgateway = {}\n'.format(push_gateway))
+            if push_gateway:
+                env_file.write('pushgateway = {}\n'.format(push_gateway))
 
     def create_stack(self, stack_name, stack_file_path, param_file):
         files, template = template_utils.process_template_path(stack_file_path)

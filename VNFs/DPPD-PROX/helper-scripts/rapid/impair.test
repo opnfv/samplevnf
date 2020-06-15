@@ -31,6 +31,7 @@ latcores = [3]
 name = ImpairGW
 config_file = impair.cfg
 cores = [1]
+monitor = False
 
 [TestM3]
 name = Swap

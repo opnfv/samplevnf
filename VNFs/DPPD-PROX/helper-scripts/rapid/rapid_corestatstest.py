@@ -19,6 +19,7 @@
 
 import sys
 import time
+import requests
 from rapid_log import RapidLog
 from rapid_test import RapidTest
 
@@ -26,10 +27,8 @@ class CoreStatsTest(RapidTest):
     """
     Class to manage the corestatstesting
     """
-    def __init__(self, runtime, pushgateway, environment_file, machines):
-        self.runtime = runtime
-        self.pushgateway = pushgateway
-        self.environment_file = environment_file
+    def __init__(self, test_param,  runtime, pushgateway, environment_file, machines):
+        super().__init__(test_param, runtime, pushgateway, environment_file)
         self.machines = machines 
 
     def run(self):
@@ -41,7 +40,7 @@ class CoreStatsTest(RapidTest):
         RapidLog.info("+-----------+-----------+------------+------------+------------+------------+------------+------------+------------+")
         RapidLog.info("| PROX ID   |    Time   |    RX      |     TX     | non DP RX  | non DP TX  |   TX - RX  | nonDP TX-RX|  DROP TOT  |")
         RapidLog.info("+-----------+-----------+------------+------------+------------+------------+------------+------------+------------+")
-        duration = self.runtime
+        duration = self.test['runtime']
         tot_drop = []
         old_rx = []; old_non_dp_rx = []; old_tx = []; old_non_dp_tx = []; old_drop = []; old_tx_fail = []; old_tsc = []
         new_rx = []; new_non_dp_rx = []; new_tx = []; new_non_dp_tx = []; new_drop = []; new_tx_fail = []; new_tsc = []
@@ -75,8 +74,8 @@ class CoreStatsTest(RapidTest):
                 tot_drop[i] = tot_drop[i] + tx - rx
                 RapidLog.info('|{:>10.0f}'.format(i)+ ' |{:>10.0f}'.format(duration)+' | ' + '{:>10.0f}'.format(rx) + ' | ' +'{:>10.0f}'.format(tx) + ' | '+'{:>10.0f}'.format(non_dp_rx)+' | '+'{:>10.0f}'.format(non_dp_tx)+' | ' + '{:>10.0f}'.format(tx-rx) + ' | '+ '{:>10.0f}'.format(non_dp_tx-non_dp_rx) + ' | '+'{:>10.0f}'.format(tot_drop[i]) +' |')
     #            writer.writerow({'PROXID':i,'Time':duration,'Received':rx,'Sent':tx,'NonDPReceived':non_dp_rx,'NonDPSent':non_dp_tx,'Delta':tx-rx,'NonDPDelta':non_dp_tx-non_dp_rx,'Dropped':tot_drop[i]})
-                if self.pushgateway:
-                    URL = self.pushgateway+ '/metrics/job/' + TestName + '/instance/' + self.environment_file + str(i)
+                if self.test['pushgateway']:
+                    URL = self.test['pushgateway'] + self.test['test']+ '/instance/' + self.test['environment_file'] + str(i)
                     DATA = 'PROXID {}\nTime {}\n Received {}\nSent {}\nNonDPReceived {}\nNonDPSent {}\nDelta {}\nNonDPDelta {}\nDropped {}\n'.format(i,duration,rx,tx,non_dp_rx,non_dp_tx,tx-rx,non_dp_tx-non_dp_rx,tot_drop[i])
                     HEADERS = {'X-Requested-With': 'Python requests', 'Content-type': 'text/xml'}
                     response = requests.post(url=URL, data=DATA,headers=HEADERS)

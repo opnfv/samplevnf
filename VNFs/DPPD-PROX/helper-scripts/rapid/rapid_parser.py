@@ -40,15 +40,16 @@ class RapidConfigParser(object):
             test_params['lat_percentile'] = old_div(float(testconfig.get('TestParameters', 'lat_percentile')),100.0)
         else:
             test_params['lat_percentile'] = 0.99
-        RapidLog.info('Latency percentile measured at {:.0f}%'.format(test_params['lat_percentile']*100))
+        RapidLog.info('Latency percentile at {:.0f}%'.format(test_params['lat_percentile']*100))
         config = configparser.RawConfigParser()
         config.read(test_params['environment_file'])
         test_params['vim_type'] = config.get('Varia', 'vim')
         test_params['key'] = config.get('ssh', 'key')
         test_params['user'] = config.get('ssh', 'user')
         test_params['total_number_of_machines'] = int(config.get('rapid', 'total_number_of_machines'))
-        if config.has_option('TestParameters', 'pushgateway'):
-            test_params['pushgateway'] = config.get('TestParameters', 'pushgateway')
+        #if config.has_option('TestParameters', 'pushgateway'):
+        if config.has_option('Varia', 'pushgateway'):
+            test_params['pushgateway'] = config.get('Varia', 'pushgateway')
             RapidLog.info('Measurements will be pushed to %s'%test_params['pushgateway'])
         else:
             test_params['pushgateway'] = None
@@ -62,7 +63,7 @@ class RapidConfigParser(object):
                 if option in ['imix','imixs','flows']:
                     test[option] = ast.literal_eval(testconfig.get(section, option))
 #                    test[option] = [int(i) for i in test[option]]
-                elif option in ['maxframespersecondallingress','stepsize']:
+                elif option in ['maxframespersecondallingress','stepsize','flowsize']:
                     test[option] = int(testconfig.get(section, option))
                 elif option in ['startspeed','drop_rate_threshold','lat_avg_threshold','lat_perc_threshold','lat_max_threshold','accuracy','maxr','maxz','pass_threshold']:
                     test[option] = float(testconfig.get(section, option))
@@ -126,7 +127,7 @@ class RapidConfigParser(object):
                 while True:
                     gw_ip_key = 'dp_ip{}'.format(index)
                     if gw_ip_key in machines[int(machine['gw_vm'])-1].keys():
-                        gw_ip = machines[int(machine['dest_vm'])-1][gw_ip_key]
+                        gw_ip = machines[int(machine['gw_vm'])-1][gw_ip_key]
                         gw_ips.append(gw_ip)
                         index += 1
                     else:

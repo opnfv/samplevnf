@@ -1,7 +1,7 @@
 heat_template_version: 2015-10-15
 
 description: >
-  Template for deploying n PROX instances. Teh template allows for deploying
+  Template for deploying n PROX instances. The template allows for deploying
   multiple groups of PROX VMs. You can create a first group with certain
   flavors, availability groups, etc... Another group can be created with
   different characteristics.
@@ -50,7 +50,8 @@ resources:
           PROX_mgmt_net_id: {get_param: mgmt_net_name}
           PROX_data_net_id: {get_param: data_net_name}
           PROX_config: {get_resource: MyConfig}
-    depends_on: MyConfig
+    depends_on:
+      - MyConfig
   
   PROX2VMs:
     type: OS::Heat::ResourceGroup
@@ -69,7 +70,8 @@ resources:
           PROX_mgmt_net_id: {get_param: mgmt_net_name}
           PROX_data_net_id: {get_param: data_net_name}
           PROX_config: {get_resource: MyConfig}
-    depends_on: MyConfig
+    depends_on:
+      - MyConfig
   
   MyConfig:
     type: OS::Heat::CloudConfig
@@ -88,6 +90,24 @@ resources:
           list:  |
               rapid:rapid
           expire: False
+        write_files:
+        - path: /opt/rapid/after_boot_do_not_run.sh
+          # after_boot.sh is ran by check_prox_system_setup.sh, if it exists
+          # This can be used to fix some issues, like in the example below
+          # Remove this section or rename the file, if you do not want to run
+          # this after booting
+          content: |
+            OLDIFS="${IFS}"
+            IFS=$'\n'
+            list="$(ip route | grep via | grep -v 'dev eth0')"
+            # Delete all routes using gateway on other interfaces than eth0
+            for item in ${list}
+              do /bin/bash -c "sudo ip route del ${item}"
+            done
+            /bin/bash -c "sudo ip route add default via 10.6.6.1 dev eth0"
+            /bin/bash -c "echo nameserver 8.8.8.8 > /etc/resolv.conf"
+            IFS="${OLDIFS}"
+          permissions: '0777'
 
 outputs:
   number_of_servers:

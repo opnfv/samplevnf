@@ -92,11 +92,11 @@ class RapidTestManager(object):
                         test_params['environment_file'], gen_machine,
                         sut_machine, background_machines)
             elif test_param['test'] in ['corestats']:
-                test = CoreStatsTest(test_params['runtime'],
+                test = CoreStatsTest(test_param, test_params['runtime'],
                         test_params['pushgateway'],
                         test_params['environment_file'], machines)
             elif test_param['test'] in ['portstats']:
-                test = PortStatsTest(test_params['runtime'],
+                test = PortStatsTest(test_param, test_params['runtime'],
                         test_params['pushgateway'],
                         test_params['environment_file'], machines)
             elif test_param['test'] in ['impairtest']:
@@ -105,7 +105,9 @@ class RapidTestManager(object):
                         test_params['environment_file'], gen_machine,
                         sut_machine)
             elif test_param['test'] in ['irqtest']:
-                test = IrqTest(test_params['runtime'], machines)
+                test = IrqTest(test_param, test_params['runtime'],
+                        test_params['pushgateway'],
+                        test_params['environment_file'], machines)
             elif test_param['test'] in ['warmuptest']:
                 test = WarmupTest(test_param, gen_machine)
             else:

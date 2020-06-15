@@ -40,6 +40,11 @@ warmuptime=2
 
 [test2]
 test=fixed_rate
+# Following parameter defines the success criterium for the test.
+# When this test uses multiple combinations of packet size and flows,
+# all combinations must be meeting the same threshold
+# The threshold is expressed in Mpps
+pass_threshold=0.1
 imixs=[[64],[128]]
 # the number of flows in the list need to be powers of 2, max 2^20
 # If not a power of 2, we will use the lowest power of 2 that is larger than

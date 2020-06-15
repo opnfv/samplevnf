@@ -96,7 +96,7 @@ class RapidLog(object):
         # Add timestamp
         log.debug('\n---------\nLog started on %s.\n---------\n' % time.asctime())
 
-        log.debug("runrapid.py version: " + version)
+        log.debug("rapid version: " + version)
         RapidLog.log = log
 
     @staticmethod

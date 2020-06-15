@@ -1,6 +1,6 @@
 parameters:
   public_net_name: admin_floating_net
   data_net_name: dataplane-network
-  PROX_image: rapidVM
+  PROX_image: testrapidVM
   my_availability_zone: nova
   security_group: prox_security_group

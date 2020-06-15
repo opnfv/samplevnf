@@ -40,12 +40,25 @@ warmuptime=2
 
 [test2]
 test=flowsizetest
+# Following parameter defines the success criterium for the test.
+# When this test uses multiple combinations of packet size and flows,
+# all combinations must be meeting the same threshold
+# The threshold is expressed in Mpps
+pass_threshold=0.1
+# Each element in the imix list will result in a separate test. Each element
+# is on its turn a list of packet sizes which will be used during one test
+# execution. If you only want to test 1 size, define a list with only one
+# element.
 imixs=[[64]]
-# the number of flows in the list need to be powers of 2, max 2^20
-# Select from following numbers: 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576
-flows=[512,1]
+# the number of flows in the list need to be powers of 2, max 2^30
+# If not a power of 2, we will use the lowest power of 2 that is larger than
+# the requested number of flows. e.g. 9 will result in 16 flows
+flows=[512]
+# Setting one of the following thresholds to infinity (inf)
+# results in the criterion not being evaluated to rate the test as succesful
 drop_rate_threshold = 0
 lat_avg_threshold = 500
+lat_perc_threshold = 800
 lat_max_threshold = 1000
 accuracy = 0.1
 startspeed = 10

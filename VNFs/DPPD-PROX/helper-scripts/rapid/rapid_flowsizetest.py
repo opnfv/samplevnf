@@ -19,6 +19,7 @@
 
 import sys
 import time
+import requests
 from math import ceil
 from statistics import mean
 from past.utils import old_div
@@ -33,21 +34,17 @@ class FlowSizeTest(RapidTest):
     """
     def __init__(self, test_param, lat_percentile, runtime, pushgateway,
             environment_file, gen_machine, sut_machine, background_machines):
-        self.test = test_param
+        super().__init__(test_param, runtime, pushgateway, environment_file)
         self.gen_machine = gen_machine
         self.sut_machine = sut_machine
         self.background_machines = background_machines
         self.test['lat_percentile'] = lat_percentile
-        self.test['runtime'] = runtime
-        self.test['pushgateway'] = pushgateway
-        self.test['environment_file'] = environment_file
-        if 'maxr' not in self.test.keys():
-            self.test['maxr'] = 1
-        if 'maxz' not in self.test.keys():
-            self.test['maxz'] = inf
         if self.test['test'] == 'TST009test':
-            # This test implements some of the testing as defined in https://docbox.etsi.org/ISG/NFV/open/Publications_pdf/Specs-Reports/NFV-TST%20009v3.2.1%20-%20GS%20-%20NFVI_Benchmarks.pdf
-            self.test['TST009_n'] = int(ceil(old_div(self.test['maxframespersecondallingress'], self.test['stepsize'])))
+            # This test implements some of the testing as defined in
+            # https://docbox.etsi.org/ISG/NFV/open/Publications_pdf/Specs-Reports/NFV-TST%20009v3.2.1%20-%20GS%20-%20NFVI_Benchmarks.pdf
+            self.test['TST009_n'] = int(ceil(old_div(
+                self.test['maxframespersecondallingress'],
+                self.test['stepsize'])))
             self.test['TST009'] = True
             self.test['TST009_L'] = 0
             self.test['TST009_R'] = self.test['TST009_n'] - 1
@@ -58,7 +55,8 @@ class FlowSizeTest(RapidTest):
             self.test['lat_perc_threshold'] = inf
             self.test['lat_max_threshold'] = inf
         elif self.test['test'] == 'fixed_rate':
-            for key in['drop_rate_threshold','lat_avg_threshold','lat_perc_threshold','lat_max_threshold']:
+            for key in['drop_rate_threshold','lat_avg_threshold',
+                    'lat_perc_threshold','lat_max_threshold']:
                 self.test[key] = inf
 
     def new_speed(self, speed,size,success):
@@ -244,7 +242,7 @@ class FlowSizeTest(RapidTest):
                     RapidLog.info("+--------+------------------+-------------+-------------+-------------+------------------------+----------+----------+----------+-----------+-----------+-----------+-----------+-------+----+")
     #                writer.writerow({'Flows':flow_number,'PacketSize':(size+4),'RequestedPPS':self.get_pps(endspeed,size),'GeneratedPPS':endpps_req_tx,'SentPPS':endpps_tx,'ForwardedPPS':endpps_sut_tx,'ReceivedPPS':endpps_rx,'AvgLatencyUSEC':endlat_avg,'MaxLatencyUSEC':endlat_max,'Sent':endabs_tx,'Received':endabs_rx,'Lost':endabs_dropped,'LostTotal':endabs_dropped})
                     if self.test['pushgateway']:
-                        URL = self.test['pushgateway'] + '/metrics/job/' + self.test['test']+ '/instance/' + self.test['environment_file']
+                        URL = self.test['pushgateway'] + self.test['test']+ '/instance/' + self.test['environment_file']
                         if endabs_dropped == None:
                             ead = 0
                         else:

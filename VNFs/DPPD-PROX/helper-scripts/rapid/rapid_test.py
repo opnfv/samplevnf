@@ -21,11 +21,22 @@ import time
 from past.utils import old_div
 from rapid_log import RapidLog
 from rapid_log import bcolors
+inf = float("inf")
 
 class RapidTest(object):
     """
-    Class to manage the flowsizetesting
+    Class to manage the testing
     """
+    def __init__(self, test_param,  runtime, pushgateway, environment_file ):
+        self.test = test_param
+        self.test['runtime'] = runtime
+        self.test['pushgateway'] = pushgateway
+        self.test['environment_file'] = environment_file
+        if 'maxr' not in self.test.keys():
+            self.test['maxr'] = 1
+        if 'maxz' not in self.test.keys():
+            self.test['maxz'] = inf
+
     @staticmethod
     def get_percentageof10Gbps(pps_speed,size):
         # speed is given in pps, returning % of 10Gb/s

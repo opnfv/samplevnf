@@ -17,13 +17,13 @@
 
 # Directory for package build
 BUILD_DIR="/opt/rapid"
-DPDK_VERSION="19.05"
-PROX_COMMIT="b71a4cfd"
+DPDK_VERSION="20.05"
+PROX_COMMIT="7c3217fc16"
 PROX_CHECKOUT="git checkout ${PROX_COMMIT}"
 ## Next line is overruling the PROX_COMMIT and will replace the version with a very specific patch. Should be commented out
 ## 	if you want to use a committed version of PROX with the COMMIT ID specified above
 ##Following line has the commit for testing IMIX, IPV6, ... It is the merge of all PROX commits on May 27th 2020
-PROX_CHECKOUT="git fetch \"https://gerrit.opnfv.org/gerrit/samplevnf\" refs/changes/23/70223/1 && git checkout FETCH_HEAD"
+#PROX_CHECKOUT="git fetch \"https://gerrit.opnfv.org/gerrit/samplevnf\" refs/changes/23/70223/1 && git checkout FETCH_HEAD"
 MULTI_BUFFER_LIB_VER="0.52"
 export RTE_SDK="${BUILD_DIR}/dpdk-${DPDK_VERSION}"
 export RTE_TARGET="x86_64-native-linuxapp-gcc"
@@ -42,13 +42,16 @@ function os_pkgs_install()
 	${SUDO} yum install -y deltarpm yum-utils
 
 	# NASM repository for AESNI MB library
-	${SUDO} yum-config-manager --add-repo http://www.nasm.us/nasm.repo
+	#${SUDO} yum-config-manager --add-repo http://www.nasm.us/nasm.repo
 
 	[ "${OS_UPDATE}" == "y" ] && ${SUDO} yum update -y
 	${SUDO} yum install -y git wget gcc unzip libpcap-devel ncurses-devel \
 			 libedit-devel lua-devel kernel-devel iperf3 pciutils \
-			 numactl-devel vim tuna openssl-devel nasm wireshark \
-			 make
+			 numactl-devel vim tuna openssl-devel wireshark \
+			 make driverctl
+
+	${SUDO} wget https://www.nasm.us/pub/nasm/releasebuilds/2.14.02/linux/nasm-2.14.02-0.fc27.x86_64.rpm
+	${SUDO} rpm -ivh nasm-2.14.02-0.fc27.x86_64.rpm
 }
 
 function k8s_os_pkgs_runtime_install()
@@ -65,6 +68,9 @@ function os_cfg()
 	# huge pages to be used by DPDK
 	${SUDO} sh -c '(echo "vm.nr_hugepages = 1024") > /etc/sysctl.conf'
 
+	${SUDO} sh -c '(echo "options vfio enable_unsafe_noiommu_mode=1") > /etc/modprobe.d/vfio.conf'
+	${SUDO} sh -c '(echo "vfio") > /etc/modules-load.d/vfio.conf'
+	${SUDO} sh -c '(echo "vfio-pci") > /etc/modules-load.d/vfio.conf'
 	# Enabling tuned with the realtime-virtual-guest profile
 	pushd ${BUILD_DIR} > /dev/null 2>&1
 	wget http://linuxsoft.cern.ch/cern/centos/7/rt/x86_64/Packages/tuned-profiles-realtime-2.8.0-5.el7_4.2.noarch.rpm
@@ -77,7 +83,7 @@ function os_cfg()
 	# isolated CPUs so we can start the realtime-virtual-guest profile. If we don't, that command will fail.
 	# When the VM will be instantiated, the check_kernel_params service will check for the real number of cores available to this VM 
 	# and update the realtime-virtual-guest-variables.conf accordingly.
-	echo "isolated_cores=1" | ${SUDO} tee -a /etc/tuned/realtime-virtual-guest-variables.conf
+	echo "isolated_cores=1-3" | ${SUDO} tee -a /etc/tuned/realtime-virtual-guest-variables.conf
 	${SUDO} tuned-adm profile realtime-virtual-guest
 
 	# Install the check_tuned_params service to make sure that the grub cmd line has the right cpus in isolcpu. The actual number of cpu's
@@ -87,19 +93,6 @@ function os_cfg()
 	${SUDO} mv ${BUILD_DIR}/check-prox-system-setup.service /etc/systemd/system/
 	${SUDO} systemctl daemon-reload
 	${SUDO} systemctl enable check-prox-system-setup.service
-    # Following lines are added to fix the following issue: When the VM gets
-    # instantiated, the rapid scripts will try to ssh into the VM to start
-    # the testing. Once the script connects with ssh, it starts downloading
-    # config files and then start prox, etc... The problem is that when the VM
-    # boots, check_prox_system_setup.sh will check for some things and
-    # potentially reboot, resulting in losing the ssh connection again.
-    # To fix this issue, the following lines are disabling ssh access for the 
-    # centos user. The script will not be able to connect to the VM till ssh
-    # access is restored after a reboot. Restoring ssh is now done by
-    # check-prox-system-setup.service
-	printf "\nMatch User centos\n" | ${SUDO} tee -a /etc/ssh/sshd_config
-	printf "%sPubkeyAuthentication no\n" "    " | ${SUDO} tee -a /etc/ssh/sshd_config
-	printf "%sPasswordAuthentication no\n" "    " | ${SUDO} tee -a /etc/ssh/sshd_config
 	popd > /dev/null 2>&1
 }
 
@@ -152,18 +145,16 @@ function dpdk_install()
 
 	pushd ${RTE_SDK} > /dev/null 2>&1
 	make config T=${RTE_TARGET}
-	# The next sed lines make sure that we can compile DPDK 17.11 with a relatively new OS. Using a newer DPDK (18.5) should also resolve this issue
-	#${SUDO} sed -i '/CONFIG_RTE_LIBRTE_KNI=y/c\CONFIG_RTE_LIBRTE_KNI=n' ${RTE_SDK}/build/.config
-	#${SUDO} sed -i '/CONFIG_RTE_LIBRTE_PMD_KNI=y/c\CONFIG_RTE_LIBRTE_PMD_KNI=n' ${RTE_SDK}/build/.config
-	#${SUDO} sed -i '/CONFIG_RTE_KNI_KMOD=y/c\CONFIG_RTE_KNI_KMOD=n' ${RTE_SDK}/build/.config
-	#${SUDO} sed -i '/CONFIG_RTE_KNI_PREEMPT_DEFAULT=y/c\CONFIG_RTE_KNI_PREEMPT_DEFAULT=n' ${RTE_SDK}/build/.config
+	# Starting from DPDK 20.05, the IGB_UIO driver is not compiled by default.
+    # Uncomment the sed command to enable the driver compilation
+    #${SUDO} sed -i 's/CONFIG_RTE_EAL_IGB_UIO=n/c\/CONFIG_RTE_EAL_IGB_UIO=y' ${RTE_SDK}/build/.config
 
 	# For Kubernetes environment we use host vfio module
 	if [ "${K8S_ENV}" == "y" ]; then
 		sed -i 's/CONFIG_RTE_EAL_IGB_UIO=y/CONFIG_RTE_EAL_IGB_UIO=n/g' ${RTE_SDK}/build/.config
 		sed -i 's/CONFIG_RTE_LIBRTE_KNI=y/CONFIG_RTE_LIBRTE_KNI=n/g' ${RTE_SDK}/build/.config
 		sed -i 's/CONFIG_RTE_KNI_KMOD=y/CONFIG_RTE_KNI_KMOD=n/g' ${RTE_SDK}/build/.config
-	fi
+    fi
 
 	# Compile with MB library
 	sed -i '/CONFIG_RTE_LIBRTE_PMD_AESNI_MB=n/c\CONFIG_RTE_LIBRTE_PMD_AESNI_MB=y' ${RTE_SDK}/build/.config

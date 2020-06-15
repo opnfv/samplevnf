@@ -19,6 +19,7 @@
 
 import sys
 import time
+import requests
 from rapid_log import RapidLog
 from rapid_test import RapidTest
 
@@ -26,10 +27,9 @@ class PortStatsTest(RapidTest):
     """
     Class to manage the portstatstesting
     """
-    def __init__(self, runtime, pushgateway, environment_file, machines):
-        self.runtime = runtime
-        self.pushgateway = pushgateway
-        self.environment_file = environment_file
+    def __init__(self, test_param, runtime, pushgateway, environment_file,
+            machines):
+        super().__init__(test_param, runtime, pushgateway, environment_file)
         self.machines = machines 
 
     def run(self):
@@ -41,7 +41,7 @@ class PortStatsTest(RapidTest):
         RapidLog.info("+-----------+-----------+------------+------------+------------+------------+")
         RapidLog.info("| PROX ID   |    Time   |    RX      |     TX     | no MBUFS   | ierr&imiss |")
         RapidLog.info("+-----------+-----------+------------+------------+------------+------------+")
-        duration = float(runtime)
+        duration = float(self.test['runtime'])
         old_rx = []; old_tx = []; old_no_mbufs = []; old_errors = []; old_tsc = []
         new_rx = []; new_tx = []; new_no_mbufs = []; new_errors = []; new_tsc = []
         machines_to_go = len (self.machines)
@@ -70,8 +70,8 @@ class PortStatsTest(RapidTest):
                 old_tsc[i] = new_tsc[i]
                 RapidLog.info('|{:>10.0f}'.format(i)+ ' |{:>10.0f}'.format(duration)+' | ' + '{:>10.0f}'.format(rx) + ' | ' +'{:>10.0f}'.format(tx) + ' | '+'{:>10.0f}'.format(no_mbufs)+' | '+'{:>10.0f}'.format(errors)+' |')
     #            writer.writerow({'PROXID':i,'Time':duration,'Received':rx,'Sent':tx,'NoMbufs':no_mbufs,'iErrMiss':errors})
-                if self.pushgateway:
-                    URL     = self.pushgateway + '/metrics/job/' + TestName + '/instance/' + self.environment_file + str(i)
+                if self.test['pushgateway']:
+                    URL     = self.test['pushgateway'] + self.test['test'] + '/instance/' + self.test['environment_file'] + str(i)
                     DATA = 'PROXID {}\nTime {}\n Received {}\nSent {}\nNoMbufs {}\niErrMiss {}\n'.format(i,duration,rx,tx,no_mbufs,errors)
                     HEADERS = {'X-Requested-With': 'Python requests', 'Content-type': 'text/xml'}
                     response = requests.post(url=URL, data=DATA,headers=HEADERS)

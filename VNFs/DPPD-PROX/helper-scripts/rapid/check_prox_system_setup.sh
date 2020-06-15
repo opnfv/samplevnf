@@ -26,10 +26,12 @@ then
         case $line in
             isolated_cores=1-$MAXCOREID*)
                 echo "Isolated CPU(s) OK, no reboot: $line">>$logfile
-                sed -i 's/PubkeyAuthentication no/PubkeyAuthentication yes/g' /etc/ssh/sshd_config
-                service sshd restart
-                modprobe uio
-                insmod /opt/rapid/dpdk/build/kmod/igb_uio.ko
+                FILE=/opt/rapid/after_boot.sh
+                if test -f "$FILE"; then
+                  ("$FILE")
+                  echo "Executing: $FILE">>$logfile
+                fi
+                touch /opt/rapid/system_ready_for_rapid
                 exit 0
             ;;
             isolated_cores=*)

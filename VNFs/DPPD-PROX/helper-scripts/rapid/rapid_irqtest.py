@@ -20,6 +20,7 @@
 from past.utils import old_div
 import sys
 import time
+import requests
 from rapid_log import RapidLog
 from rapid_test import RapidTest
 
@@ -27,8 +28,9 @@ class IrqTest(RapidTest):
     """
     Class to manage the irq testing
     """
-    def __init__(self, runtime, machines):
-        self.runtime = runtime
+    def __init__(self, test_param, runtime, pushgateway, environment_file,
+            machines):
+        super().__init__(test_param, runtime, pushgateway, environment_file)
         self.machines = machines
 
     def run(self):
@@ -55,17 +57,29 @@ class IrqTest(RapidTest):
             for j,bucket in enumerate(buckets,start=1):
                 for i,irqcore in enumerate(machine.get_cores(),start=1):
                     old_irq[i][j] = machine.socket.irq_stats(irqcore,j-1)
-            time.sleep(float(self.runtime))
+            time.sleep(float(self.test['runtime']))
             machine.stop()
             for i,irqcore in enumerate(machine.get_cores(),start=1):
-                irq[i][0]='core %s '%irqcore
+                irq[i][0]='core %s'%irqcore
                 for j,bucket in enumerate(buckets,start=1):
                     diff =  machine.socket.irq_stats(irqcore,j-1) - old_irq[i][j]
                     if diff == 0:
                         irq[i][j] = '0'
                     else:
-                        irq[i][j] = str(round(old_div(diff,float(self.runtime)), 2))
+                        irq[i][j] = str(round(old_div(diff,float(self.test['runtime'])), 2))
             RapidLog.info('Results for PROX instance %s'%machine.name)
             for row in irq:
                 RapidLog.info(''.join(['{:>12}'.format(item) for item in row]))
+            if self.test['pushgateway']:
+                URL = self.test['pushgateway'] + self.test['test']+ '/instance/' + self.test['environment_file']
+                HEADERS = {'X-Requested-With': 'Python requests', 'Content-type': 'text/xml'}
+                #DATA = 'Machine {}\n'.format(machine.name)
+                for i,irqcore in enumerate(machine.get_cores(),start=1):
+                    DATA = '{}\n'.format(irq[i][0])
+                    for j,bucket in enumerate(buckets,start=1):
+                        DATA = DATA + 'B{} {}\n'.format(irq[0][j].replace(">","M").replace("<","").replace(" ",""),irq[i][j])
+                    response = requests.post(url=URL, data=DATA,headers=HEADERS)
+                    if (response.status_code != 202) and (response.status_code != 200):
+                        RapidLog.info('Cannot send metrics to {}'.format(URL))
+                        RapidLog.info(DATA)
         return (True)

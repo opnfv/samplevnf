@@ -46,7 +46,7 @@ class prox_ctrl(object):
         On failure, raise RuntimeWarning exception when possibly worth
         retrying, and raise RuntimeError exception otherwise.
         """
-        return self.run_cmd('true', True)
+        return self.run_cmd('test -e /opt/rapid/system_ready_for_rapid', True)
 
     def connect(self):
         attempts = 1
@@ -129,7 +129,8 @@ class prox_ctrl(object):
         try:
             return subprocess.check_output(cmd, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as ex:
-            if _connect and ex.returncode == 255:
+            #if _connect and ex.returncode == 255:
+            if _connect:
                 raise RuntimeWarning(ex.output.strip())
             raise RuntimeError('ssh returned exit status %d:\n%s'
                     % (ex.returncode, ex.output.strip()))
