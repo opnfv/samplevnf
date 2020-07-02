@@ -18,6 +18,8 @@
 #define _HANDLE_IMPAIR_H_
 
 void task_impair_set_delay_us(struct task_base *tbase, uint32_t delay_us, uint32_t random_delay_us);
-void task_impair_set_proba(struct task_base *tbase, float proba);
+void task_impair_set_proba_no_drop(struct task_base *tbase, float proba);
+void task_impair_set_proba_delay(struct task_base *tbase, float proba);
+void task_impair_set_proba_duplicate(struct task_base *tbase, float proba);
 
 #endif /* _HANDLE_IMPAIR_H_ */

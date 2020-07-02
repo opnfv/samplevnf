@@ -187,6 +187,8 @@ void set_task_defaults(struct prox_cfg* prox_cfg, struct lcore_cfg* lcore_cfg_in
 
 			targ->runtime_flags |= TASK_TX_CRC;
 			targ->accuracy_limit_nsec = 5000;
+			targ->probability_delay = 1000000;
+			targ->probability_no_drop = 1000000;
 		}
 	}
 }

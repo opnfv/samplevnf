@@ -55,7 +55,9 @@ struct task_impair {
 	unsigned queue_head;
 	unsigned queue_tail;
 	unsigned queue_mask;
-	int tresh;
+	int tresh_no_drop;
+	int tresh_duplicate;
+	int tresh_delay;
 	unsigned int seed;
 	struct random state;
 	uint64_t last_idx;
@@ -72,10 +74,23 @@ static int handle_bulk_impair(struct task_base *tbase, struct rte_mbuf **mbufs, 
 static int handle_bulk_impair_random(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts);
 static int handle_bulk_random_drop(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts);
 
-void task_impair_set_proba(struct task_base *tbase, float proba)
+void task_impair_set_proba_no_drop(struct task_base *tbase, float proba_no_drop)
 {
 	struct task_impair *task = (struct task_impair *)tbase;
-	task->tresh = ((uint64_t) RAND_MAX) * (uint32_t)(proba * 10000) / 1000000;
+	task->tresh_no_drop = ((uint64_t) RAND_MAX) * (uint32_t)(proba_no_drop * 10000) / 1000000;
+}
+
+void task_impair_set_proba_delay(struct task_base *tbase, float proba_delay)
+{
+	struct task_impair *task = (struct task_impair *)tbase;
+	task->tresh_delay = ((uint64_t) RAND_MAX) * (uint32_t)(proba_delay * 10000) / 1000000;
+	task->flags |= IMPAIR_NEED_UPDATE;
+}
+
+void task_impair_set_proba_duplicate(struct task_base *tbase, float proba_dup)
+{
+	struct task_impair *task = (struct task_impair *)tbase;
+	task->tresh_duplicate = ((uint64_t) RAND_MAX) * (uint32_t)(proba_dup * 10000) / 1000000;
 }
 
 void task_impair_set_delay_us(struct task_base *tbase, uint32_t delay_us, uint32_t random_delay_us)
@@ -118,7 +133,7 @@ static void task_impair_update(struct task_base *tbase)
 			uint16_t idx = 0;
 			while (idx < MAX_PKT_BURST && task->queue_tail != task->queue_head) {
 				if (task->queue[task->queue_tail].tsc <= now) {
-					out[idx] = rand_r(&task->seed) <= task->tresh? 0 : OUT_DISCARD;
+					out[idx] = rand_r(&task->seed) <= task->tresh_no_drop? 0 : OUT_DISCARD;
 					new_mbufs[idx++] = task->queue[task->queue_tail].mbuf;
 					task->queue_tail = (task->queue_tail + 1) & task->queue_mask;
 				}
@@ -140,7 +155,7 @@ static void task_impair_update(struct task_base *tbase)
 			while ((pkt_idx < MAX_PKT_BURST) && (task->last_idx != ((now_idx - 1) & DELAY_MAX_MASK))) {
 				struct queue *queue = &task->buffer[task->last_idx];
 				while ((pkt_idx < MAX_PKT_BURST) && (queue->queue_tail != queue->queue_head)) {
-					out[pkt_idx] = rand_r(&task->seed) <= task->tresh? 0 : OUT_DISCARD;
+					out[pkt_idx] = rand_r(&task->seed) <= task->tresh_no_drop? 0 : OUT_DISCARD;
 					new_mbufs[pkt_idx++] = queue->queue_elem[queue->queue_tail].mbuf;
 					queue->queue_tail = (queue->queue_tail + 1) & task->queue_mask;
 				}
@@ -175,10 +190,10 @@ static void task_impair_update(struct task_base *tbase)
 		}
 	} else if (task->random_delay_us) {
 		size_t size = (DELAY_MAX_MASK + 1) * sizeof(struct queue);
-		plog_info("Allocating %zd bytes\n", size);
+		plog_info("\t\tAllocating %zd bytes\n", size);
 		task->buffer = prox_zmalloc(size, task->socket_id);
 		PROX_PANIC(task->buffer == NULL, "Not enough memory to allocate buffer\n");
-		plog_info("Allocating %d x %zd bytes\n", DELAY_MAX_MASK + 1, mem_size);
+		plog_info("\t\tAllocating %d x %zd bytes\n", DELAY_MAX_MASK + 1, mem_size);
 
 		for (int i = 0; i < DELAY_MAX_MASK + 1; i++) {
 			task->buffer[i].queue_elem = prox_zmalloc(mem_size, task->socket_id);
@@ -204,11 +219,11 @@ static int handle_bulk_random_drop(struct task_base *tbase, struct rte_mbuf **mb
 	if (task->flags & IMPAIR_SET_MAC) {
 		for (uint16_t i = 0; i < n_pkts; ++i) {
 			prox_rte_ether_addr_copy((prox_rte_ether_addr *)&task->src_mac[0], &hdr[i]->s_addr);
-			out[i] = rand_r(&task->seed) <= task->tresh? 0 : OUT_DISCARD;
+			out[i] = rand_r(&task->seed) <= task->tresh_no_drop? 0 : OUT_DISCARD;
 		}
 	} else {
 		for (uint16_t i = 0; i < n_pkts; ++i) {
-			out[i] = rand_r(&task->seed) <= task->tresh? 0 : OUT_DISCARD;
+			out[i] = rand_r(&task->seed) <= task->tresh_no_drop? 0 : OUT_DISCARD;
 		}
 	}
 	ret = task->base.tx_pkt(&task->base, mbufs, n_pkts, out);
@@ -268,10 +283,10 @@ static int handle_bulk_impair(struct task_base *tbase, struct rte_mbuf **mbufs, 
 	struct rte_mbuf *new_mbufs[MAX_PKT_BURST];
 	uint16_t idx = 0;
 
-	if (task->tresh != RAND_MAX) {
+	if (task->tresh_no_drop != RAND_MAX) {
 		while (idx < MAX_PKT_BURST && task->queue_tail != task->queue_head) {
 			if (task->queue[task->queue_tail].tsc <= now) {
-				out[idx] = rand_r(&task->seed) <= task->tresh? 0 : OUT_DISCARD;
+				out[idx] = rand_r(&task->seed) <= task->tresh_no_drop? 0 : OUT_DISCARD;
 				new_mbufs[idx] = task->queue[task->queue_tail].mbuf;
 				PREFETCH0(new_mbufs[idx]);
 				PREFETCH0(&new_mbufs[idx]->cacheline1);
@@ -346,7 +361,10 @@ static int handle_bulk_impair_random(struct task_base *tbase, struct rte_mbuf **
 	}
 
 	for (i = 0; i < n_pkts; ++i) {
-		packet_time = now + random_delay(&task->state, task->delay_time, task->delay_time_mask);
+		if (rand_r(&task->seed) <= task->tresh_delay)
+			packet_time = now + random_delay(&task->state, task->delay_time, task->delay_time_mask);
+		else
+			packet_time = now;
 		idx = (packet_time >> DELAY_ACCURACY) & DELAY_MAX_MASK;
 		while (idx != ((now_idx - 1) & DELAY_MAX_MASK)) {
 			struct queue *queue = &task->buffer[idx];
@@ -366,6 +384,15 @@ static int handle_bulk_impair_random(struct task_base *tbase, struct rte_mbuf **
 			ret+= task->base.tx_pkt(&task->base, mbufs + i, 1, out);
 			plog_warn("Unexpectdly dropping packets\n");
 		}
+#if RTE_VERSION >= RTE_VERSION_NUM(19,11,0,0)
+		if (rand_r(&task->seed) <= task->tresh_duplicate) {
+			mbufs[i] = rte_pktmbuf_copy(mbufs[i], mbufs[i]->pool, 0, UINT32_MAX);
+			if (mbufs[i] == NULL) {
+				plog_err("Failed to duplicate mbuf\n");
+			} else
+				i = i - 1;
+		}
+#endif
 	}
 
 	struct rte_mbuf *new_mbufs[MAX_PKT_BURST];
@@ -374,7 +401,7 @@ static int handle_bulk_impair_random(struct task_base *tbase, struct rte_mbuf **
 	while ((pkt_idx < MAX_PKT_BURST) && (task->last_idx != ((now_idx - 1) & DELAY_MAX_MASK))) {
 		struct queue *queue = &task->buffer[task->last_idx];
 		while ((pkt_idx < MAX_PKT_BURST) && (queue->queue_tail != queue->queue_head)) {
-			out[pkt_idx] = rand_r(&task->seed) <= task->tresh? 0 : OUT_DISCARD;
+			out[pkt_idx] = rand_r(&task->seed) <= task->tresh_no_drop? 0 : OUT_DISCARD;
 			new_mbufs[pkt_idx] = queue->queue_elem[queue->queue_tail].mbuf;
 			PREFETCH0(new_mbufs[pkt_idx]);
 			PREFETCH0(&new_mbufs[pkt_idx]->cacheline1);
@@ -399,10 +426,10 @@ static void init_task(struct task_base *tbase, struct task_args *targ)
 	uint64_t delay_us = 0;
 
 	task->seed = rte_rdtsc();
-	if (targ->probability == 0)
-		targ->probability = 1000000;
 
-	task->tresh = ((uint64_t) RAND_MAX) * targ->probability / 1000000;
+	task->tresh_no_drop = ((uint64_t) RAND_MAX) * targ->probability_no_drop / 1000000;
+	task->tresh_delay = ((uint64_t) RAND_MAX) * targ->probability_delay / 1000000;
+	task->tresh_duplicate = ((uint64_t) RAND_MAX) * targ->probability_duplicate / 1000000;
 
 	if ((targ->delay_us == 0) && (targ->random_delay_us == 0)) {
 		tbase->handle_bulk = handle_bulk_random_drop;
@@ -438,10 +465,10 @@ static void init_task(struct task_base *tbase, struct task_args *targ)
 		task->queue_tail = 0;
 	} else if (targ->random_delay_us) {
 		size_t size = (DELAY_MAX_MASK + 1) * sizeof(struct queue);
-		plog_info("Allocating %zd bytes\n", size);
+		plog_info("\t\tAllocating %zd bytes\n", size);
 		task->buffer = prox_zmalloc(size, socket_id);
 		PROX_PANIC(task->buffer == NULL, "Not enough memory to allocate buffer\n");
-		plog_info("Allocating %d x %zd bytes\n", DELAY_MAX_MASK + 1, mem_size);
+		plog_info("\t\tAllocating %d x %zd bytes\n", DELAY_MAX_MASK + 1, mem_size);
 
 		for (int i = 0; i < DELAY_MAX_MASK + 1; i++) {
 			task->buffer[i].queue_elem = prox_zmalloc(mem_size, socket_id);

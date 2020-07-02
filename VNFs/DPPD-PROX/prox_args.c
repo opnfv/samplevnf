@@ -1134,7 +1134,7 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 	if (STR_EQ(str, "packet id pos")) {
 		return parse_int(&targ->packet_id_pos, pkey);
 	}
-	if (STR_EQ(str, "probability")) {
+	if (STR_EQ(str, "probability")) { // old - use "probability no drop" instead
 		float probability;
 		int rc = parse_float(&probability, pkey);
 		if (probability == 0) {
@@ -1144,9 +1144,44 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 			set_errf("Probability must be < 100\n");
 			return -1;
 		}
-		targ->probability = probability * 10000;
+		targ->probability_no_drop = probability * 10000;
 		return rc;
 	}
+	if (STR_EQ(str, "proba no drop")) {
+		float probability;
+		int rc = parse_float(&probability, pkey);
+		if (probability == 0) {
+			set_errf("probability no drop must be != 0\n");
+			return -1;
+		} else if (probability > 100.0) {
+			set_errf("Probability must be < 100\n");
+			return -1;
+		}
+		targ->probability_no_drop = probability * 10000;
+		return rc;
+	}
+	if (STR_EQ(str, "proba delay")) {
+		float probability;
+		int rc = parse_float(&probability, pkey);
+		if (probability > 100.0) {
+			set_errf("Probability must be < 100\n");
+			return -1;
+		}
+		targ->probability_delay = probability * 10000;
+		return rc;
+	}
+#if RTE_VERSION >= RTE_VERSION_NUM(19,11,0,0)
+	if (STR_EQ(str, "proba duplicate")) {
+		float probability;
+		int rc = parse_float(&probability, pkey);
+		if (probability > 100.0) {
+			set_errf("probability duplicate must be < 100\n");
+			return -1;
+		}
+		targ->probability_duplicate = probability * 10000;
+		return rc;
+	}
+#endif
 	if (STR_EQ(str, "concur conn")) {
 		return parse_int(&targ->n_concur_conn, pkey);
 	}
