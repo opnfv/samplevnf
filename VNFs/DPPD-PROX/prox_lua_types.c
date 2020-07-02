@@ -418,7 +418,7 @@ int lua_to_next_hop(struct lua_State *L, enum lua_place from, const char *name, 
 	uint32_t next_hop_index;
 	uint32_t port_id;
 	uint32_t ip;
-	uint32_t mpls;
+	uint32_t mpls = 0;
 	prox_rte_ether_addr mac;
 	int pop;
 
