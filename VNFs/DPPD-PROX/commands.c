@@ -113,7 +113,7 @@ static inline int wait_command_handled(struct lcore_cfg *lconf)
 static inline void start_l3(struct task_args *targ)
 {
 	if (!task_is_master(targ)) {
-		if ((targ->nb_txrings != 0) || (targ->nb_txports != 0)) {
+		if ((targ->nb_txports != 0)) {
 			if (targ->flags & (TASK_ARG_L3|TASK_ARG_NDP))
 				task_start_l3(targ->tbase, targ);
 		}

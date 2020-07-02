@@ -1254,7 +1254,7 @@ static struct rte_mempool *task_gen_create_mempool(struct task_args *targ, uint1
 	uint32_t mbuf_size = TX_MBUF_SIZE;
 	if (max_frame_size + (unsigned)sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM > mbuf_size)
 		mbuf_size = max_frame_size + (unsigned)sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM;
-	plog_info("\tCreating mempool with name '%s'\n", name);
+	plog_info("\t\tCreating mempool with name '%s'\n", name);
 	ret = rte_mempool_create(name, targ->nb_mbuf - 1, mbuf_size,
 				 targ->nb_cache_mbuf, sizeof(struct rte_pktmbuf_pool_private),
 				 rte_pktmbuf_pool_init, NULL, rte_pktmbuf_init, 0,
@@ -1262,7 +1262,7 @@ static struct rte_mempool *task_gen_create_mempool(struct task_args *targ, uint1
 	PROX_PANIC(ret == NULL, "Failed to allocate dummy memory pool on socket %u with %u elements\n",
 		   sock_id, targ->nb_mbuf - 1);
 
-        plog_info("\tMempool %p size = %u * %u cache %u, socket %d\n", ret,
+        plog_info("\t\tMempool %p size = %u * %u cache %u, socket %d\n", ret,
                   targ->nb_mbuf - 1, mbuf_size, targ->nb_cache_mbuf, sock_id);
 
 	return ret;
@@ -1552,7 +1552,7 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 	PROX_PANIC((task->lat_pos || task->accur_pos) && !task->lat_enabled, "lat not enabled by lat pos or accur pos configured\n");
 
 	task->generator_id = targ->generator_id;
-	plog_info("\tGenerator id = %d\n", task->generator_id);
+	plog_info("\t\tGenerator id = %d\n", task->generator_id);
 
 	// Allocate array holding bytes to tsc for supported frame sizes
 	task->bytes_to_tsc = prox_zmalloc(task->max_frame_size * MAX_PKT_BURST * sizeof(task->bytes_to_tsc[0]), task->socket_id);
@@ -1564,7 +1564,7 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 	uint64_t bytes_per_hz = UINT64_MAX;
 	if ((task->port) && (task->port->max_link_speed != UINT32_MAX)) {
 		bytes_per_hz = task->port->max_link_speed * 125000L;
-		plog_info("\tPort %u: max link speed is %ld Mbps\n",
+		plog_info("\t\tPort %u: max link speed is %ld Mbps\n",
 			(uint8_t)(task->port - prox_port_cfg), 8 * bytes_per_hz / 1000000);
 	}
 	// There are cases where hz estimate might be slighly over-estimated
@@ -1582,10 +1582,10 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 		task->imix_pkt_sizes[i] = targ->imix_pkt_sizes[i];
 	}
 	if (!strcmp(targ->pcap_file, "")) {
-		plog_info("\tUsing inline definition of a packet\n");
+		plog_info("\t\tUsing inline definition of a packet\n");
 		task_init_gen_load_pkt_inline(task, targ);
 	} else {
-		plog_info("Loading from pcap %s\n", targ->pcap_file);
+		plog_info("\t\tLoading from pcap %s\n", targ->pcap_file);
 		task_init_gen_load_pcap(task, targ);
 	}
 

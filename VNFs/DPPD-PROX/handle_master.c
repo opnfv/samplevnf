@@ -979,7 +979,7 @@ void init_ctrl_plane(struct task_base *tbase)
 		rte_socket_id(), 0);
 	PROX_PANIC(ret == NULL, "Failed to allocate ARP memory pool on socket %u with %u elements\n",
 		rte_socket_id(), NB_ARP_MBUF);
-	plog_info("\t\tMempool %p (%s) size = %u * %u cache %u, socket %d\n", ret, name, NB_ARP_MBUF,
+	plog_info("\tMempool %p (%s) size = %u * %u cache %u, socket %d\n", ret, name, NB_ARP_MBUF,
 		ARP_MBUF_SIZE, NB_CACHE_ARP_MBUF, rte_socket_id());
 	tbase->l3.arp_nd_pool = ret;
 }

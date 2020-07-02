@@ -990,10 +990,10 @@ static void setup_all_task_structs(void)
 
 	while(prox_core_next(&lcore_id, 1) == 0) {
 		lconf = &lcore_cfg[lcore_id];
-		plog_info("\tInitializing struct for core %d with %d task\n", lcore_id, lconf->n_tasks_all);
+		plog_info("\t*** Initializing core %d (%d task) ***\n", lcore_id, lconf->n_tasks_all);
 		for (uint8_t task_id = 0; task_id < lconf->n_tasks_all; ++task_id) {
 			if (!task_is_master(&lconf->targs[task_id])) {
-				plog_info("\tInitializing struct for core %d task %d\n", lcore_id, task_id);
+				plog_info("\t\tInitializing struct for core %d task %d\n", lcore_id, task_id);
 				lconf->targs[task_id].tmaster = tmaster;
 				lconf->tasks_all[task_id] = init_task_struct(&lconf->targs[task_id]);
 			}

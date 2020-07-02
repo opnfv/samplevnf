@@ -52,6 +52,9 @@ struct lat_test {
 	uint64_t buckets[LAT_BUCKET_COUNT];
 	uint64_t bucket_size;
 	uint64_t lost_packets;
+	uint64_t mis_ordered;
+	uint64_t extent;
+	uint64_t duplicate;
 };
 
 static struct time_unit lat_test_get_accuracy_limit(struct lat_test *lat_test)
@@ -157,6 +160,9 @@ static void lat_test_combine(struct lat_test *dst, struct lat_test *src)
 	if (src->accuracy_limit_tsc > dst->accuracy_limit_tsc)
 		dst->accuracy_limit_tsc = src->accuracy_limit_tsc;
 	dst->lost_packets += src->lost_packets;
+	dst->mis_ordered += src->mis_ordered;
+	dst->extent += src->extent;
+	dst->duplicate += src->duplicate;
 
 #ifdef LATENCY_HISTOGRAM
 	_lat_test_histogram_combine(dst, src);
@@ -178,6 +184,9 @@ static void lat_test_reset(struct lat_test *lat_test)
 	lat_test->accuracy_limit_tsc = 0;
 
 	lat_test->lost_packets = 0;
+	lat_test->mis_ordered = 0;
+	lat_test->extent = 0;
+	lat_test->duplicate = 0;
 
 	memset(lat_test->buckets, 0, sizeof(lat_test->buckets));
 }

@@ -204,7 +204,9 @@ struct task_args {
 	uint32_t               lat_enabled;
 	uint32_t               pkt_size;
 	uint8_t                pkt_inline[MAX_PKT_SIZE];
-	uint32_t               probability;
+	uint32_t               probability_no_drop;
+	uint32_t               probability_duplicate;
+	uint32_t               probability_delay;
 	char                   nat_table[256];
 	uint32_t               use_src;
 	char                   route_table[256];
