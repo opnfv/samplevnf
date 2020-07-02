@@ -485,21 +485,21 @@ void task_init_l3(struct task_base *tbase, struct task_args *targ)
 		.hash_func_init_val = 0,
 	};
 	if (targ->flags & TASK_ARG_L3) {
-		plog_info("\tInitializing L3 (IPv4)\n");
+		plog_info("\t\tInitializing L3 (IPv4)\n");
 		tbase->l3.ip_hash = rte_hash_create(&hash_params);
 		PROX_PANIC(tbase->l3.ip_hash == NULL, "Failed to set up ip hash table\n");
 		hash_name[0]++;
 	}
 
 	if (targ->flags & TASK_ARG_NDP) {
-		plog_info("\tInitializing NDP (IPv6)\n");
+		plog_info("\t\tInitializing NDP (IPv6)\n");
 		hash_params.key_len = sizeof(struct ipv6_addr);
 		tbase->l3.ip6_hash = rte_hash_create(&hash_params);
 		PROX_PANIC(tbase->l3.ip6_hash == NULL, "Failed to set up ip hash table\n");
 	}
 	tbase->l3.arp_table = (struct arp_table *)prox_zmalloc(n_entries * sizeof(struct arp_table), socket_id);
 	PROX_PANIC(tbase->l3.arp_table == NULL, "Failed to allocate memory for %u entries in arp/ndp table\n", n_entries);
-	plog_info("\tarp/ndp table, with %d entries of size %ld\n", n_entries, sizeof(struct l3_base));
+	plog_info("\t\tarp/ndp table, with %d entries of size %ld\n", n_entries, sizeof(struct l3_base));
 
 	targ->lconf->ctrl_func_p[targ->task] = handle_ctrl_plane_pkts;
 	targ->lconf->ctrl_timeout = freq_to_tsc(targ->ctrl_freq);

@@ -366,7 +366,7 @@ struct task_base *init_task_struct(struct task_args *targ)
 	tbase->handle_bulk = t->handle;
 
 	if (targ->flags & (TASK_ARG_L3|TASK_ARG_NDP)) {
-		plog_info("\tTask (%d,%d) configured in L3/NDP mode\n", targ->lconf->id, targ->id);
+		plog_info("\t\tTask (%d,%d) configured in L3/NDP mode\n", targ->lconf->id, targ->id);
 		tbase->l3.ctrl_plane_ring = targ->ctrl_plane_ring;
 		if (targ->nb_txports != 0) {
 			tbase->aux->tx_pkt_l2 = tbase->tx_pkt;

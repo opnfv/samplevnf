@@ -398,16 +398,16 @@ static int parse_cmd_count(const char *str, struct input *input)
 	return 0;
 }
 
-static int parse_cmd_set_probability(const char *str, struct input *input)
+static int parse_cmd_set_proba_no_drop(const char *str, struct input *input)
 {
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
-	float probability;
+	float proba_no_drop;
 
 	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 	if (!(str = strchr_skip_twice(str, ' ')))
 		return -1;
-	if (sscanf(str, "%f", &probability) != 1)
+	if (sscanf(str, "%f", &proba_no_drop) != 1)
 		return -1;
 
 	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
@@ -417,7 +417,59 @@ static int parse_cmd_set_probability(const char *str, struct input *input)
 				plog_err("Core %u task %u is not impairing packets\n", lcore_id, task_id);
 			} else {
 				struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
-				task_impair_set_proba(tbase, probability);
+				task_impair_set_proba_no_drop(tbase, proba_no_drop);
+			}
+		}
+	}
+	return 0;
+}
+
+static int parse_cmd_set_proba_delay(const char *str, struct input *input)
+{
+	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
+	float proba_delay;
+
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
+		return -1;
+	if (!(str = strchr_skip_twice(str, ' ')))
+		return -1;
+	if (sscanf(str, "%f", &proba_delay) != 1)
+		return -1;
+
+	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
+		for (unsigned int i = 0; i < nb_cores; i++) {
+			lcore_id = lcores[i];
+			if (!task_is_mode(lcore_id, task_id, "impair")) {
+				plog_err("Core %u task %u is not impairing packets\n", lcore_id, task_id);
+			} else {
+				struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
+				task_impair_set_proba_delay(tbase, proba_delay);
+			}
+		}
+	}
+	return 0;
+}
+
+static int parse_cmd_set_proba_duplicate(const char *str, struct input *input)
+{
+	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
+	float proba_duplicate;
+
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
+		return -1;
+	if (!(str = strchr_skip_twice(str, ' ')))
+		return -1;
+	if (sscanf(str, "%f", &proba_duplicate) != 1)
+		return -1;
+
+	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
+		for (unsigned int i = 0; i < nb_cores; i++) {
+			lcore_id = lcores[i];
+			if (!task_is_mode(lcore_id, task_id, "impair")) {
+				plog_err("Core %u task %u is not impairing packets\n", lcore_id, task_id);
+			} else {
+				struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
+				task_impair_set_proba_duplicate(tbase, proba_duplicate);
 			}
 		}
 	}
@@ -2240,7 +2292,12 @@ static struct cmd_str cmd_strings[] = {
 	{"cgnat dump private hash", "<core id> <task id>", "Dump cgnat private hash table", parse_cmd_cgnat_private_hash},
 	{"delay_us", "<core_id> <task_id> <delay_us>", "Set the delay in usec for the impair mode to <delay_us>", parse_cmd_delay_us},
 	{"random delay_us", "<core_id> <task_id> <random delay_us>", "Set the delay in usec for the impair mode to <random delay_us>", parse_cmd_random_delay_us},
-	{"probability", "<core_id> <task_id> <probability>", "Set the percent of forwarded packets for the impair mode", parse_cmd_set_probability},
+	{"probability", "<core_id> <task_id> <probability>", "Old - Use <proba no drop> instead. Set the percent of forwarded packets for the impair mode", parse_cmd_set_proba_no_drop}, // old - backward compatibility
+	{"proba no drop", "<core_id> <task_id> <probability>", "Set the percent of forwarded packets for the impair mode", parse_cmd_set_proba_no_drop},
+	{"proba delay", "<core_id> <task_id> <probability>", "Set the percent of delayed packets for the impair mode", parse_cmd_set_proba_delay},
+#if RTE_VERSION >= RTE_VERSION_NUM(19,11,0,0)
+	{"proba duplicate", "<core_id> <task_id> <probability>", "Set the percent of duplicate packets for the impair mode", parse_cmd_set_proba_duplicate},
+#endif
 	{"version", "", "Show version", parse_cmd_version},
 	{"join igmp", "<core_id> <task_id> <ip>", "Send igmp membership report for group <ip>", parse_cmd_join_igmp},
 	{"leave igmp", "<core_id> <task_id>", "Send igmp leave group", parse_cmd_leave_igmp},

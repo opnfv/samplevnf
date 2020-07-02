@@ -228,6 +228,9 @@ static void stats_latency_from_lat_test(struct stats_latency *dst, struct lat_te
 	dst->tot_packets = src->tot_pkts;
 	dst->tot_all_packets = src->tot_all_pkts;
 	dst->lost_packets = src->lost_packets;
+	dst->mis_ordered = src->mis_ordered;
+	dst->extent = src->extent;
+	dst->duplicate = src->duplicate;
 }
 
 static void stats_latency_update_entry(struct stats_latency_manager_entry *entry)

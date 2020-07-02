@@ -26,6 +26,9 @@ static struct display_column *stddev_col;
 static struct display_column *accuracy_limit_col;
 static struct display_column *used_col;
 static struct display_column *lost_col;
+static struct display_column *mis_ordered_col;
+static struct display_column *extent_col;
+static struct display_column *duplicate_col;
 static struct display_page display_page_latency;
 
 static void display_latency_draw_frame(struct screen_state *screen_state)
@@ -68,12 +71,18 @@ static void display_latency_draw_frame(struct screen_state *screen_state)
 	used_col = display_table_add_col(acc);
 	display_column_init(used_col, "Used Packets (%)", 16);
 	accuracy_limit_col = display_table_add_col(acc);
-	display_column_init(accuracy_limit_col, "limit (us)", 16);
+	display_column_init(accuracy_limit_col, "limit (us)", 12);
 
 	display_table_init(other, "Other");
 
 	lost_col = display_table_add_col(other);
-	display_column_init(lost_col, "Lost Packets", 16);
+	display_column_init(lost_col, "Lost", 12);
+	mis_ordered_col = display_table_add_col(other);
+	display_column_init(mis_ordered_col, "mis-ordered", 12);
+	extent_col = display_table_add_col(other);
+	display_column_init(extent_col, "extent", 12);
+	duplicate_col = display_table_add_col(other);
+	display_column_init(duplicate_col, "duplicate", 12);
 
 	display_page_draw_frame(&display_page_latency, n_latency);
 
@@ -117,8 +126,11 @@ static void display_stats_latency_entry(int row, struct stats_latency *stats_lat
 	}
 
 	display_column_print(accuracy_limit_col, row, "%s", print_time_unit_usec(dst, &accuracy_limit));
-	display_column_print(lost_col, row, "%16"PRIu64"", stats_latency->lost_packets);
+	display_column_print(lost_col, row, "%12"PRIu64"", stats_latency->lost_packets);
 	display_column_print(used_col, row, "%3u.%06u", used / AFTER_POINT, used % AFTER_POINT);
+	display_column_print(mis_ordered_col, row, "%12"PRIu64"", stats_latency->mis_ordered);
+	display_column_print(extent_col, row, "%12"PRIu64"", stats_latency->extent);
+	display_column_print(duplicate_col, row, "%12"PRIu64"", stats_latency->duplicate);
 }
 
 static void display_latency_draw_stats(struct screen_state *screen_state)

@@ -29,6 +29,9 @@ struct stats_latency {
 
 	struct time_unit accuracy_limit;
 	uint64_t         lost_packets;
+	uint64_t         mis_ordered;
+	uint64_t         extent;
+	uint64_t         duplicate;
 	uint64_t         tot_packets;
 	uint64_t         tot_all_packets;
 };

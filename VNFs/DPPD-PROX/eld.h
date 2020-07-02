@@ -76,7 +76,10 @@ static uint32_t early_loss_detect_add(struct early_loss_detect *eld, uint32_t pa
 	old_queue_id = eld->entries[queue_pos];
 	eld->entries[queue_pos] = packet_index >> PACKET_QUEUE_BITS;
 
-	return (eld->entries[queue_pos] - old_queue_id - 1) & QUEUE_ID_MASK;
+	if (eld->entries[queue_pos] != old_queue_id)
+		return (eld->entries[queue_pos] - old_queue_id - 1) & QUEUE_ID_MASK;
+	else
+		return 0;
 }
 
 #endif /* _ELD_H_ */

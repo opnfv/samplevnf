@@ -115,6 +115,7 @@ struct task_lat {
 	FILE *fp_tx;
 	struct prox_port_cfg *port;
 	uint64_t *bytes_to_tsc;
+	uint64_t *previous_packet;
 };
 /* This function calculate the difference between rx and tx_time
  * Both values are uint32_t (see handle_lat_bulk)
@@ -440,6 +441,17 @@ static uint32_t task_lat_early_loss_detect(struct task_lat *task, uint32_t packe
 	return early_loss_detect_add(eld, packet_id);
 }
 
+static void lat_test_check_duplicate(struct task_lat *task, struct lat_test *lat_test, uint32_t packet_id, uint8_t generator_id)
+{
+	struct early_loss_detect *eld = &task->eld[generator_id];
+	uint32_t old_queue_id, queue_pos;
+
+	queue_pos = packet_id & PACKET_QUEUE_MASK;
+	old_queue_id = eld->entries[queue_pos];
+	if ((packet_id >> PACKET_QUEUE_BITS) == old_queue_id)
+		lat_test->duplicate++;
+}
+
 static uint64_t tsc_extrapolate_backward(struct task_lat *task, uint64_t tsc_from, uint64_t bytes, uint64_t tsc_minimum)
 {
 #ifdef NO_LAT_EXTRAPOLATION
@@ -460,6 +472,15 @@ static void lat_test_histogram_add(struct lat_test *lat_test, uint64_t lat_tsc)
 
 	bucket_id = bucket_id < bucket_count? bucket_id : (bucket_count - 1);
 	lat_test->buckets[bucket_id]++;
+}
+
+static void lat_test_check_ordering(struct task_lat *task, struct lat_test *lat_test, uint32_t packet_id, uint8_t generator_id)
+{
+	if (packet_id < task->previous_packet[generator_id]) {
+		lat_test->mis_ordered++;
+		lat_test->extent += task->previous_packet[generator_id] - packet_id;
+	}
+	task->previous_packet[generator_id] = packet_id;
 }
 
 static void lat_test_add_lost(struct lat_test *lat_test, uint64_t lost_packets)
@@ -613,7 +634,8 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 				// Skip unexpected packet
 				continue;
 			}
-
+			lat_test_check_ordering(task, task->lat_test, packet_id, generator_id);
+			lat_test_check_duplicate(task, task->lat_test, packet_id, generator_id);
 			lat_test_add_lost(task->lat_test, task_lat_early_loss_detect(task, packet_id, generator_id));
 		} else {
 			generator_id = 0;
@@ -702,7 +724,7 @@ static void task_init_generator_count(struct task_lat *task)
 		plog_info("\tNo generators found, hard-coding to %u generators\n", task->generator_count);
 	} else
 		task->generator_count = *generator_count;
-	plog_info("\tLatency using %u generators\n", task->generator_count);
+	plog_info("\t\tLatency using %u generators\n", task->generator_count);
 }
 
 static void task_lat_init_eld(struct task_lat *task, uint8_t socket_id)
@@ -786,6 +808,8 @@ static void init_task_lat(struct task_base *tbase, struct task_args *targ)
         if (task->unique_id_pos) {
 		task_lat_init_eld(task, socket_id);
 		task_lat_reset_eld(task);
+		task->previous_packet = prox_zmalloc(sizeof(task->previous_packet) * task->generator_count , socket_id);
+		PROX_PANIC(task->previous_packet == NULL, "Failed to allocate array for storing previous packet\n");
         }
 	task->lat_test = &task->lt[task->using_lt];
 
@@ -803,7 +827,7 @@ static void init_task_lat(struct task_base *tbase, struct task_args *targ)
 		// It can be UINT32_MAX (virtual devices or not supported by DPDK < 16.04)
 		if (port->max_link_speed != UINT32_MAX) {
 			bytes_per_hz = port->max_link_speed * 125000L;
-			plog_info("\tPort %u: max link speed is %ld Mbps\n",
+			plog_info("\t\tPort %u: max link speed is %ld Mbps\n",
 				(uint8_t)(port - prox_port_cfg), 8 * bytes_per_hz / 1000000);
 		}
 	}
