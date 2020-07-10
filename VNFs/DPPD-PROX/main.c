@@ -325,7 +325,7 @@ static void configure_if_rx_queues(struct task_args *targ, uint8_t socket)
 		if (port_used_counter[if_port] > 1) {
 			multiple_port_reference = true;
 			port = &prox_port_cfg[if_port];
-			PROX_PANIC((port->all_rx_queues), "Multiple queues defined in rx port, but all_rx_queues also set for port %s\n", port->name);
+			PROX_PANIC((port->all_rx_queues), "Multiple queues defined in rx port, but all_rx_queues also set for port %s\n", port->names[0]);
 		}
 	}
 	// If only referenced once, it is possible that we want to use all queues
@@ -338,7 +338,7 @@ static void configure_if_rx_queues(struct task_args *targ, uint8_t socket)
 				if (port->all_rx_queues) {
 					port_used_counter[if_port] = port->max_rxq;
 					total_number_of_queues += port->max_rxq;
-					plog_info("\tall_rx_queues for Port %s: %u rx_queues will be applied\n", port->name, port_used_counter[if_port]);
+					plog_info("\tall_rx_queues for Port %s: %u rx_queues will be applied\n", port->names[0], port_used_counter[if_port]);
 				}
 			}
 		}
@@ -353,7 +353,7 @@ static void configure_if_rx_queues(struct task_args *targ, uint8_t socket)
 					index ++;
 				}
 				port = &prox_port_cfg[i];
-				plog_info("\t\tConfiguring task to use port %s with %u rx_queues\n", port->name, port_used_counter[i]);
+				plog_info("\t\tConfiguring task to use port %s with %u rx_queues\n", port->names[0], port_used_counter[i]);
 			}
 		}
 		targ->nb_rxports = index;

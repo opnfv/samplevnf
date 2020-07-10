@@ -995,12 +995,7 @@ static int parse_cmd_local_ip(const char *str, struct input *input)
 		struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
 		uint32_t local_ip = ((ip[3] & 0xFF) << 24) | ((ip[2] & 0xFF) << 16) | ((ip[1] & 0xFF) << 8) | ((ip[0] & 0xFF) << 0);
 		if (!task_is_mode_and_submode(lcore_id, task_id, "arp", "local")) {
-			if (!task_is_sub_mode(lcore_id, task_id, "l3")) {
-				plog_err("Core %u task %u is not in l3 mode\n", lcore_id, task_id);
-			} else {
-				plog_info("Setting local ip to %s\n", str);
-				task_set_local_ip(tbase, local_ip);
-			}
+			plog_err("Core %u task %u is not in arp mode\n", lcore_id, task_id);
 		} else {
 			plog_info("Setting local ip to %s\n", str);
 			task_arp_set_local_ip(tbase, local_ip);

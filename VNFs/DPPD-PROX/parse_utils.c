@@ -846,6 +846,72 @@ int parse_task_set(struct core_task_set *cts, const char *str2)
 	return 0;
 }
 
+int parse_ip_set(struct ip4_subnet *list, const char *str2, uint32_t max_list)
+{
+	char str[MAX_STR_LEN_PROC];
+	char *parts[MAX_STR_LEN_PROC];
+	int n = 0, rc;
+
+	if (parse_vars(str, sizeof(str), str2))
+		return -1;
+	int n_parts = rte_strsplit(str, strlen(str), parts, MAX_STR_LEN_PROC, ',');
+	for (int i = 0; i < n_parts; i++) {
+		if ((rc = parse_ip4_and_prefix(&list[i], parts[i])) < 0) {
+			set_errf("Unable to parse ip4/prefix");
+			return -1;
+		}
+	}
+	return 0;
+}
+
+int parse_int_set(uint32_t *list, const char *str2, uint32_t max_list)
+{
+	char str[MAX_STR_LEN_PROC];
+	char *parts[MAX_STR_LEN_PROC];
+	uint32_t n = 0;
+
+	if (parse_vars(str, sizeof(str), str2))
+		return -1;
+
+	int n_parts = rte_strsplit(str, strlen(str), parts, MAX_STR_LEN_PROC, ',');
+	for (int i = 0; i < n_parts; i++) {
+		char *cur_part = parts[i];
+		char *sub_parts[3];
+		int n_sub_parts = rte_strsplit(cur_part, strlen(cur_part), sub_parts, 3, '-');
+		uint32_t n1, n2;
+		int ret = 0;
+
+		if (n_sub_parts == 1) {
+			if (n >= max_list - 1) {
+				set_errf("Too many entries\n");
+				return -1;
+			}
+			if (parse_int(&list[n], sub_parts[0]))
+				return -1;
+			n++;
+		} else if (n_sub_parts == 2) {
+			if (parse_int(&n1, sub_parts[0]))
+				return -1;
+			if (parse_int(&n2, sub_parts[1]))
+				return -1;
+			if (n + n2 - n1 >= max_list) {
+				set_errf("Too many entries\n");
+				return -1;
+			}
+			for (uint32_t j = n1; j < n2; j++) {
+				list[n++] = j;
+			}
+		} else if (n_sub_parts >= 3) {
+			set_errf("Multiple '-' characters in range syntax found");
+			return -1;
+		} else {
+			set_errf("Invalid list syntax");
+			return -1;
+		}
+	}
+	return 0;
+}
+
 int parse_list_set(uint32_t *list, const char *str2, uint32_t max_list)
 {
 	char str[MAX_STR_LEN_PROC];

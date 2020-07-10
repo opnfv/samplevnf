@@ -81,7 +81,7 @@ static void display_pkt_len_draw_frame(struct screen_state *screen_state)
 		const uint32_t port_id = port_disp[i];
 
 		display_column_print(port_col, i, "%4u", port_id);
-		display_column_print(name_col, i, "%8s", prox_port_cfg[port_id].name);
+		display_column_print(name_col, i, "%8s", prox_port_cfg[port_id].names[0]);
 		display_column_print(type_col, i, "%7s", prox_port_cfg[port_id].short_name);
 	}
 }

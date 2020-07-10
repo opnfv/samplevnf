@@ -28,12 +28,14 @@
 
 #include "prox_compat.h"
 #include "prox_globals.h"
+#include "ip_subnet.h"
 
 enum addr_type {PROX_PORT_MAC_HW, PROX_PORT_MAC_SET, PROX_PORT_MAC_RAND};
 
 #define IPV4_CKSUM	1
 #define UDP_CKSUM	2
 #define NB_MCAST_ADDR	16
+#define PROX_MAX_VLAN_TAGS	256
 
 struct prox_port_cfg {
 	struct rte_mempool *pool[32];  /* Rx/Tx mempool */
@@ -55,7 +57,7 @@ struct prox_port_cfg {
 	uint32_t  mtu;
 	enum addr_type    type;
 	prox_rte_ether_addr eth_addr;    /* port MAC address */
-	char name[MAX_NAME_SIZE];
+	char names[PROX_MAX_VLAN_TAGS][MAX_NAME_SIZE];
 	char vdev[MAX_NAME_SIZE];
 	char short_name[MAX_NAME_SIZE];
 	char driver_name[MAX_NAME_SIZE];
@@ -82,12 +84,12 @@ struct prox_port_cfg {
 	uint8_t available;
 	prox_rte_ether_addr mc_addr[NB_MCAST_ADDR];
 	int dpdk_mapping;
-	uint32_t ip;
-	int fd;
-	uint32_t vlan_tag;
-	uint8_t prefix;
+	struct ip4_subnet ip_addr[PROX_MAX_VLAN_TAGS];
+	int fds[PROX_MAX_VLAN_TAGS];
+	uint32_t vlan_tags[PROX_MAX_VLAN_TAGS];
 	uint8_t is_vdev;
-    uint8_t all_rx_queues;
+	uint8_t all_rx_queues;
+	uint16_t n_vlans;
 };
 
 extern rte_atomic32_t lsc;

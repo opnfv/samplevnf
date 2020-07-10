@@ -64,6 +64,8 @@ int parse_bool(uint32_t* val, const char *str);
 int parse_flag(uint32_t* val, uint32_t flag, const char *str);
 
 int parse_list_set(uint32_t *list, const char *str, uint32_t max_limit);
+int parse_ip_set(struct ip4_subnet *list, const char *str2, uint32_t max_list);
+int parse_int_set(uint32_t *list, const char *str2, uint32_t max_list);
 
 int parse_task_set(struct core_task_set *val, const char *str);
 

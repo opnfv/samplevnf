@@ -214,6 +214,12 @@ void init_rte_dev(int use_dummy_devices)
 			continue;
 		}
 		struct prox_port_cfg* port_cfg = &prox_port_cfg[port_id];
+
+		prox_port_cfg[port_id].n_vlans = 0;
+		while ((prox_port_cfg[port_id].n_vlans < PROX_MAX_VLAN_TAGS) && (prox_port_cfg[port_id].vlan_tags[prox_port_cfg[port_id].n_vlans])) {
+			prox_port_cfg[port_id].n_vlans++;
+		}
+
 		if (port_cfg->vdev[0]) {
 			char name[MAX_NAME_SIZE], tap[MAX_NAME_SIZE];
 			snprintf(tap, MAX_NAME_SIZE, "net_tap%d", port_id);
@@ -231,20 +237,30 @@ void init_rte_dev(int use_dummy_devices)
 			prox_port_cfg[vdev_port_id].active = 1;
 			prox_port_cfg[vdev_port_id].dpdk_mapping = port_id;
 			prox_port_cfg[vdev_port_id].n_txq = 1;
+			prox_port_cfg[vdev_port_id].n_vlans = prox_port_cfg[port_id].n_vlans;
 
-			if (prox_port_cfg[port_id].vlan_tag) {
+			for (uint32_t tag_id = 0; tag_id < prox_port_cfg[port_id].n_vlans; tag_id++) {
+				prox_port_cfg[vdev_port_id].vlan_tags[tag_id] = prox_port_cfg[port_id].vlan_tags[tag_id];
 				char command[1024];
-				snprintf(prox_port_cfg[vdev_port_id].name, MAX_NAME_SIZE, "%s_%d", port_cfg->vdev, prox_port_cfg[port_id].vlan_tag);
-				sprintf(command, "ip link add link %s name %s type vlan id %d", port_cfg->vdev, prox_port_cfg[vdev_port_id].name, prox_port_cfg[port_id].vlan_tag);
+				snprintf(prox_port_cfg[vdev_port_id].names[tag_id], MAX_NAME_SIZE, "%s_%d", port_cfg->vdev, prox_port_cfg[port_id].vlan_tags[tag_id]);
+				sprintf(command, "ip link add link %s name %s type vlan id %d", port_cfg->vdev, prox_port_cfg[vdev_port_id].names[tag_id], prox_port_cfg[port_id].vlan_tags[tag_id]);
 				system(command);
-				plog_info("Running %s\n", command);
-				plog_info("Using vlan tag %d - added device %s\n", prox_port_cfg[port_id].vlan_tag, prox_port_cfg[vdev_port_id].name);
-			} else
-				strncpy(prox_port_cfg[vdev_port_id].name, port_cfg->vdev, MAX_NAME_SIZE);
+				plog_info("\tRunning %s\n", command);
+				plog_info("\tUsing vlan tag %d - added device %s\n", prox_port_cfg[port_id].vlan_tags[tag_id], prox_port_cfg[vdev_port_id].names[tag_id]);
+			}
+			if (prox_port_cfg[port_id].n_vlans == 0) {
+				strncpy(prox_port_cfg[vdev_port_id].names[0], port_cfg->vdev, MAX_NAME_SIZE);
+				prox_port_cfg[vdev_port_id].n_vlans = 1;
+				prox_port_cfg[vdev_port_id].vlan_tags[0] = 0;
+			}
 
 			prox_port_cfg[port_id].dpdk_mapping = vdev_port_id;
-			prox_port_cfg[vdev_port_id].ip = rte_be_to_cpu_32(prox_port_cfg[port_id].ip);
-			prox_port_cfg[vdev_port_id].prefix = prox_port_cfg[port_id].prefix;
+			uint32_t i = 0;
+			while ((i < PROX_MAX_VLAN_TAGS) && (prox_port_cfg[port_id].ip_addr[i].ip)) {
+				prox_port_cfg[vdev_port_id].ip_addr[i].ip = rte_be_to_cpu_32(prox_port_cfg[port_id].ip_addr[i].ip);
+				prox_port_cfg[vdev_port_id].ip_addr[i].prefix = prox_port_cfg[port_id].ip_addr[i].prefix;
+				i++;
+			}
 			prox_port_cfg[vdev_port_id].type = prox_port_cfg[port_id].type;
 			if (prox_port_cfg[vdev_port_id].type == PROX_PORT_MAC_HW) {
 				// If DPDK port MAC set to HW, then make sure the vdev has the same MAC as DPDK port
@@ -254,6 +270,10 @@ void init_rte_dev(int use_dummy_devices)
 					vdev_port_id, port_id, MAC_BYTES(prox_port_cfg[vdev_port_id].eth_addr.addr_bytes));
 			} else
 				memcpy(&prox_port_cfg[vdev_port_id].eth_addr, &prox_port_cfg[port_id].eth_addr, sizeof(prox_port_cfg[port_id].eth_addr));
+		}
+		if (prox_port_cfg[port_id].n_vlans == 0) {
+			prox_port_cfg[port_id].n_vlans = 1;
+			prox_port_cfg[port_id].vlan_tags[0] = 0;
 		}
 	}
 	nb_ports = prox_rte_eth_dev_count_avail();
@@ -425,7 +445,7 @@ uint8_t init_rte_ring_dev(void)
 			struct rte_ring* tx_ring = rte_ring_lookup(port_cfg->tx_ring);
 			PROX_PANIC(tx_ring == NULL, "Ring %s not found for port %d!\n", port_cfg->tx_ring, port_id);
 
-			int ret = rte_eth_from_rings(port_cfg->name, &rx_ring, 1, &tx_ring, 1, rte_socket_id());
+			int ret = rte_eth_from_rings(port_cfg->names[0], &rx_ring, 1, &tx_ring, 1, rte_socket_id());
 			PROX_PANIC(ret != 0, "Failed to create eth_dev from rings for port %d\n", port_id);
 
 			port_cfg->port_conf.intr_conf.lsc = 0; /* Link state interrupt not supported for ring-backed ports */
@@ -443,7 +463,7 @@ static void print_port_capa(struct prox_port_cfg *port_cfg)
 
 	port_id = port_cfg - prox_port_cfg;
 	plog_info("\t*** Initializing port %u ***\n", port_id);
-	plog_info("\t\tPort name is set to %s\n", port_cfg->name);
+	plog_info("\t\tPort name is set to %s\n", port_cfg->names[0]);
 	plog_info("\t\tPort max RX/TX queue is %u/%u\n", port_cfg->max_rxq, port_cfg->max_txq);
 	plog_info("\t\tPort driver is %s\n", port_cfg->driver_name);
 #if RTE_VERSION >= RTE_VERSION_NUM(16,4,0,0)
@@ -802,8 +822,10 @@ static void init_port(struct prox_port_cfg *port_cfg)
 	PROX_PANIC(ret < 0, "\n\t\t\trte_eth_dev_start() failed on port %u: error %d\n", port_id, ret);
 	plog_info(" done: ");
 
-	if ((prox_port_cfg[port_id].ip) && (prox_port_cfg[port_id].is_vdev)) {
-		set_ip_address(prox_port_cfg[port_id].name, &prox_port_cfg[port_id].ip, prox_port_cfg[port_id].prefix);
+	if (prox_port_cfg[port_id].is_vdev) {
+		for (int vlan_id = 0; vlan_id < prox_port_cfg[port_id].n_vlans; vlan_id++) {
+			set_ip_address(prox_port_cfg[port_id].names[vlan_id], &prox_port_cfg[port_id].ip_addr[vlan_id].ip, prox_port_cfg[port_id].ip_addr[vlan_id].prefix);
+		}
 	}
 	/* Getting link status can be done without waiting if Link
 	   State Interrupt is enabled since in that case, if the link

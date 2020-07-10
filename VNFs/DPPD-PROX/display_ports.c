@@ -116,7 +116,7 @@ static void display_ports_draw_frame(struct screen_state *state)
 		const uint32_t port_id = port_disp[i];
 
 		display_column_print(nb_col, i, "%u", port_id);
-		display_column_print(name_col, i, "%s", prox_port_cfg[port_id].name);
+		display_column_print(name_col, i, "%s", prox_port_cfg[port_id].names[0]);
 		display_column_print(type_col, i, "%s", prox_port_cfg[port_id].short_name);
 	}
 }
