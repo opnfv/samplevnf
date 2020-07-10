@@ -81,6 +81,23 @@ static inline int find_ip(struct ether_hdr_arp *pkt, uint16_t len, uint32_t *ip_
 	return -1;
 }
 
+static inline void find_vlan(struct ether_hdr_arp *pkt, uint16_t len, uint16_t *vlan)
+{
+	prox_rte_vlan_hdr *vlan_hdr;
+	prox_rte_ether_hdr *eth_hdr = (prox_rte_ether_hdr*)pkt;
+	uint16_t ether_type = eth_hdr->ether_type;
+	uint16_t l2_len = sizeof(prox_rte_ether_hdr);
+
+	*vlan = 0;
+	// Unstack VLAN tags
+	while (((ether_type == ETYPE_8021ad) || (ether_type == ETYPE_VLAN)) && (l2_len + sizeof(prox_rte_vlan_hdr) < len)) {
+		vlan_hdr = (prox_rte_vlan_hdr *)((uint8_t *)pkt + l2_len);
+		l2_len +=4;
+		ether_type = vlan_hdr->eth_proto;
+		*vlan = rte_be_to_cpu_16(vlan_hdr->vlan_tci & 0xFF0F);  // Store VLAN, or CVLAN if QinQ
+	}
+}
+
 static inline struct ipv6_addr *find_ip6(prox_rte_ether_hdr *pkt, uint16_t len, struct ipv6_addr *ip_dst, uint16_t *vlan)
 {
 	prox_rte_vlan_hdr *vlan_hdr;
@@ -253,7 +270,10 @@ int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_d
 	}
 	// No Routing table specified: only a local ip and maybe a gateway
 	// Old default behavior: if a gw is specified, ALL packets go to this gateway (even those we could send w/o the gw
+
+	uint16_t len = rte_pktmbuf_pkt_len(mbuf);
 	if (l3->gw.ip) {
+		find_vlan(packet, len, vlan);
 		if (likely((l3->flags & FLAG_DST_MAC_KNOWN) && (tsc < l3->gw.arp_ndp_retransmit_timeout) && (tsc < l3->gw.reachable_timeout))) {
 			memcpy(mac, &l3->gw.mac, sizeof(prox_rte_ether_addr));
 			return SEND_MBUF;
@@ -278,7 +298,6 @@ int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_d
 		}
 	}
 
-	uint16_t len = rte_pktmbuf_pkt_len(mbuf);
 	if (find_ip(packet, len, ip_dst, vlan) != 0) {
 		// Unable to find IP address => non IP packet => send it as it
 		return SEND_MBUF;
