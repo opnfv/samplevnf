@@ -38,6 +38,7 @@
 #include "defines.h"
 #include "prox_ipv6.h"
 #include "prox_compat.h"
+#include "ip_subnet.h"
 
 #define MAX_RTE_ARGV 64
 #define MAX_ARG_LEN  64
@@ -531,7 +532,7 @@ static int get_port_cfg(unsigned sindex, char *str, void *data)
 	}
 	else if (STR_EQ(str, "name")) {
 		uint32_t val;
-		prox_strncpy(cfg->name, pkey, MAX_NAME_SIZE);
+		prox_strncpy(cfg->names[0], pkey, MAX_NAME_SIZE);
 		PROX_ASSERT(cur_if < PROX_MAX_PORTS);
 		return add_port_name(cur_if, pkey);
 	}
@@ -568,15 +569,11 @@ static int get_port_cfg(unsigned sindex, char *str, void *data)
 		cfg->lsc_val = val;
 	}
 	else if (STR_EQ(str, "local ipv4")) {
-		struct ip4_subnet cidr;
-		if (parse_ip4_and_prefix(&cidr, pkey) != 0) {
-			cfg->prefix = 24;
-			return parse_ip(&cfg->ip, pkey);
-		} else {
-			cfg->ip = cidr.ip;
-			cfg->prefix = cidr.prefix;
-			return 0;
+		if (parse_ip_set(cfg->ip_addr, pkey, PROX_MAX_VLAN_TAGS) != 0) {
+			cfg->ip_addr[0].ip = 24;
+			return parse_ip(&cfg->ip_addr[0].ip, pkey);
 		}
+		return 0;
 	}
 	else if (STR_EQ(str, "vdev")) {
 		prox_strncpy(cfg->vdev, pkey, MAX_NAME_SIZE);
@@ -612,7 +609,7 @@ static int get_port_cfg(unsigned sindex, char *str, void *data)
 
 	}
 	else if (STR_EQ(str, "vlan tag")) {
-		return parse_int(&cfg->vlan_tag, pkey);
+		return parse_int_set(cfg->vlan_tags, pkey, sizeof(cfg->vlan_tags) / sizeof(cfg->vlan_tags[0]));
 	}
 	else if (STR_EQ(str, "vlan")) {
 #if RTE_VERSION >= RTE_VERSION_NUM(18,8,0,1)

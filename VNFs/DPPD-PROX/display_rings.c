@@ -68,7 +68,7 @@ static void display_rings_draw_frame(struct screen_state *state)
 			int offset = 0;
 
 			for (uint32_t j = 0; j < rs->nb_ports; j++)
-				offset += sprintf(name + offset, "%s", rs->port[j]->name);
+				offset += sprintf(name + offset, "%s", rs->port[j]->names[0]);
 		}
 
 		sc_val = (rs->ring->flags & RING_F_SC_DEQ) ? 'y' : 'n';

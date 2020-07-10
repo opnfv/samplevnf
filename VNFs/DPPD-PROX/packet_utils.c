@@ -530,26 +530,27 @@ void task_start_l3(struct task_base *tbase, struct task_args *targ)
         if (port && (tbase->l3.arp_nd_pool == NULL)) {
 		static char name[] = "arp0_pool";
                 tbase->l3.reachable_port_id = port - prox_port_cfg;
-		if ((targ->local_ipv4 && port->ip) && (targ->local_ipv4 != port->ip)) {
-			PROX_PANIC(1, "local_ipv4 in core section ("IPv4_BYTES_FMT") differs from port section ("IPv4_BYTES_FMT")\n", IP4(rte_be_to_cpu_32(targ->local_ipv4)), IP4(rte_be_to_cpu_32(port->ip)));
+		if ((targ->local_ipv4 && port->ip_addr[0].ip) && (targ->local_ipv4 != port->ip_addr[0].ip)) {
+			PROX_PANIC(1, "local_ipv4 in core section ("IPv4_BYTES_FMT") differs from port section ("IPv4_BYTES_FMT")\n", IP4(rte_be_to_cpu_32(targ->local_ipv4)), IP4(rte_be_to_cpu_32(port->ip_addr[0].ip)));
 		}
-		if ((targ->local_ipv4 && port->ip) && (targ->local_prefix != port->prefix)) {
-			PROX_PANIC(1, "local_ipv4 prefix in core section (%d) differs from port section (%d)\n", targ->local_prefix, port->prefix);
+		if ((targ->local_ipv4 && port->ip_addr[0].ip) && (targ->local_prefix != port->ip_addr[0].prefix)) {
+			PROX_PANIC(1, "local_ipv4 prefix in core section (%d) differs from port section (%d)\n", targ->local_prefix, port->ip_addr[0].prefix);
 		}
-		if (!targ->local_ipv4) {
-			targ->local_ipv4 = port->ip;
-			targ->local_prefix = port->prefix;
-			plog_info("Setting core local_ipv4 from port %d local_ipv4 to "IPv4_BYTES_FMT"\n", tbase->l3.reachable_port_id, IP4(rte_be_to_cpu_32(port->ip)));
+		if (!port->ip_addr[0].ip) {
+			port->ip_addr[0].ip = targ->local_ipv4;
+			port->ip_addr[0].prefix = targ->local_prefix;
+			port->n_vlans = 1;
+			port->vlan_tags[0] = 0;
+			plog_info("Setting port local_ipv4 from core %d local_ipv4 to "IPv4_BYTES_FMT"\n", tbase->l3.reachable_port_id, IP4(rte_be_to_cpu_32(port->ip_addr[0].ip)));
 		}
-		if (targ->local_ipv4) {
-			tbase->l3.local_ipv4 = rte_be_to_cpu_32(targ->local_ipv4);
-			register_ip_to_ctrl_plane(tbase->l3.tmaster, tbase->l3.local_ipv4, tbase->l3.reachable_port_id, targ->lconf->id, targ->id);
+		for (int vlan_id = 0; vlan_id < port->n_vlans; vlan_id++) {
+			register_ip_to_ctrl_plane(tbase->l3.tmaster, rte_be_to_cpu_32(port->ip_addr[vlan_id].ip), tbase->l3.reachable_port_id, targ->lconf->id, targ->id);
         	}
 		if (strcmp(targ->route_table, "") != 0) {
 			struct lpm4 *lpm;
 			int ret;
 
-			PROX_PANIC(tbase->l3.local_ipv4 == 0, "missing local_ipv4 while route table is specified in L3 mode\n");
+			PROX_PANIC(port->n_vlans == 0, "missing local_ipv4 while route table is specified in L3 mode\n");
 
 			// LPM might be modified runtime => do not share with other cores
 			ret = lua_to_lpm4(prox_lua(), GLOBAL, targ->route_table, socket_id, &lpm);
@@ -572,10 +573,13 @@ void task_start_l3(struct task_base *tbase, struct task_args *targ)
 			}
 			plog_info("Using routing table %s in l3 mode, with %d gateways\n", targ->route_table, tbase->l3.nb_gws);
 
-			// Last but one "next_hop_index" is not a gateway but direct routes
-			tbase->l3.next_hops[tbase->l3.nb_gws].ip = 0;
-			ret = rte_lpm_add(tbase->l3.ipv4_lpm, targ->local_ipv4, targ->local_prefix, tbase->l3.nb_gws++);
-			PROX_PANIC(ret, "Failed to add local_ipv4 "IPv4_BYTES_FMT"/%d to lpm\n", IP4(tbase->l3.local_ipv4), targ->local_prefix);
+			// Last but one (x n_vlans) "next_hop_index" is not a gateway but direct routes
+			for (int vlan_id = 0; vlan_id < port->n_vlans; vlan_id++) {
+				tbase->l3.next_hops[tbase->l3.nb_gws].ip = 0;
+				ret = rte_lpm_add(tbase->l3.ipv4_lpm, port->ip_addr[vlan_id].ip, port->ip_addr[vlan_id].prefix, tbase->l3.nb_gws++);
+				PROX_PANIC(ret, "Failed to add local_ipv4 "IPv4_BYTES_FMT"/%d to lpm\n", IP4(port->ip_addr[vlan_id].ip), port->ip_addr[vlan_id].prefix);
+			}
+
 			// Last "next_hop_index" is default gw
 			tbase->l3.next_hops[tbase->l3.nb_gws].ip = rte_bswap32(targ->gateway_ipv4);
 			if (targ->gateway_ipv4) {
@@ -636,11 +640,6 @@ void task_set_gateway_ip(struct task_base *tbase, uint32_t ip)
 {
 	tbase->l3.gw.ip = ip;
 	tbase->flags &= ~FLAG_DST_MAC_KNOWN;
-}
-
-void task_set_local_ip(struct task_base *tbase, uint32_t ip)
-{
-	tbase->l3.local_ipv4 = ip;
 }
 
 static void reset_arp_ndp_retransmit_timeout(struct l3_base *l3, uint32_t ip)

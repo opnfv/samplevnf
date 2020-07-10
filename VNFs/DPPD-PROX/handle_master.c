@@ -167,16 +167,17 @@ void master_init_vdev(struct task_base *tbase, uint8_t port_id, uint8_t core_id,
 
 		struct sockaddr_in dst, src;
 		src.sin_family = AF_INET;
-		src.sin_addr.s_addr = prox_port_cfg[vdev_port].ip;
 		src.sin_port = rte_cpu_to_be_16(PROX_PSEUDO_PKT_PORT);
-
-		int fd = socket(AF_INET,  SOCK_DGRAM, 0);
-		PROX_PANIC(fd < 0, "Failed to open socket(AF_INET,  SOCK_DGRAM, 0)\n");
-		prox_port_cfg[vdev_port].fd = fd;
-		rc = bind(fd,(struct sockaddr *)&src, sizeof(struct sockaddr_in));
-		PROX_PANIC(rc, "Failed to bind("IPv4_BYTES_FMT":%d): errno = %d (%s)\n", IPv4_BYTES(((uint8_t*)&src.sin_addr.s_addr)), src.sin_port, errno, strerror(errno));
-		plog_info("DPDK port %d bound("IPv4_BYTES_FMT":%d) to fd %d\n", port_id, IPv4_BYTES(((uint8_t*)&src.sin_addr.s_addr)), src.sin_port, fd);
-		fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
+		for (int vlan_id = 0; vlan_id < prox_port_cfg[vdev_port].n_vlans; vlan_id++) {
+			src.sin_addr.s_addr = prox_port_cfg[vdev_port].ip_addr[vlan_id].ip;
+			int fd = socket(AF_INET,  SOCK_DGRAM, 0);
+			PROX_PANIC(fd < 0, "Failed to open socket(AF_INET,  SOCK_DGRAM, 0)\n");
+			prox_port_cfg[vdev_port].fds[vlan_id] = fd;
+			rc = bind(fd,(struct sockaddr *)&src, sizeof(struct sockaddr_in));
+			PROX_PANIC(rc, "Failed to bind("IPv4_BYTES_FMT":%d): errno = %d (%s)\n", IPv4_BYTES(((uint8_t*)&src.sin_addr.s_addr)), src.sin_port, errno, strerror(errno));
+			plog_info("DPDK port %d bound("IPv4_BYTES_FMT":%d) to fd %d\n", port_id, IPv4_BYTES(((uint8_t*)&src.sin_addr.s_addr)), src.sin_port, fd);
+			fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
+		}
 		task->max_vdev_id++;
 	}
 }
@@ -790,6 +791,7 @@ static inline void handle_message(struct task_base *tbase, struct rte_mbuf *mbuf
 
 			struct ether_hdr_arp *hdr_arp = rte_pktmbuf_mtod(mbuf, struct ether_hdr_arp *);
 			uint32_t ip = get_ip(mbuf);
+			vlan = ctrl_ring_get_vlan(mbuf);
 			struct rte_ring *ring = task->ctrl_tx_rings[get_core(mbuf) * MAX_TASKS_PER_CORE + get_task(mbuf)];
 
 			// First check whether MAC address is not already in kernel MAC table.
@@ -810,12 +812,23 @@ static inline void handle_message(struct task_base *tbase, struct rte_mbuf *mbuf
 			dst.sin_family = AF_INET;
 			dst.sin_addr.s_addr = ip;
 			dst.sin_port = rte_cpu_to_be_16(PROX_PSEUDO_PKT_PORT);
-			// TODO VLAN: find the right fd based on the VLAN
-			int n = sendto(prox_port_cfg[vdev_port].fd, (char*)(&ip), 0, MSG_DONTROUTE,  (struct sockaddr *)&dst, sizeof(struct sockaddr_in));
+
+			int vlan_id;
+			for (vlan_id = 0; vlan_id < prox_port_cfg[vdev_port].n_vlans; vlan_id++) {
+				if (prox_port_cfg[vdev_port].vlan_tags[vlan_id] == vlan)
+					break;
+			}
+			if (vlan_id >= prox_port_cfg[vdev_port].n_vlans) {
+				// Tag not found
+				plogx_info("\tDid not send to TAP IP "IPv4_BYTES_FMT" as wrong VLAN %d\n", IPv4_BYTES(((uint8_t*)&ip)), vlan);
+				tx_drop(mbuf);
+				break;
+			}
+			int n = sendto(prox_port_cfg[vdev_port].fds[vlan_id], (char*)(&ip), 0, MSG_DONTROUTE,  (struct sockaddr *)&dst, sizeof(struct sockaddr_in));
 			if (n < 0) {
-				plogx_info("\tFailed to send to TAP IP "IPv4_BYTES_FMT" using fd %d, error = %d (%s)\n", IPv4_BYTES(((uint8_t*)&ip)), prox_port_cfg[vdev_port].fd, errno, strerror(errno));
+				plogx_info("\tFailed to send to TAP IP "IPv4_BYTES_FMT" using fd %d, error = %d (%s)\n", IPv4_BYTES(((uint8_t*)&ip)), prox_port_cfg[vdev_port].fds[vlan_id], errno, strerror(errno));
 			} else
-				plogx_dbg("\tSent %d bytes to TAP IP "IPv4_BYTES_FMT" using fd %d\n", n, IPv4_BYTES(((uint8_t*)&ip)), prox_port_cfg[vdev_port].fd);
+				plogx_dbg("\tSent %d bytes to TAP IP "IPv4_BYTES_FMT" using fd %d\n", n, IPv4_BYTES(((uint8_t*)&ip)), prox_port_cfg[vdev_port].fds[vlan_id]);
 
 			record_request(tbase, ip, port, ring);
 			tx_drop(mbuf);
@@ -1035,8 +1048,14 @@ static void handle_route_event(struct task_base *tbase)
 	}
 	int dpdk_vdev_port = -1;
 	for (int i = 0; i< prox_rte_eth_dev_count_avail(); i++) {
-		if (strcmp(prox_port_cfg[i].name, interface_name) == 0)
-			dpdk_vdev_port = i;
+		for (int vlan_id = 0; vlan_id < prox_port_cfg[i].n_vlans; vlan_id++) {
+			if (strcmp(prox_port_cfg[i].names[vlan_id], interface_name) == 0) {
+				dpdk_vdev_port = i;
+				break;
+			}
+		}
+		if (dpdk_vdev_port != -1)
+			break;
 	}
 	if (dpdk_vdev_port != -1) {
 		plogx_info("Received netlink message on tap interface %s for IP "IPv4_BYTES_FMT"/%d, Gateway  "IPv4_BYTES_FMT"\n", interface_name, IP4(ip), dst_len, IP4(gw_ip));

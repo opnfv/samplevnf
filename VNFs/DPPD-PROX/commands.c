@@ -895,7 +895,7 @@ void cmd_portinfo(int port_id, char *dst, size_t max_len)
 			dst += snprintf(dst, end - dst,
 					"%2d:%10s; "MAC_BYTES_FMT"; %s\n",
 					port_id,
-					port_cfg->name,
+					port_cfg->names[0],
 					MAC_BYTES(port_cfg->eth_addr.addr_bytes),
 					port_cfg->pci_addr);
 		}
@@ -909,7 +909,7 @@ void cmd_portinfo(int port_id, char *dst, size_t max_len)
 	struct prox_port_cfg* port_cfg = &prox_port_cfg[port_id];
 
 	dst += snprintf(dst, end - dst, "Port info for port %u\n", port_id);
-	dst += snprintf(dst, end - dst, "\tName: %s\n", port_cfg->name);
+	dst += snprintf(dst, end - dst, "\tName: %s\n", port_cfg->names[0]);
 	dst += snprintf(dst, end - dst, "\tDriver: %s\n", port_cfg->driver_name);
 	dst += snprintf(dst, end - dst, "\tMac address: "MAC_BYTES_FMT"\n", MAC_BYTES(port_cfg->eth_addr.addr_bytes));
 	dst += snprintf(dst, end - dst, "\tLink speed: %u Mbps\n", port_cfg->link_speed);
