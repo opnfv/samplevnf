@@ -18,6 +18,7 @@
 #include <inttypes.h>
 #include <rte_eal.h>
 #include <rte_ethdev.h>
+#include <rte_version.h>
 
 static const uint16_t rx_rings = 1, tx_rings = 1;
 static const struct rte_eth_conf port_conf = { .link_speeds = ETH_LINK_SPEED_AUTONEG };
@@ -33,7 +34,11 @@ port_info(void)
 		if (ret_val != 0)
 			return ret_val;
 
+#if RTE_VERSION < RTE_VERSION_NUM(19,8,0,0)
 		struct ether_addr addr;
+#else
+		struct rte_ether_addr addr;
+#endif
 		rte_eth_macaddr_get(port_id, &addr);
 		printf("Port %u MAC: %02" PRIx8 ":%02" PRIx8 ":%02" PRIx8
 				   ":%02" PRIx8 ":%02" PRIx8 ":%02" PRIx8 "\n",
