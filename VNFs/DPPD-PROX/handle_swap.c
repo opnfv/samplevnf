@@ -61,7 +61,7 @@ static void write_src_and_dst_mac(struct task_swap *task, struct rte_mbuf *mbuf)
               	rte_memcpy(hdr, task->src_dst_mac, sizeof(task->src_dst_mac));
 	} else {
 		hdr = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
-		if (likely((task->runtime_flags & TASK_ARG_SRC_MAC_SET) == 0)) {
+		if (unlikely((task->runtime_flags & TASK_ARG_SRC_MAC_SET) == 0)) {
 			/* dst mac will be used as src mac */
 			prox_rte_ether_addr_copy(&hdr->d_addr, &mac);
 		}
@@ -71,7 +71,7 @@ static void write_src_and_dst_mac(struct task_swap *task, struct rte_mbuf *mbuf)
 		else
 			prox_rte_ether_addr_copy(&hdr->s_addr, &hdr->d_addr);
 
-		if (unlikely(task->runtime_flags & TASK_ARG_SRC_MAC_SET)) {
+		if (likely(task->runtime_flags & TASK_ARG_SRC_MAC_SET)) {
 			prox_rte_ether_addr_copy((prox_rte_ether_addr *)&task->src_dst_mac[6], &hdr->s_addr);
 		} else {
 			prox_rte_ether_addr_copy(&mac, &hdr->s_addr);
