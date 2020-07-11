@@ -420,6 +420,7 @@ static inline void handle_unknown_ip6(struct task_base *tbase, struct rte_mbuf *
 	struct ether_hdr_arp *hdr_arp = rte_pktmbuf_mtod(mbuf, struct ether_hdr_arp *);
 	uint8_t port = get_port(mbuf);
 	struct ipv6_addr *ip_dst = ctrl_ring_get_ipv6_addr(mbuf);
+	uint16_t vlan = ctrl_ring_get_vlan(mbuf);
 	int ret1, ret2, i;
 
 	plogx_dbg("\tMaster trying to find MAC of external IP "IPv6_BYTES_FMT" for port %d\n", IPv6_BYTES(ip_dst->bytes), port);
@@ -479,32 +480,28 @@ static inline void handle_unknown_ip6(struct task_base *tbase, struct rte_mbuf *
 
 	// As timers are not handled by master, we might send an NS request even if one was just sent
 	// (and not yet answered) by another task
-	build_neighbour_sollicitation(mbuf, &task->internal_port_table[port].mac, ip_dst, ip_src);
+	build_neighbour_sollicitation(mbuf, &task->internal_port_table[port].mac, ip_dst, ip_src, vlan);
 	tx_ring(tbase, ring, SEND_NDP_FROM_MASTER, mbuf);
 }
 
-static inline void handle_rs(struct task_base *tbase, struct rte_mbuf *mbuf)
+static inline void handle_rs(struct task_base *tbase, struct rte_mbuf *mbuf, prox_rte_ipv6_hdr *ipv6_hdr, uint16_t vlan)
 {
 	struct task_master *task = (struct task_master *)tbase;
-	prox_rte_ether_hdr *hdr = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
-	prox_rte_ipv6_hdr *ipv6_hdr = (prox_rte_ipv6_hdr *)(hdr + 1);
 	int i, ret;
 	uint8_t port = get_port(mbuf);
 
 	if (task->internal_port_table[port].flags & IPV6_ROUTER) {
 		plogx_dbg("\tMaster handling Router Solicitation from ip "IPv6_BYTES_FMT" on port %d\n", IPv6_BYTES(ipv6_hdr->src_addr), port);
 		struct rte_ring *ring = task->internal_port_table[port].ring;
-		build_router_advertisement(mbuf, &prox_port_cfg[port].eth_addr, &task->internal_port_table[port].local_ipv6_addr, &task->internal_port_table[port].router_prefix);
+		build_router_advertisement(mbuf, &prox_port_cfg[port].eth_addr, &task->internal_port_table[port].local_ipv6_addr, &task->internal_port_table[port].router_prefix, vlan);
 		tx_ring(tbase, ring, SEND_NDP_FROM_MASTER, mbuf);
 		return;
 	}
 }
 
-static inline void handle_ra(struct task_base *tbase, struct rte_mbuf *mbuf)
+static inline void handle_ra(struct task_base *tbase, struct rte_mbuf *mbuf, prox_rte_ipv6_hdr *ipv6_hdr, uint16_t vlan)
 {
 	struct task_master *task = (struct task_master *)tbase;
-	prox_rte_ether_hdr *hdr = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
-	prox_rte_ipv6_hdr *ipv6_hdr = (prox_rte_ipv6_hdr *)(hdr + 1);
 	int i, ret, send = 0;
 	uint8_t port = get_port(mbuf);
 	struct rte_ring *ring = task->internal_port_table[port].ring;
@@ -559,11 +556,9 @@ static inline void handle_ra(struct task_base *tbase, struct rte_mbuf *mbuf)
 		tx_drop(mbuf);
 }
 
-static inline void handle_ns(struct task_base *tbase, struct rte_mbuf *mbuf)
+static inline void handle_ns(struct task_base *tbase, struct rte_mbuf *mbuf, prox_rte_ipv6_hdr *ipv6_hdr, uint16_t vlan)
 {
 	struct task_master *task = (struct task_master *)tbase;
-	prox_rte_ether_hdr *hdr = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
-	prox_rte_ipv6_hdr *ipv6_hdr = (prox_rte_ipv6_hdr *)(hdr + 1);
 	struct icmpv6_NS *neighbour_sollicitation = (struct icmpv6_NS *)(ipv6_hdr + 1);
 	int i, ret;
 	uint8_t port = get_port(mbuf);
@@ -606,7 +601,7 @@ static inline void handle_ns(struct task_base *tbase, struct rte_mbuf *mbuf)
 			plogx_dbg("\tMaster handling NS request for ip "IPv6_BYTES_FMT" on port %d which supports random ip\n", IPv6_BYTES(key.ip6.bytes), key.port);
 			struct rte_ring *ring = task->internal_port_table[port].ring;
 			create_mac_from_EUI(&key.ip6, &mac);
-			build_neighbour_advertisement(tbase, mbuf, &mac, &task->internal_port_table[port].local_ipv6_addr, PROX_SOLLICITED);
+			build_neighbour_advertisement(tbase, mbuf, &mac, &task->internal_port_table[port].local_ipv6_addr, PROX_SOLLICITED, vlan);
 			tx_ring(tbase, ring, SEND_NDP_FROM_MASTER, mbuf);
 			return;
 		}
@@ -616,7 +611,7 @@ static inline void handle_ns(struct task_base *tbase, struct rte_mbuf *mbuf)
 			plogx_dbg("\tMaster handling NS request for ip "IPv6_BYTES_FMT" on port %d which supports random ip\n", IPv6_BYTES(key.ip6.bytes), key.port);
 			struct rte_ring *ring = task->internal_port_table[port].ring;
 			create_mac_from_EUI(&key.ip6, &mac);
-			build_neighbour_advertisement(tbase, mbuf, &mac, &task->internal_port_table[port].global_ipv6_addr, PROX_SOLLICITED);
+			build_neighbour_advertisement(tbase, mbuf, &mac, &task->internal_port_table[port].global_ipv6_addr, PROX_SOLLICITED, vlan);
 			tx_ring(tbase, ring, SEND_NDP_FROM_MASTER, mbuf);
 			return;
 		}
@@ -629,16 +624,14 @@ static inline void handle_ns(struct task_base *tbase, struct rte_mbuf *mbuf)
 		tx_drop(mbuf);
 	} else {
 		struct rte_ring *ring = task->internal_ip6_table[ret].ring;
-		build_neighbour_advertisement(tbase, mbuf, &task->internal_ip6_table[ret].mac, &key.ip6, PROX_SOLLICITED);
+		build_neighbour_advertisement(tbase, mbuf, &task->internal_ip6_table[ret].mac, &key.ip6, PROX_SOLLICITED, vlan);
 		tx_ring(tbase, ring, SEND_NDP_FROM_MASTER, mbuf);
 	}
 }
 
-static inline void handle_na(struct task_base *tbase, struct rte_mbuf *mbuf)
+static inline void handle_na(struct task_base *tbase, struct rte_mbuf *mbuf, prox_rte_ipv6_hdr *ipv6_hdr, uint16_t vlan)
 {
 	struct task_master *task = (struct task_master *)tbase;
-	prox_rte_ether_hdr *hdr = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
-	prox_rte_ipv6_hdr *ipv6_hdr = (prox_rte_ipv6_hdr *)(hdr + 1);
 	struct icmpv6_NA *neighbour_advertisement = (struct icmpv6_NA *)(ipv6_hdr + 1);
 	int i, ret;
 	uint8_t port = get_port(mbuf);
@@ -716,7 +709,7 @@ static inline void handle_message(struct task_base *tbase, struct rte_mbuf *mbuf
 	int command = get_command(mbuf);
 	uint8_t port = get_port(mbuf);
 	uint32_t ip;
-	uint16_t vlan, ether_type;
+	uint16_t vlan = 0, ether_type;
 	uint8_t vdev_port = prox_port_cfg[port].dpdk_mapping;
 	plogx_dbg("\tMaster received %s (%x) from mbuf %p\n", actions_string[command], command, mbuf);
 	struct my_arp_t *arp;
@@ -828,10 +821,10 @@ static inline void handle_message(struct task_base *tbase, struct rte_mbuf *mbuf
 		break;
 	case NDP_PKT_FROM_NET_TO_MASTER:
 		ether_hdr = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
-		prox_rte_ipv6_hdr *ipv6_hdr = (prox_rte_ipv6_hdr *)(ether_hdr + 1);
-		if (unlikely((ether_hdr->ether_type != ETYPE_IPv6) || (ipv6_hdr->proto != ICMPv6))) {
+		prox_rte_ipv6_hdr *ipv6_hdr = prox_get_ipv6_hdr(ether_hdr, rte_pktmbuf_pkt_len(mbuf), &vlan);
+		if (unlikely((!ipv6_hdr) || (ipv6_hdr->proto != ICMPv6))) {
 			// Should not happen
-			if (ether_hdr->ether_type != ETYPE_IPv6)
+			if (!ipv6_hdr)
 				plog_err("\tUnexpected message received: NDP_PKT_FROM_NET_TO_MASTER with ether_type %x\n", ether_hdr->ether_type);
 			else
 				plog_err("\tUnexpected message received: NDP_PKT_FROM_NET_TO_MASTER with ether_type %x and proto %x\n", ether_hdr->ether_type, ipv6_hdr->proto);
@@ -857,16 +850,16 @@ static inline void handle_message(struct task_base *tbase, struct rte_mbuf *mbuf
 			tx_drop(mbuf);
 			break;
 		case ICMPv6_RS:
-			handle_rs(tbase, mbuf);
+			handle_rs(tbase, mbuf, ipv6_hdr, vlan);
 			break;
 		case ICMPv6_RA:
-			handle_ra(tbase, mbuf);
+			handle_ra(tbase, mbuf, ipv6_hdr, vlan);
 			break;
 		case ICMPv6_NS:
-			handle_ns(tbase, mbuf);
+			handle_ns(tbase, mbuf, ipv6_hdr, vlan);
 			break;
 		case ICMPv6_NA:
-			handle_na(tbase, mbuf);
+			handle_na(tbase, mbuf, ipv6_hdr, vlan);
 			break;
 		case ICMPv6_RE:
 			plog_err("IPV6 ICMPV6 Redirect not handled\n");

@@ -119,7 +119,25 @@ void create_mac_from_EUI(struct ipv6_addr *ipv6_addr, prox_rte_ether_addr *mac)
 	mac->addr_bytes[0] = mac->addr_bytes[0] ^ 0x02;
 	memcpy(&mac->addr_bytes[3], &ipv6_addr->bytes[13], 3);
 }
-void build_router_advertisement(struct rte_mbuf *mbuf, prox_rte_ether_addr *s_addr, struct ipv6_addr *ipv6_s_addr, struct ipv6_addr *router_prefix)
+
+static inline prox_rte_ipv6_hdr *prox_set_vlan_ipv6(prox_rte_ether_hdr *peth, uint16_t vlan)
+{
+	prox_rte_ipv6_hdr *ipv6_hdr;
+
+	if (vlan) {
+		prox_rte_vlan_hdr *vlan_hdr = (prox_rte_vlan_hdr *)(peth + 1);
+		ipv6_hdr = (prox_rte_ipv6_hdr *)(vlan_hdr + 1);
+		peth->ether_type = ETYPE_VLAN;
+		vlan_hdr->eth_proto = ETYPE_IPv6;
+		vlan_hdr->vlan_tci = rte_cpu_to_be_16(vlan);
+	} else {
+		ipv6_hdr = (prox_rte_ipv6_hdr *)(peth + 1);
+		peth->ether_type = ETYPE_IPv6;
+	}
+	return ipv6_hdr;
+}
+
+void build_router_advertisement(struct rte_mbuf *mbuf, prox_rte_ether_addr *s_addr, struct ipv6_addr *ipv6_s_addr, struct ipv6_addr *router_prefix, uint16_t vlan)
 {
 	prox_rte_ether_hdr *peth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 	init_mbuf_seg(mbuf);
@@ -127,9 +145,8 @@ void build_router_advertisement(struct rte_mbuf *mbuf, prox_rte_ether_addr *s_ad
 
 	memcpy(peth->d_addr.addr_bytes, &prox_cfg.all_nodes_mac_addr, sizeof(prox_rte_ether_addr));
 	memcpy(peth->s_addr.addr_bytes, s_addr, sizeof(prox_rte_ether_addr));
-	peth->ether_type = ETYPE_IPv6;
 
-	prox_rte_ipv6_hdr *ipv6_hdr = (prox_rte_ipv6_hdr *)(peth + 1);
+	prox_rte_ipv6_hdr *ipv6_hdr = prox_set_vlan_ipv6(peth, vlan);
 	ipv6_hdr->vtc_flow = 0x00000060;
 	ipv6_hdr->payload_len = rte_cpu_to_be_16(sizeof(struct icmpv6_RA) + sizeof(struct icmpv6_prefix_option));
 	ipv6_hdr->proto = ICMPv6;
@@ -165,11 +182,11 @@ void build_router_advertisement(struct rte_mbuf *mbuf, prox_rte_ether_addr *s_ad
 	router_advertisement->checksum = rte_ipv6_udptcp_cksum(ipv6_hdr, router_advertisement);
 
 	uint16_t pktlen = rte_be_to_cpu_16(ipv6_hdr->payload_len) + sizeof(prox_rte_ipv6_hdr) + sizeof(prox_rte_ether_hdr);
-	rte_pktmbuf_pkt_len(mbuf) = pktlen;
-	rte_pktmbuf_data_len(mbuf) = pktlen;
+	rte_pktmbuf_pkt_len(mbuf) = pktlen + (vlan ? 4 : 0);
+	rte_pktmbuf_data_len(mbuf) = pktlen + (vlan ? 4 : 0);
 }
 
-void build_router_sollicitation(struct rte_mbuf *mbuf, prox_rte_ether_addr *s_addr, struct ipv6_addr *ipv6_s_addr)
+void build_router_sollicitation(struct rte_mbuf *mbuf, prox_rte_ether_addr *s_addr, struct ipv6_addr *ipv6_s_addr, uint16_t vlan)
 {
 	prox_rte_ether_hdr *peth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 
@@ -178,9 +195,8 @@ void build_router_sollicitation(struct rte_mbuf *mbuf, prox_rte_ether_addr *s_ad
 
 	memcpy(peth->d_addr.addr_bytes, &prox_cfg.all_routers_mac_addr, sizeof(prox_rte_ether_addr));
 	memcpy(peth->s_addr.addr_bytes, s_addr, sizeof(prox_rte_ether_addr));
-	peth->ether_type = ETYPE_IPv6;
 
-	prox_rte_ipv6_hdr *ipv6_hdr = (prox_rte_ipv6_hdr *)(peth + 1);
+	prox_rte_ipv6_hdr *ipv6_hdr = prox_set_vlan_ipv6(peth, vlan);
 	ipv6_hdr->vtc_flow = 0x00000060;
 	ipv6_hdr->payload_len = rte_cpu_to_be_16(sizeof(struct icmpv6_RS));
 	ipv6_hdr->proto = ICMPv6;
@@ -198,11 +214,11 @@ void build_router_sollicitation(struct rte_mbuf *mbuf, prox_rte_ether_addr *s_ad
 	router_sollicitation->checksum = 0;
 	router_sollicitation->checksum = rte_ipv6_udptcp_cksum(ipv6_hdr, router_sollicitation);
 	uint16_t pktlen = rte_be_to_cpu_16(ipv6_hdr->payload_len) + sizeof(prox_rte_ipv6_hdr) + sizeof(prox_rte_ether_hdr);
-	rte_pktmbuf_pkt_len(mbuf) = pktlen;
-	rte_pktmbuf_data_len(mbuf) = pktlen;
+	rte_pktmbuf_pkt_len(mbuf) = pktlen + (vlan ? 4 : 0);
+	rte_pktmbuf_data_len(mbuf) = pktlen + (vlan ? 4 : 0);
 }
 
-void build_neighbour_sollicitation(struct rte_mbuf *mbuf, prox_rte_ether_addr *s_addr, struct ipv6_addr *dst, struct ipv6_addr *src)
+void build_neighbour_sollicitation(struct rte_mbuf *mbuf, prox_rte_ether_addr *s_addr, struct ipv6_addr *dst, struct ipv6_addr *src, uint16_t vlan)
 {
 	prox_rte_ether_hdr *peth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 	prox_rte_ether_addr mac_dst;
@@ -213,9 +229,9 @@ void build_neighbour_sollicitation(struct rte_mbuf *mbuf, prox_rte_ether_addr *s
 
 	memcpy(peth->d_addr.addr_bytes, &mac_dst, sizeof(prox_rte_ether_addr));
 	memcpy(peth->s_addr.addr_bytes, s_addr, sizeof(prox_rte_ether_addr));
-	peth->ether_type = ETYPE_IPv6;
 
-	prox_rte_ipv6_hdr *ipv6_hdr = (prox_rte_ipv6_hdr *)(peth + 1);
+	prox_rte_ipv6_hdr *ipv6_hdr = prox_set_vlan_ipv6(peth, vlan);
+
 	ipv6_hdr->vtc_flow = 0x00000060;
 	ipv6_hdr->payload_len = rte_cpu_to_be_16(sizeof(struct icmpv6_NS));
 	ipv6_hdr->proto = ICMPv6;
@@ -235,20 +251,21 @@ void build_neighbour_sollicitation(struct rte_mbuf *mbuf, prox_rte_ether_addr *s
 	neighbour_sollicitation->checksum = rte_ipv6_udptcp_cksum(ipv6_hdr, neighbour_sollicitation);
 
 	uint16_t pktlen = rte_be_to_cpu_16(ipv6_hdr->payload_len) + sizeof(prox_rte_ipv6_hdr) + sizeof(prox_rte_ether_hdr);
-	rte_pktmbuf_pkt_len(mbuf) = pktlen;
-	rte_pktmbuf_data_len(mbuf) = pktlen;
+	rte_pktmbuf_pkt_len(mbuf) = pktlen + (vlan ? 4 : 0);
+	rte_pktmbuf_data_len(mbuf) = pktlen + (vlan ? 4 : 0);
 }
 
-void build_neighbour_advertisement(struct task_base *tbase, struct rte_mbuf *mbuf, prox_rte_ether_addr *target, struct ipv6_addr *src_ipv6_addr, int sollicited)
+void build_neighbour_advertisement(struct task_base *tbase, struct rte_mbuf *mbuf, prox_rte_ether_addr *target, struct ipv6_addr *src_ipv6_addr, int sollicited, uint16_t vlan)
 {
 	struct task_master *task = (struct task_master *)tbase;
 	prox_rte_ether_hdr *peth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
-	prox_rte_ipv6_hdr *ipv6_hdr = (prox_rte_ipv6_hdr *)(peth + 1);
 
 	uint8_t port_id = get_port(mbuf);
 
 	init_mbuf_seg(mbuf);
 	mbuf->ol_flags &= ~(PKT_TX_IP_CKSUM|PKT_TX_UDP_CKSUM);  // Software calculates the checksum
+
+	prox_rte_ipv6_hdr *ipv6_hdr = prox_set_vlan_ipv6(peth, vlan);
 
 	// If source mac is null, use all_nodes_mac_addr.
 	if ((!sollicited) || (memcmp(peth->s_addr.addr_bytes, &null_addr, sizeof(struct ipv6_addr)) == 0)) {
@@ -260,7 +277,6 @@ void build_neighbour_advertisement(struct task_base *tbase, struct rte_mbuf *mbu
 	}
 
 	memcpy(peth->s_addr.addr_bytes, &task->internal_port_table[port_id].mac, sizeof(prox_rte_ether_addr));
-	peth->ether_type = ETYPE_IPv6;
 
 	ipv6_hdr->vtc_flow = 0x00000060;
 	ipv6_hdr->payload_len = rte_cpu_to_be_16(sizeof(struct icmpv6_NA));
@@ -297,6 +313,27 @@ void build_neighbour_advertisement(struct task_base *tbase, struct rte_mbuf *mbu
 	neighbour_advertisement->checksum = 0;
 	neighbour_advertisement->checksum = rte_ipv6_udptcp_cksum(ipv6_hdr, neighbour_advertisement);
 	uint16_t pktlen = rte_be_to_cpu_16(ipv6_hdr->payload_len) + sizeof(prox_rte_ipv6_hdr) + sizeof(prox_rte_ether_hdr);
-	rte_pktmbuf_pkt_len(mbuf) = pktlen;
-	rte_pktmbuf_data_len(mbuf) = pktlen;
+	rte_pktmbuf_pkt_len(mbuf) = pktlen + (vlan ? 4 : 0);
+	rte_pktmbuf_data_len(mbuf) = pktlen + (vlan ? 4 : 0);
+}
+
+prox_rte_ipv6_hdr *prox_get_ipv6_hdr(prox_rte_ether_hdr *hdr, uint16_t len, uint16_t *vlan)
+{
+	prox_rte_vlan_hdr *vlan_hdr;
+	prox_rte_ipv6_hdr *ipv6_hdr;
+	uint16_t ether_type = hdr->ether_type;
+	uint16_t l2_len = sizeof(prox_rte_ether_hdr);
+	ipv6_hdr = (prox_rte_ipv6_hdr *)(hdr + 1);
+
+	while (((ether_type == ETYPE_8021ad) || (ether_type == ETYPE_VLAN)) && (l2_len + sizeof(prox_rte_vlan_hdr) < len)) {
+		vlan_hdr = (prox_rte_vlan_hdr *)((uint8_t *)hdr + l2_len);
+		l2_len +=4;
+		ether_type = vlan_hdr->eth_proto;
+		*vlan = rte_be_to_cpu_16(vlan_hdr->vlan_tci & 0xFF0F);
+		ipv6_hdr = (prox_rte_ipv6_hdr *)(vlan_hdr + 1);
+	}
+	if (ether_type == ETYPE_IPv6)
+		return ipv6_hdr;
+	else
+		return NULL;
 }

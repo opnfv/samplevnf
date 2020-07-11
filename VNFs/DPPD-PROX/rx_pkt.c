@@ -180,9 +180,11 @@ static inline int handle_l3(struct task_base *tbase, uint16_t nb_rx, struct rte_
 static inline int handle_ndp(struct task_base *tbase, uint16_t nb_rx, struct rte_mbuf ***mbufs_ptr)
 {
 	struct rte_mbuf **mbufs = *mbufs_ptr;
+	prox_rte_ipv6_hdr *ipv6_hdr;
 	int i;
 	prox_rte_ether_hdr *hdr[MAX_PKT_BURST];
 	int skip = 0;
+	uint16_t vlan = 0;
 
 	for (i = 0; i < nb_rx; i++) {
 		PREFETCH0(mbufs[i]);
@@ -192,8 +194,8 @@ static inline int handle_ndp(struct task_base *tbase, uint16_t nb_rx, struct rte
 		PREFETCH0(hdr[i]);
 	}
 	for (i = 0; i < nb_rx; i++) {
-		prox_rte_ipv6_hdr *ipv6_hdr = (prox_rte_ipv6_hdr *)(hdr[i] + 1);
-		if (unlikely((hdr[i]->ether_type == ETYPE_IPv6) && (ipv6_hdr->proto == ICMPv6))) {
+		ipv6_hdr = prox_get_ipv6_hdr(hdr[i], rte_pktmbuf_pkt_len(mbufs[i]), &vlan);
+		if (unlikely((ipv6_hdr) && (ipv6_hdr->proto == ICMPv6))) {
 			dump_l3(tbase, mbufs[i]);
 			tx_ring(tbase, tbase->l3.ctrl_plane_ring, NDP_PKT_FROM_NET_TO_MASTER, mbufs[i]);
 			skip++;
