@@ -46,7 +46,7 @@ static inline int find_ip(struct ether_hdr_arp *pkt, uint16_t len, uint32_t *ip_
 
 	*vlan = 0;
 	// Unstack VLAN tags
-	while (((ether_type == ETYPE_8021ad) || (ether_type == ETYPE_VLAN)) && (l2_len + sizeof(prox_rte_vlan_hdr) < len)) {
+	while (((ether_type == ETYPE_VLAN) || (ether_type == ETYPE_8021ad)) && (l2_len + sizeof(prox_rte_vlan_hdr) < len)) {
 		vlan_hdr = (prox_rte_vlan_hdr *)((uint8_t *)pkt + l2_len);
 		l2_len +=4;
 		ether_type = vlan_hdr->eth_proto;
@@ -100,40 +100,23 @@ static inline void find_vlan(struct ether_hdr_arp *pkt, uint16_t len, uint16_t *
 
 static inline struct ipv6_addr *find_ip6(prox_rte_ether_hdr *pkt, uint16_t len, struct ipv6_addr *ip_dst, uint16_t *vlan)
 {
-	prox_rte_vlan_hdr *vlan_hdr;
-	prox_rte_ipv6_hdr *ip;
 	uint16_t ether_type = pkt->ether_type;
 	uint16_t l2_len = sizeof(prox_rte_ether_hdr);
-
 	*vlan = 0;
-	// Unstack VLAN tags
-	while (((ether_type == ETYPE_8021ad) || (ether_type == ETYPE_VLAN)) && (l2_len + sizeof(prox_rte_vlan_hdr) < len)) {
-		vlan_hdr = (prox_rte_vlan_hdr *)((uint8_t *)pkt + l2_len);
-		l2_len +=4;
+
+	if ((ether_type == ETYPE_VLAN) || (ether_type == ETYPE_8021ad)) {
+		prox_rte_vlan_hdr *vlan_hdr = (prox_rte_vlan_hdr *)((uint8_t *)pkt + l2_len);
 		ether_type = vlan_hdr->eth_proto;
-		*vlan = rte_be_to_cpu_16(vlan_hdr->vlan_tci & 0xFF0F);	// Store VLAN, or CVLAN if QinQ
+		l2_len +=4;
+		*vlan = rte_be_to_cpu_16(vlan_hdr->vlan_tci & 0xFF0F);
+		if (ether_type == ETYPE_VLAN) {
+			vlan_hdr = (prox_rte_vlan_hdr *)(vlan_hdr + 1);
+			ether_type = vlan_hdr->eth_proto;
+			l2_len +=4;
+			*vlan = rte_be_to_cpu_16(vlan_hdr->vlan_tci & 0xFF0F);
+		}
 	}
-
-	switch (ether_type) {
-	case ETYPE_MPLSU:
-	case ETYPE_MPLSM:
-		// In case of MPLS, next hop MAC is based on MPLS, not destination IP
-		l2_len = 0;
-		break;
-	case ETYPE_IPv4:
-	case ETYPE_EoGRE:
-	case ETYPE_ARP:
-		l2_len = 0;
-		break;
-	case ETYPE_IPv6:
-		break;
-	default:
-		l2_len = 0;
-		plog_warn("Unsupported packet type %x - CRC might be wrong\n", ether_type);
-		break;
-	}
-
-	if (l2_len && (l2_len + sizeof(prox_rte_ipv6_hdr) <= len)) {
+	if ((ether_type == ETYPE_IPv6) && (l2_len + sizeof(prox_rte_ipv6_hdr) <= len)) {
 		prox_rte_ipv6_hdr *ip = (prox_rte_ipv6_hdr *)((uint8_t *)pkt + l2_len);
 		// TODO: implement LPM => replace ip_dst by next hop IP DST
 		memcpy(ip_dst, &ip->dst_addr, sizeof(struct ipv6_addr));
@@ -148,7 +131,7 @@ void send_unsollicited_neighbour_advertisement(struct task_base *tbase)
 	uint8_t out = 0, port_id = tbase->l3.reachable_port_id;
 	struct rte_mbuf *mbuf = NULL;
 
-	if (memcmp(&tbase->l3.local_ipv6, &null_addr, 16) != 0) {
+	if (*(__int128 *)(&tbase->l3.local_ipv6) != 0) {
 		ret = rte_mempool_get(tbase->l3.arp_nd_pool, (void **)&mbuf);
 		if (likely(ret == 0)) {
 			mbuf->port = port_id;
@@ -160,7 +143,7 @@ void send_unsollicited_neighbour_advertisement(struct task_base *tbase)
 			return;
 		}
 	}
-	if (memcmp(&tbase->l3.global_ipv6, &null_addr, 16) != 0) {
+	if (*(__int128 *)(&tbase->l3.global_ipv6) != 0) {
 		ret = rte_mempool_get(tbase->l3.arp_nd_pool, (void **)&mbuf);
 		if (likely(ret == 0)) {
 			mbuf->port = port_id;
@@ -365,14 +348,13 @@ int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_d
 	return DROP_MBUF;
 }
 
-int write_ip6_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, struct ipv6_addr *ip_dst, uint16_t *vlan)
+int write_ip6_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, struct ipv6_addr *ip_dst, uint16_t *vlan, uint64_t tsc)
 {
 	const uint64_t hz = rte_get_tsc_hz();
 	prox_rte_ether_hdr *packet = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 	prox_rte_ether_addr *mac = &packet->d_addr;
 	struct ipv6_addr *used_ip_src;
 
-	uint64_t tsc = rte_rdtsc();
 	uint16_t len = rte_pktmbuf_pkt_len(mbuf);
 
 	struct ipv6_addr *pkt_src_ip6;
@@ -383,33 +365,33 @@ int write_ip6_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, struct ipv
 	struct l3_base *l3 = &(tbase->l3);
 
 	// Configure source IP
-	if (memcmp(&l3->local_ipv6, ip_dst, 8) == 0) {
+	if (*(uint64_t *)(&l3->local_ipv6) == *(uint64_t *)ip_dst) {
 		// Same prefix as local -> use local
 		used_ip_src = &l3->local_ipv6;
-	} else if (memcmp(&l3->global_ipv6 , ip_dst, 8) == 0) {
+	} else if (*(uint64_t *)(&l3->global_ipv6) == *(uint64_t *)ip_dst) {
 		// Same prefix as global -> use global
 		used_ip_src = &l3->global_ipv6;
-	} else if (memcmp(&l3->gw.ip6 , &null_addr, sizeof(struct ipv6_addr)) != 0) {
+	} else if (*(__int128 *)(&l3->gw.ip6) != 0) {
 		used_ip_src = &l3->global_ipv6;
 		memcpy(ip_dst, &l3->gw.ip6, sizeof(struct ipv6_addr));
-	} else if (memcmp(&l3->global_ipv6 , &null_addr, sizeof(struct ipv6_addr)) != 0) {
+	} else if (*(__int128 *)(&l3->global_ipv6) != 0) {
 		// Global IP is defined -> use it
 		used_ip_src = &l3->global_ipv6;
 	} else {
 		plog_info("Error as trying to send a packet to "IPv6_BYTES_FMT" using "IPv6_BYTES_FMT" (local)\n", IPv6_BYTES(ip_dst->bytes), IPv6_BYTES(l3->local_ipv6.bytes));
 		return DROP_MBUF;
 	}
-	memcpy(pkt_src_ip6, used_ip_src, sizeof(struct ipv6_addr));
+	rte_memcpy(pkt_src_ip6, used_ip_src, sizeof(struct ipv6_addr));
 
 	// Configure dst mac
 	if (likely(l3->n_pkts < 4)) {
 		for (unsigned int idx = 0; idx < l3->n_pkts; idx++) {
-			if (memcmp(ip_dst, &l3->optimized_arp_table[idx].ip6, sizeof(struct ipv6_addr)) == 0) {
+			if (*(__int128 *)ip_dst == *(__int128 *)(&l3->optimized_arp_table[idx].ip6)) {
 				 // IP address already in table
 				if ((tsc < l3->optimized_arp_table[idx].arp_ndp_retransmit_timeout) && (tsc < l3->optimized_arp_table[idx].reachable_timeout)) {
 					// MAC address was recently updated in table, use it
 					// plog_dbg("Valid MAC address found => send packet\n");
-					memcpy(mac, &l3->optimized_arp_table[idx].mac, sizeof(prox_rte_ether_addr));
+					rte_memcpy(mac, &l3->optimized_arp_table[idx].mac, sizeof(prox_rte_ether_addr));
 					return SEND_MBUF;
 				} else if (tsc > l3->optimized_arp_table[idx].arp_ndp_retransmit_timeout) {
 					// NDP not sent since a long time, send NDP
