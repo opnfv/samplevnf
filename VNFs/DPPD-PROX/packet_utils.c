@@ -152,7 +152,7 @@ void send_unsollicited_neighbour_advertisement(struct task_base *tbase)
 		ret = rte_mempool_get(tbase->l3.arp_nd_pool, (void **)&mbuf);
 		if (likely(ret == 0)) {
 			mbuf->port = port_id;
-			build_neighbour_advertisement(tbase->l3.tmaster, mbuf, &prox_port_cfg[port_id].eth_addr, &tbase->l3.local_ipv6, PROX_UNSOLLICITED);
+			build_neighbour_advertisement(tbase->l3.tmaster, mbuf, &prox_port_cfg[port_id].eth_addr, &tbase->l3.local_ipv6, PROX_UNSOLLICITED, prox_port_cfg[port_id].vlan_tag);
 			tbase->aux->tx_ctrlplane_pkt(tbase, &mbuf, 1, &out);
 			TASK_STATS_ADD_TX_NON_DP(&tbase->aux->stats, 1);
 		} else {
@@ -164,7 +164,7 @@ void send_unsollicited_neighbour_advertisement(struct task_base *tbase)
 		ret = rte_mempool_get(tbase->l3.arp_nd_pool, (void **)&mbuf);
 		if (likely(ret == 0)) {
 			mbuf->port = port_id;
-			build_neighbour_advertisement(tbase->l3.tmaster, mbuf, &prox_port_cfg[port_id].eth_addr, &tbase->l3.global_ipv6, PROX_UNSOLLICITED);
+			build_neighbour_advertisement(tbase->l3.tmaster, mbuf, &prox_port_cfg[port_id].eth_addr, &tbase->l3.global_ipv6, PROX_UNSOLLICITED, prox_port_cfg[port_id].vlan_tag);
 			tbase->aux->tx_ctrlplane_pkt(tbase, &mbuf, 1, &out);
 			TASK_STATS_ADD_TX_NON_DP(&tbase->aux->stats, 1);
 		} else {
@@ -186,7 +186,7 @@ static void send_router_sollicitation(struct task_base *tbase, struct task_args 
 	ret = rte_mempool_get(tbase->l3.arp_nd_pool, (void **)&mbuf);
 	if (likely(ret == 0)) {
 		mbuf->port = port_id;
-		build_router_sollicitation(mbuf, &prox_port_cfg[port_id].eth_addr, &targ->local_ipv6);
+		build_router_sollicitation(mbuf, &prox_port_cfg[port_id].eth_addr, &targ->local_ipv6, prox_port_cfg[port_id].vlan_tag);
 		tbase->aux->tx_ctrlplane_pkt(tbase, &mbuf, 1, &out);
 		TASK_STATS_ADD_TX_NON_DP(&tbase->aux->stats, 1);
 	} else {

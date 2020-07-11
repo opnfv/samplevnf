@@ -132,9 +132,10 @@ void set_EUI(struct ipv6_addr *ipv6_addr, prox_rte_ether_addr *mac);
 void create_mac_from_EUI(struct ipv6_addr *ipv6_addr, prox_rte_ether_addr *mac);
 
 struct task_base;
-void build_router_sollicitation(struct rte_mbuf *mbuf, prox_rte_ether_addr *s_addr, struct ipv6_addr *ipv6_s_addr);
-void build_router_advertisement(struct rte_mbuf *mbuf, prox_rte_ether_addr *s_addr, struct ipv6_addr *ipv6_s_addr, struct ipv6_addr *router_prefix);
-void build_neighbour_sollicitation(struct rte_mbuf *mbuf, prox_rte_ether_addr *s_addr, struct ipv6_addr *dst, struct ipv6_addr *src);
-void build_neighbour_advertisement(struct task_base *tbase, struct rte_mbuf *mbuf, prox_rte_ether_addr *target_mac, struct ipv6_addr *ipv6_addr, int sollicited);
+prox_rte_ipv6_hdr *prox_get_ipv6_hdr(prox_rte_ether_hdr *hdr, uint16_t len, uint16_t *vlan);
+void build_router_sollicitation(struct rte_mbuf *mbuf, prox_rte_ether_addr *s_addr, struct ipv6_addr *ipv6_s_addr, uint16_t vlan);
+void build_router_advertisement(struct rte_mbuf *mbuf, prox_rte_ether_addr *s_addr, struct ipv6_addr *ipv6_s_addr, struct ipv6_addr *router_prefix, uint16_t vlan);
+void build_neighbour_sollicitation(struct rte_mbuf *mbuf, prox_rte_ether_addr *s_addr, struct ipv6_addr *dst, struct ipv6_addr *src, uint16_t vlan);
+void build_neighbour_advertisement(struct task_base *tbase, struct rte_mbuf *mbuf, prox_rte_ether_addr *target_mac, struct ipv6_addr *ipv6_addr, int sollicited, uint16_t vlan);
 
 #endif /* _PROX_IP_V6_H_ */
