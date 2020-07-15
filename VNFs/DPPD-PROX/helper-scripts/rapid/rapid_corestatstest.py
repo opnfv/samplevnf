@@ -27,14 +27,11 @@ class CoreStatsTest(RapidTest):
     """
     Class to manage the corestatstesting
     """
-    def __init__(self, test_param,  runtime, pushgateway, environment_file, machines):
-        super().__init__(test_param, runtime, pushgateway, environment_file)
+    def __init__(self, test_param,  runtime, environment_file, machines):
+        super().__init__(test_param, runtime, environment_file)
         self.machines = machines 
 
     def run(self):
-    #    fieldnames = ['PROXID','Time','Received','Sent','NonDPReceived','NonDPSent','Delta','NonDPDelta','Dropped']
-    #    writer = csv.DictWriter(data_csv_file, fieldnames=fieldnames)
-    #    writer.writeheader()
         RapidLog.info("+------------------------------------------------------------------------------------------------------------------+")
         RapidLog.info("| Measuring core statistics on 1 or more PROX instances                                                            |")
         RapidLog.info("+-----------+-----------+------------+------------+------------+------------+------------+------------+------------+")
@@ -73,15 +70,16 @@ class CoreStatsTest(RapidTest):
                 old_tsc[i] = new_tsc[i]
                 tot_drop[i] = tot_drop[i] + tx - rx
                 RapidLog.info('|{:>10.0f}'.format(i)+ ' |{:>10.0f}'.format(duration)+' | ' + '{:>10.0f}'.format(rx) + ' | ' +'{:>10.0f}'.format(tx) + ' | '+'{:>10.0f}'.format(non_dp_rx)+' | '+'{:>10.0f}'.format(non_dp_tx)+' | ' + '{:>10.0f}'.format(tx-rx) + ' | '+ '{:>10.0f}'.format(non_dp_tx-non_dp_rx) + ' | '+'{:>10.0f}'.format(tot_drop[i]) +' |')
-    #            writer.writerow({'PROXID':i,'Time':duration,'Received':rx,'Sent':tx,'NonDPReceived':non_dp_rx,'NonDPSent':non_dp_tx,'Delta':tx-rx,'NonDPDelta':non_dp_tx-non_dp_rx,'Dropped':tot_drop[i]})
-                if self.test['pushgateway']:
-                    URL = self.test['pushgateway'] + self.test['test']+ '/instance/' + self.test['environment_file'] + str(i)
-                    DATA = 'PROXID {}\nTime {}\n Received {}\nSent {}\nNonDPReceived {}\nNonDPSent {}\nDelta {}\nNonDPDelta {}\nDropped {}\n'.format(i,duration,rx,tx,non_dp_rx,non_dp_tx,tx-rx,non_dp_tx-non_dp_rx,tot_drop[i])
-                    HEADERS = {'X-Requested-With': 'Python requests', 'Content-type': 'text/xml'}
-                    response = requests.post(url=URL, data=DATA,headers=HEADERS)
-                    if (response.status_code != 202) and (response.status_code != 200):
-                        RapidLog.info('Cannot send metrics to {}'.format(URL))
-                        RapidLog.info(DATA)
+                variables = {'test': self.test['test'],
+                        'environment_file': self.test['environment_file'],
+                        'PROXID': i,
+                        'StepSize': duration,
+                        'Received': rx,
+                        'Sent': tx,
+                        'NonDPReceived': non_dp_rx,
+                        'NonDPSent': non_dp_tx,
+                        'Dropped': tot_drop[i]}
+                self.post_data('rapid_corestatstest', variables)
                 if machines_to_go == 0:
                     duration = duration - 1
                     machines_to_go = len (self.machines)

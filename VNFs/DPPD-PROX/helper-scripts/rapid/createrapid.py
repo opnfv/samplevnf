@@ -32,8 +32,6 @@ class RapidStackManager(object):
         options = config.options(section)
         for option in options:
             rapid_stack_params[option] = config.get(section, option)
-        if 'push_gateway' not in rapid_stack_params.keys():
-            rapid_stack_params['push_gateway'] = None
         return (rapid_stack_params)
 
     @staticmethod
@@ -44,10 +42,9 @@ class RapidStackManager(object):
         heat_param = rapid_stack_params['heat_param']
         keypair_name = rapid_stack_params['keypair_name']
         user = rapid_stack_params['user']
-        push_gateway = rapid_stack_params['push_gateway']
         deployment = StackDeployment(cloud_name)
         deployment.deploy(stack_name, keypair_name, heat_template, heat_param)
-        deployment.generate_env_file(user, push_gateway)
+        deployment.generate_env_file(user)
 
 def main():
     rapid_stack_params = {}
@@ -60,7 +57,6 @@ def main():
     #heat_param = 'params_rapid.yaml'
     #keypair_name = 'prox_key'
     #user = 'centos'
-    #push_gateway = None
     RapidStackManager.deploy_stack(rapid_stack_params)
 
 if __name__ == "__main__":

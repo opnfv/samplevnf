@@ -28,17 +28,14 @@ class ImpairTest(RapidTest):
     """
     Class to manage the impair testing
     """
-    def __init__(self, test_param, lat_percentile, runtime, pushgateway,
+    def __init__(self, test_param, lat_percentile, runtime,
             environment_file, gen_machine, sut_machine):
-        super().__init__(test_param, runtime, pushgateway, environment_file)
+        super().__init__(test_param, runtime, environment_file)
         self.gen_machine = gen_machine
         self.sut_machine = sut_machine
         self.test['lat_percentile'] = lat_percentile
 
     def run(self):
-    #    fieldnames = ['Flows','PacketSize','RequestedPPS','GeneratedPPS','SentPPS','ForwardedPPS','ReceivedPPS','AvgLatencyUSEC','MaxLatencyUSEC','Dropped','DropRate']
-    #    writer = csv.DictWriter(data_csv_file, fieldnames=fieldnames)
-    #    writer.writeheader()
         imix = self.test['imix']
         size = mean (imix)
         flow_number = self.test['flowsize']
@@ -68,14 +65,20 @@ class ImpairTest(RapidTest):
             else:
                 lat_warning = ''
             RapidLog.info(self.report_result(attempts,size,speed,pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat_avg,lat_perc,lat_perc_max,lat_max,abs_tx,abs_rx,abs_dropped,actual_duration))
-#        writer.writerow({'Flows':flow_number,'PacketSize':(size+4),'RequestedPPS':self.get_pps(speed,size),'GeneratedPPS':pps_req_tx,'SentPPS':pps_tx,'ForwardedPPS':pps_sut_tx_str,'ReceivedPPS':pps_rx,'AvgLatencyUSEC':lat_avg,'MaxLatencyUSEC':lat_max,'Dropped':abs_dropped,'DropRate':drop_rate})
-            if self.test['pushgateway']:
-                URL     = self.test['pushgateway'] + self.test['test'] + '/instance/' + self.test['environment_file'] 
-                DATA = 'Flows {}\nPacketSize {}\nRequestedPPS {}\nGeneratedPPS {}\nSentPPS {}\nForwardedPPS {}\nReceivedPPS {}\nAvgLatencyUSEC {}\nMaxLatencyUSEC {}\nDropped {}\nDropRate {}\n'.format(flow_number,size+4,self.get_pps(speed,size),pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat_avg,lat_max,abs_dropped,drop_rate)
-                HEADERS = {'X-Requested-With': 'Python requests', 'Content-type': 'text/xml'}
-                response = requests.post(url=URL, data=DATA,headers=HEADERS)
-                if (response.status_code != 202) and (response.status_code != 200):
-                    RapidLog.info('Cannot send metrics to {}'.format(URL))
-                    RapidLog.info(DATA)
+            variables = {'test': self.test['test'],
+                    'environment_file': self.test['environment_file'],
+                    'Flows': flow_number,
+                    'Size': size,
+                    'RequestedSpeed': RapidTest.get_pps(speed,size),
+                    'CoreGenerated': pps_req_tx,
+                    'SentByNIC': pps_tx,
+                    'FwdBySUT': pps_sut_tx,
+                    'RevByCore': pps_rx,
+                    'AvgLatency': lat_avg,
+                    'PCTLatency': lat_perc,
+                    'MaxLatency': lat_max,
+                    'PacketsLost': abs_dropped,
+                    'DropRate': drop_rate}
+            self.post_data('rapid_impairtest', variables)
         self.gen_machine.stop_latency_cores()
         return (True)
