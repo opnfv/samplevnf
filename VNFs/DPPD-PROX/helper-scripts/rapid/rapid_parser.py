@@ -33,26 +33,25 @@ class RapidConfigParser(object):
     def parse_config(test_params):
         testconfig = configparser.RawConfigParser()
         testconfig.read(test_params['test_file'])
-        test_params['required_number_of_test_machines'] = int(testconfig.get('TestParameters', 'total_number_of_test_machines'))
-        test_params['number_of_tests'] = int(testconfig.get('TestParameters', 'number_of_tests'))
+        test_params['required_number_of_test_machines'] = int(testconfig.get(
+            'TestParameters', 'total_number_of_test_machines'))
+        test_params['number_of_tests'] = int(testconfig.get('TestParameters',
+            'number_of_tests'))
         test_params['TestName'] = testconfig.get('TestParameters', 'name')
         if testconfig.has_option('TestParameters', 'lat_percentile'):
-            test_params['lat_percentile'] = old_div(float(testconfig.get('TestParameters', 'lat_percentile')),100.0)
+            test_params['lat_percentile'] = old_div(float(
+                testconfig.get('TestParameters', 'lat_percentile')),100.0)
         else:
             test_params['lat_percentile'] = 0.99
-        RapidLog.info('Latency percentile at {:.0f}%'.format(test_params['lat_percentile']*100))
+        RapidLog.info('Latency percentile at {:.0f}%'.format(
+            test_params['lat_percentile']*100))
         config = configparser.RawConfigParser()
         config.read(test_params['environment_file'])
         test_params['vim_type'] = config.get('Varia', 'vim')
         test_params['key'] = config.get('ssh', 'key')
         test_params['user'] = config.get('ssh', 'user')
-        test_params['total_number_of_machines'] = int(config.get('rapid', 'total_number_of_machines'))
-        #if config.has_option('TestParameters', 'pushgateway'):
-        if config.has_option('Varia', 'pushgateway'):
-            test_params['pushgateway'] = config.get('Varia', 'pushgateway')
-            RapidLog.info('Measurements will be pushed to %s'%test_params['pushgateway'])
-        else:
-            test_params['pushgateway'] = None
+        test_params['total_number_of_machines'] = int(config.get('rapid',
+            'total_number_of_machines'))
         tests = []
         test = {}
         for test_index in range(1, test_params['number_of_tests']+1):
@@ -61,11 +60,16 @@ class RapidConfigParser(object):
             options = testconfig.options(section)
             for option in options:
                 if option in ['imix','imixs','flows']:
-                    test[option] = ast.literal_eval(testconfig.get(section, option))
+                    test[option] = ast.literal_eval(testconfig.get(section,
+                        option))
 #                    test[option] = [int(i) for i in test[option]]
-                elif option in ['maxframespersecondallingress','stepsize','flowsize']:
+                elif option in ['maxframespersecondallingress','stepsize',
+                        'flowsize']:
                     test[option] = int(testconfig.get(section, option))
-                elif option in ['startspeed','drop_rate_threshold','lat_avg_threshold','lat_perc_threshold','lat_max_threshold','accuracy','maxr','maxz','pass_threshold']:
+                elif option in ['startspeed', 'step', 'drop_rate_threshold',
+                        'lat_avg_threshold','lat_perc_threshold',
+                        'lat_max_threshold','accuracy','maxr','maxz',
+                        'pass_threshold']:
                     test[option] = float(testconfig.get(section, option))
                 else:
                     test[option] = testconfig.get(section, option)
@@ -75,7 +79,8 @@ class RapidConfigParser(object):
                 if 'drop_rate_threshold' not in test.keys():
                     test['drop_rate_threshold'] = 0
         test_params['tests'] = tests
-        if test_params['required_number_of_test_machines'] > test_params['total_number_of_machines']:
+        if test_params['required_number_of_test_machines'] > test_params[
+                'total_number_of_machines']:
             RapidLog.exception("Not enough VMs for this test: %d needed and only %d available" % (required_number_of_test_machines,total_number_of_machines))
             raise Exception("Not enough VMs for this test: %d needed and only %d available" % (required_number_of_test_machines,total_number_of_machines))
         machine_map = configparser.RawConfigParser()
@@ -84,14 +89,19 @@ class RapidConfigParser(object):
         machine = {}
         for test_machine in range(1, test_params['required_number_of_test_machines']+1):
             machine.clear()
-            if not(testconfig.has_option('TestM%d'%test_machine, 'prox_socket') and not testconfig.getboolean('TestM%d'%test_machine, 'prox_socket')):
+            if not(testconfig.has_option('TestM%d'%test_machine, 'prox_socket')
+                    and not testconfig.getboolean('TestM%d'%test_machine,
+                        'prox_socket')):
                 section = 'TestM%d'%test_machine
                 options = testconfig.options(section)
                 for option in options:
                     if option in ['prox_socket','prox_launch_exit','monitor']:
                         machine[option] = testconfig.getboolean(section, option)
                     elif option in ['cores', 'gencores','latcores']:
-                        machine[option] = ast.literal_eval(testconfig.get(section, option))
+                        machine[option] = ast.literal_eval(testconfig.get(
+                            section, option))
+                    elif option in ['bucket_size_exp']:
+                        machine[option] = int(testconfig.get(section, option))
                     else:
                         machine[option] = testconfig.get(section, option)
                     for key in ['prox_socket','prox_launch_exit']:
@@ -99,7 +109,8 @@ class RapidConfigParser(object):
                            machine[key] = True
                 if 'monitor' not in machine.keys():
                     machine['monitor'] = True
-                index = int(machine_map.get('TestM%d'%test_machine, 'machine_index'))
+                index = int(machine_map.get('TestM%d'%test_machine,
+                    'machine_index'))
                 section = 'M%d'%index
                 options = config.options(section)
                 for option in options:

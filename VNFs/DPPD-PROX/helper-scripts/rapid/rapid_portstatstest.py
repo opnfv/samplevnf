@@ -27,15 +27,12 @@ class PortStatsTest(RapidTest):
     """
     Class to manage the portstatstesting
     """
-    def __init__(self, test_param, runtime, pushgateway, environment_file,
+    def __init__(self, test_param, runtime, testname, environment_file,
             machines):
-        super().__init__(test_param, runtime, pushgateway, environment_file)
+        super().__init__(test_param, runtime, testname, environment_file)
         self.machines = machines 
 
     def run(self):
-    #    fieldnames = ['PROXID','Time','Received','Sent','NoMbufs','iErrMiss']
-    #    writer = csv.DictWriter(data_csv_file, fieldnames=fieldnames)
-    #    writer.writeheader()
         RapidLog.info("+---------------------------------------------------------------------------+")
         RapidLog.info("| Measuring port statistics on 1 or more PROX instances                     |")
         RapidLog.info("+-----------+-----------+------------+------------+------------+------------+")
@@ -69,15 +66,15 @@ class PortStatsTest(RapidTest):
                 old_errors[i] = new_errors[i]
                 old_tsc[i] = new_tsc[i]
                 RapidLog.info('|{:>10.0f}'.format(i)+ ' |{:>10.0f}'.format(duration)+' | ' + '{:>10.0f}'.format(rx) + ' | ' +'{:>10.0f}'.format(tx) + ' | '+'{:>10.0f}'.format(no_mbufs)+' | '+'{:>10.0f}'.format(errors)+' |')
-    #            writer.writerow({'PROXID':i,'Time':duration,'Received':rx,'Sent':tx,'NoMbufs':no_mbufs,'iErrMiss':errors})
-                if self.test['pushgateway']:
-                    URL     = self.test['pushgateway'] + self.test['test'] + '/instance/' + self.test['environment_file'] + str(i)
-                    DATA = 'PROXID {}\nTime {}\n Received {}\nSent {}\nNoMbufs {}\niErrMiss {}\n'.format(i,duration,rx,tx,no_mbufs,errors)
-                    HEADERS = {'X-Requested-With': 'Python requests', 'Content-type': 'text/xml'}
-                    response = requests.post(url=URL, data=DATA,headers=HEADERS)
-                    if (response.status_code != 202) and (response.status_code != 200):
-                        RapidLog.info('Cannot send metrics to {}'.format(URL))
-                        RapidLog.info(DATA)
+                variables = {'test': self.test['test'],
+                        'environment_file': self.test['environment_file'],
+                        'PROXID': i,
+                        'StepSize': duration,
+                        'Received': rx,
+                        'Sent': tx,
+                        'NoMbufs': no_mbufs,
+                        'iErrMiss': errors}
+                self.post_data('rapid_corestatstest', variables)
                 if machines_to_go == 0:
                     duration = duration - 1
                     machines_to_go = len (self.machines)

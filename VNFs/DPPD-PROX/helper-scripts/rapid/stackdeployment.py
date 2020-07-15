@@ -75,7 +75,7 @@ class StackDeployment(object):
                     for name in server_group_output:
                         self.names.append(name)
 
-    def print_paramDict(self, user, push_gateway):
+    def print_paramDict(self, user):
         if not(len(self.dp_ips) == len(self.dp_macs) == len(self.mngmt_ips)):
             sys.exit()
         _ENV_FILE_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -106,8 +106,6 @@ class StackDeployment(object):
             env_file.write('[Varia]\n')
             env_file.write('vim = OpenStack\n')
             env_file.write('stack = {}\n'.format(self.stack.stack_name))
-            if push_gateway:
-                env_file.write('pushgateway = {}\n'.format(push_gateway))
 
     def create_stack(self, stack_name, stack_file_path, param_file):
         files, template = template_utils.process_template_path(stack_file_path)
@@ -158,6 +156,6 @@ class StackDeployment(object):
                 self.create_key()
             self.stack = self.create_stack(stack_name, heat_template, heat_param)
 
-    def generate_env_file(self, user = 'centos', push_gateway = None):
+    def generate_env_file(self, user = 'centos'):
         self.generate_paramDict()
-        self.print_paramDict(user, push_gateway)
+        self.print_paramDict(user)
