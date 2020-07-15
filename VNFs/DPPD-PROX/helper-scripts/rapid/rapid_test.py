@@ -17,25 +17,31 @@
 ## limitations under the License.
 ##
 
+import yaml
+import requests
 import time
+import copy
 from past.utils import old_div
 from rapid_log import RapidLog
 from rapid_log import bcolors
 inf = float("inf")
+from datetime import datetime as dt
 
 class RapidTest(object):
     """
     Class to manage the testing
     """
-    def __init__(self, test_param,  runtime, pushgateway, environment_file ):
+    def __init__(self, test_param, runtime, testname, environment_file ):
         self.test = test_param
         self.test['runtime'] = runtime
-        self.test['pushgateway'] = pushgateway
+        self.test['testname'] = testname
         self.test['environment_file'] = environment_file
         if 'maxr' not in self.test.keys():
             self.test['maxr'] = 1
         if 'maxz' not in self.test.keys():
             self.test['maxz'] = inf
+        with open('format.yaml') as f:
+            self.data_format = yaml.load(f, Loader=yaml.FullLoader)
 
     @staticmethod
     def get_percentageof10Gbps(pps_speed,size):
@@ -91,6 +97,48 @@ class RapidTest(object):
             machine.stop()
 
     @staticmethod
+    def parse_data_format_dict(data_format, variables):
+        for k, v in data_format.items():
+            if type(v) is dict:
+                RapidTest.parse_data_format_dict(v, variables)
+            else:
+                if v in variables.keys():
+                    data_format[k] = variables[v]
+
+    def record_start_time(self):
+        self.start = dt.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    def record_stop_time(self):
+        self.stop = dt.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    def post_data(self, test, variables):
+        var = copy.deepcopy(self.data_format)
+        self.parse_data_format_dict(var, variables)
+        if 'URL' not in var.keys():
+            return
+        if test not in var.keys():
+            return
+        URL=''
+        for value in var['URL'].values():
+            URL = URL + value
+        HEADERS = {'X-Requested-With': 'Python requests', 'Content-type': 'application/rapid'}
+        if 'Format' in var.keys():
+            if var['Format'] == 'PushGateway':
+                data = "\n".join("{} {}".format(k, v) for k, v in var[test].items()) + "\n"
+                response = requests.post(url=URL, data=data,headers=HEADERS)
+            elif var['Format'] == 'Xtesting':
+                data = var[test]
+                response = requests.post(url=URL, json=data)
+            else:
+                return
+        else:
+            return
+        if (response.status_code != 202) and (response.status_code != 200):
+            RapidLog.info('Cannot send metrics to {}'.format(URL))
+            RapidLog.info(data)
+
+
+    @staticmethod
     def report_result(flow_number, size, speed, pps_req_tx, pps_tx, pps_sut_tx,
         pps_rx, lat_avg, lat_perc, lat_perc_max, lat_max, tx, rx, tot_drop,
         elapsed_time,speed_prefix='', lat_avg_prefix='', lat_perc_prefix='',
@@ -114,7 +162,8 @@ class RapidTest(object):
         if pps_rx is None:
             pps_rx_str = '{0: >25}'.format('NA        |')
         else:
-            pps_rx_str = bcolors.OKBLUE + '{:>4.1f} Gb/s |{:7.3f} Mpps {}|'.format(RapidTest.get_speed(pps_rx,size),pps_rx,bcolors.ENDC)
+            pps_rx_str = bcolors.OKBLUE + '{:>4.1f} Gb/s |{:7.3f} Mpps {}|'.format(
+                    RapidTest.get_speed(pps_rx,size),pps_rx,bcolors.ENDC)
         if tot_drop is None:
             tot_drop_str = ' |       NA  | '
         else:
@@ -122,14 +171,25 @@ class RapidTest(object):
         if lat_perc is None:
             lat_perc_str = ' |{:^10.10}|'.format('NA')
         elif lat_perc_max == True:
-            lat_perc_str = '|>{}{:>5.0f} us{} |'.format(lat_perc_prefix,float(lat_perc), bcolors.ENDC) 
+            lat_perc_str = '|>{}{:>5.0f} us{} |'.format(lat_perc_prefix,
+                    float(lat_perc), bcolors.ENDC) 
         else:
-            lat_perc_str = '| {}{:>5.0f} us{} |'.format(lat_perc_prefix,float(lat_perc), bcolors.ENDC) 
+            lat_perc_str = '| {}{:>5.0f} us{} |'.format(lat_perc_prefix,
+                    float(lat_perc), bcolors.ENDC) 
         if elapsed_time is None:
             elapsed_time_str = ' NA |'
         else:
             elapsed_time_str = '{:>3.0f} |'.format(elapsed_time)
-        return(flow_number_str + '{:>5.1f}'.format(speed) + '% '+speed_prefix +'{:>6.3f}'.format(RapidTest.get_pps(speed,size)) + ' Mpps|'+ pps_req_tx_str + pps_tx_str + bcolors.ENDC + pps_sut_tx_str + pps_rx_str +lat_avg_prefix+ ' {:>6.0f}'.format(lat_avg)+' us'+lat_perc_str+lat_max_prefix+'{:>6.0f}'.format(lat_max)+' us | ' + '{:>9.0f}'.format(tx) + ' | {:>9.0f}'.format(rx) + ' | '+ abs_drop_rate_prefix+ '{:>9.0f}'.format(tx-rx) + tot_drop_str +drop_rate_prefix+ '{:>5.2f}'.format(old_div(float(tx-rx),tx))  +bcolors.ENDC+' |' + elapsed_time_str)
+        return(flow_number_str + '{:>5.1f}'.format(speed) + '% ' + speed_prefix
+                + '{:>6.3f}'.format(RapidTest.get_pps(speed,size)) + ' Mpps|' +
+                pps_req_tx_str + pps_tx_str + bcolors.ENDC + pps_sut_tx_str +
+                pps_rx_str + lat_avg_prefix + ' {:>6.0f}'.format(lat_avg) +
+                ' us' + lat_perc_str +lat_max_prefix+'{:>6.0f}'.format(lat_max)
+                + ' us | ' + '{:>9.0f}'.format(tx) + ' | {:>9.0f}'.format(rx) +
+                ' | '+ abs_drop_rate_prefix+ '{:>9.0f}'.format(tx-rx) +
+                tot_drop_str +drop_rate_prefix +
+                '{:>5.2f}'.format(old_div(float(tx-rx),tx)) + bcolors.ENDC +
+                ' |' + elapsed_time_str)
             
     def run_iteration(self, requested_duration, flow_number, size, speed):
         BUCKET_SIZE_EXP = self.gen_machine.bucket_size_exp
@@ -252,6 +312,21 @@ class RapidTest(object):
                             lat_avg_sample, sample_percentile, percentile_max,
                             lat_max_sample, delta_dp_tx, delta_dp_rx,
                             tot_dp_drop, single_core_measurement_duration))
+                        variables = {
+                                'Flows': flow_number,
+                                'Size': size,
+                                'RequestedSpeed': self.get_pps(speed,size),
+                                'CoreGenerated': pps_req_tx,
+                                'SentByNIC': pps_tx,
+                                'FwdBySUT': pps_sut_tx,
+                                'RevByCore': pps_rx,
+                                'AvgLatency': lat_avg_sample,
+                                'PCTLatency': sample_percentile,
+                                'MaxLatency': lat_max_sample,
+                                'PacketsSent': delta_dp_tx,
+                                'PacketsReceived': delta_dp_rx,
+                                'PacketsLost': tot_dp_drop}
+                        self.post_data('rapid_flowsizetest', variables)
             #Stop generating
             self.gen_machine.stop_gen_cores()
             r += 1
