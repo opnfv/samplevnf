@@ -88,25 +88,27 @@ class RapidTestManager(object):
             if test_param['test'] in ['flowsizetest', 'TST009test',
                     'fixed_rate']:
                 test = FlowSizeTest(test_param, test_params['lat_percentile'],
-                        test_params['runtime'], test_params['pushgateway'],
+                        test_params['runtime'], 
+                        test_params['TestName'], 
                         test_params['environment_file'], gen_machine,
                         sut_machine, background_machines)
             elif test_param['test'] in ['corestats']:
                 test = CoreStatsTest(test_param, test_params['runtime'],
-                        test_params['pushgateway'],
+                        test_params['TestName'], 
                         test_params['environment_file'], machines)
             elif test_param['test'] in ['portstats']:
                 test = PortStatsTest(test_param, test_params['runtime'],
-                        test_params['pushgateway'],
+                        test_params['TestName'], 
                         test_params['environment_file'], machines)
             elif test_param['test'] in ['impairtest']:
                 test = ImpairTest(test_param, test_params['lat_percentile'],
-                        test_params['runtime'], test_params['pushgateway'],
+                        test_params['runtime'],
+                        test_params['TestName'], 
                         test_params['environment_file'], gen_machine,
                         sut_machine)
             elif test_param['test'] in ['irqtest']:
                 test = IrqTest(test_param, test_params['runtime'],
-                        test_params['pushgateway'],
+                        test_params['TestName'], 
                         test_params['environment_file'], machines)
             elif test_param['test'] in ['warmuptest']:
                 test = WarmupTest(test_param, gen_machine)

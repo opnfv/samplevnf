@@ -1,0 +1,64 @@
+;Format: PushGateway
+;Format: Xtesting
+;URL:
+  part1: http://192.168.36.61:9091/metrics/job/
+  part2: test
+  part3: /instance/
+  part4: environment_file
+;rapid_flowsizetest:
+  Flows: Flows 
+  Size: Size
+  RequestedSpeed: RequestedSpeed
+  CoreGenerated: CoreGenerated
+  SentByNIC: SentByNIC
+  FwdBySUT: FwdBySUT
+  RevByCore: RevByCore
+  AvgLatency: AvgLatency
+  PCTLatency: PCTLatency
+  MaxLatency: MaxLatency
+  PacketsSent: PacketsSent
+  PacketsReceived: PacketsReceived
+  PacketsLost: PacketsLost
+rapid_flowsizetest:
+  project_name: "vsperf"
+  scenario: "vsperf"
+  start_date: start_date
+  stop_date: stop_date
+  case_name: test
+  pod_name: "intel-pod10"
+  installer: "Fuel"
+  version: "1.0"
+  build_tag: "none"
+  criteria: "PASS"
+  details:
+    Flows: Flows 
+    Size: Size
+    Speed (Mpps):
+      RequestedSpeed: RequestedSpeed
+      CoreGenerated: CoreGenerated
+      SentByNIC: SentByNIC
+      FwdBySUT: FwdBySUT
+      RevByCore: RevByCore
+    Latency (usec):
+      AvgLatency: AvgLatency
+      PCTLatency: PCTLatency
+      MaxLatency: MaxLatency
+    Absolute Packet Count:
+      PacketsSent: PacketsSent
+      PacketsReceived: PacketsReceived
+      PacketsLost: PacketsLost
+rapid_irqtest:
+  Core: Core 
+  LessThan1us   : B1
+  LessThan5us   : B5
+  LessThan10us  : B10
+  LessThan50us  : B50
+  LessThan100us : B100
+  LessThan500us : B500
+  LessThan1ms   : B1000
+  LessThan5ms   : B5000
+  LessThan10ms  : B10000
+  LessThan50ms  : B50000
+  LessThan100ms : B100000
+  LessThan500ms : B500000
+  MoreThan500ms : BM500000
