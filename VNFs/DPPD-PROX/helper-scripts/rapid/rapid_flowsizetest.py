@@ -16,10 +16,8 @@
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
 ##
-
 import sys
 import time
-import requests
 from math import ceil
 from statistics import mean
 from past.utils import old_div
@@ -32,9 +30,9 @@ class FlowSizeTest(RapidTest):
     """
     Class to manage the flowsizetesting
     """
-    def __init__(self, test_param, lat_percentile, runtime, pushgateway,
+    def __init__(self, test_param, lat_percentile, runtime,
             environment_file, gen_machine, sut_machine, background_machines):
-        super().__init__(test_param, runtime, pushgateway, environment_file)
+        super().__init__(test_param, runtime, environment_file)
         self.gen_machine = gen_machine
         self.sut_machine = sut_machine
         self.background_machines = background_machines
@@ -128,6 +126,7 @@ class FlowSizeTest(RapidTest):
                 self.set_background_flows(self.background_machines, flow_number)
                 endspeed = None
                 speed = self.get_start_speed_and_init(size)
+                self.record_start_time()
                 while True:
                     attempts += 1
                     endwarning = False
@@ -167,7 +166,7 @@ class FlowSizeTest(RapidTest):
                         if lat_warning or retry_warning:
                             endwarning = '|        | {:177.177} |'.format(retry_warning + lat_warning)
                         success = True
-                        TestPassed = False # fixed rate testing cannot be True, it is just reported numbers every second
+                        TestPassed = False # fixed rate testing cannot be True, it is just reporting numbers every second
                         speed_prefix = lat_avg_prefix = lat_perc_prefix = lat_max_prefix = abs_drop_rate_prefix = drop_rate_prefix = bcolors.ENDC
                     # The following if statement is testing if we pass the success criteria of a certain drop rate, average latency and maximum latency below the threshold
                     # The drop rate success can be achieved in 2 ways: either the drop rate is below a treshold, either we want that no packet has been lost during the test
@@ -232,6 +231,7 @@ class FlowSizeTest(RapidTest):
                     speed = self.new_speed(speed, size, success)
                     if self.resolution_achieved():
                         break
+                self.record_stop_time()
                 if endspeed is not None:
                     if TestPassed and (endpps_rx < self.test['pass_threshold']):
                         TestPassed = False
@@ -240,20 +240,27 @@ class FlowSizeTest(RapidTest):
                     if endwarning:
                         RapidLog.info (endwarning)
                     RapidLog.info("+--------+------------------+-------------+-------------+-------------+------------------------+----------+----------+----------+-----------+-----------+-----------+-----------+-------+----+")
-    #                writer.writerow({'Flows':flow_number,'PacketSize':(size+4),'RequestedPPS':self.get_pps(endspeed,size),'GeneratedPPS':endpps_req_tx,'SentPPS':endpps_tx,'ForwardedPPS':endpps_sut_tx,'ReceivedPPS':endpps_rx,'AvgLatencyUSEC':endlat_avg,'MaxLatencyUSEC':endlat_max,'Sent':endabs_tx,'Received':endabs_rx,'Lost':endabs_dropped,'LostTotal':endabs_dropped})
-                    if self.test['pushgateway']:
-                        URL = self.test['pushgateway'] + self.test['test']+ '/instance/' + self.test['environment_file']
-                        if endabs_dropped == None:
-                            ead = 0
-                        else:
-                            ead = endabs_dropped
-                        DATA = 'Flows {}\nPacketSize {}\nRequestedPPS {}\nGeneratedPPS {}\nSentPPS {}\nForwardedPPS {}\nReceivedPPS {}\nAvgLatencyUSEC {}\nMaxLatencyUSEC {}\nSent {}\nReceived {}\nLost {}\nLostTotal {}\n'.format(flow_number,size+4,self.get_pps(endspeed,size),endpps_req_tx,endpps_tx,endpps_sut_tx,endpps_rx,endlat_avg,endlat_max,endabs_tx,endabs_rx,ead,ead)
-                        HEADERS = {'X-Requested-With': 'Python requests', 'Content-type': 'text/xml'}
-                        response = requests.post(url=URL, data=DATA,headers=HEADERS)
-                        if (response.status_code != 202) and (response.status_code != 200):
-                            RapidLog.info('Cannot send metrics to {}'.format(URL))
-                            RapidLog.info(DATA)
+                    if self.test['test'] != 'fixed_rate':
+                        variables = {'test': self.test['test'],
+                                'environment_file': self.test['environment_file'],
+                                'start_date': self.start,
+                                'stop_date': self.stop,
+                                'Flows': flow_number,
+                                'Size': size,
+                                'RequestedSpeed': RapidTest.get_pps(speed,size),
+                                'CoreGenerated': endpps_req_tx,
+                                'SentByNIC': endpps_tx,
+                                'FwdBySUT': endpps_sut_tx,
+                                'RevByCore': endpps_rx,
+                                'AvgLatency': endlat_avg,
+                                'PCTLatency': endlat_perc,
+                                'MaxLatency': endlat_max,
+                                'PacketsSent': endabs_tx,
+                                'PacketsReceived': endabs_rx,
+                                'PacketsLost': abs_dropped}
+                        self.post_data('rapid_flowsizetest', variables)
                 else:
                     RapidLog.info('|{:>7}'.format(str(flow_number))+" | Speed 0 or close to 0")
         self.gen_machine.stop_latency_cores()
         return (TestPassed)
+

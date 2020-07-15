@@ -47,12 +47,6 @@ class RapidConfigParser(object):
         test_params['key'] = config.get('ssh', 'key')
         test_params['user'] = config.get('ssh', 'user')
         test_params['total_number_of_machines'] = int(config.get('rapid', 'total_number_of_machines'))
-        #if config.has_option('TestParameters', 'pushgateway'):
-        if config.has_option('Varia', 'pushgateway'):
-            test_params['pushgateway'] = config.get('Varia', 'pushgateway')
-            RapidLog.info('Measurements will be pushed to %s'%test_params['pushgateway'])
-        else:
-            test_params['pushgateway'] = None
         tests = []
         test = {}
         for test_index in range(1, test_params['number_of_tests']+1):
@@ -92,6 +86,8 @@ class RapidConfigParser(object):
                         machine[option] = testconfig.getboolean(section, option)
                     elif option in ['cores', 'gencores','latcores']:
                         machine[option] = ast.literal_eval(testconfig.get(section, option))
+                    elif option in ['bucket_size_exp']:
+                        machine[option] = int(testconfig.get(section, option))
                     else:
                         machine[option] = testconfig.get(section, option)
                     for key in ['prox_socket','prox_launch_exit']:

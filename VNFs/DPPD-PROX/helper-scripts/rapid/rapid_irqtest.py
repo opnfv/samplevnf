@@ -28,9 +28,9 @@ class IrqTest(RapidTest):
     """
     Class to manage the irq testing
     """
-    def __init__(self, test_param, runtime, pushgateway, environment_file,
+    def __init__(self, test_param, runtime, environment_file,
             machines):
-        super().__init__(test_param, runtime, pushgateway, environment_file)
+        super().__init__(test_param, runtime, environment_file)
         self.machines = machines
 
     def run(self):
@@ -45,41 +45,53 @@ class IrqTest(RapidTest):
         for machine in self.machines:
             buckets=machine.socket.show_irq_buckets(1)
             print('Measurement ongoing ... ',end='\r')
-            machine.stop()
-            old_irq = [[0 for x in range(len(buckets)+1)] for y in range(len(machine.get_cores())+1)] 
-            irq = [[0 for x in range(len(buckets)+1)] for y in range(len(machine.get_cores())+1)]
-            irq[0][0] = 'bucket us' 
-            for j,bucket in enumerate(buckets,start=1):
-                irq[0][j] = '<'+ bucket
-            irq[0][-1] = '>'+ buckets [-2]
-            machine.start()
-            time.sleep(2)
-            for j,bucket in enumerate(buckets,start=1):
-                for i,irqcore in enumerate(machine.get_cores(),start=1):
-                    old_irq[i][j] = machine.socket.irq_stats(irqcore,j-1)
+            machine.start() # PROX cores will be started within 0 to 1 seconds
+            # That is why we sleep a bit over 1 second to make sure all cores
+            # are started
+            time.sleep(1.2)
+            old_irq = [[0 for x in range(len(buckets))] for y in range(len(machine.get_cores()))] 
+            irq     = [[0 for x in range(len(buckets))] for y in range(len(machine.get_cores()))]
+            column_names = []
+            for bucket in buckets:
+                column_names.append('<{}'.format(bucket))
+            column_names[-1] = '>{}'.format(buckets[-2])
+            for j,bucket in enumerate(buckets):
+                for i,irqcore in enumerate(machine.get_cores()):
+                    old_irq[i][j] = machine.socket.irq_stats(irqcore,j)
+            # Measurements in the loop above, are updated by PROX every second
+            # This means that taking the same measurement 0.5 second later
+            # might results in the same data or data from the next 1s window
             time.sleep(float(self.test['runtime']))
-            machine.stop()
-            for i,irqcore in enumerate(machine.get_cores(),start=1):
-                irq[i][0]='core %s'%irqcore
-                for j,bucket in enumerate(buckets,start=1):
-                    diff =  machine.socket.irq_stats(irqcore,j-1) - old_irq[i][j]
+            row_names = []
+            for i,irqcore in enumerate(machine.get_cores()):
+                row_names.append(irqcore)
+                for j,bucket in enumerate(buckets):
+                    diff =  machine.socket.irq_stats(irqcore,j) - old_irq[i][j]
                     if diff == 0:
                         irq[i][j] = '0'
                     else:
                         irq[i][j] = str(round(old_div(diff,float(self.test['runtime'])), 2))
+            # Measurements in the loop above, are updated by PROX every second
+            # This means that taking the same measurement 0.5 second later
+            # might results in the same data or data from the next 1s window
+            # Conclusion: we don't know the exact window size.
+            # Real measurement windows might be wrong by 1 second
+            # This could be fixed in this script by checking this data every
+            # 0.5 seconds Not implemented since we can also run this test for
+            # a longer time and decrease the error. The absolute number of
+            # interrupts is not so important.
+            machine.stop()
             RapidLog.info('Results for PROX instance %s'%machine.name)
-            for row in irq:
-                RapidLog.info(''.join(['{:>12}'.format(item) for item in row]))
-            if self.test['pushgateway']:
-                URL = self.test['pushgateway'] + self.test['test']+ '/instance/' + self.test['environment_file']
-                HEADERS = {'X-Requested-With': 'Python requests', 'Content-type': 'text/xml'}
-                #DATA = 'Machine {}\n'.format(machine.name)
-                for i,irqcore in enumerate(machine.get_cores(),start=1):
-                    DATA = '{}\n'.format(irq[i][0])
-                    for j,bucket in enumerate(buckets,start=1):
-                        DATA = DATA + 'B{} {}\n'.format(irq[0][j].replace(">","M").replace("<","").replace(" ",""),irq[i][j])
-                    response = requests.post(url=URL, data=DATA,headers=HEADERS)
-                    if (response.status_code != 202) and (response.status_code != 200):
-                        RapidLog.info('Cannot send metrics to {}'.format(URL))
-                        RapidLog.info(DATA)
+            RapidLog.info('{:>12}'.format('bucket us') + ''.join(['{:>12}'.format(item) for item in column_names]))
+            for j, row in enumerate(irq):
+                RapidLog.info('Core {:>7}'.format(row_names[j]) + ''.join(['{:>12}'.format(item) for item in row]))
+            variables = {}
+            variables['test'] = self.test['test']
+            variables['environment_file'] = self.test['environment_file']
+            variables['Machine'] = machine.name
+            for i,irqcore in enumerate(machine.get_cores()):
+                variables['Core'] = '{}'.format(row_names[i])
+                for j,bucket in enumerate(buckets):
+                    variables['B{}'.format(column_names[j].replace(">","M").replace("<","").replace(" ",""))] = irq[i][j]
+                self.post_data('rapid_irqtest', variables)
         return (True)
