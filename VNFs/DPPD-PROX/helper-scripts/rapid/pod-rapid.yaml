@@ -11,7 +11,7 @@ spec:
     imagePullPolicy: Always
     securityContext:
       capabilities:
-        add: ["IPC_LOCK"]
+        add: ["IPC_LOCK", "NET_ADMIN"]
     volumeMounts:
     - mountPath: /dev/hugepages
       name: hugepages

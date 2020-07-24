@@ -157,7 +157,7 @@ class Pod:
         Otherwise return -1.
         """
         self._log.info("Checking assigned SRIOV VF for POD %s" % self._name)
-        ret = self._ssh_client.run_cmd("cat /opt/k8s_sriov_device_plugin_envs")
+        ret = self._ssh_client.run_cmd("cat /opt/rapid/k8s_sriov_device_plugin_envs")
         if ret != 0:
             self._log.error("Failed to check assigned SRIOV VF!"
                             "Error %s" % self._ssh_client.get_error())

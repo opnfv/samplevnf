@@ -17,10 +17,21 @@
 
 function save_k8s_envs()
 {
-	printenv | grep "PCIDEVICE_INTEL_COM" > /opt/k8s_sriov_device_plugin_envs
+	printenv | grep "PCIDEVICE_INTEL_COM" > /opt/rapid/k8s_sriov_device_plugin_envs
+}
+
+function create_tun()
+{
+	mkdir -p /dev/net
+	mknod /dev/net/tun c 10 200
+	chmod 600 /dev/net/tun
 }
 
 save_k8s_envs
+create_tun
+
+# Ready for testing
+touch /opt/rapid/system_ready_for_rapid
 
 # Start SSH server in background
 /usr/sbin/sshd
