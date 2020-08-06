@@ -1,6 +1,8 @@
 ;Format: PushGateway
 ;Format: Xtesting
 ;URL:
+  part1: http://testresults.opnfv.org/test/api/v1/results
+;URL:
   part1: http://192.168.36.61:9091/metrics/job/
   part2: test
   part3: /instance/
@@ -20,8 +22,8 @@
   PacketsReceived: PacketsReceived
   PacketsLost: PacketsLost
 rapid_flowsizetest:
-  project_name: "vsperf"
-  scenario: "vsperf"
+  project_name: "cirv"
+  scenario: "rapid"
   start_date: start_date
   stop_date: stop_date
   case_name: test

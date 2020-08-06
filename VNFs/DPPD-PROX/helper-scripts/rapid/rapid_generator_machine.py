@@ -35,7 +35,7 @@ class RandomPortBits(object):
             # throw exeption since we need the first bit to be 1
             # Otherwise, the randomization could results in all 0's
             # and that might be an invalid UDP port and result in 
-            # packets begin discarded
+            # packets being discarded
         src_number_of_random_bits = number_of_random_bits // 2
         dst_number_of_random_bits = (number_of_random_bits -
                 src_number_of_random_bits)
@@ -43,12 +43,38 @@ class RandomPortBits(object):
                 src_number_of_random_bits)
         dst_port_bitmap = '1000000000000000'.replace ('0','X',
                 dst_number_of_random_bits)
-        return [src_port_bitmap, dst_port_bitmap, 1<<number_of_random_bits]
+        return [src_port_bitmap, dst_port_bitmap, 1 << number_of_random_bits]
 
 class RapidGeneratorMachine(RapidMachine):
     """
-    Class to deal with rapid configuration files
+    Class to deal with a generator PROX instance (VM, bare metal, container)
     """
+    def __init__(self, key, user, vim, rundir, machine_params, ipv6):
+        mac_address_size = 6
+        ethertype_size = 2
+        FCS_size = 4
+        if ipv6:
+            ip_header_size = 40
+            self.ip_length_offset = 18
+            # In IPV6, the IP size is the size of the IP content
+            self.frame_size_minus_ip_size = (2 * mac_address_size +
+                    ethertype_size + ip_header_size + FCS_size)
+        else:
+            ip_header_size = 20
+            self.ip_length_offset = 16
+            # In IPV4, the IP size is the size of the IP header + IP content
+            self.frame_size_minus_ip_size = (2 * mac_address_size +
+                    ethertype_size + FCS_size)
+        self.frame_size_minus_udp_header_and_content = (2 * mac_address_size +
+                ethertype_size + ip_header_size + FCS_size )
+        udp_header_start_offset = (2 * mac_address_size + ethertype_size +
+                ip_header_size)
+        self.udp_source_port_offset = udp_header_start_offset 
+        self.udp_dest_port_offset = udp_header_start_offset + 2
+        self.udp_length_offset = udp_header_start_offset + 4
+        self.ipv6 = ipv6
+        super().__init__(key, user, vim, rundir, machine_params)
+
     def get_cores(self):
         return (self.machine_params['gencores'] +
                 self.machine_params['latcores'])
@@ -62,9 +88,8 @@ class RapidGeneratorMachine(RapidMachine):
             for index, gw_ip in enumerate(self.machine_params['gw_ips'],
                     start = 1):
                 appendix = appendix + 'gw_ip{}="{}"\n'.format(index, gw_ip)
-                appendix = (appendix +
-                        'gw_hex_ip{}=convertIPToHex(gw_ip{})\n'.format(index,
-                            index))
+                appendix = (appendix + 'gw_hex_ip{}=convertIPToHex(gw_ip{})\n'.
+                        format(index, index))
         if 'bucket_size_exp' in self.machine_params.keys():
             self.bucket_size_exp = self.machine_params['bucket_size_exp']
         else:
@@ -100,15 +125,17 @@ class RapidGeneratorMachine(RapidMachine):
             # The set_size function takes the PROX packet size as a parameter
             self.socket.set_size(self.machine_params['gencores'], 0,
                     imix_frame_sizes[0] - 4)
-            # 18 is the difference between the frame size and IP size =
-            # size of (MAC addresses, ethertype and FCS)
-            self.socket.set_value(self.machine_params['gencores'], 0, 16,
-                    imix_frame_sizes[0] - 18, 2)
-            # 38 is the difference between the frame size and UDP size = 
-            # 18 + size of IP header (=20)
-            self.socket.set_value(self.machine_params['gencores'], 0, 38,
-                    imix_frame_sizes[0] - 38, 2)
+            # Writing length in the ip header
+            self.socket.set_value(self.machine_params['gencores'], 0,
+                    self.ip_length_offset, imix_frame_sizes[0] - 
+                    self.frame_size_minus_ip_size, 2)
+            # Writing length in the udp header
+            self.socket.set_value(self.machine_params['gencores'], 0,
+                    self.udp_length_offset, imix_frame_sizes[0] -
+                    self.frame_size_minus_udp_header_and_content, 2)
         else:
+            if self.ipv6:
+                RapidLog.critical('IMIX not supported for IPV6')
             prox_sizes = [frame_size - 4 for frame_size in imix_frame_sizes]
             self.socket.set_imix(self.machine_params['gencores'], 0,
                     prox_sizes)
@@ -116,10 +143,10 @@ class RapidGeneratorMachine(RapidMachine):
     def set_flows(self, number_of_flows):
         source_port, destination_port, actualflows = RandomPortBits.get_bitmap(
                 number_of_flows)
-        self.socket.set_random(self.machine_params['gencores'],0,34,
-                source_port,2)
-        self.socket.set_random(self.machine_params['gencores'],0,36,
-                destination_port,2)
+        self.socket.set_random(self.machine_params['gencores'],0,
+                self.udp_source_port_offset, source_port,2)
+        self.socket.set_random(self.machine_params['gencores'],0,
+                self.udp_dest_port_offset, destination_port,2)
         return actualflows
 
     def start_gen_cores(self):

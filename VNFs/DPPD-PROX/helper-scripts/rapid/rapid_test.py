@@ -188,7 +188,7 @@ class RapidTest(object):
                 + ' us | ' + '{:>9.0f}'.format(tx) + ' | {:>9.0f}'.format(rx) +
                 ' | '+ abs_drop_rate_prefix+ '{:>9.0f}'.format(tx-rx) +
                 tot_drop_str +drop_rate_prefix +
-                '{:>5.2f}'.format(old_div(float(tx-rx),tx)) + bcolors.ENDC +
+                '{:>5.2f}'.format(100*old_div(float(tx-rx),tx)) + bcolors.ENDC +
                 ' |' + elapsed_time_str)
             
     def run_iteration(self, requested_duration, flow_number, size, speed):

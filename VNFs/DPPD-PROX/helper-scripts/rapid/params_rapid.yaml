@@ -4,3 +4,5 @@ parameters:
   PROX_image: testrapidVM
   my_availability_zone: nova
   security_group: prox_security_group
+  PROXVM_count: 4
+  PROX2VM_count: 0

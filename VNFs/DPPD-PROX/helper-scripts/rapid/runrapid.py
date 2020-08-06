@@ -56,7 +56,8 @@ class RapidTestManager(object):
             if 'gencores' in machine_params.keys():
                 machine = RapidGeneratorMachine(test_params['key'],
                         test_params['user'], test_params['vim_type'],
-                        test_params['rundir'], machine_params)
+                        test_params['rundir'], machine_params,
+                        test_params['ipv6'])
                 if machine_params['monitor']:
                     if monitor_gen:
                         RapidLog.exception("Can only monitor 1 generator")

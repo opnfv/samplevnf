@@ -45,6 +45,10 @@ class RapidConfigParser(object):
             test_params['lat_percentile'] = 0.99
         RapidLog.info('Latency percentile at {:.0f}%'.format(
             test_params['lat_percentile']*100))
+        if testconfig.has_option('TestParameters', 'ipv6'):
+            test_params['ipv6'] = testconfig.getboolean('TestParameters','ipv6')
+        else:
+            test_params['ipv6'] = False
         config = configparser.RawConfigParser()
         config.read(test_params['environment_file'])
         test_params['vim_type'] = config.get('Varia', 'vim')
@@ -62,7 +66,6 @@ class RapidConfigParser(object):
                 if option in ['imix','imixs','flows']:
                     test[option] = ast.literal_eval(testconfig.get(section,
                         option))
-#                    test[option] = [int(i) for i in test[option]]
                 elif option in ['maxframespersecondallingress','stepsize',
                         'flowsize']:
                     test[option] = int(testconfig.get(section, option))

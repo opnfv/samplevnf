@@ -28,3 +28,6 @@ machine_index=2
 
 [TestM3]
 machine_index=3
+
+[TestM4]
+machine_index=4

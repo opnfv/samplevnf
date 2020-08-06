@@ -15,7 +15,7 @@
 ##
 
 [TestParameters]
-name = TST009Testing
+name = Rapid_ETSINFV_TST009
 number_of_tests = 2
 total_number_of_test_machines = 2
 lat_percentile = 99

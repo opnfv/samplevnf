@@ -22,7 +22,7 @@ import re
 
 class RapidMachine(object):
     """
-    Class to deal with rapid configuration files
+    Class to deal with a PROX instance (VM, bare metal, container)
     """
     def __init__(self, key, user, vim, rundir, machine_params):
         self.name = machine_params['name']
