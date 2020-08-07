@@ -19,7 +19,7 @@
 #include <rte_ip.h>
 #include <rte_udp.h>
 #include <rte_version.h>
-#if RTE_VERSION >= RTE_VERSION_NUM(19,11,0,0)
+#if RTE_VERSION > RTE_VERSION_NUM(19,11,0,0)
 #include <rte_vxlan.h>
 #endif
 
