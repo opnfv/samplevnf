@@ -541,6 +541,13 @@ static int get_port_cfg(unsigned sindex, char *str, void *data)
 	else if (STR_EQ(str, "tx desc")) {
 		return parse_int(&cfg->n_txd, pkey);
 	}
+	else if (STR_EQ(str, "all_rx_queues")) {
+		uint32_t val;
+		if (parse_bool(&val, pkey)) {
+			return -1;
+		}
+		cfg->all_rx_queues = val;
+	}
 	else if (STR_EQ(str, "promiscuous")) {
 		uint32_t val;
 		if (parse_bool(&val, pkey)) {
