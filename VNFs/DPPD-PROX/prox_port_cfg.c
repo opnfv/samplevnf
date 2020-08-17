@@ -638,21 +638,27 @@ static void init_port(struct prox_port_cfg *port_cfg)
 
 	if (port_cfg->n_rxq > 1)  {
 		// Enable RSS if multiple receive queues
-		port_cfg->port_conf.rxmode.mq_mode       		|= ETH_MQ_RX_RSS;
-		port_cfg->port_conf.rx_adv_conf.rss_conf.rss_key 	= toeplitz_init_key;
-		port_cfg->port_conf.rx_adv_conf.rss_conf.rss_key_len 	= TOEPLITZ_KEY_LEN;
+		if (strcmp(port_cfg->short_name, "virtio")) {
+			port_cfg->port_conf.rxmode.mq_mode       		|= ETH_MQ_RX_RSS;
+			port_cfg->port_conf.rx_adv_conf.rss_conf.rss_key 	= toeplitz_init_key;
+			port_cfg->port_conf.rx_adv_conf.rss_conf.rss_key_len 	= TOEPLITZ_KEY_LEN;
 #if RTE_VERSION >= RTE_VERSION_NUM(2,0,0,0)
-		port_cfg->port_conf.rx_adv_conf.rss_conf.rss_hf 	= ETH_RSS_IP|ETH_RSS_UDP;
+			port_cfg->port_conf.rx_adv_conf.rss_conf.rss_hf 	= ETH_RSS_IP|ETH_RSS_UDP;
 #else
-		port_cfg->port_conf.rx_adv_conf.rss_conf.rss_hf 	= ETH_RSS_IPV4|ETH_RSS_NONF_IPV4_UDP;
+			port_cfg->port_conf.rx_adv_conf.rss_conf.rss_hf 	= ETH_RSS_IPV4|ETH_RSS_NONF_IPV4_UDP;
 #endif
+		}
 	}
 
 	// Make sure that the requested RSS offload is supported by the PMD
 #if RTE_VERSION >= RTE_VERSION_NUM(2,0,0,0)
 	port_cfg->port_conf.rx_adv_conf.rss_conf.rss_hf &= port_cfg->dev_info.flow_type_rss_offloads;
 #endif
-	plog_info("\t\t Enabling RSS rss_hf = 0x%lx (requested 0x%llx, supported 0x%lx)\n", port_cfg->port_conf.rx_adv_conf.rss_conf.rss_hf, ETH_RSS_IP|ETH_RSS_UDP, port_cfg->dev_info.flow_type_rss_offloads);
+	if (strcmp(port_cfg->short_name, "virtio")) {
+		plog_info("\t\t Enabling RSS rss_hf = 0x%lx (requested 0x%llx, supported 0x%lx)\n", port_cfg->port_conf.rx_adv_conf.rss_conf.rss_hf, ETH_RSS_IP|ETH_RSS_UDP, port_cfg->dev_info.flow_type_rss_offloads);
+	} else {
+		plog_info("\t\t Not enabling RSS on virtio port");
+	}
 
 	// rxmode such as hw src strip
 #if RTE_VERSION >= RTE_VERSION_NUM(18,8,0,1)
