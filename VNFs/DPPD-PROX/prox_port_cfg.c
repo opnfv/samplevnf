@@ -638,7 +638,8 @@ static void init_port(struct prox_port_cfg *port_cfg)
 
 	if (port_cfg->n_rxq > 1)  {
 		// Enable RSS if multiple receive queues
-		port_cfg->port_conf.rxmode.mq_mode       		|= ETH_MQ_RX_RSS;
+        if (strcmp(port_cfg->short_name, "virtio"))
+    		port_cfg->port_conf.rxmode.mq_mode       		|= ETH_MQ_RX_RSS;
 		port_cfg->port_conf.rx_adv_conf.rss_conf.rss_key 	= toeplitz_init_key;
 		port_cfg->port_conf.rx_adv_conf.rss_conf.rss_key_len 	= TOEPLITZ_KEY_LEN;
 #if RTE_VERSION >= RTE_VERSION_NUM(2,0,0,0)
