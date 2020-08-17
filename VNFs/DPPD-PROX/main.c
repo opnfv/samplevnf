@@ -315,6 +315,49 @@ static void configure_if_tx_queues(struct task_args *targ, uint8_t socket)
 static void configure_if_rx_queues(struct task_args *targ, uint8_t socket)
 {
 	struct prox_port_cfg *port;
+	uint8_t port_used_counter[PROX_MAX_PORTS] = {0};
+	bool multiple_port_reference = false;
+	uint8_t total_number_of_queues = 0;
+	// Check how many times a port is referenced for this task
+	for (uint8_t i = 0; i < targ->nb_rxports; i++) {
+		uint8_t if_port = targ->rx_port_queue[i].port;
+		port_used_counter[if_port]++;
+		if (port_used_counter[if_port] > 1) {
+			multiple_port_reference = true;
+			port = &prox_port_cfg[if_port];
+			PROX_PANIC((port->all_rx_queues), "Multiple queues defined in rx port, but all_rx_queues also set for port %s\n", port->name);
+		}
+	}
+	// If only referenced once, it is possible that we want to use all queues
+	// Therefore we will check all_rx_queues for that port
+	if (!multiple_port_reference) {
+		for (uint8_t i = 0; i < PROX_MAX_PORTS; i++) {
+			uint8_t if_port = targ->rx_port_queue[i].port;
+			if (port_used_counter[if_port]) {
+				port = &prox_port_cfg[if_port];
+				if (port->all_rx_queues) {
+					port_used_counter[if_port] = port->max_rxq;
+					total_number_of_queues += port->max_rxq;
+					plog_info("\tall_rx_queues for Port %s: %u rx_queues will be applied\n", port->name, port_used_counter[if_port]);
+				}
+			}
+		}
+	}
+	if (total_number_of_queues) {
+		PROX_PANIC((total_number_of_queues > PROX_MAX_PORTS), "%u queues using the all_rx_queues. PROX_MAX_PORTS is set to %u\n", total_number_of_queues, PROX_MAX_PORTS);
+		uint8_t index = 0;
+		for (uint8_t i = 0; i < PROX_MAX_PORTS; i++) {
+			if (port_used_counter[i]) {
+				for (uint8_t j = 0; j < port_used_counter[i]; j++) {
+					targ->rx_port_queue[index].port = i;
+					index ++;
+				}
+				port = &prox_port_cfg[i];
+				plog_info("\t\tConfiguring task to use port %s with %u rx_queues\n", port->name, port_used_counter[i]);
+			}
+		}
+		targ->nb_rxports = index;
+	}
 	for (int i = 0; i < targ->nb_rxports; i++) {
 		uint8_t if_port = targ->rx_port_queue[i].port;
 
