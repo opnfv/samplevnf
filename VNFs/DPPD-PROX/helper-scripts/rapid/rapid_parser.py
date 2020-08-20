@@ -81,6 +81,10 @@ class RapidConfigParser(object):
             if test['test'] in ['flowsizetest','TST009test']:
                 if 'drop_rate_threshold' not in test.keys():
                     test['drop_rate_threshold'] = 0
+                latency_thresholds = ['lat_avg_threshold','lat_perc_threshold','lat_max_threshold']
+                for threshold in latency_thresholds:
+                    if threshold not in test.keys():
+                        test[threshold] = 'inf'
         test_params['tests'] = tests
         if test_params['required_number_of_test_machines'] > test_params[
                 'total_number_of_machines']:

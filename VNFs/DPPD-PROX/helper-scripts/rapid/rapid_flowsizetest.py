@@ -49,9 +49,6 @@ class FlowSizeTest(RapidTest):
             self.test['TST009_S']= []
             for m in range(0, self.test['TST009_n']):
                 self.test['TST009_S'].append((m+1) * self.test['stepsize'])
-            self.test['lat_avg_threshold'] = inf
-            self.test['lat_perc_threshold'] = inf
-            self.test['lat_max_threshold'] = inf
         elif self.test['test'] == 'fixed_rate':
             for key in['drop_rate_threshold','lat_avg_threshold',
                     'lat_perc_threshold','lat_max_threshold']:
