@@ -18,7 +18,7 @@
 # Directory for package build
 BUILD_DIR="/opt/rapid"
 DPDK_VERSION="20.05"
-PROX_COMMIT="7c3217fc16"
+PROX_COMMIT="ba394f91"
 PROX_CHECKOUT="git checkout ${PROX_COMMIT}"
 ## Next line is overruling the PROX_COMMIT and will replace the version with a very specific patch. Should be commented out
 ## 	if you want to use a committed version of PROX with the COMMIT ID specified above
