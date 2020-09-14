@@ -54,6 +54,7 @@
 #endif
 
 uint8_t lb_nb_txrings = 0xff;
+extern const char *git_version;
 struct rte_ring *ctrl_rings[RTE_MAX_LCORE*MAX_TASKS_PER_CORE];
 
 static void __attribute__((noreturn)) prox_usage(const char *prgname)
@@ -1218,6 +1219,7 @@ int main(int argc, char **argv)
 	plog_init(prox_cfg.log_name, prox_cfg.log_name_pid);
 	plog_info("=== " PROGRAM_NAME " %s ===\n", VERSION_STR());
 	plog_info("\tUsing DPDK %s\n", rte_version() + sizeof(RTE_VER_PREFIX));
+	plog_info("\tgit version %s\n", git_version);
 	set_term_env();
 	read_rdt_info();
 

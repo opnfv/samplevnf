@@ -214,12 +214,15 @@ SRCS-y += stats_latency.c stats_global.c stats_core.c stats_task.c stats_prio.c 
 SRCS-y += cmd_parser.c input.c prox_shared.c prox_lua_types.c
 SRCS-y += genl4_bundle.c heap.c genl4_stream_tcp.c genl4_stream_udp.c cdf.c
 SRCS-y += stats.c stats_cons_log.c stats_cons_cli.c stats_parser.c hash_set.c prox_lua.c prox_malloc.c prox_ipv6.c prox_compat.c
+SRCS-y += git_version.c
+
+GIT_VERSION := "$(shell git describe --abbrev=8 --dirty --always)"
 
 ifeq ($(FIRST_PROX_MAKE),)
 MAKEFLAGS += --no-print-directory
 FIRST_PROX_MAKE = 1
 export FIRST_PROX_MAKE
-all:	libedit_autoconf.h
+all:	libedit_autoconf.h git_version.c
 	@./helper-scripts/trailing.sh
 	@$(MAKE) $@
 clean:
@@ -246,6 +249,12 @@ libedit_autoconf.h: $(AUTO-CONFIG-SCRIPT)
 		> /dev/null
 # auto-conf adds empty line at the end of the file, considered as error by trailing.sh script
 	$(Q) sed -i '$$ d' '$@'
+
+git_version.c: force
+	@echo 'const char *git_version=$(GIT_VERSION);' | cmp -s - $@ || echo 'const char *git_version=$(GIT_VERSION);' > $@
+	@echo $@
+force:
+	
 else
 include $(RTE_SDK)/mk/rte.extapp.mk
 endif
