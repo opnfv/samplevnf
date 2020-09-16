@@ -193,6 +193,28 @@ class prox_ctrl(object):
             raise RuntimeError('scp returned exit status %d:\n%s'
                     % (ex.returncode, ex.output.strip()))
 
+    def scp_get(self, src, dst):
+        """Copy src file from remote system to dst on local system."""
+        cmd = [ 'scp',
+                '-B',
+                '-oStrictHostKeyChecking=no',
+                '-oUserKnownHostsFile=/dev/null',
+                '-oLogLevel=ERROR' ]
+        if self._key is not None:
+            cmd.extend(['-i', self._key])
+        remote = ''
+        if self._user is not None:
+            remote += self._user + '@'
+        remote += self._ip + ':/home/' + self._user + src
+        cmd.append(remote)
+        cmd.append(dst)
+        try:
+            # Actually ignore output on success, but capture stderr on failure
+            subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as ex:
+            raise RuntimeError('scp returned exit status %d:\n%s'
+                    % (ex.returncode, ex.output.strip()))
+
     def _build_ssh(self, command):
         cmd = [ 'ssh',
                 '-oBatchMode=yes',

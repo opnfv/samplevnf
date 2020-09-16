@@ -52,6 +52,9 @@ class RapidMachine(object):
         self.generate_lua(vim)
         self._client.scp_put(self.machine_params['config_file'], '{}/{}'.format(self.rundir, machine_params['config_file']))
 
+    def __del__(self):
+        self._client.scp_get('/prox.log', './{}.prox.log'.format(self.name))
+
     def get_cores(self):
         return (self.machine_params['cores'])
 

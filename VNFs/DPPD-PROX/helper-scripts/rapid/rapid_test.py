@@ -202,8 +202,34 @@ class RapidTest(object):
             t1_rx, t1_non_dp_rx, t1_tx, t1_non_dp_tx, t1_drop, t1_tx_fail, t1_tsc, abs_tsc_hz = self.gen_machine.core_stats()
             t1_dp_rx = t1_rx - t1_non_dp_rx
             t1_dp_tx = t1_tx - t1_non_dp_tx
+            self.gen_machine.set_generator_speed(0)
             self.gen_machine.start_gen_cores()
+            if self.background_machines:
+                self.set_background_speed(self.background_machines, 0)
+                self.start_background_traffic(self.background_machines)
+            if 'ramp_step' in self.test.keys():
+                ramp_speed = self.test['ramp_step']
+            else:
+                ramp_speed = speed
+            while ramp_speed < speed:
+                self.gen_machine.set_generator_speed(ramp_speed)
+                if self.background_machines:
+                    self.set_background_speed(self.background_machines, ramp_speed)
+                time.sleep(2)
+                ramp_speed = ramp_speed + self.test['ramp_step']
+            self.gen_machine.set_generator_speed(speed)
+            if self.background_machines:
+                self.set_background_speed(self.background_machines, speed)
             time.sleep(2) ## Needs to be 2 seconds since this 1 sec is the time that PROX uses to refresh the stats. Note that this can be changed in PROX!! Don't do it.
+            start_bg_gen_stats = []
+            for bg_gen_machine in self.background_machines:
+                bg_rx, bg_non_dp_rx, bg_tx, bg_non_dp_tx, _, _, bg_tsc, _ = bg_gen_machine.core_stats()
+                bg_gen_stat = {
+                        "bg_dp_rx" : bg_rx - bg_non_dp_rx,
+                        "bg_dp_tx" : bg_tx - bg_non_dp_tx,
+                        "bg_tsc"   : bg_tsc
+                        }
+                start_bg_gen_stats.append(dict(bg_gen_stat))
             if self.sut_machine!= None:
                 t2_sut_rx, t2_sut_non_dp_rx, t2_sut_tx, t2_sut_non_dp_tx, t2_sut_drop, t2_sut_tx_fail, t2_sut_tsc, sut_tsc_hz = self.sut_machine.core_stats()
             t2_rx, t2_non_dp_rx, t2_tx, t2_non_dp_tx, t2_drop, t2_tx_fail, t2_tsc, tsc_hz = self.gen_machine.core_stats()
@@ -327,6 +353,27 @@ class RapidTest(object):
                                 'PacketsReceived': delta_dp_rx,
                                 'PacketsLost': tot_dp_drop}
                         self.post_data('rapid_flowsizetest', variables)
+            end_bg_gen_stats = []
+            for bg_gen_machine in self.background_machines:
+                bg_rx, bg_non_dp_rx, bg_tx, bg_non_dp_tx, _, _, bg_tsc, bg_hz = bg_gen_machine.core_stats()
+                bg_gen_stat = {"bg_dp_rx" : bg_rx - bg_non_dp_rx,
+                        "bg_dp_tx" : bg_tx - bg_non_dp_tx,
+                        "bg_tsc"   : bg_tsc,
+                        "bg_hz"    : bg_hz
+                        }
+                end_bg_gen_stats.append(dict(bg_gen_stat))
+            i = 0
+            bg_rates =[]
+            while i < len(end_bg_gen_stats):
+                bg_rates.append(0.000001*(end_bg_gen_stats[i]['bg_dp_rx'] -
+                    start_bg_gen_stats[i]['bg_dp_rx']) / ((end_bg_gen_stats[i]['bg_tsc'] -
+                    start_bg_gen_stats[i]['bg_tsc']) * 1.0 / end_bg_gen_stats[i]['bg_hz']))
+                i += 1
+            if len(bg_rates):
+                avg_bg_rate = sum(bg_rates) / len(bg_rates)
+                RapidLog.debug('Average Background traffic rate: {:>7.3f} Mpps'.format(avg_bg_rate))
+            else:
+                avg_bg_rate = None
             #Stop generating
             self.gen_machine.stop_gen_cores()
             r += 1

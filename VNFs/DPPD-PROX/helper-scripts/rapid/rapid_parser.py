@@ -72,7 +72,7 @@ class RapidConfigParser(object):
                 elif option in ['startspeed', 'step', 'drop_rate_threshold',
                         'lat_avg_threshold','lat_perc_threshold',
                         'lat_max_threshold','accuracy','maxr','maxz',
-                        'pass_threshold']:
+                        'pass_threshold','ramp_step']:
                     test[option] = float(testconfig.get(section, option))
                 else:
                     test[option] = testconfig.get(section, option)
