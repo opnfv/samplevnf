@@ -23,6 +23,8 @@ from future import standard_library
 standard_library.install_aliases()
 from builtins import object
 import sys
+import concurrent.futures
+from concurrent.futures import ALL_COMPLETED
 from rapid_cli import RapidCli
 from rapid_log import RapidLog
 from rapid_parser import RapidConfigParser
@@ -81,8 +83,11 @@ class RapidTestManager(object):
             machines.append(machine)
         if test_params['configonly']:
             sys.exit()
-        for machine in machines:
-            machine.start_prox()
+        prox_executor = concurrent.futures.ThreadPoolExecutor(max_workers=len(machines))
+        future_to_prox = {prox_executor.submit(machine.start_prox): machine for machine in machines}
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(machines)) as executor:
+            future_to_connect_prox = {executor.submit(machine.connect_prox): machine for machine in machines}
+            concurrent.futures.wait(future_to_connect_prox,return_when=ALL_COMPLETED)
         result = True
         for test_param in test_params['tests']:
             RapidLog.info(test_param['test'])
@@ -119,6 +124,8 @@ class RapidTestManager(object):
             single_test_result = test.run()
             if not single_test_result:
                 result = False
+        for machine in machines:
+            machine.close_prox()
         return (result)
 
 def main():

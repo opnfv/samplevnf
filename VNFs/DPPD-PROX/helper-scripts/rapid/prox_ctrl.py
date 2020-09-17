@@ -32,7 +32,6 @@ class prox_ctrl(object):
         self._ip   = ip
         self._key  = key
         self._user = user
-        self._children = []
         self._proxsock = []
 
     def __del__(self):
@@ -50,7 +49,7 @@ class prox_ctrl(object):
 
     def connect(self):
         attempts = 1
-        RapidLog.debug("Trying to connect to instance which was just launched \
+        RapidLog.debug("Trying to connect to machine \
                 on %s, attempt: %d" % (self._ip, attempts))
         while True:
             try:
@@ -64,9 +63,9 @@ class prox_ctrl(object):
                     raise Exception("Failed to connect to instance after %d \
                             attempts:\n%s" % (attempts, ex))
                 time.sleep(2)
-                RapidLog.debug("Trying to connect to instance which was just \
-                        launched on %s, attempt: %d" % (self._ip, attempts))
-        RapidLog.debug("Connected to instance on %s" % self._ip)
+                RapidLog.debug("Trying to connect to machine \
+                       on %s, attempt: %d" % (self._ip, attempts))
+        RapidLog.debug("Connected to machine on %s" % self._ip)
 
     def connect_socket(self):
         attempts = 1
@@ -93,31 +92,6 @@ class prox_ctrl(object):
         """Must be called before program termination."""
         for sock in self._proxsock:
             sock.quit()
-        children = len(self._children)
-        if children == 0:
-            return
-        if children > 1:
-            print('Waiting for %d child processes to complete ...' % children)
-        for child in self._children:
-            ret = os.waitpid(child[0], os.WNOHANG)
-            if ret[0] == 0:
-                print("Waiting for child process '%s' to complete ..." 
-                        % child[1])
-                ret = os.waitpid(child[0], 0)
-            rc = ret[1]
-            if os.WIFEXITED(rc):
-                if os.WEXITSTATUS(rc) == 0:
-                    print("Child process '%s' completed successfully" 
-                            % child[1])
-                else:
-                    print("Child process '%s' returned exit status %d" % (
-                            child[1], os.WEXITSTATUS(rc)))
-            elif os.WIFSIGNALED(rc):
-                print("Child process '%s' exited on signal %d" % (
-                        child[1], os.WTERMSIG(rc)))
-            else:
-                print("Wait status for child process '%s' is 0x%04x" % (
-                        child[1], rc))
 
     def run_cmd(self, command, _connect=False):
         """Execute command over ssh on remote system.
@@ -134,29 +108,6 @@ class prox_ctrl(object):
                 raise RuntimeWarning(ex.output.strip())
             raise RuntimeError('ssh returned exit status %d:\n%s'
                     % (ex.returncode, ex.output.strip()))
-
-    def fork_cmd(self, command, name=None):
-        """Execute command over ssh on remote system, in a child process.
-        Do not wait for remote command completion.
-        Return child process id.
-        """
-        if name is None:
-            name = command
-        cmd = self._build_ssh(command)
-        pid = os.fork()
-        if (pid != 0):
-            # In the parent process
-            self._children.append((pid, name))
-            return pid
-        # In the child process: use os._exit to terminate
-        try:
-            # Actually ignore output on success, but capture stderr on failure
-            subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError as ex:
-            raise RuntimeError("Child process '%s' failed:\n"
-                    'ssh returned exit status %d:\n%s'
-                    % (name, ex.returncode, ex.output.strip()))
-        os._exit(0)
 
     def prox_sock(self, port=8474):
         """Connect to the PROX instance on remote system.
