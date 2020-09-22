@@ -88,6 +88,7 @@ struct prox_port_cfg {
 	int fds[PROX_MAX_VLAN_TAGS];
 	uint32_t vlan_tags[PROX_MAX_VLAN_TAGS];
 	uint8_t is_vdev;
+	uint8_t virtual;
 	uint8_t all_rx_queues;
 	uint16_t n_vlans;
 };

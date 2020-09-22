@@ -582,6 +582,13 @@ static int get_port_cfg(unsigned sindex, char *str, void *data)
 		}
 		return 0;
 	}
+	else if (STR_EQ(str, "virtual")) {
+		uint32_t val;
+		if (parse_bool(&val, pkey)) {
+			return -1;
+		}
+		cfg->virtual = val;
+	}
 	else if (STR_EQ(str, "vdev")) {
 		prox_strncpy(cfg->vdev, pkey, MAX_NAME_SIZE);
 	}
