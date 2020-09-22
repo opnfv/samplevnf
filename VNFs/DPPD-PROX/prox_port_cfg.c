@@ -173,13 +173,14 @@ static inline uint32_t get_netmask(uint8_t prefix)
 		return rte_cpu_to_be_32(~((1 << (32 - prefix)) - 1));
 }
 
-static void set_ip_address(char *devname, uint32_t *ip, uint8_t prefix)
+static void set_ip_address(char *devname, uint32_t ip, uint8_t prefix)
 {
 	struct ifreq ifreq;
 	struct sockaddr_in in_addr;
 	int fd, rc;
 	uint32_t netmask = get_netmask(prefix);
 	plog_info("Setting netmask to %x\n", netmask);
+	uint32_t ip_cpu = rte_be_to_cpu_32(ip);
 
 	fd = socket(AF_INET, SOCK_DGRAM, 0);
 
@@ -187,12 +188,12 @@ static void set_ip_address(char *devname, uint32_t *ip, uint8_t prefix)
 	memset(&in_addr, 0, sizeof(struct sockaddr_in));
 
 	in_addr.sin_family = AF_INET;
-	in_addr.sin_addr = *(struct in_addr *)ip;
+	in_addr.sin_addr = *(struct in_addr *)&ip_cpu;
 
 	strncpy(ifreq.ifr_name, devname, IFNAMSIZ);
 	ifreq.ifr_addr = *(struct sockaddr *)&in_addr;
 	rc = ioctl(fd, SIOCSIFADDR, &ifreq);
-	PROX_PANIC(rc < 0, "Failed to set IP address %x on device %s: error = %d (%s)\n", *ip, devname, errno, strerror(errno));
+	PROX_PANIC(rc < 0, "Failed to set IP address %x on device %s: error = %d (%s)\n", ip_cpu, devname, errno, strerror(errno));
 
 	in_addr.sin_addr = *(struct in_addr *)&netmask;
 	ifreq.ifr_netmask = *(struct sockaddr *)&in_addr;
@@ -209,6 +210,11 @@ void init_rte_dev(int use_dummy_devices)
 	struct rte_eth_dev_info dev_info;
 	const struct rte_pci_device *pci_dev;
 
+	for (uint8_t port_id = 0; port_id < PROX_MAX_PORTS; ++port_id) {
+		if (prox_port_cfg[port_id].active && (prox_port_cfg[port_id].virtual == 0) && (port_id >= prox_rte_eth_dev_count_avail())) {
+			PROX_PANIC(1, "port %u used but only %u available\n", port_id, prox_rte_eth_dev_count_avail());
+		}
+	}
 	for (uint8_t port_id = 0; port_id < PROX_MAX_PORTS; ++port_id) {
 		if (!prox_port_cfg[port_id].active) {
 			continue;
@@ -257,7 +263,7 @@ void init_rte_dev(int use_dummy_devices)
 			prox_port_cfg[port_id].dpdk_mapping = vdev_port_id;
 			uint32_t i = 0;
 			while ((i < PROX_MAX_VLAN_TAGS) && (prox_port_cfg[port_id].ip_addr[i].ip)) {
-				prox_port_cfg[vdev_port_id].ip_addr[i].ip = rte_be_to_cpu_32(prox_port_cfg[port_id].ip_addr[i].ip);
+				prox_port_cfg[vdev_port_id].ip_addr[i].ip = prox_port_cfg[port_id].ip_addr[i].ip;
 				prox_port_cfg[vdev_port_id].ip_addr[i].prefix = prox_port_cfg[port_id].ip_addr[i].prefix;
 				i++;
 			}
@@ -824,7 +830,7 @@ static void init_port(struct prox_port_cfg *port_cfg)
 
 	if (prox_port_cfg[port_id].is_vdev) {
 		for (int vlan_id = 0; vlan_id < prox_port_cfg[port_id].n_vlans; vlan_id++) {
-			set_ip_address(prox_port_cfg[port_id].names[vlan_id], &prox_port_cfg[port_id].ip_addr[vlan_id].ip, prox_port_cfg[port_id].ip_addr[vlan_id].prefix);
+			set_ip_address(prox_port_cfg[port_id].names[vlan_id], prox_port_cfg[port_id].ip_addr[vlan_id].ip, prox_port_cfg[port_id].ip_addr[vlan_id].prefix);
 		}
 	}
 	/* Getting link status can be done without waiting if Link

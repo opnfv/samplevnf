@@ -169,7 +169,7 @@ void master_init_vdev(struct task_base *tbase, uint8_t port_id, uint8_t core_id,
 		src.sin_family = AF_INET;
 		src.sin_port = rte_cpu_to_be_16(PROX_PSEUDO_PKT_PORT);
 		for (int vlan_id = 0; vlan_id < prox_port_cfg[vdev_port].n_vlans; vlan_id++) {
-			src.sin_addr.s_addr = prox_port_cfg[vdev_port].ip_addr[vlan_id].ip;
+			src.sin_addr.s_addr = rte_be_to_cpu_32(prox_port_cfg[vdev_port].ip_addr[vlan_id].ip);
 			int fd = socket(AF_INET,  SOCK_DGRAM, 0);
 			PROX_PANIC(fd < 0, "Failed to open socket(AF_INET,  SOCK_DGRAM, 0)\n");
 			prox_port_cfg[vdev_port].fds[vlan_id] = fd;
