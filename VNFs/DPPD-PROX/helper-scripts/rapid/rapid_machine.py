@@ -48,12 +48,13 @@ class RapidMachine(object):
         self.vim = vim
 
     def __del__(self):
-        self._client.scp_get('/prox.log', './{}.prox.log'.format(self.name))
+        if self.machine_params['prox_socket']:
+            self._client.scp_get('/prox.log', './{}.prox.log'.format(self.name))
 
     def get_cores(self):
         return (self.machine_params['cores'])
 
-    def devbind(self):
+    def devbind(self, configonly):
         # Script to bind the right network interface to the poll mode driver
         for index, dp_port in enumerate(self.dp_ports, start = 1):
             DevBindFileName = self.rundir + '/devbind-{}-port{}.sh'.format(self.ip, index)
@@ -61,8 +62,9 @@ class RapidMachine(object):
             cmd =  'sed -i \'s/MACADDRESS/' + dp_port['mac'] + '/\' ' + DevBindFileName 
             result = self._client.run_cmd(cmd)
             RapidLog.debug('devbind.sh MAC updated for port {} on {} {}'.format(index, self.name, result))
-            result = self._client.run_cmd(DevBindFileName)
-            RapidLog.debug('devbind.sh running for port {} on {} {}'.format(index, self.name, result))
+            if ((not configonly) and self.machine_params['prox_launch_exit']):
+                result = self._client.run_cmd(DevBindFileName)
+                RapidLog.debug('devbind.sh running for port {} on {} {}'.format(index, self.name, result))
 
     def generate_lua(self, vim, appendix = ''):
         PROXConfigfile =  open (self.machine_params['config_file'], 'r')
@@ -93,25 +95,28 @@ class RapidMachine(object):
         self._client.scp_put(self.LuaFileName, self.rundir + '/parameters.lua')
         self._client.scp_put('helper.lua', self.rundir + '/helper.lua')
 
-    def start_prox(self, autostart=''):
-        self._client = prox_ctrl(self.ip, self.key, self.user)
-        self._client.connect()
-        if self.vim in ['OpenStack']:
-            self.devbind()
-        self.generate_lua(self.vim)
-        self._client.scp_put(self.machine_params['config_file'], '{}/{}'.format(self.rundir, self.machine_params['config_file']))
-        if self.machine_params['prox_launch_exit']:
-            cmd = 'sudo {}/prox {} -t -o cli -f {}/{}'.format(self.rundir, autostart, self.rundir, self.machine_params['config_file'])
-            RapidLog.debug("Starting PROX on {}: {}".format(self.name, cmd))
-            result = self._client.run_cmd(cmd, 'PROX Testing on {}'.format(self.name))
-            #RapidLog.debug("Finished PROX on {}: {}, {}".format(self.name, cmd, result))
-            RapidLog.debug("Finished PROX on {}: {}".format(self.name, cmd))
+    def start_prox(self, configonly=False, autostart=''):
+        if self.machine_params['prox_socket']:
+            self._client = prox_ctrl(self.ip, self.key, self.user)
+            self._client.connect()
+            if self.vim in ['OpenStack']:
+                self.devbind(configonly)
+            self.generate_lua(self.vim)
+            self._client.scp_put(self.machine_params['config_file'], '{}/{}'.format(self.rundir, self.machine_params['config_file']))
+            if ((not configonly) and self.machine_params['prox_launch_exit']):
+                cmd = 'sudo {}/prox {} -t -o cli -f {}/{}'.format(self.rundir, autostart, self.rundir, self.machine_params['config_file'])
+                RapidLog.debug("Starting PROX on {}: {}".format(self.name, cmd))
+                result = self._client.run_cmd(cmd, 'PROX Testing on {}'.format(self.name))
+                #RapidLog.debug("Finished PROX on {}: {}, {}".format(self.name, cmd, result))
+                RapidLog.debug("Finished PROX on {}: {}".format(self.name, cmd))
 
     def close_prox(self):
-        self.socket.quit()
+        if self.machine_params['prox_socket'] and self.machine_params['prox_launch_exit']:
+            self.socket.quit()
 
     def connect_prox(self):
-        self.socket = self._client.connect_socket()
+        if self.machine_params['prox_socket']:
+           self.socket = self._client.connect_socket()
 
     def start(self):
         self.socket.start(self.get_cores())

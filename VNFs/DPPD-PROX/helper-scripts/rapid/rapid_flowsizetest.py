@@ -138,7 +138,7 @@ class FlowSizeTest(RapidTest):
                     self.set_background_speed(self.background_machines, speed)
                     self.start_background_traffic(self.background_machines)
                     # Get statistics now that the generation is stable and initial ARP messages are dealt with
-                    pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat_avg,lat_perc , lat_perc_max, lat_max, abs_tx,abs_rx,abs_dropped, abs_tx_fail, drop_rate, lat_min, lat_used, r, actual_duration = self.run_iteration(float(self.test['runtime']),flow_number,size,speed)
+                    pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat_avg,lat_perc , lat_perc_max, lat_max, abs_tx,abs_rx,abs_dropped, abs_tx_fail, drop_rate, lat_min, lat_used, r, actual_duration, avg_bg_rate = self.run_iteration(float(self.test['runtime']),flow_number,size,speed)
                     self.stop_background_traffic(self.background_machines)
                     if r > 1:
                         retry_warning = bcolors.WARNING + ' {:1} retries needed'.format(r) +  bcolors.ENDC
@@ -164,6 +164,7 @@ class FlowSizeTest(RapidTest):
                         enddrop_rate = drop_rate
                         endabs_tx = abs_tx
                         endabs_rx = abs_rx
+                        endavg_bg_rate = avg_bg_rate
                         if lat_warning or retry_warning:
                             endwarning = '|        | {:177.177} |'.format(retry_warning + lat_warning)
                         success = True
@@ -196,6 +197,7 @@ class FlowSizeTest(RapidTest):
                         enddrop_rate = drop_rate
                         endabs_tx = abs_tx
                         endabs_rx = abs_rx
+                        endavg_bg_rate = avg_bg_rate
                         if lat_warning or gen_warning or retry_warning:
                             endwarning = '|        | {:186.186} |'.format(retry_warning + lat_warning + gen_warning)
                         success = True
@@ -241,6 +243,10 @@ class FlowSizeTest(RapidTest):
                         TestPassed = False
                     speed_prefix = lat_avg_prefix = lat_perc_prefix = lat_max_prefix = abs_drop_rate_prefix = drop_rate_prefix = bcolors.ENDC
                     RapidLog.info(self.report_result(flow_number,size,endspeed,endpps_req_tx,endpps_tx,endpps_sut_tx,endpps_rx,endlat_avg,endlat_perc,endlat_perc_max,endlat_max,endabs_tx,endabs_rx,endabs_dropped,actual_duration,speed_prefix,lat_avg_prefix,lat_perc_prefix,lat_max_prefix,abs_drop_rate_prefix,drop_rate_prefix))
+                    if endavg_bg_rate:
+                        tot_avg_rx_rate = endpps_rx + (endavg_bg_rate * len(self.background_machines))
+                        endtotaltrafficrate = '|        | Total amount of traffic received by all generators during this test: {:>4.3f} Gb/s {:7.3f} Mpps {} |'.format(RapidTest.get_speed(tot_avg_rx_rate,size) , tot_avg_rx_rate, ' '*84)
+                        RapidLog.info (endtotaltrafficrate)
                     if endwarning:
                         RapidLog.info (endwarning)
                     RapidLog.info("+--------+------------------+-------------+-------------+-------------+------------------------+----------+----------+----------+-----------+-----------+-----------+-----------+-------+----+")

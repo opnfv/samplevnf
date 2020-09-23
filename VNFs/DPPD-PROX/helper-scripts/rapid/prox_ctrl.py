@@ -34,9 +34,6 @@ class prox_ctrl(object):
         self._user = user
         self._proxsock = []
 
-    def __del__(self):
-        self.close()
-
     def ip(self):
         return self._ip
 
@@ -89,7 +86,6 @@ class prox_ctrl(object):
         return sock
 
     def close(self):
-        """Must be called before program termination."""
         for sock in self._proxsock:
             sock.quit()
 
@@ -186,9 +182,6 @@ class prox_sock(object):
     def __init__(self, sock):
         self._sock = sock
         self._rcvd = b''
-
-    def __del__(self):
-        self.quit()
 
     def quit(self):
         if self._sock is not None:

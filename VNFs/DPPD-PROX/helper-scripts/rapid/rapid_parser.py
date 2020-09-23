@@ -96,33 +96,30 @@ class RapidConfigParser(object):
         machine = {}
         for test_machine in range(1, test_params['required_number_of_test_machines']+1):
             machine.clear()
-            if not(testconfig.has_option('TestM%d'%test_machine, 'prox_socket')
-                    and not testconfig.getboolean('TestM%d'%test_machine,
-                        'prox_socket')):
-                section = 'TestM%d'%test_machine
-                options = testconfig.options(section)
-                for option in options:
-                    if option in ['prox_socket','prox_launch_exit','monitor']:
-                        machine[option] = testconfig.getboolean(section, option)
-                    elif option in ['cores', 'gencores','latcores']:
-                        machine[option] = ast.literal_eval(testconfig.get(
-                            section, option))
-                    elif option in ['bucket_size_exp']:
-                        machine[option] = int(testconfig.get(section, option))
-                    else:
-                        machine[option] = testconfig.get(section, option)
-                    for key in ['prox_socket','prox_launch_exit']:
-                       if key not in machine.keys():
-                           machine[key] = True
-                if 'monitor' not in machine.keys():
-                    machine['monitor'] = True
-                index = int(machine_map.get('TestM%d'%test_machine,
-                    'machine_index'))
-                section = 'M%d'%index
-                options = config.options(section)
-                for option in options:
-                    machine[option] = config.get(section, option)
-                machines.append(dict(machine))
+            section = 'TestM%d'%test_machine
+            options = testconfig.options(section)
+            for option in options:
+                if option in ['prox_socket','prox_launch_exit','monitor']:
+                    machine[option] = testconfig.getboolean(section, option)
+                elif option in ['cores', 'gencores','latcores']:
+                    machine[option] = ast.literal_eval(testconfig.get(
+                        section, option))
+                elif option in ['bucket_size_exp']:
+                    machine[option] = int(testconfig.get(section, option))
+                else:
+                    machine[option] = testconfig.get(section, option)
+                for key in ['prox_socket','prox_launch_exit']:
+                   if key not in machine.keys():
+                       machine[key] = True
+            if 'monitor' not in machine.keys():
+                machine['monitor'] = True
+            index = int(machine_map.get('TestM%d'%test_machine,
+                'machine_index'))
+            section = 'M%d'%index
+            options = config.options(section)
+            for option in options:
+                machine[option] = config.get(section, option)
+            machines.append(dict(machine))
         for machine in machines:
             dp_ports = []
             if 'dest_vm' in machine.keys():
