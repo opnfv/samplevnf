@@ -103,10 +103,10 @@ class RapidGeneratorMachine(RapidMachine):
             appendix = appendix + 'heartbeat="60"\n'
         super().generate_lua(vim, appendix)
 
-    def start_prox(self):
+    def start_prox(self, configonly=False):
         # Start the generator with the -e option so that the cores don't
         # start automatically
-        super().start_prox('-e')
+        super().start_prox(configonly, '-e')
 
     def set_generator_speed(self, speed):
         # The assumption is that we only use task 0 for generating

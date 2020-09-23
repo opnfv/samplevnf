@@ -433,4 +433,4 @@ class RapidTest(object):
                 drop_rate = 100.0*tot_dp_drop/dp_tx
                 if ((drop_rate < self.test['drop_rate_threshold']) or (tot_dp_drop == self.test['drop_rate_threshold'] ==0) or (tot_dp_drop > self.test['maxz'])):
                     break
-        return(pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat_avg,percentile,percentile_max,lat_max,dp_tx,dp_rx,tot_dp_drop,(t4_tx_fail - t1_tx_fail),drop_rate,lat_min,used_avg,r,tot_core_measurement_duration)
+        return(pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat_avg,percentile,percentile_max,lat_max,dp_tx,dp_rx,tot_dp_drop,(t4_tx_fail - t1_tx_fail),drop_rate,lat_min,used_avg,r,tot_core_measurement_duration,avg_bg_rate)

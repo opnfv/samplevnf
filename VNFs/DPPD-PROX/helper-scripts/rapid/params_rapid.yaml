@@ -1,7 +1,7 @@
 parameters:
   public_net_name: admin_floating_net
   data_net_name: dataplane-network
-  PROX_image: testrapidVM
+  PROX_image: rapidVM
   my_availability_zone: nova
   security_group: prox_security_group
   PROXVM_count: 4
