@@ -42,18 +42,21 @@ class RapidTestManager(object):
     """
     RapidTestManager Class
     """
+    def __del__(self):
+        for machine in self.machines:
+            machine.close_prox()
+
     @staticmethod
     def get_defaults():
         return (RapidDefaults.test_params)
 
-    @staticmethod
-    def run_tests(test_params):
+    def run_tests(self, test_params):
         test_params = RapidConfigParser.parse_config(test_params)
         RapidLog.debug(test_params)
         monitor_gen = monitor_sut = False
         background_machines = []
         sut_machine = gen_machine = None
-        machines = []
+        self.machines = []
         for machine_params in test_params['machines']:
             if 'gencores' in machine_params.keys():
                 machine = RapidGeneratorMachine(test_params['key'],
@@ -79,14 +82,16 @@ class RapidTestManager(object):
                         raise Exception("Can only monitor 1 sut")
                     else:
                         monitor_sut = True
-                        sut_machine = machine
-            machines.append(machine)
+                        if machine_params['prox_socket']:
+                            sut_machine = machine
+            self.machines.append(machine)
+        prox_executor = concurrent.futures.ThreadPoolExecutor(max_workers=len(self.machines))
+        self.future_to_prox = {prox_executor.submit(machine.start_prox,test_params['configonly']): machine for machine in self.machines}
         if test_params['configonly']:
+            concurrent.futures.wait(self.future_to_prox,return_when=ALL_COMPLETED)
             sys.exit()
-        prox_executor = concurrent.futures.ThreadPoolExecutor(max_workers=len(machines))
-        future_to_prox = {prox_executor.submit(machine.start_prox): machine for machine in machines}
-        with concurrent.futures.ThreadPoolExecutor(max_workers=len(machines)) as executor:
-            future_to_connect_prox = {executor.submit(machine.connect_prox): machine for machine in machines}
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(self.machines)) as executor:
+            future_to_connect_prox = {executor.submit(machine.connect_prox): machine for machine in self.machines}
             concurrent.futures.wait(future_to_connect_prox,return_when=ALL_COMPLETED)
         result = True
         for test_param in test_params['tests']:
@@ -101,11 +106,11 @@ class RapidTestManager(object):
             elif test_param['test'] in ['corestats']:
                 test = CoreStatsTest(test_param, test_params['runtime'],
                         test_params['TestName'], 
-                        test_params['environment_file'], machines)
+                        test_params['environment_file'], self.machines)
             elif test_param['test'] in ['portstats']:
                 test = PortStatsTest(test_param, test_params['runtime'],
                         test_params['TestName'], 
-                        test_params['environment_file'], machines)
+                        test_params['environment_file'], self.machines)
             elif test_param['test'] in ['impairtest']:
                 test = ImpairTest(test_param, test_params['lat_percentile'],
                         test_params['runtime'],
@@ -115,7 +120,7 @@ class RapidTestManager(object):
             elif test_param['test'] in ['irqtest']:
                 test = IrqTest(test_param, test_params['runtime'],
                         test_params['TestName'], 
-                        test_params['environment_file'], machines)
+                        test_params['environment_file'], self.machines)
             elif test_param['test'] in ['warmuptest']:
                 test = WarmupTest(test_param, gen_machine)
             else:
@@ -124,8 +129,6 @@ class RapidTestManager(object):
             single_test_result = test.run()
             if not single_test_result:
                 result = False
-        for machine in machines:
-            machine.close_prox()
         return (result)
 
 def main():
@@ -139,7 +142,8 @@ def main():
             test_params['test_file'])
     RapidLog.log_init(log_file, test_params['loglevel'],
             test_params['screenloglevel'] , test_params['version']  )
-    test_result = RapidTestManager.run_tests(test_params)
+    test_manager = RapidTestManager()
+    test_result = test_manager.run_tests(test_params)
     RapidLog.info('Test result is : {}'.format(test_result))
 
 if __name__ == "__main__":
