@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2020 Intel Corporation
+
+---
+
+prox:
+  name: prox
+  network: userspace-openness # intel-sriov-vfio
+  node_ip: 192.168.1.156
+  nodeName: myNodeName
+swap:
+  ip: 192.168.201.2
+  hex_ip: c0 a8 c9 02
+gen:
+  ip: 192.168.201.10
+  hex_ip: c0 a8 c9 0a
