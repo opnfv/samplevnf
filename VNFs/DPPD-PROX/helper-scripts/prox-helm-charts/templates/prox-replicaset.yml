@@ -1,0 +1,65 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2020 Intel Corporation
+
+---
+
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: prox-replicaset
+  labels:
+    app: prox
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: prox
+  template:
+    metadata:
+      name: {{ .Values.prox.name }}
+      labels:
+        app: prox
+      annotations:
+        k8s.v1.cni.cncf.io/networks: {{ .Values.prox.network }}
+    spec:
+      nodeName: {{ .Values.prox.nodeName }}
+      containers:
+      - name: pod-rapid
+        image: {{ .Values.prox.node_ip }}:5000/prox_slim:latest
+        imagePullPolicy: Always
+        command: ["/bin/sh"]
+        args: ["-c", "sed -ne '/hostname/p' /proc/1/task/1/mountinfo | awk -F '/' '{print \"dev=\\\"\"substr($6,1,12)\"\\\"\"}' > /root/parameters.lua; sleep infinity"]
+        securityContext:
+          privileged: true
+          capabilities:
+            add: ["IPC_LOCK", "NET_ADMIN"]
+        volumeMounts:
+        - mountPath: /ovs
+          name: shared-dir
+        - mountPath: /dev/hugepages
+          name: hugepages
+        - mountPath: /data/templates
+          name: prox-config
+        resources:
+          requests:
+            hugepages-1Gi: 1Gi
+            memory: 1Gi
+            {{ if eq .Values.prox.network "intel-sriov-vfio" }}
+              intel.com/intel_sriov_vfio: '1'
+            {{ end }}
+          limits:
+            hugepages-1Gi: 1Gi
+            {{ if eq .Values.prox.network "intel-sriov-vfio" }}
+              intel.com/intel_sriov_vfio: '1'
+            {{ end }}
+      volumes:
+      - name: shared-dir
+        hostPath:
+          path: /var/run/openvswitch/
+      - name: hugepages
+        emptyDir:
+          medium: HugePages
+      - name: prox-config
+        configMap:
+          name: swap-gen-config
+#      restartPolicy: Never
