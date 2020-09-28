@@ -1,0 +1,118 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2020 Intel Corporation
+
+{{ if eq $.Values.prox.network "sriov-openness-vm" }}
+{{ if .Values.prox.cnfs }}
+{{- range $id, $elem := .Values.prox.cnfs }}
+apiVersion: kubevirt.io/v1alpha3
+kind: VirtualMachine
+metadata:
+  name: prox-vm{{ $id }}
+spec:
+  running: true
+  template:
+    metadata:
+      labels:
+        kubevirt.io/domain: prox-domain-{{ $elem.name }}
+    spec:
+      domain:
+        cpu:
+          cores: 4
+        devices:
+          disks:
+          - disk:
+              bus: virtio
+            name: rootfs-{{ $elem.name }}
+          - disk:
+              bus: virtio
+            name: cloudinit-{{ $elem.name }}
+          - disk: {}
+            serial: proxconfigmap-{{ $elem.name }}
+            name: prox-config
+          interfaces:
+          - name: default
+            bridge: {}
+          - name: sriov-net
+            sriov: {}
+        resources:
+          requests:
+            memory: 2048M
+      networks:
+      - name: default
+        pod: {}
+      - multus:
+          networkName: sriov-openness-vm #name of the NetworkAttachmentDefinition
+        name: sriov-net
+      volumes:
+        - name: prox-config
+          configMap:
+            name: swap-gen-config
+        - name: rootfs-{{ $elem.name }}
+          dataVolume:
+            name: datavol-{{ $elem.name }}
+        - name: cloudinit-{{ $elem.name }}
+          cloudInitNoCloud:
+            userData: |-
+              #cloud-config
+              users:
+                - name: root
+                  password: {{ $.Values.prox.virtual_machine.password }}
+                  sudo: ALL=(ALL) NOPASSWD:ALL
+                  lock-passwd: false
+                  ssh_pwauth: true
+                  ssh_authorized_keys:
+                    - ssh-rsa {{ $.Values.prox.virtual_machine.ssh_public_key }}
+              chpasswd:
+                list: |
+                  root:{{ $.Values.prox.virtual_machine.password }}
+                expire: False
+              bootcmd:
+                - mkdir -p /data/templates
+                - mount /dev/$(lsblk --nodeps -no name,serial | grep proxconfigmap | cut -f1 -d' ') /data/templates
+              runcmd:
+                - yum install -y numactl-devel make gcc tig git net-tools wget gcc unzip libpcap-devel ncurses-devel libedit-devel pciutils lua-devel driverctl
+                - cd /root
+                - git clone http://dpdk.org/git/dpdk
+                - git clone https://github.com/opnfv/samplevnf
+                - cd /root/dpdk
+                - git checkout v20.05
+                - export RTE_SDK=/root/dpdk
+                - export RTE_TARGET=x86_64-native-linuxapp-gcc
+                - make config T=x86_64-native-linuxapp-gcc
+                - make -j16
+                - cd /root/samplevnf/VNFs/DPPD-PROX/
+                - export RTE_TARGET=build
+                - make -j16
+                - echo 256 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages
+                - modprobe vfio
+                - echo 1 > /sys/module/vfio/parameters/enable_unsafe_noiommu_mode
+                - modprobe vfio-pci
+                - echo "options vfio enable_unsafe_noiommu_mode=1" > /etc/modprobe.d/vfio.conf
+                - echo "vfio-pci" >> /etc/modprobe.d/vfio.conf
+                - sed -i -e '/^GRUB_CMDLINE_LINUX/s/^.*$/GRUB_CMDLINE_LINUX="console=tty0 crashkernel=auto console=ttyS0,115200 default_hugepagesz=2M hugepagesz=2M hugepages=256 isolcpus=1-3"/' /etc/default/grub
+                - grub2-mkconfig -o /boot/grub2/grub.cfg
+                - driverctl set-override 0000:02:01.0 vfio-pci
+                - touch /root/parameters.lua
+                - mkdir -p /opt/rapid
+                - ln -s /root/samplevnf/VNFs/DPPD-PROX/build/prox /opt/rapid/prox
+
+  dataVolumeTemplates:
+  - metadata:
+      name: datavol-{{ $elem.name }}
+    spec:
+      pvc:
+        storageClassName: local-storage
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
+      source:
+        http:
+          url: https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud-1907.qcow2.xz
+
+---
+
+{{- end }}
+{{ end }}
+{{ end }}
