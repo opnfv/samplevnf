@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2020 Intel Corporation
+
+---
+# Set network to:
+# 	userspace-openness for DPDK app in container on top of OVS-DPDK
+#	sriov-openness for using Socket based app in container on VF
+#       sriov-openness-dpdk for DPDK app on top in container on VF
+#	sriov-openness-vm for using DPDK app in container in VM on top of VF. This requires kubevirt to be enabled in exp kits (openness 20.09rc2)
+#  network: userspace-openness # userspace-openness, sriov-openness, sriov-openness-dpdk, sriov-openness-vm
+prox:
+  name: prox
+  network: sriov-openness-vm
+  controller_ip: 192.168.1.156
+  virtual_machine:
+    ssh_public_key: AAAAB3NzaC1yc2EAAAADAQABAAABAQDUlSIrA4bLvow5zLXOF3tX8W5DjzMjBUiNvwd5KZi4OiWXHROWxRKxcn8Ys2BPgCd2/37+Z/IoDzlDDMG/gu/mWrGtSpSJwhtOqKe6FM6sgCzIKOTpgw3dnju/XEV3hAdGUWSS/7NvyH8ggORzLwKV69ViCH8ry1jZWZgo3rgoSFosY3vQBrC0PiKLd8ETHosk03Xz3PJqDOD8VPMYyeVDIc1uVTYCHEIhyVSMSvANYknmbXlPJNO1PdVOw4az3hCvwBgiWPCd5gzbiZd34SOAQpXgTubKQ+fgS8Rmy3fuxS0OmtvEKLT8Jajhb2lyaVU/v8VwmrHYaQptP+zJanj7 root@supermicro01
+    password: root
+
+  cnfs:
+    - name: swap
+      nodeSelector_hostname: supermicro01
+      dp_ip: 192.168.201.10
+      hex_dp_ip: c0 a8 c9 0a
+    - name: gen
+      nodeSelector_hostname: supermicro01
+      dp_ip: 192.168.201.11
+      hex_dp_ip: c0 a8 c9 0b

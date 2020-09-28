@@ -1,0 +1,61 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2020 Intel Corporation
+
+{{ if eq $.Values.prox.network "sriov-openness-vm" }}
+{{ if .Values.prox.cnfs }}
+{{- range $id, $elem := .Values.prox.cnfs }}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv{{ mul $id 2 }}
+  labels:
+        type: local
+spec:
+  capacity:
+        storage: 10Gi
+  accessModes:
+        - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  local:
+        path: /var/vd/vol{{ mul $id 2 }}/
+  nodeAffinity:
+        required:
+          nodeSelectorTerms:
+          - matchExpressions:
+                - key: kubernetes.io/hostname
+                  operator: In
+                  values:
+                  - {{ $elem.nodeSelector_hostname }}
+
+---
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv{{ add (mul $id 2) 1 }}
+  labels:
+        type: local
+spec:
+  capacity:
+        storage: 10Gi
+  accessModes:
+        - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  local:
+        path: /var/vd/vol{{ add (mul $id 2) 1 }}/
+  nodeAffinity:
+        required:
+          nodeSelectorTerms:
+          - matchExpressions:
+                - key: kubernetes.io/hostname
+                  operator: In
+                  values:
+                  - {{ $elem.nodeSelector_hostname }}
+
+---
+
+{{- end }}
+{{ end }}
+{{ end }}
