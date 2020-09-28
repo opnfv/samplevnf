@@ -1,0 +1,134 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2020 Intel Corporation
+
+---
+
+apiVersion: v1
+items:
+- apiVersion: v1
+  data:
+    gen.cfg: |
+      [lua]
+      dofile("/root/parameters.lua")
+
+      [eal options]
+      -n=4 ; force number of memory channels
+      no-output=no ; disable DPDK debug output
+      {{ if eq .Values.prox.network "userspace-openness" }}
+      eal=--proc-type auto --vdev=net_virtio_user0,path=/ovs/${dev}-net1 --no-pci --single-file-segments
+      {{ end }}
+      {{ if eq .Values.prox.network "sriov-openness" }}
+      eal=--proc-type auto --vdev=net_tap,iface=tap0,remote=net1 --single-file-segments
+      {{ end }}
+      {{ if eq .Values.prox.network "sriov-openness-vm" }}
+      eal=--proc-type auto --single-file-segments
+      {{ end }}
+      {{ if eq .Values.prox.network "sriov-openness-dpdk" }}
+      eal=--proc-type auto --single-file-segments -w ${pci_address}
+      {{ end }}
+
+      [port 0]
+      name=if0
+      mac=hardware
+      vlan=yes
+
+      [defaults]
+      mempool size=8K
+
+      [variables]
+      {{- range .Values.prox.cnfs }}      
+      ${{ .name }}_ip={{ .dp_ip }}
+      ${{ .name }}_hex_ip={{ .hex_dp_ip }}
+      {{- end }}
+
+      [global]
+      name=gen-prox
+
+      [core 0]
+      mode=master
+
+      [core 1]
+      name=gen
+      task=0
+      mode=gen
+      sub mode=l3
+      tx port=if0
+      bps=1250000000
+      pkt inline=00 00 00 00 00 00 00 00 00 00 00 00 08 00 45 00 00 2e 00 01 00 00 40 11 f7 7d ${gen_hex_ip} ${swap_hex_ip} 0b b8 0b b9 00 1a 55 7b
+      pkt size=60
+      local ipv4=${gen_ip}
+      min bulk size=8
+      max bulk size=64
+      lat pos=42
+      accuracy pos=46
+      packet id pos=50
+      signature=0x98765432
+      signature pos=56
+
+      [core 2]
+      name=lat
+      task=0
+      mode=lat
+      sub mode=l3
+      rx port=if0
+      local ipv4=${gen_ip}
+      lat pos=42
+      accuracy pos=46
+      packet id pos=50
+      signature pos=56
+      signature=0x98765432
+    swap.cfg: |
+      [lua]
+      dofile("/root/parameters.lua")
+
+      [eal options]
+      -n=4 ; force number of memory channels
+      no-output=no ; disable DPDK debug output
+      {{ if eq .Values.prox.network "userspace-openness" }}
+      eal=--proc-type auto --vdev=net_virtio_user0,path=/ovs/${dev}-net1 --no-pci --single-file-segments
+      {{ end }}
+      {{ if eq .Values.prox.network "sriov-openness" }}
+      eal=--proc-type auto --vdev=net_tap,iface=tap0,remote=net1 --single-file-segments
+      {{ end }}
+      {{ if eq .Values.prox.network "sriov-openness-vm" }}
+      eal=--proc-type auto --single-file-segments
+      {{ end }}
+      {{ if eq .Values.prox.network "sriov-openness-dpdk" }}
+      eal=--proc-type auto --single-file-segments -w ${pci_address}
+      {{ end }}
+
+      [port 0]
+      name=if0
+      mac=hardware
+      vlan=yes
+
+      [defaults]
+      mempool size=8K
+
+      [variables]
+      {{- range .Values.prox.cnfs }}      
+      ${{ .name }}_ip={{ .dp_ip }}
+      ${{ .name }}_hex_ip={{ .hex_dp_ip }}
+      {{- end }}
+
+      [global]
+      name=swap-prox
+
+      [core 0]
+      mode=master
+
+      [core 1]
+      name=swap
+      task=0
+      mode=swap
+      sub mode=l3
+      rx port=if0
+      tx port=if0
+      local ipv4=${swap_ip}
+      drop=no
+  kind: ConfigMap
+  metadata:
+    name: swap-gen-config
+    namespace: default
+kind: List
+
