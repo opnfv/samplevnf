@@ -1,0 +1,84 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "603ecb90_fd42a0ad",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 2
+      },
+      "lineNbr": 14,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2020-09-29T07:45:35Z",
+      "side": 1,
+      "message": "Do you really mean \"is NOT fixed?\"",
+      "range": {
+        "startLine": 14,
+        "startChar": 24,
+        "endLine": 14,
+        "endChar": 27
+      },
+      "revId": "cda0f4b6267a2afb9ae42407a6b528814004647f",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "f88329e2_4d0384a0",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 2
+      },
+      "lineNbr": 18,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2020-09-29T07:45:35Z",
+      "side": 1,
+      "message": "I found this very unclear. What about\nSetting this option to false is not meaningful for the generator PROX instances since we would not be able to control the\nbehavior of PROX during the test.",
+      "range": {
+        "startLine": 16,
+        "startChar": 58,
+        "endLine": 18,
+        "endChar": 32
+      },
+      "revId": "cda0f4b6267a2afb9ae42407a6b528814004647f",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "dcebc088_f642e0c4",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 2
+      },
+      "lineNbr": 19,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2020-09-29T07:45:35Z",
+      "side": 1,
+      "message": "Again not very clear. Do you mean we could set this option to false   for non-PROX VNF connected to a prox generator?",
+      "revId": "cda0f4b6267a2afb9ae42407a6b528814004647f",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "488d0d1f_d1e75334",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 2
+      },
+      "lineNbr": 20,
+      "author": {
+        "id": 6899
+      },
+      "writtenOn": "2020-09-29T07:45:35Z",
+      "side": 1,
+      "message": "program",
+      "revId": "cda0f4b6267a2afb9ae42407a6b528814004647f",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    }
+  ]
+}
