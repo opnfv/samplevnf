@@ -138,7 +138,7 @@ class FlowSizeTest(RapidTest):
                     self.set_background_speed(self.background_machines, speed)
                     self.start_background_traffic(self.background_machines)
                     # Get statistics now that the generation is stable and initial ARP messages are dealt with
-                    pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat_avg,lat_perc , lat_perc_max, lat_max, abs_tx,abs_rx,abs_dropped, abs_tx_fail, drop_rate, lat_min, lat_used, r, actual_duration, avg_bg_rate = self.run_iteration(float(self.test['runtime']),flow_number,size,speed)
+                    pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat_avg,lat_perc , lat_perc_max, lat_max, abs_tx,abs_rx,abs_dropped, abs_tx_fail, drop_rate, lat_min, lat_used, r, actual_duration, avg_bg_rate, bucket_size, buckets = self.run_iteration(float(self.test['runtime']),flow_number,size,speed)
                     self.stop_background_traffic(self.background_machines)
                     if r > 1:
                         retry_warning = bcolors.WARNING + ' {:1} retries needed'.format(r) +  bcolors.ENDC
@@ -160,6 +160,7 @@ class FlowSizeTest(RapidTest):
                         endlat_perc = lat_perc
                         endlat_perc_max = lat_perc_max
                         endlat_max = lat_max
+                        endbuckets = buckets
                         endabs_dropped = abs_dropped
                         enddrop_rate = drop_rate
                         endabs_tx = abs_tx
@@ -193,6 +194,7 @@ class FlowSizeTest(RapidTest):
                         endlat_perc = lat_perc
                         endlat_perc_max = lat_perc_max
                         endlat_max = lat_max
+                        endbuckets = buckets
                         endabs_dropped = None
                         enddrop_rate = drop_rate
                         endabs_tx = abs_tx
@@ -267,7 +269,9 @@ class FlowSizeTest(RapidTest):
                                 'MaxLatency': endlat_max,
                                 'PacketsSent': endabs_tx,
                                 'PacketsReceived': endabs_rx,
-                                'PacketsLost': abs_dropped}
+                                'PacketsLost': abs_dropped,
+                                'bucket_size': bucket_size,
+                                'buckets': endbuckets}
                         self.post_data('rapid_flowsizetest', variables)
                 else:
                     RapidLog.info('|{:>7}'.format(str(flow_number))+" | Speed 0 or close to 0")

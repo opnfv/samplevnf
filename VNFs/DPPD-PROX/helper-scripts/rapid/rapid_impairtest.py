@@ -57,7 +57,7 @@ class ImpairTest(RapidTest):
             sys.stdout.flush()
             time.sleep(1)
             # Get statistics now that the generation is stable and NO ARP messages any more
-            pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat_avg, lat_perc, lat_perc_max, lat_max, abs_tx, abs_rx, abs_dropped, abs_tx_fail, drop_rate, lat_min, lat_used, r, actual_duration, _ = self.run_iteration(float(self.test['runtime']),flow_number,size,speed)
+            pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat_avg, lat_perc, lat_perc_max, lat_max, abs_tx, abs_rx, abs_dropped, abs_tx_fail, drop_rate, lat_min, lat_used, r, actual_duration, _,bucket_size, buckets = self.run_iteration(float(self.test['runtime']),flow_number,size,speed)
             # Drop rate is expressed in percentage. lat_used is a ratio (0 to 1). The sum of these 2 should be 100%.
             # If the sum is lower than 95, it means that more than 5% of the latency measurements where dropped for accuracy reasons.
             if (drop_rate + lat_used * 100) < 95:
@@ -78,7 +78,9 @@ class ImpairTest(RapidTest):
                     'PCTLatency': lat_perc,
                     'MaxLatency': lat_max,
                     'PacketsLost': abs_dropped,
-                    'DropRate': drop_rate}
+                    'DropRate': drop_rate,
+                    'bucket_size': bucket_size,
+                    'buckets': buckets}
             self.post_data('rapid_impairtest', variables)
         self.gen_machine.stop_latency_cores()
         return (True)

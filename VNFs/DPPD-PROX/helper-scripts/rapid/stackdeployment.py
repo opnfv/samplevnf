@@ -75,7 +75,7 @@ class StackDeployment(object):
                     for name in server_group_output:
                         self.names.append(name)
 
-    def print_paramDict(self, user):
+    def print_paramDict(self, user, dataplane_subnet_mask):
         if not(len(self.dp_ips) == len(self.dp_macs) == len(self.mngmt_ips)):
             sys.exit()
         _ENV_FILE_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -90,9 +90,11 @@ class StackDeployment(object):
                 env_file.write('admin_ip = {}\n'.format(str(self.mngmt_ips[count])))
                 if type(self.dp_ips[count]) == list:
                     for i, dp_ip in enumerate(self.dp_ips[count], start = 1):
-                        env_file.write('dp_ip{} = {}\n'.format(i, str(dp_ip)))
+                        env_file.write('dp_ip{} = {}/{}\n'.format(i, str(dp_ip),
+                            dataplane_subnet_mask))
                 else:
-                    env_file.write('dp_ip1 = {}\n'.format(str(self.dp_ips[count])))
+                    env_file.write('dp_ip1 = {}/{}\n'.format(str(self.dp_ips[count]),
+                        dataplane_subnet_mask))
                 if type(self.dp_macs[count]) == list:
                     for i, dp_mac in enumerate(self.dp_macs[count], start = 1):
                         env_file.write('dp_mac{} = {}\n'.format(i, str(dp_mac)))
@@ -156,6 +158,6 @@ class StackDeployment(object):
                 self.create_key()
             self.stack = self.create_stack(stack_name, heat_template, heat_param)
 
-    def generate_env_file(self, user = 'centos'):
+    def generate_env_file(self, user = 'centos', dataplane_subnet_mask = '24'):
         self.generate_paramDict()
-        self.print_paramDict(user)
+        self.print_paramDict(user, dataplane_subnet_mask)

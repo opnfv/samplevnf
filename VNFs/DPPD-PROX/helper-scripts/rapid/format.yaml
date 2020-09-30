@@ -45,6 +45,9 @@ rapid_flowsizetest:
       AvgLatency: AvgLatency
       PCTLatency: PCTLatency
       MaxLatency: MaxLatency
+      Distribution:
+        bucket_size: bucket_size
+        buckets: buckets
     Absolute Packet Count:
       PacketsSent: PacketsSent
       PacketsReceived: PacketsReceived

@@ -32,6 +32,8 @@ class RapidStackManager(object):
         options = config.options(section)
         for option in options:
             rapid_stack_params[option] = config.get(section, option)
+        if 'dataplane_subnet_mask' not in rapid_stack_params.keys():
+            rapid_stack_params['dataplane_subnet_mask'] = 24
         return (rapid_stack_params)
 
     @staticmethod
@@ -42,9 +44,10 @@ class RapidStackManager(object):
         heat_param = rapid_stack_params['heat_param']
         keypair_name = rapid_stack_params['keypair_name']
         user = rapid_stack_params['user']
+        dataplane_subnet_mask = rapid_stack_params['dataplane_subnet_mask']
         deployment = StackDeployment(cloud_name)
         deployment.deploy(stack_name, keypair_name, heat_template, heat_param)
-        deployment.generate_env_file(user)
+        deployment.generate_env_file(user, dataplane_subnet_mask)
 
 def main():
     rapid_stack_params = {}

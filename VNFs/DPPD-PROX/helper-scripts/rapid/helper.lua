@@ -21,6 +21,22 @@ function convertIPToHex(ip)
     return "IP ADDRESS ERROR"
   end
 
+  local chunks = {ip:match("^(%d+)%.(%d+)%.(%d+)%.(%d+)(\/%d+)$")}
+  if #chunks == 5 then
+    for i,v in ipairs(chunks) do
+      if i < 5 then
+        if tonumber(v) > 255 then
+          print ("IPV4 ADDRESS ERROR: ", ip)
+          return "IPV4 ADDRESS ERROR"
+        end
+        address_chunks[#address_chunks + 1] = string.format ("%02x", v)
+      end
+    end
+    result = table.concat(address_chunks, " ")
+    print ("Hex IPV4: ", result)
+    return result
+  end
+
   local chunks = {ip:match("^(%d+)%.(%d+)%.(%d+)%.(%d+)$")}
   if #chunks == 4 then
     for i,v in ipairs(chunks) do
