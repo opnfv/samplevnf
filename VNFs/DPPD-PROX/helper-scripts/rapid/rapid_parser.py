@@ -106,6 +106,8 @@ class RapidConfigParser(object):
                         section, option))
                 elif option in ['bucket_size_exp']:
                     machine[option] = int(testconfig.get(section, option))
+                    if machine[option] < 11:
+                        RapidLog.exception("Minimum Value for bucket_size_exp is 11")
                 else:
                     machine[option] = testconfig.get(section, option)
                 for key in ['prox_socket','prox_launch_exit']:

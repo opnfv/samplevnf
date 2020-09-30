@@ -57,12 +57,13 @@ class RapidTestManager(object):
         background_machines = []
         sut_machine = gen_machine = None
         self.machines = []
+        configonly = test_params['configonly']
         for machine_params in test_params['machines']:
             if 'gencores' in machine_params.keys():
                 machine = RapidGeneratorMachine(test_params['key'],
                         test_params['user'], test_params['vim_type'],
                         test_params['rundir'], machine_params,
-                        test_params['ipv6'])
+                        configonly, test_params['ipv6'])
                 if machine_params['monitor']:
                     if monitor_gen:
                         RapidLog.exception("Can only monitor 1 generator")
@@ -75,7 +76,7 @@ class RapidTestManager(object):
             else:
                 machine = RapidMachine(test_params['key'], test_params['user'],
                         test_params['vim_type'], test_params['rundir'],
-                        machine_params)
+                        machine_params, configonly)
                 if machine_params['monitor']:
                     if monitor_sut:
                         RapidLog.exception("Can only monitor 1 sut")
@@ -86,8 +87,8 @@ class RapidTestManager(object):
                             sut_machine = machine
             self.machines.append(machine)
         prox_executor = concurrent.futures.ThreadPoolExecutor(max_workers=len(self.machines))
-        self.future_to_prox = {prox_executor.submit(machine.start_prox,test_params['configonly']): machine for machine in self.machines}
-        if test_params['configonly']:
+        self.future_to_prox = {prox_executor.submit(machine.start_prox): machine for machine in self.machines}
+        if configonly:
             concurrent.futures.wait(self.future_to_prox,return_when=ALL_COMPLETED)
             sys.exit()
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(self.machines)) as executor:

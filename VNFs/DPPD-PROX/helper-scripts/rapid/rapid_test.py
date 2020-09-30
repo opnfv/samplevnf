@@ -285,8 +285,9 @@ class RapidTest(object):
                         if sample_count > lat_samples * LAT_PERCENTILE:
                             break
                     percentile_max = (sample_percentile == len(buckets))
-                    sample_percentile = sample_percentile *  float(2 ** BUCKET_SIZE_EXP) / (old_div(float(lat_hz),float(10**6)))
-                    buckets_total = [buckets_total[i] + buckets[i] for i in range(len(buckets_total))] 
+                    bucket_size = float(2 ** BUCKET_SIZE_EXP) / (old_div(float(lat_hz),float(10**6)))
+                    sample_percentile = sample_percentile *  bucket_size
+                    buckets_total = [buckets_total[i] + buckets[i] for i in range(len(buckets_total))]
                     t2_lat_tsc = t3_lat_tsc
                     lat_avail = True
                 t3_rx, t3_non_dp_rx, t3_tx, t3_non_dp_tx, t3_drop, t3_tx_fail, t3_tsc, tsc_hz = self.gen_machine.core_stats()
@@ -351,7 +352,10 @@ class RapidTest(object):
                                 'MaxLatency': lat_max_sample,
                                 'PacketsSent': delta_dp_tx,
                                 'PacketsReceived': delta_dp_rx,
-                                'PacketsLost': tot_dp_drop}
+                                'PacketsLost': tot_dp_drop,
+                                'bucket_size': bucket_size,
+                                'buckets': buckets}
+
                         self.post_data('rapid_flowsizetest', variables)
             end_bg_gen_stats = []
             for bg_gen_machine in self.background_machines:
@@ -393,7 +397,7 @@ class RapidTest(object):
                     if sample_count > lat_samples * LAT_PERCENTILE:
                         break
                 percentile_max = (percentile == len(buckets))
-                percentile = percentile *  float(2 ** BUCKET_SIZE_EXP) / (old_div(float(lat_hz),float(10**6)))
+                percentile = percentile *  bucket_size
                 lat_max = lat_max_sample
                 lat_avg = lat_avg_sample
                 delta_rx = t4_rx - t2_rx
@@ -414,12 +418,13 @@ class RapidTest(object):
                 break ## Not really needed since the while loop will stop when evaluating the value of r
             else:
                 sample_count = 0
+                buckets = buckets_total
                 for percentile, bucket in enumerate(buckets_total,start=1):
                     sample_count += bucket
                     if sample_count > tot_lat_samples * LAT_PERCENTILE:
                         break
                 percentile_max = (percentile == len(buckets_total))
-                percentile = percentile *  float(2 ** BUCKET_SIZE_EXP) / (old_div(float(lat_hz),float(10**6)))
+                percentile = percentile *  bucket_size
                 pps_req_tx = (tot_tx + tot_drop - tot_rx)/tot_core_measurement_duration/1000000.0 # tot_drop is all packets dropped by all tasks. This includes packets dropped at the generator task + packets dropped by the nop task. In steady state, this equals to the number of packets received by this VM
                 pps_tx = tot_tx/tot_core_measurement_duration/1000000.0 # tot_tx is all generated packets actually accepted by the interface
                 pps_rx = tot_rx/tot_core_measurement_duration/1000000.0 # tot_rx is all packets received by the nop task = all packets received in the gen VM
@@ -433,4 +438,4 @@ class RapidTest(object):
                 drop_rate = 100.0*tot_dp_drop/dp_tx
                 if ((drop_rate < self.test['drop_rate_threshold']) or (tot_dp_drop == self.test['drop_rate_threshold'] ==0) or (tot_dp_drop > self.test['maxz'])):
                     break
-        return(pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat_avg,percentile,percentile_max,lat_max,dp_tx,dp_rx,tot_dp_drop,(t4_tx_fail - t1_tx_fail),drop_rate,lat_min,used_avg,r,tot_core_measurement_duration,avg_bg_rate)
+        return(pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat_avg,percentile,percentile_max,lat_max,dp_tx,dp_rx,tot_dp_drop,(t4_tx_fail - t1_tx_fail),drop_rate,lat_min,used_avg,r,tot_core_measurement_duration,avg_bg_rate,bucket_size,buckets)

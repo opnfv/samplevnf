@@ -49,7 +49,7 @@ class RapidGeneratorMachine(RapidMachine):
     """
     Class to deal with a generator PROX instance (VM, bare metal, container)
     """
-    def __init__(self, key, user, vim, rundir, machine_params, ipv6):
+    def __init__(self, key, user, vim, rundir, machine_params, configonly, ipv6):
         mac_address_size = 6
         ethertype_size = 2
         FCS_size = 4
@@ -73,7 +73,7 @@ class RapidGeneratorMachine(RapidMachine):
         self.udp_dest_port_offset = udp_header_start_offset + 2
         self.udp_length_offset = udp_header_start_offset + 4
         self.ipv6 = ipv6
-        super().__init__(key, user, vim, rundir, machine_params)
+        super().__init__(key, user, vim, rundir, machine_params, configonly)
 
     def get_cores(self):
         return (self.machine_params['gencores'] +
@@ -103,10 +103,10 @@ class RapidGeneratorMachine(RapidMachine):
             appendix = appendix + 'heartbeat="60"\n'
         super().generate_lua(vim, appendix)
 
-    def start_prox(self, configonly=False):
+    def start_prox(self):
         # Start the generator with the -e option so that the cores don't
         # start automatically
-        super().start_prox(configonly, '-e')
+        super().start_prox('-e')
 
     def set_generator_speed(self, speed):
         # The assumption is that we only use task 0 for generating
