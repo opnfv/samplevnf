@@ -42,9 +42,10 @@ class RapidStackManager(object):
         heat_param = rapid_stack_params['heat_param']
         keypair_name = rapid_stack_params['keypair_name']
         user = rapid_stack_params['user']
+        dataplane_subnet_mask = rapid_stack_params['dataplane_subnet_mask']
         deployment = StackDeployment(cloud_name)
         deployment.deploy(stack_name, keypair_name, heat_template, heat_param)
-        deployment.generate_env_file(user)
+        deployment.generate_env_file(user, dataplane_subnet_mask)
 
 def main():
     rapid_stack_params = {}
