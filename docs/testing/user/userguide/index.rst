@@ -12,13 +12,4 @@ SampleVNF User Guide
    :maxdepth: 4
    :numbered:
 
-   01-introduction
-   02-methodology
-   03-architecture
-   04-installation
-   05-How_to_run_SampleVNFs
-   06-How_to_use_REST_api
-   07-Config_files
-   08-CLI_Commands_Reference
-   glossary
-   references
+   01-prox_documentation

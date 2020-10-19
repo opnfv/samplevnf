@@ -3,57 +3,14 @@
 .. http://creativecommons.org/licenses/by/4.0
 .. (c) OPNFV, Intel Corporation and others.
 
-=======
-License
-=======
 
-OPNFV release note for SampleVNF Docs
-are licensed under a Creative Commons Attribution 4.0 International License.
-You should have received a copy of the license along with this.
-If not, see <http://creativecommons.org/licenses/by/4.0/>.
-:
-
-The *SampleVNFs*, the *SampleVNF test cases* are opensource software,
-licensed under the terms of the Apache License, Version 2.0.
-
-==========================================
-OPNFV Hunter Release Note for SampleVNF
-==========================================
-
-.. toctree::
-   :maxdepth: 2
-
-.. _SampleVNF: https://wiki.opnfv.org/SAM
-
-.. _Yardstick: https://wiki.opnfv.org/yardstick
-
-.. _NFV-TST001: http://www.etsi.org/deliver/etsi_gs/NFV-TST/001_099/001/01.01.01_60/gs_NFV-TST001v010101p.pdf
-
-
-Abstract
-========
-
-This document describes the release note of SampleVNF project.
-
-
-Version History
-===============
-
-+----------------+--------------------+---------------------------------+
-| *Date*         | *Version*          | *Comment*                       |
-|                |                    |                                 |
-+----------------+--------------------+---------------------------------+
-| "May 10 2019"  |  8.0             | SampleVNF for Hunter release    |
-|                |                    |                                 |
-+----------------+--------------------+---------------------------------+
-
-
-Important Notes
-===============
-
-The software delivered in the OPNFV SampleVNF_ Project, comprising the
-*SampleVNF VNFs* and performance test case are part of  OPNFV Yardstick_
-Project is a realization of the methodology in ETSI-ISG NFV-TST001_.
+OPNFV Jerma Release
+===================
+* Supported SampleVNF in this release is PROX for dataplane benchmarking purposes.
+* PROX supporting up to DPDK:20.05
+* Introducing ability to make test cloud-configured dataplane networking benchmarks using
+  ETSI NFV TST009 standard methods
+* Test automation using X-testing
 
 
 OPNFV Hunter Release
@@ -121,7 +78,7 @@ Yardstick Project.
 
 
 Release Data
-============
+------------
 
 +--------------------------------------+--------------------------------------+
 | **Project**                          | SampleVNF                            |
@@ -151,10 +108,10 @@ Release Data
 
 
 Deliverables
-============
+------------
 
 Documents
----------
+^^^^^^^^^
 
  - User Guide: http://artifacts.opnfv.org/samplevnf/docs/testing_user_userguide/index.html
 
@@ -162,7 +119,7 @@ Documents
 
 
 Software Deliverables
----------------------
+^^^^^^^^^^^^^^^^^^^^^
 
  - The SampleVNF Docker image: To be added
 
@@ -184,7 +141,7 @@ Software Deliverables
 +---------------------+-------------------------------------------------------+
 
 Document Version Changes
-------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 This is the first version of the SampleVNF  in OPNFV.
 It includes the following documentation updates:
@@ -197,7 +154,7 @@ It includes the following documentation updates:
 
 
 Feature additions
------------------
+^^^^^^^^^^^^^^^^^
 
 - Support for DPDK 18.05 and DPDK 18.08
 - Add support for counting non dataplane related packets
@@ -222,7 +179,7 @@ Bug fixes:
 
 
 Known Issues/Faults
--------------------
+^^^^^^^^^^^^^^^^^^^
 - Huge page freeing needs to be handled properly while running the application else it might
   cause system crash. Known issue from DPDK.
 - UDP Replay is used to capture throughput for dynamic cgnapt
@@ -232,37 +189,37 @@ Known Issues/Faults
 - Rest API uses port 80, make sure other webservices are stopped before using SampleVNF RestAPI.
 
 Corrected Faults
-----------------
+^^^^^^^^^^^^^^^^
 
 Hunter 8.2:
 
-+----------------------------+-------------------------------------------------------------------+
-| **JIRA REFERENCE**         | **DESCRIPTION**                                                   |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-129              |  Support for DPDK 18.05 and DPDK 18.08                            |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-130              |  Add support for counting non dataplane related packets           |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-131              |  test improvements and fixes for image creation                   |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-132              |  Local Documentation Builds                                       |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-133              |  Improve l3fwd performance                                        |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-134              |  Enable the local cache mac address                               |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-135              |  Initial support for DPDK 18.05                                   |
-+----------------------------+-------------------------------------------------------------------+
++----------------------------+----------------------------------------------------------------------+
+| **JIRA REFERENCE**         | **DESCRIPTION**                                                      |
++----------------------------+----------------------------------------------------------------------+
+| SAMPLEVNF-129              |  Support for DPDK 18.05 and DPDK 18.08                               |
++----------------------------+----------------------------------------------------------------------+
+| SAMPLEVNF-130              |  Add support for counting non dataplane related packets              |
++----------------------------+----------------------------------------------------------------------+
+| SAMPLEVNF-131              |  test improvements and fixes for image creation                      |
++----------------------------+----------------------------------------------------------------------+
+| SAMPLEVNF-132              |  Local Documentation Builds                                          |
++----------------------------+----------------------------------------------------------------------+
+| SAMPLEVNF-133              |  Improve l3fwd performance                                           |
++----------------------------+----------------------------------------------------------------------+
+| SAMPLEVNF-134              |  Enable the local cache mac address                                  |
++----------------------------+----------------------------------------------------------------------+
+| SAMPLEVNF-135              |  Initial support for DPDK 18.05                                      |
++----------------------------+----------------------------------------------------------------------+
 | SAMPLEVNF-136              |  Adding centos.json to be used with packer to generate a VM with PROX|
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-137              |  Adding support for Ubuntu 17.20...                               |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-138              |  Get multiple port stats simultaneously                           |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-139              |  Increase default mbuf size and code simplification/cleanup       |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-140              |  update from src port in the pvt/pub handler                      |
-+----------------------------+-------------------------------------------------------------------+
++----------------------------+----------------------------------------------------------------------+
+| SAMPLEVNF-137              |  Adding support for Ubuntu 17.20...                                  |
++----------------------------+----------------------------------------------------------------------+
+| SAMPLEVNF-138              |  Get multiple port stats simultaneously                              |
++----------------------------+----------------------------------------------------------------------+
+| SAMPLEVNF-139              |  Increase default mbuf size and code simplification/cleanup          |
++----------------------------+----------------------------------------------------------------------+
+| SAMPLEVNF-140              |  update from src port in the pvt/pub handler                         |
++----------------------------+----------------------------------------------------------------------+
 
 
 
@@ -286,7 +243,7 @@ Bug Fix Jira:
 +----------------------------+-------------------------------------------------------------------+
 
 Hunter known restrictions/issues
-====================================
+--------------------------------
 +-----------+-----------+----------------------------------------------+
 | Installer | Scenario  |  Issue                                       |
 +===========+===========+==============================================+
@@ -295,7 +252,7 @@ Hunter known restrictions/issues
 
 
 Open JIRA tickets
-=================
+-----------------
 
 +----------------------------+------------------------------------------------+
 | **JIRA REFERENCE**         | **DESCRIPTION**                                |
@@ -307,273 +264,11 @@ Open JIRA tickets
 
 
 Useful links
-============
+------------
 
  - wiki project page: https://wiki.opnfv.org/display/SAM
 
  - wiki SampleVNF Hunter release planing page: https://wiki.opnfv.org/display/SAM/G+-+Release+SampleVNF+planning
-
- - SampleVNF repo: https://git.opnfv.org/cgit/samplevnf
-
- - SampleVNF IRC chanel: #opnfv-samplevnf
-| SAMPLEVNF-                 |  PROX support for dpdk 18,05                                    |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-                 |  PROX support for dpdk 18,05                                    |
-+----------------------------+-------------------------------------------------------------------+
-
-
-
-
-Bug Fix Jira:
-
-+----------------------------+-------------------------------------------------------------------+
-| **JIRA REFERENCE**         | **DESCRIPTION**                                                   |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-                 |  Fix samplevnf perf issues          |
-+----------------------------+-------------------------------------------------------------------+
-
-Hunter known restrictions/issues
-====================================
-+-----------+-----------+----------------------------------------------+
-| Installer | Scenario  |  Issue                                       |
-+===========+===========+==============================================+
-|           |           |                                              |
-+-----------+-----------+----------------------------------------------+
-
-
-Open JIRA tickets
-=================
-
-+----------------------------+------------------------------------------------+
-| **JIRA REFERENCE**         | **DESCRIPTION**                                |
-|                            |                                                |
-+----------------------------+------------------------------------------------+
-|                            |                                                |
-|                            |                                                |
-+----------------------------+------------------------------------------------+
-
-
-Useful links
-============
-
- - wiki project page: https://wiki.opnfv.org/display/SAM
-
- - wiki SampleVNF Hunter release planing page: https://wiki.opnfv.org/display/SAM/G+-+Release+SampleVNF+planning
-
- - SampleVNF repo: https://git.opnfv.org/cgit/samplevnf
-
- - SampleVNF IRC chanel: #opnfv-samplevnf
-
-
-
-
-Bug Fix Jira:
-
-+----------------------------+-------------------------------------------------------------------+
-| **JIRA REFERENCE**         | **DESCRIPTION**                                                   |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-                 |  Fix samplevnf perf issues          |
-+----------------------------+-------------------------------------------------------------------+
-
-Hunter known restrictions/issues
-====================================
-+-----------+-----------+----------------------------------------------+
-| Installer | Scenario  |  Issue                                       |
-+===========+===========+==============================================+
-|           |           |                                              |
-+-----------+-----------+----------------------------------------------+
-
-
-Open JIRA tickets
-=================
-
-+----------------------------+------------------------------------------------+
-| **JIRA REFERENCE**         | **DESCRIPTION**                                |
-|                            |                                                |
-+----------------------------+------------------------------------------------+
-|                            |                                                |
-|                            |                                                |
-+----------------------------+------------------------------------------------+
-
-
-Useful links
-============
-
- - wiki project page: https://wiki.opnfv.org/display/SAM
-
- - wiki SampleVNF Hunter release planing page: https://wiki.opnfv.org/display/SAM/G+-+Release+SampleVNF+planning
-
- - SampleVNF repo: https://git.opnfv.org/cgit/samplevnf
-
- - SampleVNF IRC chanel: #opnfv-samplevnf
-
-
-
-
-Bug Fix Jira:
-
-+----------------------------+-------------------------------------------------------------------+
-| **JIRA REFERENCE**         | **DESCRIPTION**                                                   |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-                 |  Fix samplevnf perf issues          |
-+----------------------------+-------------------------------------------------------------------+
-
-Hunter known restrictions/issues
-====================================
-+-----------+-----------+----------------------------------------------+
-| Installer | Scenario  |  Issue                                       |
-+===========+===========+==============================================+
-|           |           |                                              |
-+-----------+-----------+----------------------------------------------+
-
-
-Open JIRA tickets
-=================
-
-+----------------------------+------------------------------------------------+
-| **JIRA REFERENCE**         | **DESCRIPTION**                                |
-|                            |                                                |
-+----------------------------+------------------------------------------------+
-|                            |                                                |
-|                            |                                                |
-+----------------------------+------------------------------------------------+
-
-
-Useful links
-============
-
- - wiki project page: https://wiki.opnfv.org/display/SAM
-
- - wiki SampleVNF Hunter release planing page: https://wiki.opnfv.org/display/SAM/G+-+Release+SampleVNF+planning
-
- - SampleVNF repo: https://git.opnfv.org/cgit/samplevnf
-
- - SampleVNF IRC chanel: #opnfv-samplevnf
-
-
-
-
-Bug Fix Jira:
-
-+----------------------------+-------------------------------------------------------------------+
-| **JIRA REFERENCE**         | **DESCRIPTION**                                                   |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-                 |  Fix samplevnf perf issues          |
-+----------------------------+-------------------------------------------------------------------+
-
-Hunter known restrictions/issues
-====================================
-+-----------+-----------+----------------------------------------------+
-| Installer | Scenario  |  Issue                                       |
-+===========+===========+==============================================+
-|           |           |                                              |
-+-----------+-----------+----------------------------------------------+
-
-
-Open JIRA tickets
-=================
-
-+----------------------------+------------------------------------------------+
-| **JIRA REFERENCE**         | **DESCRIPTION**                                |
-|                            |                                                |
-+----------------------------+------------------------------------------------+
-|                            |                                                |
-|                            |                                                |
-+----------------------------+------------------------------------------------+
-
-
-Useful links
-============
-
- - wiki project page: https://wiki.opnfv.org/display/SAM
-
- - wiki SampleVNF Hunter release planing page: https://wiki.opnfv.org/display/SAM/G+-+Release+SampleVNF+planning
-
- - SampleVNF repo: https://git.opnfv.org/cgit/samplevnf
-
- - SampleVNF IRC chanel: #opnfv-samplevnf
-
-
-
-
-Bug Fix Jira:
-
-+----------------------------+-------------------------------------------------------------------+
-| **JIRA REFERENCE**         | **DESCRIPTION**                                                   |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-                 |  Fix samplevnf perf issues          |
-+----------------------------+-------------------------------------------------------------------+
-
-Hunter known restrictions/issues
-====================================
-+-----------+-----------+----------------------------------------------+
-| Installer | Scenario  |  Issue                                       |
-+===========+===========+==============================================+
-|           |           |                                              |
-+-----------+-----------+----------------------------------------------+
-
-
-Open JIRA tickets
-=================
-
-+----------------------------+------------------------------------------------+
-| **JIRA REFERENCE**         | **DESCRIPTION**                                |
-|                            |                                                |
-+----------------------------+------------------------------------------------+
-|                            |                                                |
-|                            |                                                |
-+----------------------------+------------------------------------------------+
-
-
-Useful links
-============
-
- - wiki project page: https://wiki.opnfv.org/display/SAM
-
- - wiki SampleVNF Hunter release planing page: https://wiki.opnfv.org/display/SAM/G+-+Release+SampleVNF+planning
-
- - SampleVNF repo: https://git.opnfv.org/cgit/samplevnf
-
- - SampleVNF IRC chanel: #opnfv-samplevnf
-
-
-
-
-Bug Fix Jira:
-
-+----------------------------+-------------------------------------------------------------------+
-| **JIRA REFERENCE**         | **DESCRIPTION**                                                   |
-+----------------------------+-------------------------------------------------------------------+
-| SAMPLEVNF-                 |  Fix samplevnf perf issues          |
-+----------------------------+-------------------------------------------------------------------+
-
-Hunter known restrictions/issues
-====================================
-+-----------+-----------+----------------------------------------------+
-| Installer | Scenario  |  Issue                                       |
-+===========+===========+==============================================+
-|           |           |                                              |
-+-----------+-----------+----------------------------------------------+
-
-
-Open JIRA tickets
-=================
-
-+----------------------------+------------------------------------------------+
-| **JIRA REFERENCE**         | **DESCRIPTION**                                |
-|                            |                                                |
-+----------------------------+------------------------------------------------+
-|                            |                                                |
-|                            |                                                |
-+----------------------------+------------------------------------------------+
-
-
-Useful links
-============
-
- - wiki project page: https://wiki.opnfv.org/display/SAM
-
- - wiki SampleVNF Hunter release planing page: https://wiki.opnfv.org/display/SAM/H+-++Release+SampleVNF+planning
 
  - SampleVNF repo: https://git.opnfv.org/cgit/samplevnf
 

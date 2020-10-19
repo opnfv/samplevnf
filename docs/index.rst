@@ -14,6 +14,4 @@ OPNFV Samplevnf
    :maxdepth: 1
 
    release/release-notes/index
-   release/results/index
-   testing/developer/index
    testing/user/userguide/index
