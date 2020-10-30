@@ -709,7 +709,7 @@ static int parse_cmd_reset_randoms_all(const char *str, struct input *input)
 	unsigned task_id, lcore_id = -1;
 	while (prox_core_next(&lcore_id, 0) == 0) {
 		for (task_id = 0; task_id < lcore_cfg[lcore_id].n_tasks_all; task_id++) {
-			if (!task_is_mode(lcore_id, task_id, "gen")) {
+			if (task_is_mode(lcore_id, task_id, "gen")) {
 				struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
 				uint32_t n_rands = task_gen_get_n_randoms(tbase);
 
@@ -730,7 +730,7 @@ static int parse_cmd_reset_values_all(const char *str, struct input *input)
 	unsigned task_id, lcore_id = -1;
 	while (prox_core_next(&lcore_id, 0) == 0) {
 		for (task_id = 0; task_id < lcore_cfg[lcore_id].n_tasks_all; task_id++) {
-			if (!task_is_mode(lcore_id, task_id, "gen")) {
+			if (task_is_mode(lcore_id, task_id, "gen")) {
 				struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
 
 				plog_info("Resetting values on core %d task %d\n", lcore_id, task_id);
