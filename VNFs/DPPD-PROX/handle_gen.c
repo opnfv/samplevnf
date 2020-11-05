@@ -1184,7 +1184,10 @@ static void task_gen_reset_pkt_templates_content(struct task_gen *task)
 
 static void task_gen_reset_pkt_templates(struct task_gen *task)
 {
-	task_gen_reset_pkt_templates_len(task);
+	if (task->imix_nb_pkts)
+		task_gen_set_pkt_templates_len(task, task->imix_pkt_sizes);
+	else
+		task_gen_reset_pkt_templates_len(task);
 	task_gen_reset_pkt_templates_content(task);
 	task_gen_pkt_template_recalc_all(task);
 }
@@ -1351,6 +1354,11 @@ void task_gen_reset_values(struct task_base *tbase)
 	struct task_gen *task = (struct task_gen *)tbase;
 
 	task_gen_reset_pkt_templates_content(task);
+	task_gen_pkt_template_recalc_metadata(task);
+	check_all_pkt_size(task, DO_NOT_PANIC);
+	check_all_fields_in_bounds(task, DO_NOT_PANIC);
+	task_gen_set_eth_ip_udp_sizes(task, task->orig_n_pkts, task->imix_nb_pkts, task->imix_pkt_sizes);
+
 	if (task->flags & TASK_OVERWRITE_SRC_MAC_WITH_PORT_MAC) {
 		for (uint32_t i = 0; i < task->n_pkts; ++i) {
 			rte_memcpy(&task->pkt_template[i].buf[sizeof(prox_rte_ether_addr)], &task->src_mac, sizeof(prox_rte_ether_addr));
