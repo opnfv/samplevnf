@@ -259,7 +259,7 @@ class FlowSizeTest(RapidTest):
                                 'stop_date': self.stop,
                                 'Flows': flow_number,
                                 'Size': size,
-                                'RequestedSpeed': RapidTest.get_pps(speed,size),
+                                'RequestedSpeed': RapidTest.get_pps(endspeed,size),
                                 'CoreGenerated': endpps_req_tx,
                                 'SentByNIC': endpps_tx,
                                 'FwdBySUT': endpps_sut_tx,
@@ -269,7 +269,7 @@ class FlowSizeTest(RapidTest):
                                 'MaxLatency': endlat_max,
                                 'PacketsSent': endabs_tx,
                                 'PacketsReceived': endabs_rx,
-                                'PacketsLost': abs_dropped,
+                                'PacketsLost': endabs_dropped,
                                 'bucket_size': bucket_size,
                                 'buckets': endbuckets}
                         self.post_data('rapid_flowsizetest', variables)

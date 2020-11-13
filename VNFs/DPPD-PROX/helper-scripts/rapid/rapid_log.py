@@ -91,7 +91,7 @@ class RapidLog(object):
             log.debug('\n---------\nLog closed on %s.\n---------\n' % time.asctime())
 
             # Roll over on application start
-            log.handlers[0].doRollover()
+            file_handler.doRollover()
 
         # Add timestamp
         log.debug('\n---------\nLog started on %s.\n---------\n' % time.asctime())
