@@ -1,0 +1,18 @@
+---
+tiers:
+    -
+        name: rapid
+        order: 1
+        description: 'Rapid Testing'
+        testcases:
+            -
+                case_name: rapid_tst009
+                project_name: rapidxt
+                criteria: 100
+                blocking: true
+                clean_flag: false
+                description: 'TST009 test, 64 byte packets, 64 flows'
+                run:
+                    name: rapidxt
+                    args:
+                        test_file: TST009_Throughput_64B_64F.test 

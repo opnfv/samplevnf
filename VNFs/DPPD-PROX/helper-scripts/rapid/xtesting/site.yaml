@@ -1,0 +1,13 @@
+---
+- hosts:
+    - 127.0.0.1
+  roles:
+      - role: collivier.xtesting
+        project: rapidxt
+        repo: 127.0.0.1
+        dport: 5000
+        gerrit:
+        suites:
+            - container: rapidxt
+              tests:
+                  - rapid_tst009

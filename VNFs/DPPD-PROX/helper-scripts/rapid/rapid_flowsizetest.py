@@ -97,12 +97,7 @@ class FlowSizeTest(RapidTest):
             return ((self.test['maxspeed'] - self.test['minspeed']) <= self.test['accuracy'])
 
     def run(self):
-    #    global fieldnames
-    #    global writer
-    #    #fieldnames = ['Flows','PacketSize','Gbps','Mpps','AvgLatency','MaxLatency','PacketsDropped','PacketDropRate']
-    #    fieldnames = ['Flows','PacketSize','RequestedPPS','GeneratedPPS','SentPPS','ForwardedPPS','ReceivedPPS','AvgLatencyUSEC','MaxLatencyUSEC','Sent','Received','Lost','LostTotal']
-    #    writer = csv.DictWriter(data_csv_file, fieldnames=fieldnames)
-    #    writer.writeheader()
+        result_details = {'Details': 'Nothing'}
         self.gen_machine.start_latency_cores()
         TestPassed = True
         for imix in self.test['imixs']:
@@ -253,7 +248,7 @@ class FlowSizeTest(RapidTest):
                         RapidLog.info (endwarning)
                     RapidLog.info("+--------+------------------+-------------+-------------+-------------+------------------------+----------+----------+----------+-----------+-----------+-----------+-----------+-------+----+")
                     if self.test['test'] != 'fixed_rate':
-                        variables = {'test': self.test['testname'],
+                        result_details = {'test': self.test['testname'],
                                 'environment_file': self.test['environment_file'],
                                 'start_date': self.start,
                                 'stop_date': self.stop,
@@ -272,9 +267,8 @@ class FlowSizeTest(RapidTest):
                                 'PacketsLost': endabs_dropped,
                                 'bucket_size': bucket_size,
                                 'buckets': endbuckets}
-                        self.post_data('rapid_flowsizetest', variables)
+                        self.post_data('rapid_flowsizetest', result_details)
                 else:
                     RapidLog.info('|{:>7}'.format(str(flow_number))+" | Speed 0 or close to 0")
         self.gen_machine.stop_latency_cores()
-        return (TestPassed)
-
+        return (TestPassed,result_details)
