@@ -256,7 +256,7 @@ class RapidTest(object):
                 RapidLog.info(self.report_result(flow_number,size,speed,None,None,None,None,lat_avg,sample_percentile,percentile_max,lat_max, dp_tx, dp_rx , None, None))
             tot_rx = tot_non_dp_rx = tot_tx = tot_non_dp_tx = tot_drop = 0
             lat_avg = used_avg = 0
-            buckets_total = [buckets[i] for i in range(len(buckets))]
+            buckets_total = buckets
             tot_lat_samples = sum(buckets)
             tot_lat_measurement_duration = float(0)
             tot_core_measurement_duration = float(0)
