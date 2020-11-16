@@ -127,10 +127,10 @@ class RapidTestManager(object):
             else:
                 RapidLog.debug('Test name ({}) is not valid:'.format(
                     test_param['test']))
-            single_test_result = test.run()
+            single_test_result, result_details = test.run()
             if not single_test_result:
                 result = False
-        return (result)
+        return (result, result_details)
 
 def main():
     """Main function.
@@ -144,7 +144,7 @@ def main():
     RapidLog.log_init(log_file, test_params['loglevel'],
             test_params['screenloglevel'] , test_params['version']  )
     test_manager = RapidTestManager()
-    test_result = test_manager.run_tests(test_params)
+    test_result, _ = test_manager.run_tests(test_params)
     RapidLog.info('Test result is : {}'.format(test_result))
 
 if __name__ == "__main__":
