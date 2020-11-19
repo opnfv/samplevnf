@@ -1,21 +1,19 @@
 Project: Sample Virtual Network Function (SAMPLEVNF)
 Project Creation Date:27/03/2017
 Lifecycle State: Incubation
-Primary Contact: kannan.babu.ramia@intel.com
-Project Lead: deepak.s@intel.com
+Primary Contact: luc.provoost@intel.com
+Project Lead: luc.provoost@intel.com
 Jira Name: Sample Virtual Network Function
 Jira Prefix: [SAMPLEVNF]
 mailing list tag:[samplevnf]
 Repo: samplevnf
 
 Committers:
-deepak.s@intel.com
-sonika.jindal@intel.com
-anand.b.jyoti@intel.com
-fbrockne@cisco.com
-shang.xiaodong@zte.com.cn
+luc.provoost@intel.com
+acm@research.att.com
+trevor.cooper@intel.com
 xavier.simonart@intel.com
 patrice.buriez@intel.com
 
-Link to TSC approval: http://meetbot.opnfv.org/meetings/opnfv-meeting/2017/opnfv-meeting.2017-02-07-15.00.html 
+Link to TSC approval: https://wiki.opnfv.org/display/meetings/OPNFV+TSC+Meeting+2020-09-29
 Link to approval of additional submitters:
