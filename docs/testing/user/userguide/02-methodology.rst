@@ -6,81 +6,69 @@
 ===========
 Methodology
 ===========
+.. _NFV-TST009: https://docbox.etsi.org/ISG/NFV/open/Publications_pdf/Specs-Reports/NFV-TST%20009v3.2.1%20-%20GS%20-%20NFVI_Benchmarks.pdf
 
 Abstract
 ========
 
 This chapter describes the methodology/overview of SampleVNF project from
-the perspective of a :term:`VNF` and :term:`NFVI` Characterization
+the perspective of :term:`NFVI` Characterization
 
 Overview
 ========
-This project provides a placeholder for various sample VNF (Virtual Network Function (:term:`VNF`))
-development which includes example reference architecture and optimization methods
-related to VNF/Network service for high performance VNFs.
+This project covers the dataplane benchmarking for Network Function Virtualization
+Infrastructure (:term:`NFVI`)) using the PROX tool, according to ETSI GS NFV-TST009_.
 
-The sample VNFs are Open Source approximations* of Telco grade :term:`VNF`
-using optimized VNF + NFVi Infrastructure libraries, with Performance Characterization of Sample† Traffic Flows.
-• * Not a commercial product. Encourage the community to contribute and close the feature gaps.
-• † No Vendor/Proprietary Workloads
+The test execution and reporting is driven by the Xtesting framework and is fully automated.
+
+When executing the tests, traffic will be send between 2 or more PROX VMs and all metrics
+will be collected in the Xtesting database.
+The placement of the test VMs (in which the PROX tool is running), can be controlled by
+Heat stacks, but can also be done through other means. This will be explained in the chapter
+covering the PROX instance deployment, and needs to be done prior to the test execution.
+
+The PROX tool is a DPDK based application optimized for high throughput packet handling.
+As such, we will not measure limitations imposed by the tool, but the capacity of the 
+NFVI. In the rare case that the PROX tool would impose a limit, a warning will be logged.
 
 ETSI-NFV
 ========
-
-.. _NFV-TST001: http://www.etsi.org/deliver/etsi_gs/NFV-TST/001_099/001/01.01.01_60/gs_NFV-TST001v010101p.pdf
-.. _SampleVNFtst: https://wiki.opnfv.org/display/SAM/Technical+Briefs+of+VNFs
-.. _Yardstick_NSB: http://artifacts.opnfv.org/yardstick/docs/testing_user_userguide/index.html#document-13-nsb-overview
-
-SampleVNF Test Infrastructure (NSB (Yardstick_NSB_))in yardstick helps to facilitate
-consistent/repeatable methodologies for characterizing & validating the
-sample VNFs (:term:`VNF`) through OPEN SOURCE VNF approximations.
-
-Network Service Benchmarking in yardstick framework follows ETSI GS NFV-TST001_
-to verify/characterize both :term:`NFVI` & :term:`VNF`
-
-The document ETSI GS NFV-TST001_, "Pre-deployment Testing; Report on Validation
-of NFV Environments and Services", recommends methods for pre-deployment
-testing of the functional components of an NFV environment.
-
-The SampleVNF project implements the methodology described in chapter 13 of Yardstick_NSB_,
-"Pre-deployment validation of NFV infrastructure".
-
-The methodology consists in decomposing the typical :term:`VNF` work-load
-performance metrics into a number of characteristics/performance vectors, which
-each can be represented by distinct test-cases.
-
-.. seealso:: SampleVNFtst_ for material on alignment ETSI TST001 and SampleVNF.
+The document ETSI GS NFV-TST009_, "Specification of Networking Benchmarks and
+Measurement Methods for NFVI", specifies vendor-agnostic definitions of performance
+metrics and the associated methods of measurement for Benchmarking networks supported
+in the NFVI. Throughput, latency, packet loss and delay variation will be measured.
+The delay variation is not represented by the Frame Delay Variation (FDV) as defined in
+the specification, but by the average latency, the 99 percentile latency, the maximum
+latency and the complete latency distribution histogram.
 
 Metrics
 =======
 
-The metrics, as defined by ETSI GS NFV-TST001, are shown in
-:ref:`Table1 <table2_1>`.
+The metrics, as reported by the tool, and aligned with the definitions in ETSI GS NFV-TST009_,
+are shown in :ref:`Table1 <table2_1>`.
 
 .. _table2_1:
 
-**Table 1 - Performance/Speed Metrics**
+**Table 1 - Network Metrics**
 
-+---------+-------------------------------------------------------------------+
-| Category| Performance/Speed                                                 |
-|         |                                                                   |
-+---------+-------------------------------------------------------------------+
-| Network | * Throughput per NFVI node (frames/byte per second)               |
-|         | * Throughput provided to a VM (frames/byte per second)            |
-|         | * Latency per traffic flow                                        |
-|         | * Latency between VMs                                             |
-|         | * Latency between NFVI nodes                                      |
-|         | * Packet delay variation (jitter) between VMs                     |
-|         | * Packet delay variation (jitter) between NFVI nodes              |
-|         | * RFC 3511 benchmark                                              |
-|         |                                                                   |
-+---------+-------------------------------------------------------------------+
++-----------------+---------------------------------------------------------------+
+| Measurement     | Description                                                   |
+|                 |                                                               |
++-----------------+---------------------------------------------------------------+
+| Throughput      | Maximum number of traffic that can be sent between 2 VM       |
+|                 | instances, within the allowed packet loss requirements.       |
+|                 | Results are expressed in Mpps and in Gb/s                     |
++-----------------+---------------------------------------------------------------+
+| Latency         | 99 percentile Round trip latency expressed in micro-seconds   |
+|                 | Note that you can also specify the n-th percentile            |
++-----------------+---------------------------------------------------------------+
+| Delay Variation | Average latency, maximum latency and the latency histogram    |
++-----------------+---------------------------------------------------------------+
+| Loss            | Packets per seconds that were lost on their round trip between|
+|                 | VMs. Total packet loss numbers are also reported              |
++-----------------+---------------------------------------------------------------+
 
 .. note:: The description in this OPNFV document is intended as a reference for
   users to understand the scope of the SampleVNF Project and the
   deliverables of the SampleVNF framework. For complete description of
   the methodology, please refer to the ETSI document.
-
-.. rubric:: Footnotes
-.. [1] To be included in future deliveries.
-

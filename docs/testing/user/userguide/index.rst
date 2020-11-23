@@ -12,4 +12,6 @@ SampleVNF User Guide
    :maxdepth: 4
    :numbered:
 
-   01-prox_documentation
+   01-introduction.rst
+   02-methodology.rst
+   03-installation.rst
