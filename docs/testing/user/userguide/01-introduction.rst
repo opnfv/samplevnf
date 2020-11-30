@@ -10,7 +10,11 @@ Introduction
 **Welcome to SampleVNF's documentation !**
 
 .. _Pharos: https://wiki.opnfv.org/display/pharos
+<<<<<<< HEAD
 .. _SampleVNF: https://wiki.opnfv.org/samplevnf
+=======
+.. _SampleVNF: https://wiki.opnfv.org/display/SAM
+>>>>>>> Jerma documentation rewrite
 
 SampleVNF_ is an OPNFV Project.
 
@@ -24,7 +28,11 @@ to perform Network Function Virtualization Infrastructure
 
 *SampleVNF* is used in OPNFV for characterization of NFVI on OPNFV infrastructure.
 
+<<<<<<< HEAD
 .. seealso:: Pharos_ for information on OPNFV community labs
+=======
+.. seealso:: 'Pharos'_ for information on OPNFV community labs
+>>>>>>> Jerma documentation rewrite
 
 
 About This Document
@@ -37,16 +45,19 @@ This document consists of the following chapters:
 
 * Chapter :doc:`02-methodology` describes the methodology implemented by the
   *SampleVNF* Project for :term:`NFVI` verification.
+<<<<<<< HEAD
 
 * Chapter :doc:`03-installation` provides instructions to install *SampleVNF*.
 
 * Chapter :doc:`05-How_to_run_SampleVNFs` provides example on how installing and running *SampleVNF*.
 
 * Chapter :doc:`06-How_to_use_REST_api` provides info on how to run REST API *SampleVNF*.
+=======
+>>>>>>> Jerma documentation rewrite
 
-* Chapter :doc:`07-Config_files` provides info *SampleVNF* configuration.
+* Chapter :doc:`03-installation` provides instructions to install *SampleVNF*.
 
-* Chapter :doc:`08-CLI_Commands_Reference` provides info on CLI commands supported by *SampleVNF*
+* Chapter :doc:`04-running_the_test` shows how to run the dataplane testing.
 
 Contact SampleVNF
 =================
