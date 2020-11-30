@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "b0403cf6_eb72100c",
+        "filename": "docs/testing/user/userguide/03-installation.rst",
+        "patchSetId": 1
+      },
+      "lineNbr": 165,
+      "author": {
+        "id": 385
+      },
+      "writtenOn": "2020-11-30T23:56:20Z",
+      "side": 1,
+      "message": "s/PLease/Please/",
+      "range": {
+        "startLine": 165,
+        "startChar": 0,
+        "endLine": 165,
+        "endChar": 6
+      },
+      "revId": "4fbd57151a67c0d99082f884523953b3e6bdd39e",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    }
+  ]
+}
