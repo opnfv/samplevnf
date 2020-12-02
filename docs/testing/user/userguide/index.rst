@@ -15,3 +15,4 @@ SampleVNF User Guide
    01-introduction.rst
    02-methodology.rst
    03-installation.rst
+   04-running_the_test.rst
