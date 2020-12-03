@@ -9,10 +9,6 @@ Introduction
 
 **Welcome to SampleVNF's documentation !**
 
-.. _Pharos: https://wiki.opnfv.org/display/pharos
-.. _SampleVNF: https://wiki.opnfv.org/display/SAM
-
-SampleVNF_ is an OPNFV Project.
 
 The project's goal was to provide a placeholder for various sample VNF
 (Virtual Network Function (:term:`VNF`)) development which includes example
@@ -22,9 +18,7 @@ Today, we only maintain PROX and rapid scripts as part of this project
 to perform Network Function Virtualization Infrastructure
 (:term:`NFVI`) characterization.
 
-*SampleVNF* is used in OPNFV for characterization of NFVI on OPNFV infrastructure.
-
-.. seealso:: 'Pharos'_ for information on OPNFV community labs
+*SampleVNF* is used in OPNFV for characterization of NFVI.
 
 
 About This Document
@@ -41,10 +35,3 @@ This document consists of the following chapters:
 * Chapter :doc:`03-installation` provides instructions to install *SampleVNF*.
 
 * Chapter :doc:`04-running_the_test` shows how to run the dataplane testing.
-
-Contact SampleVNF
-=================
-
-Feedback? `Contact us`_
-
-.. _Contact us: opnfv-users@lists.opnfv.org

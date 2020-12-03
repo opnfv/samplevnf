@@ -69,6 +69,5 @@ are shown in :ref:`Table1 <table2_1>`.
 +-----------------+---------------------------------------------------------------+
 
 .. note:: The description in this OPNFV document is intended as a reference for
-  users to understand the scope of the SampleVNF Project and the
-  deliverables of the SampleVNF framework. For complete description of
-  the methodology, please refer to the ETSI document.
+  users to execute the benchmarking. For complete description of the methodology,
+  please refer to the ETSI document.

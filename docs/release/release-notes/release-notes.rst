@@ -6,7 +6,7 @@
 
 OPNFV Jerma Release
 ===================
-* Supported SampleVNF in this release is PROX for dataplane benchmarking purposes.
+* The only supported test VNF in this release for dataplane benchmarking purposes is PROX
 * PROX supporting up to DPDK:20.05
 * Introducing ability to make test cloud-configured dataplane networking benchmarks using
   ETSI NFV TST009 standard methods

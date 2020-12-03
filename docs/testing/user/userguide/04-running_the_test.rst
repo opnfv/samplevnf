@@ -13,13 +13,17 @@ Running the test
 Overview
 --------
 A default test will be run automatically when you launch the testing. The
-details and definition of that test is defined in file
+details and definition of that test are defined in file
 TST009_Throughput_64B_64F.test_.
 
 We will discuss the sections of such a test file and how this can be changed to
 accomodate the testing you want to execute. This will be done by creating your
 own test file and making sure it becomes part of your testcases.yaml, as will
 be shown below.
+
+As the name of the default test file suggests, the test will find the
+throughput, latency and packet loss according to NFV-TST009_, for packets that
+are 64 bytes long and for 64 different flows.
 
 Test File Description
 ---------------------
@@ -82,20 +86,30 @@ the machine. This will be the name of the PROX instance and will be shown in
 case you run the PROX UI. In this automated testing, this will be not be
 visible.
 
-The PROX config file is used by the PROX program and defines what PROX will be
+The config_file parameter defines which PROX config file is used by the PROX
+program and what PROX will be
 doing. For a generator, this will typically be gen.cfg. Multiple cfg files
-exist in the rapid_location_. dest_vm is used by a generator to find out to
-which VM he needs to send the packets. Int e example below, the packets will be
-sent to TestM2. gencores is a list of cores to be used for the generator tasks.
+exist in the rapid_location_.
+
+The dest_vm parameter is used by a generator to find out to
+which VM he needs to send the packets. In the example below, the packets will be
+sent to TestM2.
+
+The gencores parameter defines a list of cores to be used for the generator tasks.
 Note that if you specify more than 1 core, the interface will need to support as
-many tx queues as there are generator cores. The latcores field specifies a
+many tx queues as there are generator cores.
+
+The latcores parameter specifies a
 list of cores to be used by the latency measurement tasks. You need as many rx
-queueus on the interface as the number of latcores. The default value for the
+queues on the interface as specified in the latcores parameter.
+
+The default value for the
 bucket_size_exp parameter is 12. It is also its minimum value. In case most of
 the latency measurements in the histogram are falling in the last bucket, this
 number needs to be increased. Every time you increase this number by 1, the
 bucket size for the latency histogram is multiplied by 2. There are 128 buckets
 in the histogram.
+
 cores is a parameter that will be used by non-generator configurations that
 don't need a disctinction between generator and latency cores (e.g. swap.cfg).
 
@@ -124,10 +138,12 @@ rapid_location_.
 
 The pass_threshold parameter defines the success criterium for the test. When
 this test uses multiple combinations of packet size and flows, all combinations
-must be meeting the same threshold. The threshold is expressed in Mpps.
+must be meeting the same threshold. If one of the combinations fails, the test
+will be reported as failed.
+The threshold is expressed in Mpps.
 
 The imixs parameter defines the pakcet sizes that will be used. Each element in
-the imix list will result in a separate test. Each element is on its turn a
+the imixs list will result in a separate test. Each element is on its turn a
 list of packet sizes which will be used during one test execution. If you only
 want to test 1 imix size, define imixs with only one element. For each element in
 the imixs list, the generator will iterate over the packet lengths and send them
@@ -139,40 +155,42 @@ needing results for more sizes, one should create a specific test file per size
 and launch the different tests using Xtesting.
 
 The flows parameter is a list of flow sizes. For each flow size, a test will be
-run with the specified amount of flows. The flow size needs to be powers of 2,
+run with the specified amount of flows. The flow size needs to be a power of 2,
 max 2^30. If not a power of 2, we will use the lowest power of 2 that is larger
 than the requested number of flows. e.g. 9 will result in 16 flows.
 Same remark as for the imixs parameter: we will only use one element in the
-flows list. When more flows need to be tested, create a differnt test file and
+flows list. When more flows need to be tested, create a different test file and
 launch it using Xtesting.
 
-drop_rate_threshold specifies the ratio of packets than can be dropped and still
-consider the test run as succesful. Note that a value of 0 means a zero packet
+The drop_rate_threshold parameter specifies the maximum ratio of packets than
+can be dropped while still considering
+the test run as succesful. Note that a value of 0 means an absolute zero packet
 loss: even if we lose 1 packet during a certain step in a test run, it will be
 marked as failed.
 
-lat_avg_threshold, lat_perc_threshold, lat_max_threshold are threshols to define
+The lat_avg_threshold, lat_perc_threshold, lat_max_threshold parameters
+are thresholds to define
 the maximal acceptable round trip latency to mark the test step as successful.
 You can set this threshold for the average, the percentile and the maximum
-latency. Which percentile is being used is define in the TestParameters section.
+latency. Which percentile is being used is defined in the TestParameters section.
 All these thresholds are expressed in micro-seconds. You can also put the value
 to inf, which means the threshold will never be reached and hence the threshold
 value is not being used to define if the run is successful or not.
 
-MAXr, MAXz, MAXFramesPerSecondAllIngress and StepSize are defined in
+The MAXr, MAXz, MAXFramesPerSecondAllIngress and StepSize parameters are defined in
 NFV-TST009_ and are used to control the binary search algorithm.
 
-ramp_step is a variable that controls the ramping of the generated traffic. When
+The ramp_step variable controls the ramping of the generated traffic. When
 not specified, the requested traffic for each step in the testing will be
 applied immediately. If specified, the generator will slowly go to the requested
 speed by increasing the traffic each second with the value specified in this
-parameter till it reached the requested speed. This parameter is expressed in
+parameter till it reaches the requested speed. This parameter is expressed in
 100Mb/s.
 
 .. code-block:: console
 
      pass_threshold=0.001
-     imixs=[[64]]
+     imixs=[[128, 256, 64, 64, 128]]
      flows=[64]
      drop_rate_threshold = 0
      lat_avg_threshold = inf
