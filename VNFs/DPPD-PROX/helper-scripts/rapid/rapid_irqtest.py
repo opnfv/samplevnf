@@ -94,4 +94,4 @@ class IrqTest(RapidTest):
                 for j,bucket in enumerate(buckets):
                     variables['B{}'.format(column_names[j].replace(">","M").replace("<","").replace(" ",""))] = irq[i][j]
                 self.post_data('rapid_irqtest', variables)
-        return (True)
+        return (True, None)

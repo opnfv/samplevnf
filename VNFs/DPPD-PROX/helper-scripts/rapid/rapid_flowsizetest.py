@@ -267,8 +267,8 @@ class FlowSizeTest(RapidTest):
                                 'PacketsLost': endabs_dropped,
                                 'bucket_size': bucket_size,
                                 'buckets': endbuckets}
-                        self.post_data('rapid_flowsizetest', result_details)
+                        result_details = self.post_data('rapid_flowsizetest', result_details)
                 else:
                     RapidLog.info('|{:>7}'.format(str(flow_number))+" | Speed 0 or close to 0")
         self.gen_machine.stop_latency_cores()
-        return (TestPassed,result_details)
+        return (TestPassed, result_details)

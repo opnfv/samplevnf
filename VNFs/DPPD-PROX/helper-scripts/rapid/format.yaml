@@ -22,36 +22,25 @@
   PacketsReceived: PacketsReceived
   PacketsLost: PacketsLost
 rapid_flowsizetest:
-  project_name: "cirv"
-  scenario: "rapid"
-  start_date: start_date
-  stop_date: stop_date
-  case_name: test
-  pod_name: "intel-pod10"
-  installer: "Fuel"
-  version: "1.0"
-  build_tag: "none"
-  criteria: "PASS"
-  details:
-    Flows: Flows 
-    Size: Size
-    Speed (Mpps):
-      RequestedSpeed: RequestedSpeed
-      CoreGenerated: CoreGenerated
-      SentByNIC: SentByNIC
-      FwdBySUT: FwdBySUT
-      RevByCore: RevByCore
-    Latency (usec):
-      AvgLatency: AvgLatency
-      PCTLatency: PCTLatency
-      MaxLatency: MaxLatency
-      Distribution:
-        bucket_size: bucket_size
-        buckets: buckets
-    Absolute Packet Count:
-      PacketsSent: PacketsSent
-      PacketsReceived: PacketsReceived
-      PacketsLost: PacketsLost
+  Flows: Flows 
+  Size: Size
+  Speed (Mpps):
+    RequestedSpeed: RequestedSpeed
+    CoreGenerated: CoreGenerated
+    SentByNIC: SentByNIC
+    FwdBySUT: FwdBySUT
+    RevByCore: RevByCore
+  Latency (usec):
+    AvgLatency: AvgLatency
+    PCTLatency: PCTLatency
+    MaxLatency: MaxLatency
+    Distribution:
+      bucket_size: bucket_size
+      buckets: buckets
+  Absolute Packet Count:
+    PacketsSent: PacketsSent
+    PacketsReceived: PacketsReceived
+    PacketsLost: PacketsLost
 rapid_irqtest:
   Core: Core 
   LessThan1us   : B1

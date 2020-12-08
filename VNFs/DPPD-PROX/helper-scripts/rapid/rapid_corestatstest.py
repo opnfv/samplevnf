@@ -33,6 +33,7 @@ class CoreStatsTest(RapidTest):
         self.machines = machines 
 
     def run(self):
+        result_details = {'Details': 'Nothing'}
         RapidLog.info("+------------------------------------------------------------------------------------------------------------------+")
         RapidLog.info("| Measuring core statistics on 1 or more PROX instances                                                            |")
         RapidLog.info("+-----------+-----------+------------+------------+------------+------------+------------+------------+------------+")
@@ -71,7 +72,7 @@ class CoreStatsTest(RapidTest):
                 old_tsc[i] = new_tsc[i]
                 tot_drop[i] = tot_drop[i] + tx - rx
                 RapidLog.info('|{:>10.0f}'.format(i)+ ' |{:>10.0f}'.format(duration)+' | ' + '{:>10.0f}'.format(rx) + ' | ' +'{:>10.0f}'.format(tx) + ' | '+'{:>10.0f}'.format(non_dp_rx)+' | '+'{:>10.0f}'.format(non_dp_tx)+' | ' + '{:>10.0f}'.format(tx-rx) + ' | '+ '{:>10.0f}'.format(non_dp_tx-non_dp_rx) + ' | '+'{:>10.0f}'.format(tot_drop[i]) +' |')
-                variables = {'test': self.test['test'],
+                result_details = {'test': self.test['test'],
                         'environment_file': self.test['environment_file'],
                         'PROXID': i,
                         'StepSize': duration,
@@ -80,10 +81,10 @@ class CoreStatsTest(RapidTest):
                         'NonDPReceived': non_dp_rx,
                         'NonDPSent': non_dp_tx,
                         'Dropped': tot_drop[i]}
-                self.post_data('rapid_corestatstest', variables)
+                result_details = self.post_data('rapid_corestatstest', result_details)
                 if machines_to_go == 0:
                     duration = duration - 1
                     machines_to_go = len (self.machines)
         RapidLog.info("+-----------+-----------+------------+------------+------------+------------+------------+------------+------------+")
-        return (True)
+        return (True, result_details)
                 

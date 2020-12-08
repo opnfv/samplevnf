@@ -114,29 +114,21 @@ class RapidTest(object):
     def post_data(self, test, variables):
         var = copy.deepcopy(self.data_format)
         self.parse_data_format_dict(var, variables)
-        if 'URL' not in var.keys():
-            return
-        if test not in var.keys():
-            return
-        URL=''
-        for value in var['URL'].values():
-            URL = URL + value
-        HEADERS = {'X-Requested-With': 'Python requests', 'Content-type': 'application/rapid'}
-        if 'Format' in var.keys():
+        if var.keys() >= {'URL', test, 'Format'}:
+            URL=''
+            for value in var['URL'].values():
+                URL = URL + value
+            HEADERS = {'X-Requested-With': 'Python requests', 'Content-type': 'application/rapid'}
             if var['Format'] == 'PushGateway':
                 data = "\n".join("{} {}".format(k, v) for k, v in var[test].items()) + "\n"
                 response = requests.post(url=URL, data=data,headers=HEADERS)
             elif var['Format'] == 'Xtesting':
                 data = var[test]
                 response = requests.post(url=URL, json=data)
-            else:
-                return
-        else:
-            return
-        if (response.status_code != 202) and (response.status_code != 200):
-            RapidLog.info('Cannot send metrics to {}'.format(URL))
-            RapidLog.info(data)
-
+            if (response.status_code >= 300):
+                RapidLog.info('Cannot send metrics to {}'.format(URL))
+                RapidLog.info(data)
+        return (var[test])
 
     @staticmethod
     def report_result(flow_number, size, speed, pps_req_tx, pps_tx, pps_sut_tx,

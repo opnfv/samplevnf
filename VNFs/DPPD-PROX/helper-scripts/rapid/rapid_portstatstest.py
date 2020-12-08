@@ -33,6 +33,7 @@ class PortStatsTest(RapidTest):
         self.machines = machines 
 
     def run(self):
+        result_details = {'Details': 'Nothing'}
         RapidLog.info("+---------------------------------------------------------------------------+")
         RapidLog.info("| Measuring port statistics on 1 or more PROX instances                     |")
         RapidLog.info("+-----------+-----------+------------+------------+------------+------------+")
@@ -66,7 +67,7 @@ class PortStatsTest(RapidTest):
                 old_errors[i] = new_errors[i]
                 old_tsc[i] = new_tsc[i]
                 RapidLog.info('|{:>10.0f}'.format(i)+ ' |{:>10.0f}'.format(duration)+' | ' + '{:>10.0f}'.format(rx) + ' | ' +'{:>10.0f}'.format(tx) + ' | '+'{:>10.0f}'.format(no_mbufs)+' | '+'{:>10.0f}'.format(errors)+' |')
-                variables = {'test': self.test['test'],
+                result_details = {'test': self.test['test'],
                         'environment_file': self.test['environment_file'],
                         'PROXID': i,
                         'StepSize': duration,
@@ -74,9 +75,9 @@ class PortStatsTest(RapidTest):
                         'Sent': tx,
                         'NoMbufs': no_mbufs,
                         'iErrMiss': errors}
-                self.post_data('rapid_corestatstest', variables)
+                result_details = self.post_data('rapid_corestatstest', result_details)
                 if machines_to_go == 0:
                     duration = duration - 1
                     machines_to_go = len (self.machines)
         RapidLog.info("+-----------+-----------+------------+------------+------------+------------+")
-        return (True)
+        return (True, result_details)

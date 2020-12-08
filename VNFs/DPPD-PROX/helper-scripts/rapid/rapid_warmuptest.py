@@ -48,4 +48,4 @@ class WarmupTest(RapidTest):
         self.gen_machine.stop()
     #    gen_machine['socket'].set_value(gencores,0,56,50,1)
         time.sleep(WARMUPTIME)
-        return (True)
+        return (True, None)

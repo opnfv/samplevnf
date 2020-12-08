@@ -36,6 +36,7 @@ class ImpairTest(RapidTest):
         self.test['lat_percentile'] = lat_percentile
 
     def run(self):
+        result_details = {'Details': 'Nothing'}
         imix = self.test['imix']
         size = mean (imix)
         flow_number = self.test['flowsize']
@@ -65,7 +66,7 @@ class ImpairTest(RapidTest):
             else:
                 lat_warning = ''
             RapidLog.info(self.report_result(attempts,size,speed,pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat_avg,lat_perc,lat_perc_max,lat_max,abs_tx,abs_rx,abs_dropped,actual_duration))
-            variables = {'test': self.test['test'],
+            result_details = {'test': self.test['test'],
                     'environment_file': self.test['environment_file'],
                     'Flows': flow_number,
                     'Size': size,
@@ -81,6 +82,6 @@ class ImpairTest(RapidTest):
                     'DropRate': drop_rate,
                     'bucket_size': bucket_size,
                     'buckets': buckets}
-            self.post_data('rapid_impairtest', variables)
+            result_details = self.post_data('rapid_impairtest', result_details)
         self.gen_machine.stop_latency_cores()
-        return (True)
+        return (True, result_details)
