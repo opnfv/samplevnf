@@ -115,9 +115,18 @@ class K8sDeployment:
             else:
                 pod_dp_ip = None
 
+            # Search for POD dataplane subnet
+            if self._create_config.has_option("POD%d" % i,
+                                              "dp_subnet"):
+                pod_dp_subnet = self._create_config.get(
+                    "POD%d" % i, "dp_subnet")
+            else:
+                pod_dp_subnet = "24"
+
             pod = Pod(pod_name)
             pod.set_nodeselector(pod_nodeselector_hostname)
             pod.set_dp_ip(pod_dp_ip)
+            pod.set_dp_subnet(pod_dp_subnet)
             pod.set_id(i)
 
             # Add POD to the list of PODs which need to be created
@@ -181,7 +190,8 @@ class K8sDeployment:
             self._runtime_config.set("M%d" % pod.get_id(),
                                      "dp_pci_dev", pod.get_dp_pci_dev())
             self._runtime_config.set("M%d" % pod.get_id(),
-                                     "dp_ip1", pod.get_dp_ip())
+                                     "dp_ip1", pod.get_dp_ip() + "/" +
+                                     pod.get_dp_subnet())
 
         # Section [Varia]
         self._runtime_config.add_section("Varia")

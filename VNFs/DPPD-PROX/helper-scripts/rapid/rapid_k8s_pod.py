@@ -36,6 +36,7 @@ class Pod:
     _id = None
     _admin_ip = None
     _dp_ip = None
+    _dp_subnet = None
 
     _ssh_client = None
 
@@ -128,6 +129,9 @@ class Pod:
     def get_dp_ip(self):
         return self._dp_ip
 
+    def get_dp_subnet(self):
+        return self._dp_subnet
+
     def get_dp_mac(self):
         return self._sriov_vf_mac
 
@@ -188,6 +192,9 @@ class Pod:
 
     def set_dp_ip(self, dp_ip):
         self._dp_ip = dp_ip
+
+    def set_dp_subnet(self, dp_subnet):
+        self._dp_subnet = dp_subnet
 
     def set_id(self, pod_id):
         self._id = pod_id
