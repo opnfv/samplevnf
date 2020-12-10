@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3
 
 ##
 ## Copyright (c) 2019 Intel Corporation
@@ -17,7 +17,7 @@
 ##
 
 import argparse
-from k8sdeployment import K8sDeployment
+from rapid_k8s_deployment import K8sDeployment
 
 # Config file name for deployment creation
 CREATE_CONFIG_FILE_NAME = "rapid.pods"

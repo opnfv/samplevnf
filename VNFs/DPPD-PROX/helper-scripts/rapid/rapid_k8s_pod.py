@@ -1,5 +1,3 @@
-#!/usr/bin/env python2.7
-
 ##
 ## Copyright (c) 2019 Intel Corporation
 ##
@@ -21,7 +19,7 @@ import time, yaml
 import logging
 from kubernetes import client, config
 
-from sshclient import SSHClient
+from rapid_sshclient import SSHClient
 
 class Pod:
     """Class which represents test pods.

@@ -1,5 +1,3 @@
-#!/usr/bin/env python2.7
-
 ##
 ## Copyright (c) 2019 Intel Corporation
 ##

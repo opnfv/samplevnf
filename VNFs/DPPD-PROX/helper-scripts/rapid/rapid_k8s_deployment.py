@@ -1,5 +1,3 @@
-#!/usr/bin/env python2.7
-
 ##
 ## Copyright (c) 2019-2020 Intel Corporation
 ##
@@ -18,11 +16,15 @@
 
 import sys
 from kubernetes import client, config
-import ConfigParser
+try:
+    import configparser
+except ImportError:
+    # Python 2.x fallback
+    import ConfigParser as configparser
 import logging
 from logging import handlers
 
-from pod import Pod
+from rapid_k8s_pod import Pod
 
 class K8sDeployment:
     """Deployment class to create containers for test execution in Kubernetes
@@ -69,7 +71,7 @@ class K8sDeployment:
         """Read and parse configuration file for the test environment.
         """
         self._log.info("Loading configuration file %s", config_file_name)
-        self._create_config = ConfigParser.RawConfigParser()
+        self._create_config = configparser.RawConfigParser()
         try:
             self._create_config.read(config_file_name)
         except Exception as e:
@@ -146,7 +148,7 @@ class K8sDeployment:
     def save_runtime_config(self, config_file_name):
         self._log.info("Saving config %s for runrapid script...",
                        config_file_name)
-        self._runtime_config = ConfigParser.RawConfigParser()
+        self._runtime_config = configparser.RawConfigParser()
 
         # Section [DEFAULT]
 #        self._runtime_config.set("DEFAULT",
