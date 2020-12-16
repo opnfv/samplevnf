@@ -36,6 +36,7 @@ class RapidXt(testcase.TestCase):
             for key in kwargs:
                 test_params[key] = kwargs[key]
             os.makedirs(self.res_dir, exist_ok=True)
+            test_params['resultsdir'] = self.res_dir
             log_file = '{}/RUN{}.{}.log'.format(self.res_dir,
                 test_params['environment_file'], test_params['test_file'])
             RapidLog.log_init(log_file, test_params['loglevel'],
