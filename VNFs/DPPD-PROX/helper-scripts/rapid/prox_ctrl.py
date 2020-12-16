@@ -183,9 +183,8 @@ class prox_sock(object):
         self._sock = sock
         self._rcvd = b''
 
-    def quit(self):
+    def __del__(self):
         if self._sock is not None:
-            self._send('quit')
             self._sock.close()
             self._sock = None
 
@@ -320,6 +319,9 @@ class prox_sock(object):
     def set_value(self, cores, task, offset, value, length):
         self._send('set value %s %s %s %s %s' % (','.join(map(str, cores)), 
             task, offset, value, length))
+
+    def quit_prox(self):
+        self._send('quit')
 
     def _send(self, cmd):
         """Append LF and send command to the PROX instance."""

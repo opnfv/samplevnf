@@ -1,12 +1,29 @@
 ---
 tiers:
     -
-        name: rapid
+        name: IRQ_rapid_benchmarking
         order: 1
-        description: 'Rapid Testing'
+        description: 'IRQ Rapid Testing'
         testcases:
             -
-                case_name: rapid_tst009
+                case_name: rapid_irq
+                project_name: rapidxt
+                criteria: 100
+                blocking: true
+                clean_flag: false
+                description: 'IRQ test'
+                run:
+                    name: rapidxt
+                    args:
+                        test_file: irq.test
+                        runtime: 5
+    -
+        name: TST009_rapid_benchmarking
+        order: 2
+        description: 'TST009 Rapid Testing'
+        testcases:
+            -
+                case_name: rapid_tst009_64b_64f
                 project_name: rapidxt
                 criteria: 100
                 blocking: true
@@ -15,4 +32,17 @@ tiers:
                 run:
                     name: rapidxt
                     args:
-                        test_file: TST009_Throughput_64B_64F.test 
+                        test_file: TST009_Throughput_64B_64F.test
+                        runtime: 5
+            -
+                case_name: rapid_tst009_aaafg_64f
+                project_name: rapidxt
+                criteria: 100
+                blocking: true
+                clean_flag: false
+                description: 'TST009 test, imix aaafg, 64 flows'
+                run:
+                    name: rapidxt
+                    args:
+                        test_file: TST009_Throughput_aaafg_2048F.test
+                        runtime: 5
