@@ -113,7 +113,7 @@ class RapidMachine(object):
 
     def close_prox(self):
         if (not self.configonly) and self.machine_params['prox_socket'] and self.machine_params['prox_launch_exit']:
-            self.socket.quit()
+            self.socket.quit_prox()
 
     def connect_prox(self):
         if self.machine_params['prox_socket']:

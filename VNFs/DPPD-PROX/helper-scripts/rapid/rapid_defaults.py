@@ -21,7 +21,7 @@ class RapidDefaults(object):
     Class to define the test defaults
     """
     test_params = {
-        'version' : '2020.09.23', # Please do NOT change, used for debugging
+        'version' : '2020.12.17', # Please do NOT change, used for debugging
         'environment_file' : 'rapid.env', #Default string for environment
         'test_file' : 'basicrapid.test', #Default string for test
         'machine_map_file' : 'machine.map', #Default string for machine map file

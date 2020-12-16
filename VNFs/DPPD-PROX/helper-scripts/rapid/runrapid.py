@@ -130,6 +130,9 @@ class RapidTestManager(object):
             single_test_result, result_details = test.run()
             if not single_test_result:
                 result = False
+        for machine in self.machines:
+            machine.close_prox()
+        concurrent.futures.wait(self.future_to_prox,return_when=ALL_COMPLETED)
         return (result, result_details)
 
 def main():
