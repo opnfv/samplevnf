@@ -36,6 +36,7 @@ class RapidXt(testcase.TestCase):
             for key in kwargs:
                 test_params[key] = kwargs[key]
             os.makedirs(self.res_dir, exist_ok=True)
+            test_params['resultsdir'] = self.res_dir
             log_file = '{}/RUN{}.{}.log'.format(self.res_dir,
                 test_params['environment_file'], test_params['test_file'])
             RapidLog.log_init(log_file, test_params['loglevel'],
@@ -43,9 +44,9 @@ class RapidXt(testcase.TestCase):
             test_manager = RapidTestManager()
             self.start_time = time.time()
             self.result, self.details = test_manager.run_tests(test_params)
-            self.result = 100 * self.result
-            RapidLog.info('Test result is : {}'.format(self.result))
             self.stop_time = time.time()
+            RapidLog.log_close()
+
         except Exception:  # pylint: disable=broad-except
             print("Unexpected error:", sys.exc_info()[0])
             self.result = 0

@@ -24,7 +24,6 @@ RUN git clone https://git.opnfv.org/samplevnf /samplevnf
 WORKDIR /samplevnf/VNFs/DPPD-PROX/helper-scripts/rapid
 COPY rapid.env /samplevnf/VNFs/DPPD-PROX/helper-scripts/rapid/.
 COPY rapid_key.pem /samplevnf/VNFs/DPPD-PROX/helper-scripts/rapid/.
-COPY TST009_Throughput_64B_64F.test /samplevnf/VNFs/DPPD-PROX/helper-scripts/rapid/.
 COPY testcases.yaml /usr/lib/python3.8/site-packages/xtesting/ci/testcases.yaml
 RUN apk add python3-dev openssh-client && cd /samplevnf/VNFs/DPPD-PROX/helper-scripts/rapid/ && git init && pip3 install .
 CMD ["run_tests", "-t", "all"]

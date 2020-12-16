@@ -24,12 +24,14 @@ class RapidMachine(object):
     """
     Class to deal with a PROX instance (VM, bare metal, container)
     """
-    def __init__(self, key, user, vim, rundir, machine_params, configonly):
+    def __init__(self, key, user, vim, rundir, resultsdir, machine_params,
+            configonly):
         self.name = machine_params['name']
         self.ip = machine_params['admin_ip']
         self.key = key
         self.user = user
         self.rundir = rundir
+        self.resultsdir = resultsdir
         self.dp_ports = []
         self.dpdk_port_index = []
         self.configonly = configonly
@@ -44,13 +46,13 @@ class RapidMachine(object):
                 index += 1
             else:
                 break
-        self.rundir = rundir
         self.machine_params = machine_params
         self.vim = vim
 
     def __del__(self):
         if ((not self.configonly) and self.machine_params['prox_socket']):
-            self._client.scp_get('/prox.log', './{}.prox.log'.format(self.name))
+            self._client.scp_get('/prox.log', '{}/{}.prox.log'.format(
+                self.resultsdir, self.name))
 
     def get_cores(self):
         return (self.machine_params['cores'])
@@ -113,7 +115,7 @@ class RapidMachine(object):
 
     def close_prox(self):
         if (not self.configonly) and self.machine_params['prox_socket'] and self.machine_params['prox_launch_exit']:
-            self.socket.quit()
+            self.socket.quit_prox()
 
     def connect_prox(self):
         if self.machine_params['prox_socket']:

@@ -21,7 +21,7 @@ class RapidDefaults(object):
     Class to define the test defaults
     """
     test_params = {
-        'version' : '2020.09.23', # Please do NOT change, used for debugging
+        'version' : '2020.12.21', # Please do NOT change, used for debugging
         'environment_file' : 'rapid.env', #Default string for environment
         'test_file' : 'basicrapid.test', #Default string for test
         'machine_map_file' : 'machine.map', #Default string for machine map file
@@ -30,5 +30,6 @@ class RapidDefaults(object):
         'runtime' : 10, # time in seconds for 1 test run
         'configonly' : False, # If True, the system will upload all the necessary config fiels to the VMs, but not start PROX and the actual testing
         'rundir' : '/opt/rapid', # Directory where to find the tools in the machines running PROX
+        'resultsdir' : '.', # Directory where to store log files
         'lat_percentile' : 0.99
         }

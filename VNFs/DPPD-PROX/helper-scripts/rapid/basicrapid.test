@@ -44,11 +44,6 @@ warmuptime=2
 
 [test2]
 test=flowsizetest
-# Following parameter defines the success criterium for the test.
-# When this test uses multiple combinations of packet size and flows,
-# all combinations must be meeting the same threshold
-# The threshold is expressed in Mpps
-pass_threshold=0.1
 # Each element in the imix list will result in a separate test. Each element
 # is on its turn a list of packet sizes which will be used during one test
 # execution. If you only want to test 1 size, define a list with only one

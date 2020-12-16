@@ -45,12 +45,8 @@ warmuptime=2
 
 [test2]
 test=flowsizetest
-# Following parameter defines the success criterium for the test.
-# When this test uses multiple combinations of packet size and flows,
-# all combinations must be meeting the same threshold
-# The threshold is expressed in Mpps
-pass_threshold=0.1
-# DO NOT USE IMIX FOR IPV6 TESTING
+# DO NOT USE IMIX FOR IPV6 TESTING. THE LIST OF IMIXS CAN ONLY CONTAIN LISTS
+# WITH ONE ELEMENT!!!
 # PACKET SIZE NEEDS TO BE AT LEAST 84 (66 + 18) FOR IPV6
 # 18 bytes needed for UDP LATENCY AND COUNTER CONTENT
 imixs=[[84],[250]]

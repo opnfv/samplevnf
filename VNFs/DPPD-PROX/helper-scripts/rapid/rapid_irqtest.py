@@ -34,16 +34,24 @@ class IrqTest(RapidTest):
         self.machines = machines
 
     def run(self):
-        RapidLog.info("+----------------------------------------------------------------------------------------------------------------------------")
-        RapidLog.info("| Measuring time probably spent dealing with an interrupt. Interrupting DPDK cores for more than 50us might be problematic   ")
-        RapidLog.info("| and result in packet loss. The first row shows the interrupted time buckets: first number is the bucket between 0us and    ")
-        RapidLog.info("| that number expressed in us and so on. The numbers in the other rows show how many times per second, the program was       ")
-        RapidLog.info("| interrupted for a time as specified by its bucket. '0' is printed when there are no interrupts in this bucket throughout   ")
-        RapidLog.info("| the duration of the test. 0.00 means there were interrupts in this bucket but very few. Due to rounding this shows as 0.00 ") 
-        RapidLog.info("+----------------------------------------------------------------------------------------------------------------------------")
+        RapidLog.info("+----------------------------------------------------------------------------------------------------------------------------+")
+        RapidLog.info("| Measuring time probably spent dealing with an interrupt. Interrupting DPDK cores for more than 50us might be problematic   |")
+        RapidLog.info("| and result in packet loss. The first row shows the interrupted time buckets: first number is the bucket between 0us and    |")
+        RapidLog.info("| that number expressed in us and so on. The numbers in the other rows show how many times per second, the program was       |")
+        RapidLog.info("| interrupted for a time as specified by its bucket. '0' is printed when there are no interrupts in this bucket throughout   |")
+        RapidLog.info("| the duration of the test. 0.00 means there were interrupts in this bucket but very few. Due to rounding this shows as 0.00 |") 
+        RapidLog.info("+----------------------------------------------------------------------------------------------------------------------------+")
         sys.stdout.flush()
+        max_loop_duration = 0
+        machine_details = {}
         for machine in self.machines:
             buckets=machine.socket.show_irq_buckets(1)
+            if max_loop_duration == 0:
+                # First time we go through the loop, we need to initialize
+                # result_details
+                result_details = {'test': self.test['testname'],
+                        'environment_file': self.test['environment_file'],
+                        'buckets': buckets}
             print('Measurement ongoing ... ',end='\r')
             machine.start() # PROX cores will be started within 0 to 1 seconds
             # That is why we sleep a bit over 1 second to make sure all cores
@@ -60,7 +68,7 @@ class IrqTest(RapidTest):
                     old_irq[i][j] = machine.socket.irq_stats(irqcore,j)
             # Measurements in the loop above, are updated by PROX every second
             # This means that taking the same measurement 0.5 second later
-            # might results in the same data or data from the next 1s window
+            # might result in the same data or data from the next 1s window
             time.sleep(float(self.test['runtime']))
             row_names = []
             for i,irqcore in enumerate(machine.get_cores()):
@@ -70,10 +78,13 @@ class IrqTest(RapidTest):
                     if diff == 0:
                         irq[i][j] = '0'
                     else:
-                        irq[i][j] = str(round(old_div(diff,float(self.test['runtime'])), 2))
+                        irq[i][j] = str(round(old_div(diff,
+                            float(self.test['runtime'])), 2))
+                        if max_loop_duration < int(bucket):
+                            max_loop_duration = int(bucket)
             # Measurements in the loop above, are updated by PROX every second
             # This means that taking the same measurement 0.5 second later
-            # might results in the same data or data from the next 1s window
+            # might result in the same data or data from the next 1s window
             # Conclusion: we don't know the exact window size.
             # Real measurement windows might be wrong by 1 second
             # This could be fixed in this script by checking this data every
@@ -81,17 +92,15 @@ class IrqTest(RapidTest):
             # a longer time and decrease the error. The absolute number of
             # interrupts is not so important.
             machine.stop()
+            core_details = {}
             RapidLog.info('Results for PROX instance %s'%machine.name)
-            RapidLog.info('{:>12}'.format('bucket us') + ''.join(['{:>12}'.format(item) for item in column_names]))
+            RapidLog.info('{:>12}'.format('bucket us') +
+                    ''.join(['{:>12}'.format(item) for item in column_names]))
             for j, row in enumerate(irq):
-                RapidLog.info('Core {:>7}'.format(row_names[j]) + ''.join(['{:>12}'.format(item) for item in row]))
-            variables = {}
-            variables['test'] = self.test['test']
-            variables['environment_file'] = self.test['environment_file']
-            variables['Machine'] = machine.name
-            for i,irqcore in enumerate(machine.get_cores()):
-                variables['Core'] = '{}'.format(row_names[i])
-                for j,bucket in enumerate(buckets):
-                    variables['B{}'.format(column_names[j].replace(">","M").replace("<","").replace(" ",""))] = irq[i][j]
-                self.post_data('rapid_irqtest', variables)
-        return (True, None)
+                RapidLog.info('Core {:>7}'.format(row_names[j]) +
+                        ''.join(['{:>12}'.format(item) for item in row]))
+                core_details['Core {}'.format(row_names[j])] = row
+            machine_details[machine.name] = core_details
+        result_details['machine_data'] = machine_details
+        result_details = self.post_data('rapid_irqtest', result_details)
+        return (500000 - max_loop_duration, result_details)

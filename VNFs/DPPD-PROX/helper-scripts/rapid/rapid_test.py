@@ -105,12 +105,6 @@ class RapidTest(object):
                 if v in variables.keys():
                     data_format[k] = variables[v]
 
-    def record_start_time(self):
-        self.start = dt.now().strftime('%Y-%m-%d %H:%M:%S')
-
-    def record_stop_time(self):
-        self.stop = dt.now().strftime('%Y-%m-%d %H:%M:%S')
-
     def post_data(self, test, variables):
         var = copy.deepcopy(self.data_format)
         self.parse_data_format_dict(var, variables)

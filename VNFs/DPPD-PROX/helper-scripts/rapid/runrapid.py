@@ -62,8 +62,8 @@ class RapidTestManager(object):
             if 'gencores' in machine_params.keys():
                 machine = RapidGeneratorMachine(test_params['key'],
                         test_params['user'], test_params['vim_type'],
-                        test_params['rundir'], machine_params,
-                        configonly, test_params['ipv6'])
+                        test_params['rundir'], test_params['resultsdir'],
+                        machine_params, configonly, test_params['ipv6'])
                 if machine_params['monitor']:
                     if monitor_gen:
                         RapidLog.exception("Can only monitor 1 generator")
@@ -76,7 +76,7 @@ class RapidTestManager(object):
             else:
                 machine = RapidMachine(test_params['key'], test_params['user'],
                         test_params['vim_type'], test_params['rundir'],
-                        machine_params, configonly)
+                        test_params['resultsdir'], machine_params, configonly)
                 if machine_params['monitor']:
                     if monitor_sut:
                         RapidLog.exception("Can only monitor 1 sut")
@@ -94,7 +94,7 @@ class RapidTestManager(object):
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(self.machines)) as executor:
             future_to_connect_prox = {executor.submit(machine.connect_prox): machine for machine in self.machines}
             concurrent.futures.wait(future_to_connect_prox,return_when=ALL_COMPLETED)
-        result = True
+        result = 0
         for test_param in test_params['tests']:
             RapidLog.info(test_param['test'])
             if test_param['test'] in ['flowsizetest', 'TST009test',
@@ -128,8 +128,10 @@ class RapidTestManager(object):
                 RapidLog.debug('Test name ({}) is not valid:'.format(
                     test_param['test']))
             single_test_result, result_details = test.run()
-            if not single_test_result:
-                result = False
+            result = result + single_test_result
+        for machine in self.machines:
+            machine.close_prox()
+        concurrent.futures.wait(self.future_to_prox,return_when=ALL_COMPLETED)
         return (result, result_details)
 
 def main():
@@ -145,7 +147,7 @@ def main():
             test_params['screenloglevel'] , test_params['version']  )
     test_manager = RapidTestManager()
     test_result, _ = test_manager.run_tests(test_params)
-    RapidLog.info('Test result is : {}'.format(test_result))
+    RapidLog.log_close()
 
 if __name__ == "__main__":
     main()

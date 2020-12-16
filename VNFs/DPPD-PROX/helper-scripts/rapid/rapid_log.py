@@ -42,62 +42,80 @@ class RapidLog(object):
 
     @staticmethod
     def log_init(log_file, loglevel, screenloglevel, version):
-        # create formatters
-        screen_formatter = logging.Formatter("%(message)s")
-        file_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-
-        # get a top-level logger,
-        # set its log level,
-        # BUT PREVENT IT from propagating messages to the root logger
-        #
-        log = logging.getLogger()
-        numeric_level = getattr(logging, loglevel.upper(), None)
-        if not isinstance(numeric_level, int):
-            raise ValueError('Invalid log level: %s' % loglevel)
-        log.setLevel(numeric_level)
-        log.propagate = 0
-
-        # create a console handler
-        # and set its log level to the command-line option 
-        # 
-        console_handler = logging.StreamHandler(sys.stdout)
-        #console_handler.setLevel(logging.INFO)
-        numeric_screenlevel = getattr(logging, screenloglevel.upper(), None)
-        if not isinstance(numeric_screenlevel, int):
-            raise ValueError('Invalid screenlog level: %s' % screenloglevel)
-        console_handler.setLevel(numeric_screenlevel)
-        console_handler.setFormatter(screen_formatter)
-
-        # create a file handler
-        # and set its log level
-        #
-        file_handler = logging.handlers.RotatingFileHandler(log_file, backupCount=10)
-        #file_handler = log.handlers.TimedRotatingFileHandler(log_file, 'D', 1, 5)
-        file_handler.setLevel(numeric_level)
-        file_handler.setFormatter(file_formatter)
-
-        # add handlers to the logger
-        #
-        log.addHandler(file_handler)
-        log.addHandler(console_handler)
-
-        # Check if log exists and should therefore be rolled
-        needRoll = os.path.isfile(log_file)
+        log = logging.getLogger(__name__)
+        makeFileHandler = True
+        makeStreamHandler = True
+        if len(log.handlers) > 0:
+            for handler in log.handlers:
+                if isinstance(handler, logging.FileHandler):
+                    makeFileHandler = False
+                elif isinstance(handler, logging.StreamHandler):
+                    makeStreamHandler = False
+        if makeStreamHandler:
+            # create formatters
+            screen_formatter = logging.Formatter("%(message)s")
+            # create a console handler
+            # and set its log level to the command-line option 
+            # 
+            console_handler = logging.StreamHandler(sys.stdout)
+            #console_handler.setLevel(logging.INFO)
+            numeric_screenlevel = getattr(logging, screenloglevel.upper(), None)
+            if not isinstance(numeric_screenlevel, int):
+                raise ValueError('Invalid screenlog level: %s' % screenloglevel)
+            console_handler.setLevel(numeric_screenlevel)
+            console_handler.setFormatter(screen_formatter)
+            # add handler to the logger
+            #
+            log.addHandler(console_handler)
+        if makeFileHandler:
+            # create formatters
+            file_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+            # get a top-level logger,
+            # set its log level,
+            # BUT PREVENT IT from propagating messages to the root logger
+            #
+            numeric_level = getattr(logging, loglevel.upper(), None)
+            if not isinstance(numeric_level, int):
+                raise ValueError('Invalid log level: %s' % loglevel)
+            log.setLevel(numeric_level)
+            log.propagate = 0
 
 
-        # This is a stale log, so roll it
-        if needRoll:    
-            # Add timestamp
-            log.debug('\n---------\nLog closed on %s.\n---------\n' % time.asctime())
+            # create a file handler
+            # and set its log level
+            #
+            file_handler = logging.handlers.RotatingFileHandler(log_file, backupCount=10)
+            file_handler.setLevel(numeric_level)
+            file_handler.setFormatter(file_formatter)
 
-            # Roll over on application start
-            file_handler.doRollover()
+            # add handler to the logger
+            #
+            log.addHandler(file_handler)
+
+            # Check if log exists and should therefore be rolled
+            needRoll = os.path.isfile(log_file)
+
+
+            # This is a stale log, so roll it
+            if needRoll:    
+                # Add timestamp
+                log.debug('\n---------\nLog closed on %s.\n---------\n' % time.asctime())
+
+                # Roll over on application start
+                file_handler.doRollover()
 
         # Add timestamp
         log.debug('\n---------\nLog started on %s.\n---------\n' % time.asctime())
 
         log.debug("rapid version: " + version)
         RapidLog.log = log
+
+    @staticmethod
+    def log_close():
+        for handler in RapidLog.log.handlers:
+            if isinstance(handler, logging.FileHandler):
+                handler.close()
+                RapidLog.log.removeHandler(handler)
 
     @staticmethod
     def exception(exception_info):

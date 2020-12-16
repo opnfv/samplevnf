@@ -22,6 +22,8 @@
   PacketsReceived: PacketsReceived
   PacketsLost: PacketsLost
 rapid_flowsizetest:
+  Environment: environment_file
+  Test: test
   Flows: Flows 
   Size: Size
   Speed (Mpps):
@@ -42,17 +44,7 @@ rapid_flowsizetest:
     PacketsReceived: PacketsReceived
     PacketsLost: PacketsLost
 rapid_irqtest:
-  Core: Core 
-  LessThan1us   : B1
-  LessThan5us   : B5
-  LessThan10us  : B10
-  LessThan50us  : B50
-  LessThan100us : B100
-  LessThan500us : B500
-  LessThan1ms   : B1000
-  LessThan5ms   : B5000
-  LessThan10ms  : B10000
-  LessThan50ms  : B50000
-  LessThan100ms : B100000
-  LessThan500ms : B500000
-  MoreThan500ms : BM500000
+  Environment: environment_file
+  Test: test
+  Buckets: buckets
+  Machine_data: machine_data 

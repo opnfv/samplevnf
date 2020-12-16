@@ -99,7 +99,7 @@ class FlowSizeTest(RapidTest):
     def run(self):
         result_details = {'Details': 'Nothing'}
         self.gen_machine.start_latency_cores()
-        TestPassed = True
+        TestResult = 0
         for imix in self.test['imixs']:
             size = mean(imix)
             self.gen_machine.set_udp_packet_size(imix)
@@ -122,7 +122,6 @@ class FlowSizeTest(RapidTest):
                 self.set_background_flows(self.background_machines, flow_number)
                 endspeed = None
                 speed = self.get_start_speed_and_init(size)
-                self.record_start_time()
                 while True:
                     attempts += 1
                     endwarning = False
@@ -164,7 +163,7 @@ class FlowSizeTest(RapidTest):
                         if lat_warning or retry_warning:
                             endwarning = '|        | {:177.177} |'.format(retry_warning + lat_warning)
                         success = True
-                        TestPassed = False # fixed rate testing cannot be True, it is just reporting numbers every second
+                        TestResult = TestResult + pps_rx # fixed rate testing result is strange: we just report the pps received
                         speed_prefix = lat_avg_prefix = lat_perc_prefix = lat_max_prefix = abs_drop_rate_prefix = drop_rate_prefix = bcolors.ENDC
                     # The following if statement is testing if we pass the success criteria of a certain drop rate, average latency and maximum latency below the threshold
                     # The drop rate success can be achieved in 2 ways: either the drop rate is below a treshold, either we want that no packet has been lost during the test
@@ -234,10 +233,7 @@ class FlowSizeTest(RapidTest):
                             break
                     elif self.resolution_achieved():
                         break
-                self.record_stop_time()
                 if endspeed is not None:
-                    if TestPassed and (endpps_rx < self.test['pass_threshold']):
-                        TestPassed = False
                     speed_prefix = lat_avg_prefix = lat_perc_prefix = lat_max_prefix = abs_drop_rate_prefix = drop_rate_prefix = bcolors.ENDC
                     RapidLog.info(self.report_result(flow_number,size,endspeed,endpps_req_tx,endpps_tx,endpps_sut_tx,endpps_rx,endlat_avg,endlat_perc,endlat_perc_max,endlat_max,endabs_tx,endabs_rx,endabs_dropped,actual_duration,speed_prefix,lat_avg_prefix,lat_perc_prefix,lat_max_prefix,abs_drop_rate_prefix,drop_rate_prefix))
                     if endavg_bg_rate:
@@ -248,10 +244,9 @@ class FlowSizeTest(RapidTest):
                         RapidLog.info (endwarning)
                     RapidLog.info("+--------+------------------+-------------+-------------+-------------+------------------------+----------+----------+----------+-----------+-----------+-----------+-----------+-------+----+")
                     if self.test['test'] != 'fixed_rate':
+                        TestResult = TestResult + endpps_rx
                         result_details = {'test': self.test['testname'],
                                 'environment_file': self.test['environment_file'],
-                                'start_date': self.start,
-                                'stop_date': self.stop,
                                 'Flows': flow_number,
                                 'Size': size,
                                 'RequestedSpeed': RapidTest.get_pps(endspeed,size),
@@ -271,4 +266,4 @@ class FlowSizeTest(RapidTest):
                 else:
                     RapidLog.info('|{:>7}'.format(str(flow_number))+" | Speed 0 or close to 0")
         self.gen_machine.stop_latency_cores()
-        return (TestPassed, result_details)
+        return (TestResult, result_details)

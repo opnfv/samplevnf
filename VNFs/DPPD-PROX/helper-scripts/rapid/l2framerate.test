@@ -33,11 +33,6 @@ cores = [1]
 
 [test1]
 test=fixed_rate
-# Following parameter defines the success criterium for the test.
-# When this test uses multiple combinations of packet size and flows,
-# all combinations must be meeting the same threshold
-# The threshold is expressed in Mpps
-pass_threshold=0.1
 startspeed = 10
 imixs=[[256]]
 flows=[64]

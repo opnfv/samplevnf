@@ -1,18 +1,51 @@
 ---
 tiers:
     -
-        name: rapid
+        name: IRQ_rapid_benchmarking
         order: 1
-        description: 'Rapid Testing'
+        description: 'IRQ Rapid Testing'
         testcases:
             -
-                case_name: rapid_tst009
+                case_name: rapid_irq
                 project_name: rapidxt
-                criteria: 100
+                criteria: 499500
+                # Criterium for irq is defined as 500000 -  the maximal allowed interrupt time per PMD loop (in us)
+                blocking: true
+                clean_flag: false
+                description: 'IRQ test'
+                run:
+                    name: rapidxt
+                    args:
+                        test_file: irq.test
+                        runtime: 5
+    -
+        name: TST009_rapid_benchmarking
+        order: 2
+        description: 'TST009 Rapid Testing'
+        testcases:
+            -
+                case_name: rapid_tst009_64b_64f
+                project_name: rapidxt
+                criteria: 0.5
+                # Criterium for TST009 testing is defined as the minimum packets per second received in the generator, expressed in Mpps
                 blocking: true
                 clean_flag: false
                 description: 'TST009 test, 64 byte packets, 64 flows'
                 run:
                     name: rapidxt
                     args:
-                        test_file: TST009_Throughput_64B_64F.test 
+                        test_file: TST009_Throughput_64B_64F.test
+                        runtime: 5
+            -
+                case_name: rapid_tst009_acaeab_16384f
+                project_name: rapidxt
+                criteria: 0.2
+                # Criterium for TST009 testing is defined as the minimum packets per second received in the generator, expressed in Mpps
+                blocking: true
+                clean_flag: false
+                description: 'TST009 test, imix acaeab, 16384 flows'
+                run:
+                    name: rapidxt
+                    args:
+                        test_file: TST009_Throughput_acaeab_16384F.test
+                        runtime: 5
