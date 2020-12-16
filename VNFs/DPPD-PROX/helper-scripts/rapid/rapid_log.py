@@ -42,62 +42,62 @@ class RapidLog(object):
 
     @staticmethod
     def log_init(log_file, loglevel, screenloglevel, version):
-        # create formatters
-        screen_formatter = logging.Formatter("%(message)s")
-        file_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+        if len(log.handlers) < 1:
+            # create formatters
+            screen_formatter = logging.Formatter("%(message)s")
+            file_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+            # get a top-level logger,
+            # set its log level,
+            # BUT PREVENT IT from propagating messages to the root logger
+            #
+            log = logging.getLogger()
+            numeric_level = getattr(logging, loglevel.upper(), None)
+            if not isinstance(numeric_level, int):
+                raise ValueError('Invalid log level: %s' % loglevel)
+            log.setLevel(numeric_level)
+            log.propagate = 0
 
-        # get a top-level logger,
-        # set its log level,
-        # BUT PREVENT IT from propagating messages to the root logger
-        #
-        log = logging.getLogger()
-        numeric_level = getattr(logging, loglevel.upper(), None)
-        if not isinstance(numeric_level, int):
-            raise ValueError('Invalid log level: %s' % loglevel)
-        log.setLevel(numeric_level)
-        log.propagate = 0
+            # create a console handler
+            # and set its log level to the command-line option 
+            # 
+            console_handler = logging.StreamHandler(sys.stdout)
+            #console_handler.setLevel(logging.INFO)
+            numeric_screenlevel = getattr(logging, screenloglevel.upper(), None)
+            if not isinstance(numeric_screenlevel, int):
+                raise ValueError('Invalid screenlog level: %s' % screenloglevel)
+            console_handler.setLevel(numeric_screenlevel)
+            console_handler.setFormatter(screen_formatter)
 
-        # create a console handler
-        # and set its log level to the command-line option 
-        # 
-        console_handler = logging.StreamHandler(sys.stdout)
-        #console_handler.setLevel(logging.INFO)
-        numeric_screenlevel = getattr(logging, screenloglevel.upper(), None)
-        if not isinstance(numeric_screenlevel, int):
-            raise ValueError('Invalid screenlog level: %s' % screenloglevel)
-        console_handler.setLevel(numeric_screenlevel)
-        console_handler.setFormatter(screen_formatter)
+            # create a file handler
+            # and set its log level
+            #
+            file_handler = logging.handlers.RotatingFileHandler(log_file, backupCount=10)
+            #file_handler = log.handlers.TimedRotatingFileHandler(log_file, 'D', 1, 5)
+            file_handler.setLevel(numeric_level)
+            file_handler.setFormatter(file_formatter)
 
-        # create a file handler
-        # and set its log level
-        #
-        file_handler = logging.handlers.RotatingFileHandler(log_file, backupCount=10)
-        #file_handler = log.handlers.TimedRotatingFileHandler(log_file, 'D', 1, 5)
-        file_handler.setLevel(numeric_level)
-        file_handler.setFormatter(file_formatter)
+            # add handlers to the logger
+            #
+            log.addHandler(file_handler)
+            log.addHandler(console_handler)
 
-        # add handlers to the logger
-        #
-        log.addHandler(file_handler)
-        log.addHandler(console_handler)
-
-        # Check if log exists and should therefore be rolled
-        needRoll = os.path.isfile(log_file)
+            # Check if log exists and should therefore be rolled
+            needRoll = os.path.isfile(log_file)
 
 
-        # This is a stale log, so roll it
-        if needRoll:    
+            # This is a stale log, so roll it
+            if needRoll:    
+                # Add timestamp
+                log.debug('\n---------\nLog closed on %s.\n---------\n' % time.asctime())
+
+                # Roll over on application start
+                file_handler.doRollover()
+
             # Add timestamp
-            log.debug('\n---------\nLog closed on %s.\n---------\n' % time.asctime())
+            log.debug('\n---------\nLog started on %s.\n---------\n' % time.asctime())
 
-            # Roll over on application start
-            file_handler.doRollover()
-
-        # Add timestamp
-        log.debug('\n---------\nLog started on %s.\n---------\n' % time.asctime())
-
-        log.debug("rapid version: " + version)
-        RapidLog.log = log
+            log.debug("rapid version: " + version)
+            RapidLog.log = log
 
     @staticmethod
     def exception(exception_info):
