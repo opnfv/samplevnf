@@ -21,6 +21,7 @@
 #include "stats_global.h"
 #include "stats_port.h"
 #include "stats_task.h"
+#include "clock.h"
 
 struct global_stats {
 	struct global_stats_sample sample[2];
@@ -84,7 +85,7 @@ void stats_global_init(unsigned avg_start, unsigned duration)
 
 	global_stats.start_tsc = now;
 	/* + 1 for rounding */
-	tsc_hz = rte_get_tsc_hz();
+	tsc_hz = prox_rte_get_tsc_hz();
 	if (duration)
 		global_stats.end_tsc = global_stats.start_tsc + (avg_start + duration + 1) * tsc_hz;
 

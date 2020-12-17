@@ -54,6 +54,7 @@
 #include "rx_pkt.h"
 #include "prox_compat.h"
 #include "igmp.h"
+#include "clock.h"
 
 static int core_task_is_valid(int lcore_id, int task_id)
 {
@@ -1257,7 +1258,7 @@ static int parse_cmd_tot_stats(const char *str, struct input *input)
 	if (input->reply) {
 		char buf[128];
 		snprintf(buf, sizeof(buf), "%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64"\n",
-			 tot_rx, tot_tx, last_tsc, rte_get_tsc_hz());
+			 tot_rx, tot_tx, last_tsc, prox_rte_get_tsc_hz());
 		input->reply(input, buf, strlen(buf));
 	}
 	else {
@@ -1309,7 +1310,7 @@ static int parse_cmd_tot_ierrors_tot(const char *str, struct input *input)
 		char buf[128];
 		snprintf(buf, sizeof(buf),
 			 "%"PRIu64",%"PRIu64",%"PRIu64"\n",
-			 tot, last_tsc, rte_get_tsc_hz());
+			 tot, last_tsc, prox_rte_get_tsc_hz());
 		input->reply(input, buf, strlen(buf));
 	}
 	else {
@@ -1332,7 +1333,7 @@ static int parse_cmd_tot_imissed_tot(const char *str, struct input *input)
 		char buf[128];
 		snprintf(buf, sizeof(buf),
 			 "%"PRIu64",%"PRIu64",%"PRIu64"\n",
-			 tot, last_tsc, rte_get_tsc_hz());
+			 tot, last_tsc, prox_rte_get_tsc_hz());
 		input->reply(input, buf, strlen(buf));
 	}
 	else {
@@ -1769,7 +1770,7 @@ static int parse_cmd_core_stats(const char *str, struct input *input)
 				char buf[128];
 				snprintf(buf, sizeof(buf),
 				 	"%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64"\n",
-				 	tot_rx, tot_tx, tot_drop, last_tsc, rte_get_tsc_hz());
+				 	tot_rx, tot_tx, tot_drop, last_tsc, prox_rte_get_tsc_hz());
 				input->reply(input, buf, strlen(buf));
 			}
 			else {
@@ -1843,7 +1844,7 @@ static void handle_dp_core_stats(unsigned lcore_id, unsigned task_id, struct inp
 		char buf[128];
 		snprintf(buf, sizeof(buf),
 			"%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%u,%u\n",
-			tot_rx, tot_tx, tot_rx_non_dp, tot_tx_non_dp, tot_drop, tot_tx_fail, last_tsc, rte_get_tsc_hz(), lcore_id, task_id);
+			tot_rx, tot_tx, tot_rx_non_dp, tot_tx_non_dp, tot_drop, tot_tx_fail, last_tsc, prox_rte_get_tsc_hz(), lcore_id, task_id);
 		input->reply(input, buf, strlen(buf));
 	}
 	else {
@@ -1887,7 +1888,7 @@ static void handle_lat_stats(unsigned lcore_id, unsigned task_id, struct input *
 			 tot_lat_min_usec,
 			 tot_lat_max_usec,
 			 last_tsc,
-			 rte_get_tsc_hz(),
+			 prox_rte_get_tsc_hz(),
 			 lcore_id,
 			 task_id);
 		input->reply(input, buf, strlen(buf));

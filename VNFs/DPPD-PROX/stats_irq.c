@@ -21,6 +21,7 @@
 #include "prox_cfg.h"
 #include "prox_globals.h"
 #include "lconf.h"
+#include "clock.h"
 
 static struct irq_task_stats   irq_task_stats_set[RTE_MAX_LCORE * MAX_TASKS_PER_CORE];
 static uint8_t nb_irq_tasks;
@@ -112,7 +113,7 @@ uint64_t get_max_irq_stats_by_core_task(uint8_t lcore_id, uint8_t irq_task_id)
 {
 	for (uint8_t task_id = 0; task_id < nb_irq_tasks; ++task_id) {
 		if ((irq_task_stats_set[task_id].lcore_id == lcore_id) && (irq_task_stats_set[task_id].task_id == irq_task_id))
-			return (irq_task_stats_set[task_id].max_irq * 1000000) / rte_get_tsc_hz();
+			return (irq_task_stats_set[task_id].max_irq * 1000000) / prox_rte_get_tsc_hz();
 	}
 	return -1;
 }
@@ -128,7 +129,7 @@ uint64_t get_irq_stats_by_core_task(uint8_t lcore_id, uint8_t irq_task_id, int i
 
 uint64_t get_max_irq_stats(uint8_t task_id)
 {
-	return (irq_task_stats_set[task_id].max_irq * 1000000L) / rte_get_tsc_hz();
+	return (irq_task_stats_set[task_id].max_irq * 1000000L) / prox_rte_get_tsc_hz();
 }
 
 uint64_t get_irq_stats(uint8_t task_id, int bucket_id)

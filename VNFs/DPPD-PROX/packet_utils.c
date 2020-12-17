@@ -35,6 +35,7 @@
 #include "defines.h"
 #include "prox_ipv6.h"
 #include "tx_pkt.h"
+#include "clock.h"
 
 static inline int find_ip(struct ether_hdr_arp *pkt, uint16_t len, uint32_t *ip_dst, uint16_t *vlan)
 {
@@ -223,7 +224,7 @@ static inline int update_mac_and_send_mbuf(struct arp_table *entry, prox_rte_eth
 
 int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_dst, uint16_t *vlan, uint64_t **time, uint64_t tsc)
 {
-	const uint64_t hz = rte_get_tsc_hz();
+	const uint64_t hz = prox_rte_get_tsc_hz();
 	struct ether_hdr_arp *packet = rte_pktmbuf_mtod(mbuf, struct ether_hdr_arp *);
 	prox_rte_ether_addr *mac = &packet->ether_hdr.d_addr;
 	prox_next_hop_index_type next_hop_index;
@@ -244,7 +245,7 @@ int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_d
 		if (unlikely(rte_lpm_lookup(l3->ipv4_lpm, rte_bswap32(*ip_dst), &next_hop_index) != 0)) {
 			// Prevent printing too many messages
 			n_no_route++;
-			if (tsc > last_tsc + rte_get_tsc_hz()) {
+			if (tsc > last_tsc + prox_rte_get_tsc_hz()) {
 				plogx_err("No route to IP "IPv4_BYTES_FMT" (%ld times)\n", IP4(*ip_dst), n_no_route);
 				last_tsc = tsc;
 				n_no_route = 0;
@@ -350,7 +351,7 @@ int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_d
 
 int write_ip6_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, struct ipv6_addr *ip_dst, uint16_t *vlan, uint64_t tsc)
 {
-	const uint64_t hz = rte_get_tsc_hz();
+	const uint64_t hz = prox_rte_get_tsc_hz();
 	prox_rte_ether_hdr *packet = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 	prox_rte_ether_addr *mac = &packet->d_addr;
 	struct ipv6_addr *used_ip_src;
@@ -698,7 +699,7 @@ static prox_next_hop_index_type get_nh_index(struct task_base *tbase, uint32_t g
 void handle_ctrl_plane_pkts(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts)
 {
 	uint8_t out[1];
-	const uint64_t hz = rte_get_tsc_hz();
+	const uint64_t hz = prox_rte_get_tsc_hz();
 	uint32_t ip, ip_dst, idx, gateway_ip, prefix;
 	prox_next_hop_index_type gateway_index;
 	int j, ret, modified_route;

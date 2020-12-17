@@ -25,6 +25,7 @@
 #include "defaults.h"
 #include "prox_cfg.h"
 #include "etypes.h"
+#include "clock.h"
 
 #define FLAG_DST_MAC_KNOWN	1
 #define MAX_ARP_ENTRIES	65536
@@ -88,7 +89,7 @@ void send_unsollicited_neighbour_advertisement(struct task_base *tbase);
 static inline void update_arp_ndp_retransmit_timeout(struct l3_base *l3, uint64_t *ptr, uint32_t base)
 {
 	// randomize timers - from 0.5 to 1.5 * configured time
-	const uint64_t hz = rte_get_tsc_hz();
+	const uint64_t hz = prox_rte_get_tsc_hz();
 	uint64_t tsc = rte_rdtsc();
 	uint64_t rand = 500 + (1000L * rand_r(&l3->seed)) / RAND_MAX;
 	*ptr = tsc + (base * rand / 1000) * hz / 1000;

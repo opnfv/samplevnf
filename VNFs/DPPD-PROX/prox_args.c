@@ -356,6 +356,9 @@ static int get_global_cfg(__attribute__((unused))unsigned sindex, char *str, voi
 	if (STR_EQ(str, "heartbeat timeout")) {
 		return parse_int(&pset->heartbeat_timeout, pkey);
 	}
+	if (STR_EQ(str, "clock speed khz")) {
+		return parse_int(&pset->clock_speed_khz, pkey);
+	}
 
 	if (STR_EQ(str, "cpe table map")) {
 		/* The config defined ports through 0, 1, 2 ... which

@@ -35,6 +35,7 @@
 #include "etypes.h"
 #include "prox_cfg.h"
 #include "dpi/dpi.h"
+#include "clock.h"
 
 struct task_dpi_per_core {
 	void     *dpi_opaque;
@@ -275,7 +276,7 @@ static struct kv_store_expire *get_shared_flow_table(struct task_args *targ, str
 					     de->dpi_get_flow_entry_size(),
 					     socket_id,
 					     de->dpi_flow_expire,
-					     rte_get_tsc_hz() * 60);
+					     prox_rte_get_tsc_hz() * 60);
 		PROX_PANIC(ret == NULL, "Failed to allocate KV store\n");
 		prox_sh_add_core(targ->lconf->id, "flow_table", ret);
 	}

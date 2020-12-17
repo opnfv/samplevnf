@@ -24,6 +24,7 @@
 #include "log.h"
 #include "unistd.h"
 #include "input.h"
+#include "clock.h"
 
 #define MAX_INTERRUPT_LENGTH	500000	/* Maximum length of an interrupt is (1 / MAX_INTERRUPT_LENGTH) seconds */
 uint64_t irq_bucket_maxtime_micro[] = {1,5,10,50,100,500,1000,5000,10000,50000,100000,500000,UINT64_MAX};
@@ -62,9 +63,9 @@ void task_irq_show_stats(struct task_irq *task_irq, struct input *input)
 				task_irq->lcore_id,
 				i,
 				bucket->info[i].lat,
-				bucket->info[i].lat * 1000000 / rte_get_tsc_hz(),
+				bucket->info[i].lat * 1000000 / prox_rte_get_tsc_hz(),
 				bucket->info[i].tsc - task_irq->start_tsc,
-				(bucket->info[i].tsc - task_irq->start_tsc) * 1000 / rte_get_tsc_hz());
+				(bucket->info[i].tsc - task_irq->start_tsc) * 1000 / prox_rte_get_tsc_hz());
 			sprintf(buf+strlen(buf), "\n");
 			input->reply(input, buf, strlen(buf));
 			buf[0] = 0;
@@ -76,9 +77,9 @@ void task_irq_show_stats(struct task_irq *task_irq, struct input *input)
 					  task_irq->lcore_id,
 					  i,
 					  bucket->info[i].lat,
-					  bucket->info[i].lat * 1000000 / rte_get_tsc_hz(),
+					  bucket->info[i].lat * 1000000 / prox_rte_get_tsc_hz(),
 					  bucket->info[i].tsc - task_irq->start_tsc,
-					  (bucket->info[i].tsc - task_irq->start_tsc) * 1000 / rte_get_tsc_hz());
+					  (bucket->info[i].tsc - task_irq->start_tsc) * 1000 / prox_rte_get_tsc_hz());
 	}
 	task_irq->stats_use_lt = !task_irq->task_use_lt;
 	bucket->index = 0;
@@ -106,13 +107,13 @@ static void irq_stop(struct task_base *tbase)
 			struct irq_bucket *bucket = &task->buffer[bucket_id];
 			for (i=0; i< bucket->index;i++) {
 				if (bucket->info[i].lat != 0) {
-					lat = bucket->info[i].lat * 1000000000 / rte_get_tsc_hz();
+					lat = bucket->info[i].lat * 1000000000 / prox_rte_get_tsc_hz();
 					if (max_lat < lat)
 						max_lat = lat;
 					n_lat++;
 					tot_lat += lat;
 					plog_info("%d; %ld; %ld\n", lcore_id, lat,
-					  	(bucket->info[i].tsc - task->start_tsc) * 1000 / rte_get_tsc_hz());
+					  	(bucket->info[i].tsc - task->start_tsc) * 1000 / prox_rte_get_tsc_hz());
 				}
 			}
 		}
@@ -149,15 +150,15 @@ static void init_task_irq(struct task_base *tbase,
 {
 	struct task_irq *task = (struct task_irq *)tbase;
 	task->start_tsc = rte_rdtsc();
-	task->first_tsc = task->start_tsc + 2 * rte_get_tsc_hz();
+	task->first_tsc = task->start_tsc + 2 * prox_rte_get_tsc_hz();
 	task->lcore_id = targ->lconf->id;
 	task->irq_debug = targ->irq_debug;
 	// max_irq expressed in cycles
-	task->max_irq = rte_get_tsc_hz() / MAX_INTERRUPT_LENGTH;
+	task->max_irq = prox_rte_get_tsc_hz() / MAX_INTERRUPT_LENGTH;
 	plog_info("\tusing irq mode with max irq set to %ld cycles\n", task->max_irq);
 
 	for (uint bucket_id = 0; bucket_id < IRQ_BUCKETS_COUNT - 1; bucket_id++)
-		irq_bucket_maxtime_cycles[bucket_id] = rte_get_tsc_hz() * irq_bucket_maxtime_micro[bucket_id] / 1000000;
+		irq_bucket_maxtime_cycles[bucket_id] = prox_rte_get_tsc_hz() * irq_bucket_maxtime_micro[bucket_id] / 1000000;
 	irq_bucket_maxtime_cycles[IRQ_BUCKETS_COUNT - 1] = UINT64_MAX;
 }
 

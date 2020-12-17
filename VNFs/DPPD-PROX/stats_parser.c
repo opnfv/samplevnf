@@ -32,6 +32,7 @@
 #include "stats_prio_task.h"
 #include "stats_irq.h"
 #include "prox_compat.h"
+#include "clock.h"
 
 struct stats_path_str {
 	const char *str;
@@ -781,7 +782,7 @@ static uint64_t sp_global_tsc(int argc, const char *argv[])
 
 static uint64_t sp_hz(int argc, const char *argv[])
 {
-	return rte_get_tsc_hz();
+	return prox_rte_get_tsc_hz();
 }
 
 struct stats_path_str stats_paths[] = {

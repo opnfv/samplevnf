@@ -49,6 +49,7 @@
 #include "handle_master.h"
 #include "defines.h"
 #include "prox_ipv6.h"
+#include "clock.h"
 
 struct pkt_template {
 	uint16_t len;
@@ -1381,7 +1382,7 @@ static void init_task_gen_pcap(struct task_base *tbase, struct task_args *targ)
 
 	task->loop = targ->loop;
 	task->pkt_idx = 0;
-	task->hz = rte_get_tsc_hz();
+	task->hz = prox_rte_get_tsc_hz();
 
 	char err[PCAP_ERRBUF_SIZE];
 	pcap_t *handle = pcap_open_offline(targ->pcap_file, err);
@@ -1526,7 +1527,7 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 	task->local_mbuf.mempool = task_gen_create_mempool(targ, task->max_frame_size);
 	PROX_PANIC(task->local_mbuf.mempool == NULL, "Failed to create mempool\n");
 	task->pkt_idx = 0;
-	task->hz = rte_get_tsc_hz();
+	task->hz = prox_rte_get_tsc_hz();
 	task->lat_pos = targ->lat_pos;
 	task->accur_pos = targ->accur_pos;
 	task->sig_pos = targ->sig_pos;
@@ -1540,7 +1541,7 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 	 * at which rate to start. Note that virtio running on OVS returns 10 Gbps, so a script has
 	 * probably also to check the driver (as returned by the same "port info" command.
 	 */
-	struct token_time_cfg tt_cfg = token_time_cfg_create(1250000000, rte_get_tsc_hz(), -1);
+	struct token_time_cfg tt_cfg = token_time_cfg_create(1250000000, prox_rte_get_tsc_hz(), -1);
 	token_time_init(&task->token_time, &tt_cfg);
 
 	init_task_gen_seeds(task);

@@ -35,6 +35,7 @@
 #include "prox_assert.h"
 #include "pkt_prototypes.h"
 #include "quit.h"
+#include "clock.h"
 
 struct cpe_gre_key {
 	prox_rte_ether_addr clt_mac;
@@ -161,7 +162,7 @@ static void init_task_gre_encap(struct task_base *tbase, struct task_args *targ)
 
 #ifdef GRE_TP
 	if (targ->tb_rate) {
-		task->cycles_per_byte = ((double)rte_get_tsc_hz()) / ((double)targ->tb_rate);
+		task->cycles_per_byte = ((double)prox_rte_get_tsc_hz()) / ((double)targ->tb_rate);
 		task->tb_size = targ->tb_size != 0 ? targ->tb_size : 1520;
 	}
 	else {

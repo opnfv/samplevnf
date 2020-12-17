@@ -72,6 +72,7 @@ struct prox_cfg {
 	uint32_t	logbuf_pos;
 	char		*logbuf;
 	uint32_t        heartbeat_timeout;
+	uint32_t        clock_speed_khz;
 	uint32_t        poll_timeout;
 	uint64_t        heartbeat_tsc;
 	struct ipv6_addr all_routers_ipv6_mcast_addr;

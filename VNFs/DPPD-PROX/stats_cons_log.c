@@ -23,6 +23,7 @@
 #include "prox_args.h"
 #include "prox_assert.h"
 #include "commands.h"
+#include "clock.h"
 
 static struct stats_cons stats_cons_log = {
 	.init = stats_cons_log_init,
@@ -138,7 +139,7 @@ void stats_cons_log_init(void)
 
 	struct header hdr;
 
-	header_init(&hdr, rte_get_tsc_hz(), rte_rdtsc(), n_entries);
+	header_init(&hdr, prox_rte_get_tsc_hz(), rte_rdtsc(), n_entries);
 	header_add_field(&hdr, sizeof(((struct record *)0)->lcore_id));
 	header_add_field(&hdr, sizeof(((struct record *)0)->task_id));
 	header_add_field(&hdr, sizeof(((struct record *)0)->active_connections));
@@ -188,7 +189,7 @@ void stats_cons_log_notify(void)
 #else
 void stats_cons_log_init(void)
 {
-	uint64_t el = rte_get_tsc_hz();
+	uint64_t el = prox_rte_get_tsc_hz();
 	uint64_t now = rte_rdtsc();
 
 	fp = fopen(STATS_DUMP_FILE_NAME, "w");
@@ -221,7 +222,7 @@ void stats_cons_log_init(void)
 
 	struct header hdr;
 
-	header_init(&hdr, rte_get_tsc_hz(), rte_rdtsc(), n_entries);
+	header_init(&hdr, prox_rte_get_tsc_hz(), rte_rdtsc(), n_entries);
 	header_add_field(&hdr, sizeof(((struct record *)0)->lcore_id));
 	header_add_field(&hdr, sizeof(((struct record *)0)->task_id));
 	header_add_field(&hdr, sizeof(((struct record *)0)->rx_bytes));

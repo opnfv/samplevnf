@@ -27,6 +27,7 @@
 #include "run.h"
 #include "cmd_parser.h"
 #include "prox_cfg.h"
+#include "clock.h"
 
 static struct input tcp_server;
 int tcp_server_started;
@@ -135,7 +136,7 @@ static void handle_client(struct input* client_input)
 		return ;
 	}
 
-	prox_cfg.heartbeat_tsc = rte_rdtsc() + prox_cfg.heartbeat_timeout * rte_get_tsc_hz();
+	prox_cfg.heartbeat_tsc = rte_rdtsc() + prox_cfg.heartbeat_timeout * prox_rte_get_tsc_hz();
 
 	/* Scan in data until \n (\r skipped if followed by \n) */
 	for (int i = 0; i < ret; ++i) {

@@ -25,6 +25,7 @@
 #include "task_base.h"
 #include "stats.h"
 #include "prox_compat.h"
+#include "clock.h"
 
 struct task_dump {
 	struct task_base base;
@@ -84,7 +85,7 @@ static void stop(struct task_base *tbase)
 	struct pcap_pkthdr header = {{0}, 0, 0};
 	static int once = 0;
 	char err_str[PCAP_ERRBUF_SIZE];
-	const uint64_t hz = rte_get_tsc_hz();
+	const uint64_t hz = prox_rte_get_tsc_hz();
 	struct timeval tv = {0};
 	uint64_t tsc, beg = 0;
 

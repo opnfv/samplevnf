@@ -33,6 +33,7 @@
 #include "eld.h"
 #include "prox_shared.h"
 #include "prox_port_cfg.h"
+#include "clock.h"
 
 #define DEFAULT_BUCKET_SIZE	11
 #define ACCURACY_BUFFER_SIZE	(2 * ACCURACY_WINDOW)
@@ -842,7 +843,7 @@ static void init_task_lat(struct task_base *tbase, struct task_args *targ)
 		if (bytes_per_hz == UINT64_MAX)
 			task->bytes_to_tsc[i] = 0;
 		else
-			task->bytes_to_tsc[i] = (rte_get_tsc_hz() * i * 0.99) / bytes_per_hz;
+			task->bytes_to_tsc[i] = (prox_rte_get_tsc_hz() * i * 0.99) / bytes_per_hz;
 	}
 }
 

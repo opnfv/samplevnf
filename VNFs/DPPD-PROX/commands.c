@@ -39,6 +39,7 @@
 #include "rw_reg.h"
 #include "cqm.h"
 #include "stats_core.h"
+#include "clock.h"
 
 void start_core_all(int task_id)
 {
@@ -94,7 +95,7 @@ static inline int wait_command_handled(struct lcore_cfg *lconf)
 
 	while (lconf_is_req(lconf)) {
 		t2 = rte_rdtsc();
-		if (t2 - t1 > max_time * rte_get_tsc_hz()) {
+		if (t2 - t1 > max_time * prox_rte_get_tsc_hz()) {
 			// Failed to handle command ...
 			for (uint8_t task_id = 0; task_id < lconf->n_tasks_all; ++task_id) {
 				struct task_args *targs = &lconf->targs[task_id];

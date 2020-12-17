@@ -48,6 +48,7 @@
 #include "thread_pipeline.h"
 #include "cqm.h"
 #include "handle_master.h"
+#include "clock.h"
 
 #if RTE_VERSION < RTE_VERSION_NUM(1,8,0,0)
 #define RTE_CACHE_LINE_SIZE CACHE_LINE_SIZE
@@ -1078,7 +1079,7 @@ static int setup_prox(int argc, char **argv)
 	init_rte_dev(prox_cfg.flags & DSF_USE_DUMMY_DEVICES);
 	plog_info("=== Calibrating TSC overhead ===\n");
 	clock_init();
-	plog_info("\tTSC running at %"PRIu64" Hz\n", rte_get_tsc_hz());
+	plog_info("\tTSC running at %"PRIu64" Hz\n", prox_rte_get_tsc_hz());
 
 	init_lcores();
 	plog_info("=== Initializing ports ===\n");

@@ -31,6 +31,7 @@
 #include "etypes.h"
 #include "prox_cfg.h"
 #include "prox_compat.h"
+#include "clock.h"
 
 static pthread_mutex_t file_mtx = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 int log_lvl = PROX_MAX_LOG_LVL;
@@ -193,7 +194,7 @@ static int vplog(int lvl, const char *format, va_list ap, const struct rte_mbuf 
 
 	*buf = 0;
 	if (extended) {
-		hz = rte_get_tsc_hz();
+		hz = prox_rte_get_tsc_hz();
 		rtime_tsc = rte_rdtsc() - tsc_off;
 		rtime_sec = rtime_tsc / hz;
 		rtime_usec = (rtime_tsc - rtime_sec * hz) / (hz / 1000000);

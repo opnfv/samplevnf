@@ -52,6 +52,7 @@
 #include "token_time.h"
 #include "commands.h"
 #include "prox_shared.h"
+#include "clock.h"
 
 #if RTE_VERSION < RTE_VERSION_NUM(1,8,0,0)
 #define RTE_CACHE_LINE_SIZE CACHE_LINE_SIZE
@@ -730,7 +731,7 @@ static int lua_to_stream_cfg(struct lua_State *L, enum lua_place from, const cha
 	if (lua_to_double(L, TABLE, "dn_bps", &dn))
 		dn = 5000;// Default rate is 40 Mbps
 
-	const uint64_t hz = rte_get_tsc_hz();
+	const uint64_t hz = prox_rte_get_tsc_hz();
 
 	ret->tt_cfg[PEER_CLIENT] = token_time_cfg_create(up, hz, PROX_RTE_ETHER_MAX_LEN + 20);
 	ret->tt_cfg[PEER_SERVER] = token_time_cfg_create(dn, hz, PROX_RTE_ETHER_MAX_LEN + 20);
@@ -945,7 +946,7 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 
 	struct token_time_cfg tt_cfg = {
 		.bpp = targ->rate_bps,
-		.period = rte_get_tsc_hz(),
+		.period = prox_rte_get_tsc_hz(),
 		.bytes_max = n_descriptors * (PROX_RTE_ETHER_MIN_LEN + 20),
 	};
 
@@ -1013,7 +1014,7 @@ static void init_task_gen_client(struct task_base *tbase, struct task_args *targ
 
 	PROX_PANIC(targ->max_setup_rate == 0, "Max setup rate not set\n");
 
-	task->new_conn_cost = rte_get_tsc_hz()/targ->max_setup_rate;
+	task->new_conn_cost = prox_rte_get_tsc_hz()/targ->max_setup_rate;
 
 	static char name2[] = "task_gen_hash";
 	name2[0]++;
@@ -1036,7 +1037,7 @@ static void init_task_gen_client(struct task_base *tbase, struct task_args *targ
 
 	struct token_time_cfg tt_cfg = {
 		.bpp = targ->rate_bps,
-		.period = rte_get_tsc_hz(),
+		.period = prox_rte_get_tsc_hz(),
 		.bytes_max = prox_port_cfg[targ->tx_port_queue[0].port].n_txd * (PROX_RTE_ETHER_MIN_LEN + 20),
 	};
 

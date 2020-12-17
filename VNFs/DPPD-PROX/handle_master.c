@@ -46,6 +46,7 @@
 #include "defines.h"
 #include "prox_ipv6.h"
 #include "packet_utils.h"
+#include "clock.h"
 
 #define PROX_MAX_ARP_REQUESTS	32	// Maximum number of tasks requesting the same MAC address
 #define NETLINK_BUF_SIZE	16384
@@ -397,7 +398,7 @@ static inline void handle_icmp(struct task_base *tbase, struct rte_mbuf *mbuf)
 	uint8_t type = picmp->icmp_type;
 	if (type == PROX_RTE_IP_ICMP_ECHO_REQUEST) {
 		port->n_echo_req++;
-		if (rte_rdtsc() - port->last_echo_req_rcvd_tsc > rte_get_tsc_hz()) {
+		if (rte_rdtsc() - port->last_echo_req_rcvd_tsc > prox_rte_get_tsc_hz()) {
 			plog_dbg("Received %u Echo Request on IP "IPv4_BYTES_FMT" (last received from IP "IPv4_BYTES_FMT")\n", port->n_echo_req, IPv4_BYTES(((uint8_t*)&ip_hdr->dst_addr)), IPv4_BYTES(((uint8_t*)&ip_hdr->src_addr)));
 			port->n_echo_req = 0;
 			port->last_echo_req_rcvd_tsc = rte_rdtsc();
@@ -405,7 +406,7 @@ static inline void handle_icmp(struct task_base *tbase, struct rte_mbuf *mbuf)
 		build_icmp_reply_message(tbase, mbuf);
 	} else if (type == PROX_RTE_IP_ICMP_ECHO_REPLY) {
 		port->n_echo_rep++;
-		if (rte_rdtsc() - port->last_echo_rep_rcvd_tsc > rte_get_tsc_hz()) {
+		if (rte_rdtsc() - port->last_echo_rep_rcvd_tsc > prox_rte_get_tsc_hz()) {
 			plog_info("Received %u Echo Reply on IP "IPv4_BYTES_FMT" (last received from IP "IPv4_BYTES_FMT")\n", port->n_echo_rep, IPv4_BYTES(((uint8_t*)&ip_hdr->dst_addr)), IPv4_BYTES(((uint8_t*)&ip_hdr->src_addr)));
 			port->n_echo_rep = 0;
 			port->last_echo_rep_rcvd_tsc = rte_rdtsc();

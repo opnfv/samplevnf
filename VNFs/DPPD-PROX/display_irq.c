@@ -18,6 +18,7 @@
 #include "stats_irq.h"
 #include "display.h"
 #include "lconf.h"
+#include "clock.h"
 
 static struct display_page display_page_irq;
 static struct display_column *stats_irq[IRQ_BUCKETS_COUNT];
@@ -127,7 +128,7 @@ static void display_irq_draw_stats(struct screen_state *state)
 			struct irq_sample *last = get_irq_sample(count, 1);
 			struct irq_sample *prev = get_irq_sample(count, 0);
 
-			display_column_print(stats_max, count, "%9lu", (last->max_irq * 1000000L) / rte_get_tsc_hz());
+			display_column_print(stats_max, count, "%9lu", (last->max_irq * 1000000L) / prox_rte_get_tsc_hz());
 			for (uint i = 0; i < IRQ_BUCKETS_COUNT; ++i) {
 				display_column_print(stats_irq[i], count, "%9lu", last->irq[i] - prev->irq[i]);
 			}

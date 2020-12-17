@@ -18,6 +18,8 @@
 #define _CLOCK_H_
 
 #include <inttypes.h>
+#include <rte_cycles.h>
+#include "prox_cfg.h"
 
 extern uint32_t rdtsc_overhead;
 extern uint32_t rdtsc_overhead_stats;
@@ -36,6 +38,14 @@ struct time_unit_err {
 
 extern uint64_t thresh;
 extern uint64_t tsc_hz;
+
+static uint64_t prox_rte_get_tsc_hz(void)
+{
+	if (prox_cfg.clock_speed_khz)
+		return (1000L * prox_cfg.clock_speed_khz);
+	else
+		return rte_get_tsc_hz();
+}
 
 static uint64_t val_to_rate(uint64_t val, uint64_t delta_t)
 {

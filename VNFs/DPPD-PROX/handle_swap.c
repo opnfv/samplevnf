@@ -31,6 +31,7 @@
 #include "igmp.h"
 #include "prox_cksum.h"
 #include "prox_compat.h"
+#include "clock.h"
 
 struct task_swap {
 	struct task_base base;
@@ -334,7 +335,7 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 			if (type == PROX_RTE_IP_ICMP_ECHO_REQUEST) {
 				if (ip_hdr->dst_addr == task->local_ipv4) {
 					task->n_echo_req++;
-					if (rte_rdtsc() - task->last_echo_req_rcvd_tsc > rte_get_tsc_hz()) {
+					if (rte_rdtsc() - task->last_echo_req_rcvd_tsc > prox_rte_get_tsc_hz()) {
 						plog_info("Received %u Echo Request on IP "IPv4_BYTES_FMT" (last received from IP "IPv4_BYTES_FMT")\n", task->n_echo_req, IPv4_BYTES(((uint8_t*)&ip_hdr->dst_addr)), IPv4_BYTES(((uint8_t*)&ip_hdr->src_addr)));
 						task->n_echo_req = 0;
 						task->last_echo_req_rcvd_tsc = rte_rdtsc();
@@ -347,7 +348,7 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 			} else if (type == PROX_RTE_IP_ICMP_ECHO_REPLY) {
 				if (ip_hdr->dst_addr == task->local_ipv4) {
 					task->n_echo_rep++;
-					if (rte_rdtsc() - task->last_echo_rep_rcvd_tsc > rte_get_tsc_hz()) {
+					if (rte_rdtsc() - task->last_echo_rep_rcvd_tsc > prox_rte_get_tsc_hz()) {
 						plog_info("Received %u Echo Reply on IP "IPv4_BYTES_FMT" (last received from IP "IPv4_BYTES_FMT")\n", task->n_echo_rep, IPv4_BYTES(((uint8_t*)&ip_hdr->dst_addr)), IPv4_BYTES(((uint8_t*)&ip_hdr->src_addr)));
 						task->n_echo_rep = 0;
 						task->last_echo_rep_rcvd_tsc = rte_rdtsc();

@@ -20,6 +20,7 @@
 #include "stats_latency.h"
 #include "display.h"
 #include "lconf.h"
+#include "clock.h"
 
 static struct display_page display_page_latency_distr;
 static struct display_column *stats_latency_distr[LAT_BUCKET_COUNT];
@@ -53,7 +54,7 @@ static void display_latency_distr_draw_frame(struct screen_state *state)
 
 	uint32_t bucket_size = stats_get_latency_bucket_size();
 	struct display_table *stats = display_page_add_table(&display_page_latency_distr);
-	uint32_t bucket_unit_nsec = 1000000000 / (rte_get_tsc_hz() >> bucket_size);
+	uint32_t bucket_unit_nsec = 1000000000 / (prox_rte_get_tsc_hz() >> bucket_size);
 	if (state->toggle == 0) {
 		display_table_init(stats, "Statistics per second");
 	} else {
@@ -63,7 +64,7 @@ static void display_latency_distr_draw_frame(struct screen_state *state)
 	stats_max = display_table_add_col(stats);
 	snprintf(title, sizeof(title), " MAXIMUM(mic)");
 	display_column_init(stats_max, title, 11);
-	plog_info("Bucket unit is %d nsec, bucket size is %d, freq is %ld\n", bucket_unit_nsec, bucket_size, rte_get_tsc_hz());
+	plog_info("Bucket unit is %d nsec, bucket size is %d, freq is %ld\n", bucket_unit_nsec, bucket_size, prox_rte_get_tsc_hz());
 
 	uint32_t i = global_min_bucket_id, first = i, k = 0;
 	while ((i < LAT_BUCKET_COUNT) && (i <= global_max_bucket_id)) {
