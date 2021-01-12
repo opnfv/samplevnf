@@ -402,7 +402,7 @@ static inline void handle_icmp(struct task_base *tbase, struct rte_mbuf *mbuf)
 			port->n_echo_req = 0;
 			port->last_echo_req_rcvd_tsc = rte_rdtsc();
 		}
-		build_icmp_reply_message(tbase, mbuf);
+		return build_icmp_reply_message(tbase, mbuf);
 	} else if (type == PROX_RTE_IP_ICMP_ECHO_REPLY) {
 		port->n_echo_rep++;
 		if (rte_rdtsc() - port->last_echo_rep_rcvd_tsc > rte_get_tsc_hz()) {
