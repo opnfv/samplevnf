@@ -22,7 +22,7 @@ lat_percentile = 99
 
 [TestM1]
 name = Generator
-config_file = gen.cfg
+config_file = configs/gen.cfg
 dest_vm = 2
 gencores = [1]
 latcores = [3]
@@ -30,7 +30,7 @@ latcores = [3]
 
 [TestM2]
 name = Swap
-config_file = swap.cfg
+config_file = configs/swap.cfg
 cores = [1]
 #prox_socket = true
 #prox_launch_exit = true

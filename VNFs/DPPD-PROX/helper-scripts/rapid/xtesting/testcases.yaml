@@ -16,7 +16,7 @@ tiers:
                 run:
                     name: rapidxt
                     args:
-                        test_file: irq.test
+                        test_file: tests/irq.test
                         runtime: 5
     -
         name: TST009_rapid_benchmarking
@@ -34,7 +34,7 @@ tiers:
                 run:
                     name: rapidxt
                     args:
-                        test_file: TST009_Throughput_64B_64F.test
+                        test_file: tests/TST009_Throughput_64B_64F.test
                         runtime: 5
             -
                 case_name: rapid_tst009_acaeab_16384f
@@ -47,5 +47,5 @@ tiers:
                 run:
                     name: rapidxt
                     args:
-                        test_file: TST009_Throughput_acaeab_16384F.test
+                        test_file: tests/TST009_Throughput_acaeab_16384F.test
                         runtime: 5

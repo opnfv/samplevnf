@@ -1,0 +1,52 @@
+##
+## Copyright (c) 2010-2020 Intel Corporation
+##
+## Licensed under the Apache License, Version 2.0 (the "License");
+## you may not use this file except in compliance with the License.
+## You may obtain a copy of the License at
+##
+##     http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+
+[TestParameters]
+name = BareTesting
+number_of_tests = 2
+total_number_of_test_machines = 2
+
+[TestM1]
+name = Generator
+config_file = configs/l2gen_bare.cfg
+dest_vm = 2
+gencores = [1]
+latcores = [3]
+
+[TestM2]
+name = Swap
+config_file = configs/l2swap.cfg
+cores = [1]
+
+[test1]
+test=warmuptest
+flowsize=512
+imix=[64]
+warmupspeed=10
+warmuptime=2
+
+[test2]
+test=flowsizetest
+imixs=[[64],[128]]
+# the number of flows in the list need to be powers of 2, max 2^20
+# Select from following numbers: 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576
+flows=[512,1]
+drop_rate_threshold = 0
+lat_avg_threshold = 500
+lat_max_threshold = 1000
+accuracy = 0.1
+startspeed = 10
+

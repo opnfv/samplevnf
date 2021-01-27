@@ -18,6 +18,7 @@
 
 from rapid_log import RapidLog 
 from prox_ctrl import prox_ctrl
+import os
 import re
 
 class RapidMachine(object):
@@ -69,8 +70,8 @@ class RapidMachine(object):
                 result = self._client.run_cmd(DevBindFileName)
                 RapidLog.debug('devbind.sh running for port {} on {} {}'.format(index, self.name, result))
 
-    def generate_lua(self, vim, appendix = ''):
-        PROXConfigfile =  open (self.machine_params['config_file'], 'r')
+    def generate_lua(self, vim, prox_config_file, appendix = ''):
+        PROXConfigfile =  open (prox_config_file, 'r')
         PROXConfig = PROXConfigfile.read()
         PROXConfigfile.close()
         self.all_tasks_for_this_cfg = set(re.findall("task\s*=\s*(\d+)",PROXConfig))
@@ -104,13 +105,13 @@ class RapidMachine(object):
             self._client.connect()
             if self.vim in ['OpenStack']:
                 self.devbind()
-            self.generate_lua(self.vim)
-            self._client.scp_put(self.machine_params['config_file'], '{}/{}'.format(self.rundir, self.machine_params['config_file']))
+            _, prox_config_file_name = os.path.split(self.machine_params['config_file'])
+            self.generate_lua(self.vim, self.machine_params['config_file'])
+            self._client.scp_put(self.machine_params['config_file'], '{}/{}'.format(self.rundir, prox_config_file_name))
             if ((not self.configonly) and self.machine_params['prox_launch_exit']):
-                cmd = 'sudo {}/prox {} -t -o cli -f {}/{}'.format(self.rundir, autostart, self.rundir, self.machine_params['config_file'])
+                cmd = 'sudo {}/prox {} -t -o cli -f {}/{}'.format(self.rundir, autostart, self.rundir, prox_config_file_name)
                 RapidLog.debug("Starting PROX on {}: {}".format(self.name, cmd))
                 result = self._client.run_cmd(cmd, 'PROX Testing on {}'.format(self.name))
-                #RapidLog.debug("Finished PROX on {}: {}, {}".format(self.name, cmd, result))
                 RapidLog.debug("Finished PROX on {}: {}".format(self.name, cmd))
 
     def close_prox(self):

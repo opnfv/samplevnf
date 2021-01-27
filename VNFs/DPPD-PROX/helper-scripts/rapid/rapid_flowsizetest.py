@@ -109,7 +109,7 @@ class FlowSizeTest(RapidTest):
                 backgroundinfo = '{}{}'.format(bcolors.FLASH,bcolors.ENDC)
             self.set_background_size(self.background_machines, imix)
             RapidLog.info("+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+")
-            RapidLog.info('| UDP, {:>5} bytes, different number of flows by randomizing SRC & DST UDP port. {:116.116}|'.format(size, backgroundinfo))
+            RapidLog.info('| UDP, {:>5} bytes, different number of flows by randomizing SRC & DST UDP port. {:116.116}|'.format(round(size), backgroundinfo))
             RapidLog.info("+--------+------------------+-------------+-------------+-------------+------------------------+----------+----------+----------+-----------+-----------+-----------+-----------+-------+----+")
             RapidLog.info('| Flows  | Speed requested  | Gen by core | Sent by NIC | Fwrd by SUT | Rec. by core           | Avg. Lat.|{:.0f} Pcentil| Max. Lat.|   Sent    |  Received |    Lost   | Total Lost|L.Ratio|Time|'.format(self.test['lat_percentile']*100))
             RapidLog.info("+--------+------------------+-------------+-------------+-------------+------------------------+----------+----------+----------+-----------+-----------+-----------+-----------+-------+----+")

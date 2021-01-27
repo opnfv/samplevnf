@@ -81,7 +81,7 @@ class RapidGeneratorMachine(RapidMachine):
         return (self.machine_params['gencores'] +
                 self.machine_params['latcores'])
 
-    def generate_lua(self, vim):
+    def generate_lua(self, vim, prox_config_file):
         appendix = 'gencores="%s"\n'% ','.join(map(str,
             self.machine_params['gencores']))
         appendix = appendix + 'latcores="%s"\n'% ','.join(map(str,
@@ -103,7 +103,7 @@ class RapidGeneratorMachine(RapidMachine):
                     'heartbeat="%s"\n'% self.machine_params['heartbeat'])
         else:
             appendix = appendix + 'heartbeat="60"\n'
-        super().generate_lua(vim, appendix)
+        super().generate_lua(vim, prox_config_file, appendix)
 
     def start_prox(self):
         # Start the generator with the -e option so that the cores don't

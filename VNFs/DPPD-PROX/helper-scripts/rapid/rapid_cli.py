@@ -41,6 +41,7 @@ class RapidCli(object):
         print("  --env ENVIRONMENT_NAME Parameters will be read from ENVIRONMENT_NAME. Default is %s."%test_params['environment_file'])
         print("  --test TEST_NAME       Test cases will be read from TEST_NAME. Default is %s."%test_params['test_file'])
         print("  --map MACHINE_MAP_FILE Machine mapping will be read from MACHINE_MAP_FILE. Default is %s."%test_params['machine_map_file'])
+        print("  --map INDEX_LIST       This parameter can also be a list of indices, e.g. [2,3]")
         print("  --runtime              Specify time in seconds for 1 test run")
         print("  --configonly           If this option is specified, only upload all config files to the VMs, do not run the tests")
         print("  --log                  Specify logging level for log file output, default is DEBUG")

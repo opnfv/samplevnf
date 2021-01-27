@@ -15,38 +15,42 @@
 ##
 
 [TestParameters]
-name = BareTesting
+name = impairTesting
 number_of_tests = 2
-total_number_of_test_machines = 2
+total_number_of_test_machines = 3
 
 [TestM1]
 name = Generator
-config_file = l2gen_bare.cfg
-dest_vm = 2
+config_file = configs/gen_gw.cfg
+gw_vm = 2
+dest_vm = 3
 gencores = [1]
 latcores = [3]
 
 [TestM2]
+name = ImpairGW
+config_file = configs/impair.cfg
+cores = [1]
+monitor = False
+
+[TestM3]
 name = Swap
-config_file = l2swap.cfg
+config_file = configs/swap.cfg
 cores = [1]
 
 [test1]
 test=warmuptest
-flowsize=512
+flowsize=1024
 imix=[64]
 warmupspeed=10
 warmuptime=2
 
 [test2]
-test=flowsizetest
-imixs=[[64],[128]]
-# the number of flows in the list need to be powers of 2, max 2^20
-# Select from following numbers: 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576
-flows=[512,1]
-drop_rate_threshold = 0
+test=impairtest
+imix=[64]
+flowsize=64
+drop_rate_threshold = 0.1
 lat_avg_threshold = 500
 lat_max_threshold = 1000
 accuracy = 0.1
 startspeed = 10
-

@@ -22,6 +22,7 @@ from __future__ import division
 from future import standard_library
 standard_library.install_aliases()
 from builtins import object
+import os
 import sys
 import concurrent.futures
 from concurrent.futures import ALL_COMPLETED
@@ -141,8 +142,9 @@ def main():
     # When no cli is used, the process_cli can be replaced by code modifying
     # test_params
     test_params = RapidCli.process_cli(test_params)
-    log_file = 'RUN{}.{}.log'.format(test_params['environment_file'],
-            test_params['test_file'])
+    _, test_file_name = os.path.split(test_params['test_file'])
+    _, environment_file_name = os.path.split(test_params['environment_file'])
+    log_file = 'RUN{}.{}.log'.format(environment_file_name, test_file_name)
     RapidLog.log_init(log_file, test_params['loglevel'],
             test_params['screenloglevel'] , test_params['version']  )
     test_manager = RapidTestManager()

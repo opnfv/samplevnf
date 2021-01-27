@@ -45,7 +45,7 @@ class ImpairTest(RapidTest):
         flow_number = self.gen_machine.set_flows(flow_number)
         self.gen_machine.start_latency_cores()
         RapidLog.info("+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+")
-        RapidLog.info("| Generator is sending UDP ({:>5} flow) packets ({:>5} bytes) to SUT via GW dropping and delaying packets. SUT sends packets back. Use ctrl-c to stop the test                               |".format(flow_number,size))
+        RapidLog.info("| Generator is sending UDP ({:>5} flow) packets ({:>5} bytes) to SUT via GW dropping and delaying packets. SUT sends packets back. Use ctrl-c to stop the test                               |".format(flow_number,round(size)))
         RapidLog.info("+--------+------------------+-------------+-------------+-------------+------------------------+----------+----------+----------+-----------+-----------+-----------+-----------+-------+----+")
         RapidLog.info('| Test   | Speed requested  | Gen by core | Sent by NIC | Fwrd by SUT | Rec. by core           | Avg. Lat.|{:.0f} Pcentil| Max. Lat.|   Sent    |  Received |    Lost   | Total Lost|L.Ratio|Time|'.format(self.test['lat_percentile']*100))
         RapidLog.info("+--------+------------------+-------------+-------------+-------------+------------------------+----------+----------+----------+-----------+-----------+-----------+-----------+-------+----+")

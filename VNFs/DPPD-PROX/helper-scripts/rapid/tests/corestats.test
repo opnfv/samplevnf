@@ -1,5 +1,5 @@
 ##
-## Copyright (c) 2010-2020 Intel Corporation
+## Copyright (c) 2010-2019 Intel Corporation
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
 ## you may not use this file except in compliance with the License.
@@ -15,42 +15,14 @@
 ##
 
 [TestParameters]
-name = impairTesting
-number_of_tests = 2
-total_number_of_test_machines = 3
+name = CoreStatistics
+number_of_tests = 1
+total_number_of_test_machines = 1
 
 [TestM1]
-name = Generator
-config_file = gen_gw.cfg
-gw_vm = 2
-dest_vm = 3
-gencores = [1]
-latcores = [3]
-
-[TestM2]
-name = ImpairGW
-config_file = impair.cfg
-cores = [1]
-monitor = False
-
-[TestM3]
 name = Swap
-config_file = swap.cfg
+config_file = configs/swap.cfg
 cores = [1]
 
 [test1]
-test=warmuptest
-flowsize=1024
-imix=[64]
-warmupspeed=10
-warmuptime=2
-
-[test2]
-test=impairtest
-imix=[64]
-flowsize=64
-drop_rate_threshold = 0.1
-lat_avg_threshold = 500
-lat_max_threshold = 1000
-accuracy = 0.1
-startspeed = 10
+test=corestats

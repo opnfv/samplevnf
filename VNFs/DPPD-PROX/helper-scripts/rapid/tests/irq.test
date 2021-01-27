@@ -21,13 +21,13 @@ total_number_of_test_machines = 2
 
 [TestM1]
 name = InterruptTestMachine1
-config_file = irq.cfg
+config_file = configs/irq.cfg
 cores = [1,2,3]
 monitor = False
 
 [TestM2]
 name = InterruptTestMachine2
-config_file = irq.cfg
+config_file = configs/irq.cfg
 cores = [1,2,3]
 monitor = False
 

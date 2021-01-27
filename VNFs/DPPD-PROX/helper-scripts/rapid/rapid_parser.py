@@ -91,11 +91,29 @@ class RapidConfigParser(object):
                 'total_number_of_machines']:
             RapidLog.exception("Not enough VMs for this test: %d needed and only %d available" % (required_number_of_test_machines,total_number_of_machines))
             raise Exception("Not enough VMs for this test: %d needed and only %d available" % (required_number_of_test_machines,total_number_of_machines))
+        map_info = test_params['machine_map_file'].strip('[]').split(',')
+        map_info_length = len(map_info)
+        if map_info_length > 1:
+            if map_info_length < test_params[
+                    'required_number_of_test_machines']:
+                RapidLog.exception('Not enough machine indices in --map \
+                        parameter: {}. Needing {} entries'.format(map_info,
+                            test_params['required_number_of_test_machines']))
+            machine_index = list(map(int,map_info))
+        else:
+            machine_map = configparser.RawConfigParser()
+            machine_map.read(test_params['machine_map_file'])
+            machine_index = []
+            for test_machine in range(1,
+                    test_params['required_number_of_test_machines']+1):
+                machine_index.append(int(machine_map.get(
+                    'TestM%d'%test_machine, 'machine_index')))
         machine_map = configparser.RawConfigParser()
         machine_map.read(test_params['machine_map_file'])
         machines = []
         machine = {}
-        for test_machine in range(1, test_params['required_number_of_test_machines']+1):
+        for test_machine in range(1, test_params[
+            'required_number_of_test_machines']+1):
             machine.clear()
             section = 'TestM%d'%test_machine
             options = testconfig.options(section)
@@ -108,7 +126,8 @@ class RapidConfigParser(object):
                 elif option in ['bucket_size_exp']:
                     machine[option] = int(testconfig.get(section, option))
                     if machine[option] < 11:
-                        RapidLog.exception("Minimum Value for bucket_size_exp is 11")
+                        RapidLog.exception(
+                                "Minimum Value for bucket_size_exp is 11")
                 else:
                     machine[option] = testconfig.get(section, option)
                 for key in ['prox_socket','prox_launch_exit']:
@@ -116,9 +135,7 @@ class RapidConfigParser(object):
                        machine[key] = True
             if 'monitor' not in machine.keys():
                 machine['monitor'] = True
-            index = int(machine_map.get('TestM%d'%test_machine,
-                'machine_index'))
-            section = 'M%d'%index
+            section = 'M%d'%machine_index[test_machine-1]
             options = config.options(section)
             for option in options:
                 machine[option] = config.get(section, option)

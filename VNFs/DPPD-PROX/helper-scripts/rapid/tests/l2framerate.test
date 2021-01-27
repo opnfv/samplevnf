@@ -1,5 +1,5 @@
 ##
-## Copyright (c) 2010-2019 Intel Corporation
+## Copyright (c) 2010-2020 Intel Corporation
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
 ## you may not use this file except in compliance with the License.
@@ -15,14 +15,24 @@
 ##
 
 [TestParameters]
-name = CoreStatistics
+name = L2BasicSwapTesting
 number_of_tests = 1
-total_number_of_test_machines = 1
+total_number_of_test_machines = 2
 
 [TestM1]
+name = Generator
+config_file = configs/l2gen.cfg
+dest_vm = 2
+gencores = [1]
+latcores = [3]
+
+[TestM2]
 name = Swap
-config_file = swap.cfg
+config_file = configs/l2swap.cfg
 cores = [1]
 
 [test1]
-test=corestats
+test=fixed_rate
+startspeed = 10
+imixs=[[256]]
+flows=[64]
