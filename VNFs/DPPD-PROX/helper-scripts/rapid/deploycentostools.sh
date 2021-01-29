@@ -146,15 +146,15 @@ function dpdk_install()
 	pushd ${RTE_SDK} > /dev/null 2>&1
 	make config T=${RTE_TARGET}
 	# Starting from DPDK 20.05, the IGB_UIO driver is not compiled by default.
-    # Uncomment the sed command to enable the driver compilation
-    #${SUDO} sed -i 's/CONFIG_RTE_EAL_IGB_UIO=n/c\/CONFIG_RTE_EAL_IGB_UIO=y' ${RTE_SDK}/build/.config
+	# Uncomment the sed command to enable the driver compilation
+	#${SUDO} sed -i 's/CONFIG_RTE_EAL_IGB_UIO=n/c\/CONFIG_RTE_EAL_IGB_UIO=y' ${RTE_SDK}/build/.config
 
 	# For Kubernetes environment we use host vfio module
 	if [ "${K8S_ENV}" == "y" ]; then
 		sed -i 's/CONFIG_RTE_EAL_IGB_UIO=y/CONFIG_RTE_EAL_IGB_UIO=n/g' ${RTE_SDK}/build/.config
 		sed -i 's/CONFIG_RTE_LIBRTE_KNI=y/CONFIG_RTE_LIBRTE_KNI=n/g' ${RTE_SDK}/build/.config
 		sed -i 's/CONFIG_RTE_KNI_KMOD=y/CONFIG_RTE_KNI_KMOD=n/g' ${RTE_SDK}/build/.config
-    fi
+	fi
 
 	# Compile with MB library
 	sed -i '/CONFIG_RTE_LIBRTE_PMD_AESNI_MB=n/c\CONFIG_RTE_LIBRTE_PMD_AESNI_MB=y' ${RTE_SDK}/build/.config
@@ -165,23 +165,26 @@ function dpdk_install()
 
 function prox_compile()
 {
-	# Compile PROX
-	pushd ${BUILD_DIR}/samplevnf/VNFs/DPPD-PROX
-	make -j`getconf _NPROCESSORS_ONLN`
-	${SUDO} cp ${BUILD_DIR}/samplevnf/VNFs/DPPD-PROX/build/app/prox ${BUILD_DIR}/prox
-	popd > /dev/null 2>&1
+    # Compile PROX
+    pushd ${BUILD_DIR}/samplevnf/VNFs/DPPD-PROX
+    make -j`getconf _NPROCESSORS_ONLN`
+    ${SUDO} cp ${BUILD_DIR}/samplevnf/VNFs/DPPD-PROX/build/app/prox ${BUILD_DIR}/prox
+    popd > /dev/null 2>&1
 }
 
 function prox_install()
 {
-	# Clone and compile PROX
-	pushd ${BUILD_DIR} > /dev/null 2>&1
-	git clone https://git.opnfv.org/samplevnf
-	pushd ${BUILD_DIR}/samplevnf/VNFs/DPPD-PROX > /dev/null 2>&1
-	bash -c "${PROX_CHECKOUT}"
-	popd > /dev/null 2>&1
-	prox_compile
-	popd > /dev/null 2>&1
+    # Clone PROX
+    pushd ${BUILD_DIR} > /dev/null 2>&1
+    git clone https://git.opnfv.org/samplevnf
+    bash -c "${PROX_CHECKOUT}"
+    echo "${PROX_CHECKOUT}" > ${BUILD_DIR}/commit_id
+    cp -R ./samplevnf/VNFs/DPPD-PROX/helper-scripts/rapid ./src
+    popd > /dev/null 2>&1
+    prox_compile
+
+    # Clean build folder
+    rm -rf ${BUILD_DIR}/samplevnf
 }
 
 function port_info_build()
@@ -200,6 +203,7 @@ function create_minimal_install()
 
 	echo "${BUILD_DIR}/prox" >> ${BUILD_DIR}/list_of_install_components
 	echo "${BUILD_DIR}/port_info_app" >> ${BUILD_DIR}/list_of_install_components
+	echo "${BUILD_DIR}/commit_id" >> ${BUILD_DIR}/list_of_install_components
 
 	tar -czvhf ${BUILD_DIR}/install_components.tgz -T ${BUILD_DIR}/list_of_install_components
 }
@@ -223,7 +227,7 @@ function k8s_runtime_image()
 
 	ldconfig
 
-	#rm -rf ${BUILD_DIR}/install_components.tgz
+	rm -rf ${BUILD_DIR}/install_components.tgz
 }
 
 function print_usage()

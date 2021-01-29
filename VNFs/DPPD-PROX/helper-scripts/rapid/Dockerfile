@@ -36,6 +36,7 @@ ARG BUILD_DIR=/opt/rapid
 
 COPY ./deploycentostools.sh ${BUILD_DIR}/
 COPY --from=builder ${BUILD_DIR}/install_components.tgz ${BUILD_DIR}/install_components.tgz
+COPY --from=builder ${BUILD_DIR}/src ${BUILD_DIR}/src
 
 RUN chmod a+rwx ${BUILD_DIR} && chmod +x ${BUILD_DIR}/deploycentostools.sh \
  && ${BUILD_DIR}/deploycentostools.sh -k runtime_image
