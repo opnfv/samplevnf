@@ -246,6 +246,8 @@ struct task_args {
 	uint32_t               igmp_address;
 	uint32_t		imix_nb_pkts;
 	uint32_t 		imix_pkt_sizes[MAX_IMIX_PKTS];
+	uint32_t        multiplier;
+	uint32_t        mirror_size;
 };
 
 /* Return the first port that is reachable through the task. If the
