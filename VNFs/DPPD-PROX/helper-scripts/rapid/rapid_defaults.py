@@ -23,7 +23,7 @@ class RapidDefaults(object):
     test_params = {
         'version' : '2021.01.27', # Please do NOT change, used for debugging
         'environment_file' : 'rapid.env', #Default string for environment
-        'test_file' : 'basicrapid.test', #Default string for test
+        'test_file' : 'tests/basicrapid.test', #Default string for test
         'machine_map_file' : 'machine.map', #Default string for machine map file
         'loglevel' : 'DEBUG', # sets log level for writing to file
         'screenloglevel' : 'INFO', # sets log level for writing to screen
