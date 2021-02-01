@@ -24,6 +24,8 @@
 #include "log.h"
 #include "prox_port_cfg.h"
 #include "quit.h"
+#include "prox_cksum.h"
+#include "prefetch.h"
 
 /* Task that sends packets to multiple outputs. Note that in case of n
    outputs, the output packet rate is n times the input packet
@@ -34,7 +36,9 @@
    way to resolve this is to create deep copies of the packet. */
 struct task_mirror {
 	struct task_base base;
-	uint32_t         n_dests;
+	uint32_t	n_dests;
+	uint32_t	multiplier;
+	uint32_t	mirror_size;
 };
 
 struct task_mirror_copy {
@@ -55,14 +59,40 @@ static int handle_mirror_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, 
 	   multiple times, the pointers are copied first. This copy is
 	   used in each call to tx_pkt below. */
 	rte_memcpy(mbufs2, mbufs, sizeof(mbufs[0]) * n_pkts);
-
+	/* prefetch for optimization */
+	prox_rte_ether_hdr * hdr[MAX_PKT_BURST];
+	//for (uint16_t i = 0; i < n_pkts; ++i) {
+	//	PREFETCH0(mbufs2[i]);
+	//}
 	for (uint16_t j = 0; j < n_pkts; ++j) {
-		rte_pktmbuf_refcnt_update(mbufs2[j], task->n_dests - 1);
+		hdr[j] = rte_pktmbuf_mtod(mbufs2[j], prox_rte_ether_hdr *);
+		PREFETCH0(hdr[j]);
+	}
+	for (uint16_t j = 0; j < n_pkts; ++j) {
+		rte_pktmbuf_refcnt_update(mbufs2[j], (task->n_dests - 1) * task->multiplier);
+		prox_rte_ipv4_hdr *pip = (prox_rte_ipv4_hdr *) (hdr[j] + 1);
+		if ((task->mirror_size != 0) && (hdr[j]->ether_type == RTE_ETHER_TYPE_IPV4) && ((pip->next_proto_id == IPPROTO_UDP) || (pip->next_proto_id == IPPROTO_TCP))) {
+			rte_pktmbuf_pkt_len(mbufs2[j]) = task->mirror_size;
+			rte_pktmbuf_data_len(mbufs2[j]) = task->mirror_size;
+			pip->total_length = rte_bswap16(task->mirror_size-sizeof(prox_rte_ether_hdr));
+			pip->hdr_checksum = 0;
+			prox_ip_cksum_sw(pip);
+			int l4_len = task->mirror_size - sizeof(prox_rte_ether_hdr) - sizeof(prox_rte_ipv4_hdr);
+			if (pip->next_proto_id == IPPROTO_UDP) {
+				prox_rte_udp_hdr *udp = (prox_rte_udp_hdr *)(((uint8_t *)pip) + sizeof(prox_rte_ipv4_hdr));
+				udp->dgram_len = rte_bswap16(l4_len);
+				prox_udp_cksum_sw(udp, l4_len, pip->src_addr, pip->dst_addr);
+			} else if (pip->next_proto_id == IPPROTO_TCP) {
+				prox_rte_tcp_hdr *tcp = (prox_rte_tcp_hdr *)(((uint8_t *)pip) + sizeof(prox_rte_ipv4_hdr));
+				prox_tcp_cksum_sw(tcp, l4_len, pip->src_addr, pip->dst_addr);
+			}
+		}
 	}
 	for (uint16_t j = 0; j < task->n_dests; ++j) {
 		memset(out, j, n_pkts);
-
-		ret+= task->base.tx_pkt(&task->base, mbufs2, n_pkts, out);
+		for (uint16_t i = 0; i < task->multiplier; ++i) {
+			ret += task->base.tx_pkt(&task->base, mbufs2, n_pkts, out);
+		}
 	}
 	return ret;
 }
@@ -110,8 +140,9 @@ static int handle_mirror_bulk_copy(struct task_base *tbase, struct rte_mbuf **mb
 static void init_task_mirror(struct task_base *tbase, struct task_args *targ)
 {
 	struct task_mirror *task = (struct task_mirror *)tbase;
-
 	task->n_dests = targ->nb_txports? targ->nb_txports : targ->nb_txrings;
+	task->multiplier = targ->multiplier? targ->multiplier : 1;
+	task->mirror_size = targ->mirror_size > 63? targ->mirror_size: 0;
 }
 
 static void init_task_mirror_copy(struct task_base *tbase, struct task_args *targ)

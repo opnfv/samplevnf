@@ -1836,28 +1836,38 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 		return parse_int(&targ->n_max_rules, pkey);
 	}
 
-        if (STR_EQ(str, "tunnel hop limit")) {
-                uint32_t val;
-                int err = parse_int(&val, pkey);
-                if (err) {
-                        return -1;
-                }
-                targ->tunnel_hop_limit = val;
-                return 0;
-        }
+	if (STR_EQ(str, "tunnel hop limit")) {
+		uint32_t val;
+		int err = parse_int(&val, pkey);
+		if (err) {
+			return -1;
+		}
+		targ->tunnel_hop_limit = val;
+		return 0;
+	}
 
-        if (STR_EQ(str, "lookup port mask")) {
-                uint32_t val;
-                int err = parse_int(&val, pkey);
-                if (err) {
-                        return -1;
-                }
-                targ->lookup_port_mask = val;
-                return 0;
-        }
+	if (STR_EQ(str, "lookup port mask")) {
+		uint32_t val;
+		int err = parse_int(&val, pkey);
+		if (err) {
+			return -1;
+		}
+		targ->lookup_port_mask = val;
+		return 0;
+	}
 
 	if (STR_EQ(str, "irq debug")) {
 		parse_int(&targ->irq_debug, pkey);
+		return 0;
+	}
+
+	if (STR_EQ(str, "multiplier")) {
+		parse_int(&targ->multiplier, pkey);
+		return 0;
+	}
+
+	if (STR_EQ(str, "mirror size")) {
+		parse_int(&targ->mirror_size, pkey);
 		return 0;
 	}
 
