@@ -1861,6 +1861,16 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 		return 0;
 	}
 
+    if (STR_EQ(str, "multiplier")) {
+        parse_int(&targ->multiplier, pkey);
+        return 0;
+    }
+
+    if (STR_EQ(str, "mirror size")) {
+        parse_int(&targ->mirror_size, pkey);
+        return 0;
+    }
+
 	set_errf("Option '%s' is not known", str);
 	/* fail on unknown keys */
 	return -1;
