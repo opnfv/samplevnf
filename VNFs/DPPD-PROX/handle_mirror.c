@@ -61,9 +61,9 @@ static int handle_mirror_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, 
 	rte_memcpy(mbufs2, mbufs, sizeof(mbufs[0]) * n_pkts);
 	/* prefetch for optimization */
 	prox_rte_ether_hdr * hdr[MAX_PKT_BURST];
-	//for (uint16_t i = 0; i < n_pkts; ++i) {
-	//	PREFETCH0(mbufs2[i]);
-	//}
+	for (uint16_t j = 0; j < n_pkts; ++j) {
+		PREFETCH0(mbufs2[j]);
+	}
 	for (uint16_t j = 0; j < n_pkts; ++j) {
 		hdr[j] = rte_pktmbuf_mtod(mbufs2[j], prox_rte_ether_hdr *);
 		PREFETCH0(hdr[j]);
