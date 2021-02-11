@@ -25,6 +25,7 @@ ipv6 = True
 name = Generator
 config_file = configs/genv6.cfg
 dest_vm = 2
+mcore = [0]
 gencores = [1]
 latcores = [3]
 #bucket_size_exp = 12
@@ -32,6 +33,7 @@ latcores = [3]
 [TestM2]
 name = Swap
 config_file = configs/swapv6.cfg
+mcore = [0]
 cores = [1]
 #prox_socket = true
 #prox_launch_exit = true

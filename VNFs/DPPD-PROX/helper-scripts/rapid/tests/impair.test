@@ -24,18 +24,21 @@ name = Generator
 config_file = configs/gen_gw.cfg
 gw_vm = 2
 dest_vm = 3
+mcore = [0]
 gencores = [1]
 latcores = [3]
 
 [TestM2]
 name = ImpairGW
 config_file = configs/impair.cfg
+mcore = [0]
 cores = [1]
 monitor = False
 
 [TestM3]
 name = Swap
 config_file = configs/swap.cfg
+mcore = [0]
 cores = [1]
 
 [test1]

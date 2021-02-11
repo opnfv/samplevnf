@@ -81,6 +81,24 @@ class RapidGeneratorMachine(RapidMachine):
         return (self.machine_params['gencores'] +
                 self.machine_params['latcores'])
 
+    def remap_all_cpus(self):
+        """Convert relative cpu ids for different parameters (gencores, latcores)
+        """
+        super().remap_all_cpus()
+
+        if self.cpu_mapping is None:
+            return
+
+        if 'gencores' in self.machine_params.keys():
+            cpus_remapped = super().remap_cpus(self.machine_params['gencores'])
+            RapidLog.debug('{} ({}): gencores {} remapped to {}'.format(self.name, self.ip, self.machine_params['gencores'], cpus_remapped))
+            self.machine_params['gencores'] = cpus_remapped
+
+        if 'latcores' in self.machine_params.keys():
+            cpus_remapped = super().remap_cpus(self.machine_params['latcores'])
+            RapidLog.debug('{} ({}): latcores {} remapped to {}'.format(self.name, self.ip, self.machine_params['latcores'], cpus_remapped))
+            self.machine_params['latcores'] = cpus_remapped
+
     def generate_lua(self, vim, prox_config_file):
         appendix = 'gencores="%s"\n'% ','.join(map(str,
             self.machine_params['gencores']))
@@ -109,6 +127,8 @@ class RapidGeneratorMachine(RapidMachine):
         # Start the generator with the -e option so that the cores don't
         # start automatically
         super().start_prox('-e')
+        if self.vim in ['kubernetes']:
+            self.remap_all_cpus()
 
     def set_generator_speed(self, speed):
         # The assumption is that we only use task 0 for generating

@@ -22,6 +22,7 @@ total_number_of_test_machines = 1
 [TestM1]
 name = Swap
 config_file = configs/swap.cfg
+mcore = [0]
 cores = [1]
 
 [test1]

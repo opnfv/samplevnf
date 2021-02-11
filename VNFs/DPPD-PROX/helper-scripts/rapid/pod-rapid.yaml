@@ -7,7 +7,7 @@ metadata:
 spec:
   containers:
   - name: pod-rapid
-    image: localhost:5000/prox_slim:latest
+    image: opnfv/rapid:latest
     imagePullPolicy: Always
     securityContext:
       capabilities:
@@ -19,9 +19,12 @@ spec:
       requests:
         hugepages-2Mi: 512Mi
         memory: 1Gi
+        cpu: 8
         intel.com/intel_sriov_vfio: '1'
       limits:
         hugepages-2Mi: 512Mi
+        memory: 1Gi
+        cpu: 8
         intel.com/intel_sriov_vfio: '1'
   volumes:
   - name: hugepages

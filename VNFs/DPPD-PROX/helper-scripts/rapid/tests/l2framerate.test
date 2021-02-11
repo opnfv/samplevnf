@@ -23,12 +23,14 @@ total_number_of_test_machines = 2
 name = Generator
 config_file = configs/l2gen.cfg
 dest_vm = 2
+mcore = [0]
 gencores = [1]
 latcores = [3]
 
 [TestM2]
 name = Swap
 config_file = configs/l2swap.cfg
+mcore = [0]
 cores = [1]
 
 [test1]

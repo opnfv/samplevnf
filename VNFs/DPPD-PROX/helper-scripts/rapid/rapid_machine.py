@@ -49,6 +49,7 @@ class RapidMachine(object):
                 break
         self.machine_params = machine_params
         self.vim = vim
+        self.cpu_mapping = None
 
     def __del__(self):
         if ((not self.configonly) and self.machine_params['prox_socket']):
@@ -57,6 +58,62 @@ class RapidMachine(object):
 
     def get_cores(self):
         return (self.machine_params['cores'])
+
+    def expand_cpuset(self, cpuset):
+        """Expand cpuset provided as comma-separated list of CPU numbers and
+        CPU ranges of numbers. For more information please see
+        https://man7.org/linux/man-pages/man7/cpuset.7.html
+        """
+        cpuset_expanded = []
+        for cpu in cpuset.split(','):
+            if '-' in cpu:
+                cpu_range = cpu.split('-')
+                cpuset_expanded += range(int(cpu_range[0]), int(cpu_range[1]) + 1)
+            else:
+                cpuset_expanded.append(int(cpu))
+        return cpuset_expanded
+
+    def read_cpuset(self):
+        """Read list of cpus on which we allowed to execute
+        """
+        cmd = 'cat /sys/fs/cgroup/cpuset/cpuset.cpus'
+        cpuset_cpus = self._client.run_cmd(cmd).decode().rstrip()
+        RapidLog.debug('{} ({}): Allocated cpuset: {}'.format(self.name, self.ip, cpuset_cpus))
+        self.cpu_mapping = self.expand_cpuset(cpuset_cpus)
+        RapidLog.debug('{} ({}): Expanded cpuset: {}'.format(self.name, self.ip, self.cpu_mapping))
+
+        # Log CPU core mapping for user information
+        cpu_mapping_str = ''
+        for i in range(len(self.cpu_mapping)):
+            cpu_mapping_str = cpu_mapping_str + '[' + str(i) + '->' + str(self.cpu_mapping[i]) + '], '
+        cpu_mapping_str = cpu_mapping_str[:-2]
+        RapidLog.debug('{} ({}): CPU mapping: {}'.format(self.name, self.ip, cpu_mapping_str))
+
+    def remap_cpus(self, cpus):
+        """Convert relative cpu ids provided as function parameter to match
+        cpu ids from allocated list
+        """
+        cpus_remapped = []
+        for cpu in cpus:
+            cpus_remapped.append(self.cpu_mapping[cpu])
+        return cpus_remapped
+
+    def remap_all_cpus(self):
+        """Convert relative cpu ids for different parameters (mcore, cores)
+        """
+        if self.cpu_mapping is None:
+            RapidLog.debug('{} ({}): cpu mapping is not defined! Please check the configuration!'.format(self.name, self.ip))
+            return
+
+        if 'mcore' in self.machine_params.keys():
+            cpus_remapped = self.remap_cpus(self.machine_params['mcore'])
+            RapidLog.debug('{} ({}): mcore {} remapped to {}'.format(self.name, self.ip, self.machine_params['mcore'], cpus_remapped))
+            self.machine_params['mcore'] = cpus_remapped
+
+        if 'cores' in self.machine_params.keys():
+            cpus_remapped = self.remap_cpus(self.machine_params['cores'])
+            RapidLog.debug('{} ({}): cores {} remapped to {}'.format(self.name, self.ip, self.machine_params['cores'], cpus_remapped))
+            self.machine_params['cores'] = cpus_remapped
 
     def devbind(self):
         # Script to bind the right network interface to the poll mode driver
@@ -86,6 +143,8 @@ class RapidMachine(object):
                 LuaFile.write("eal=\"--socket-mem=512,0 --file-prefix %s --pci-whitelist %s\"\n" % (self.name, self.machine_params['dp_pci_dev']))
             else:
                 LuaFile.write("eal=\"\"\n")
+            if 'mcore' in self.machine_params.keys():
+                LuaFile.write('mcore="%s"\n'% ','.join(map(str, self.machine_params['mcore'])))
             if 'cores' in self.machine_params.keys():
                 LuaFile.write('cores="%s"\n'% ','.join(map(str, self.machine_params['cores'])))
             if 'ports' in self.machine_params.keys():
@@ -105,6 +164,9 @@ class RapidMachine(object):
             self._client.connect()
             if self.vim in ['OpenStack']:
                 self.devbind()
+            if self.vim in ['kubernetes']:
+                self.read_cpuset()
+                self.remap_all_cpus()
             _, prox_config_file_name = os.path.split(self.machine_params['config_file'])
             self.generate_lua(self.vim, self.machine_params['config_file'])
             self._client.scp_put(self.machine_params['config_file'], '{}/{}'.format(self.rundir, prox_config_file_name))

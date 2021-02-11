@@ -24,6 +24,7 @@ name = Generator
 config_file = configs/gen_gw.cfg
 dest_vm = 3
 gw_vm = 2
+mcore = [0]
 gencores = [1]
 latcores = [3]
 
@@ -31,11 +32,13 @@ latcores = [3]
 name = GW1
 config_file = configs/secgw1.cfg
 dest_vm = 3
+mcore = [0]
 cores = [1]
 
 [TestM3]
 name = GW2
 config_file = configs/secgw2.cfg
+mcore = [0]
 cores = [1]
 
 [test1]

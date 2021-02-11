@@ -120,7 +120,7 @@ class RapidConfigParser(object):
             for option in options:
                 if option in ['prox_socket','prox_launch_exit','monitor']:
                     machine[option] = testconfig.getboolean(section, option)
-                elif option in ['cores', 'gencores','latcores']:
+                elif option in ['mcore', 'cores', 'gencores','latcores']:
                     machine[option] = ast.literal_eval(testconfig.get(
                         section, option))
                 elif option in ['bucket_size_exp']:
