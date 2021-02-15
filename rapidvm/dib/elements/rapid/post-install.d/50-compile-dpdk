@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+#
+# Copyright (c) 2021 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# pick up the kernel version for the target image
+BUILD_DIR="/opt/rapid"
+export RTE_SDK="${BUILD_DIR}/dpdk"
+export RTE_TARGET="x86_64-native-linuxapp-gcc"
+
+LATEST_KERNEL_INSTALLED=`ls -v1 /lib/modules/ | tail -1`
+export RTE_KERNELDIR="/lib/modules/${LATEST_KERNEL_INSTALLED}/build"
+
+pushd ${RTE_SDK} > /dev/null 2>&1
+make config T=${RTE_TARGET}
+#sed -i 's/CONFIG_RTE_EAL_IGB_UIO=n/CONFIG_RTE_EAL_IGB_UIO=y/g' ${RTE_SDK}/build/.config
+#sed -i 's/CONFIG_RTE_LIBRTE_PMD_AESNI_MB=n/CONFIG_RTE_LIBRTE_PMD_AESNI_MB=y/g' ${RTE_SDK}/build/.config
+sed -i 's/CONFIG_RTE_APP_TEST=y/CONFIG_RTE_APP_TEST=n/g' ${RTE_SDK}/build/.config
+sed -i 's/CONFIG_RTE_TEST_PMD=y/CONFIG_RTE_TEST_PMD=n/g' ${RTE_SDK}/build/.config
+sed -i 's/CONFIG_RTE_TEST_BBDEV=y/CONFIG_RTE_TEST_BBDEV=n/g' ${RTE_SDK}/build/.config
+sed -i 's/CONFIG_RTE_APP_COMPRESS_PERF=y/CONFIG_RTE_APP_COMPRESS_PERF=n/g' ${RTE_SDK}/build/.config
+sed -i 's/CONFIG_RTE_APP_CRYPTO_PERF=y/CONFIG_RTE_APP_CRYPTO_PERF=n/g' ${RTE_SDK}/build/.config
+#sed -i 's/CONFIG_RTE_APP_EVENTDEV=y/CONFIG_RTE_APP_EVENTDEV=n/g' ${RTE_SDK}/build/.config
+make -j`getconf _NPROCESSORS_ONLN`
+popd > /dev/null 2>&1
