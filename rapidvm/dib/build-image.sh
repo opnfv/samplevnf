@@ -38,50 +38,40 @@ set -e
 # Artifact URL
 gs_url=artifacts.opnfv.org/samplevnf/images
 
-# image version number
-__version__=0.01
-image_name=rapid-$__version__
+image_name=rapid-${GIT_BRANCH##*/}
 
 # if image exists skip building
 echo "Checking if image exists in google storage..."
 if  command -v gsutil >/dev/null; then
     if gsutil -q stat gs://$gs_url/$image_name.qcow2; then
         echo "Image already exists at http://$gs_url/$image_name.qcow2"
-        echo "Build is skipped"
-        exit 0
     fi
-    echo "Image does not exist in google storage, starting build..."
+    echo "Starting build..."
     echo
 else
     echo "Cannot check image availability in OPNFV artifact repository (gsutil not available)"
 fi
 
-# check if image is already built locally
-if [ -f $image_name.qcow2 ]; then
-    echo "Image $image_name.qcow2 already exists locally"
+# install diskimage-builder
+if [ -d dib-venv ]; then
+    . dib-venv/bin/activate
 else
-
-    # install diskimage-builder
-    if [ -d dib-venv ]; then
-        . dib-venv/bin/activate
-    else
-        virtualenv dib-venv
-        . dib-venv/bin/activate
-        pip install diskimage-builder
-    fi
-    # Add rapid elements directory to the DIB elements path
-    export ELEMENTS_PATH=`pwd`/elements
-    # canned user/password for direct login
-    export DIB_DEV_USER_USERNAME=prox
-    export DIB_DEV_USER_PASSWORD=prox
-    export DIB_DEV_USER_PWDLESS_SUDO=Y
-    # Set the data sources to have ConfigDrive only
-    export DIB_CLOUD_INIT_DATASOURCES="Ec2, ConfigDrive, OpenStack"
-    # Use ELRepo to have latest kernel
-    export DIB_USE_ELREPO_KERNEL=True
-    echo "Building $image_name.qcow2..."
-    time disk-image-create -o $image_name centos7 cloud-init rapid vm
+    virtualenv dib-venv
+    . dib-venv/bin/activate
+    pip install diskimage-builder
 fi
+# Add rapid elements directory to the DIB elements path
+export ELEMENTS_PATH=`pwd`/elements
+# canned user/password for direct login
+export DIB_DEV_USER_USERNAME=prox
+export DIB_DEV_USER_PASSWORD=prox
+export DIB_DEV_USER_PWDLESS_SUDO=Y
+# Set the data sources to have ConfigDrive only
+export DIB_CLOUD_INIT_DATASOURCES="Ec2, ConfigDrive, OpenStack"
+# Use ELRepo to have latest kernel
+export DIB_USE_ELREPO_KERNEL=True
+echo "Building $image_name.qcow2..."
+time disk-image-create -o $image_name centos7 cloud-init rapid vm
 
 ls -l $image_name.qcow2
 
