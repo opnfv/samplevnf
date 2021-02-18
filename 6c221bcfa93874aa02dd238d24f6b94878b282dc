@@ -19,6 +19,24 @@
     },
     {
       "key": {
+        "uuid": "ae4517f5_6db67c74",
+        "filename": "rapidvm/dib/elements/rapid/post-install.d/70-os-cfg",
+        "patchSetId": 2
+      },
+      "lineNbr": 27,
+      "author": {
+        "id": 6991
+      },
+      "writtenOn": "2021-02-18T13:39:56Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "59dd7383_1eab9853",
+      "revId": "6c221bcfa93874aa02dd238d24f6b94878b282dc",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "dd03e488_8b765461",
         "filename": "rapidvm/dib/elements/rapid/post-install.d/70-os-cfg",
         "patchSetId": 2
@@ -33,6 +51,24 @@
       "revId": "6c221bcfa93874aa02dd238d24f6b94878b282dc",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "02a047c8_50978646",
+        "filename": "rapidvm/dib/elements/rapid/post-install.d/70-os-cfg",
+        "patchSetId": 2
+      },
+      "lineNbr": 29,
+      "author": {
+        "id": 6991
+      },
+      "writtenOn": "2021-02-18T13:39:56Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "dd03e488_8b765461",
+      "revId": "6c221bcfa93874aa02dd238d24f6b94878b282dc",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
     }
   ]
 }
