@@ -39,7 +39,7 @@ set -e
 gs_url=artifacts.opnfv.org/samplevnf/images
 
 # image version number
-__version__=0.01
+__version__=${GIT_BRANCH##*}
 image_name=rapid-$__version__
 
 # if image exists skip building
