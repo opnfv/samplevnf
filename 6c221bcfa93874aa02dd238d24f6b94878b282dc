@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "59dd7383_1eab9853",
+        "filename": "rapidvm/dib/elements/rapid/post-install.d/70-os-cfg",
+        "patchSetId": 2
+      },
+      "lineNbr": 27,
+      "author": {
+        "id": 7520
+      },
+      "writtenOn": "2021-02-18T13:32:20Z",
+      "side": 1,
+      "message": "Trailing space at the end?",
+      "revId": "6c221bcfa93874aa02dd238d24f6b94878b282dc",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "dd03e488_8b765461",
+        "filename": "rapidvm/dib/elements/rapid/post-install.d/70-os-cfg",
+        "patchSetId": 2
+      },
+      "lineNbr": 29,
+      "author": {
+        "id": 7520
+      },
+      "writtenOn": "2021-02-18T13:32:20Z",
+      "side": 1,
+      "message": "Trailing space at the end?",
+      "revId": "6c221bcfa93874aa02dd238d24f6b94878b282dc",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    }
+  ]
+}
