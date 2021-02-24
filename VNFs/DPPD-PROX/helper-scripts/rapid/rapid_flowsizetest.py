@@ -98,7 +98,6 @@ class FlowSizeTest(RapidTest):
 
     def run(self):
         result_details = {'Details': 'Nothing'}
-        self.gen_machine.start_latency_cores()
         TestResult = 0
         for imix in self.test['imixs']:
             size = mean(imix)
