@@ -1880,7 +1880,7 @@ static void handle_lat_stats(unsigned lcore_id, unsigned task_id, struct input *
 	if (input->reply) {
 		char buf[128];
 		snprintf(buf, sizeof(buf),
-			 "%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%u,%u\n",
+			 "%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%u,%u,%"PRIu64",%"PRIu64",%"PRIu64"\n",
 			 lat_min_usec,
 			 lat_max_usec,
 			 lat_avg_usec,
@@ -1889,18 +1889,24 @@ static void handle_lat_stats(unsigned lcore_id, unsigned task_id, struct input *
 			 last_tsc,
 			 rte_get_tsc_hz(),
 			 lcore_id,
-			 task_id);
+			 task_id,
+			 stats->mis_ordered,
+			 stats->extent,
+			 stats->duplicate);
 		input->reply(input, buf, strlen(buf));
 	}
 	else {
-		plog_info("core: %u, task: %u, min: %"PRIu64", max: %"PRIu64", avg: %"PRIu64", min since reset: %"PRIu64", max since reset: %"PRIu64"\n",
-			  lcore_id,
-			  task_id,
-			  lat_min_usec,
-			  lat_max_usec,
-			  lat_avg_usec,
-			  tot_lat_min_usec,
-			  tot_lat_max_usec);
+		plog_info("core: %u, task: %u, min: %"PRIu64", max: %"PRIu64", avg: %"PRIu64", min since reset: %"PRIu64", max since reset: %"PRIu64", mis_ordered: %"PRIu64", extent: %"PRIu64", duplicates: %"PRIu64"\n",
+			 lcore_id,
+			 task_id,
+			 lat_min_usec,
+			 lat_max_usec,
+			 lat_avg_usec,
+			 tot_lat_min_usec,
+			 tot_lat_max_usec,
+			 stats->mis_ordered,
+			 stats->extent,
+			 stats->duplicate);
 	}
 }
 

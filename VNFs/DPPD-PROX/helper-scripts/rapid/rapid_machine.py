@@ -50,6 +50,10 @@ class RapidMachine(object):
         self.machine_params = machine_params
         self.vim = vim
         self.cpu_mapping = None
+        PROXConfigfile =  open (self.machine_params['config_file'], 'r')
+        PROXConfig = PROXConfigfile.read()
+        PROXConfigfile.close()
+        self.all_tasks_for_this_cfg = set(re.findall("task\s*=\s*(\d+)",PROXConfig))
 
     def __del__(self):
         if ((not self.configonly) and self.machine_params['prox_socket']):
@@ -127,11 +131,7 @@ class RapidMachine(object):
                 result = self._client.run_cmd(DevBindFileName)
                 RapidLog.debug('devbind.sh running for port {} on {} {}'.format(index, self.name, result))
 
-    def generate_lua(self, vim, prox_config_file, appendix = ''):
-        PROXConfigfile =  open (prox_config_file, 'r')
-        PROXConfig = PROXConfigfile.read()
-        PROXConfigfile.close()
-        self.all_tasks_for_this_cfg = set(re.findall("task\s*=\s*(\d+)",PROXConfig))
+    def generate_lua(self, appendix = ''):
         self.LuaFileName = 'parameters-{}.lua'.format(self.ip)
         with open(self.LuaFileName, "w") as LuaFile:
             LuaFile.write('require "helper"\n')
@@ -139,7 +139,7 @@ class RapidMachine(object):
             for index, dp_port in enumerate(self.dp_ports, start = 1):
                 LuaFile.write('local_ip{}="{}"\n'.format(index, dp_port['ip']))
                 LuaFile.write('local_hex_ip{}=convertIPToHex(local_ip{})\n'.format(index, index))
-            if vim in ['kubernetes']:
+            if self.vim in ['kubernetes']:
                 LuaFile.write("eal=\"--socket-mem=512,0 --file-prefix %s --pci-whitelist %s\"\n" % (self.name, self.machine_params['dp_pci_dev']))
             else:
                 LuaFile.write("eal=\"\"\n")
@@ -168,7 +168,7 @@ class RapidMachine(object):
                 self.read_cpuset()
                 self.remap_all_cpus()
             _, prox_config_file_name = os.path.split(self.machine_params['config_file'])
-            self.generate_lua(self.vim, self.machine_params['config_file'])
+            self.generate_lua()
             self._client.scp_put(self.machine_params['config_file'], '{}/{}'.format(self.rundir, prox_config_file_name))
             if ((not self.configonly) and self.machine_params['prox_launch_exit']):
                 cmd = 'sudo {}/prox {} -t -o cli -f {}/{}'.format(self.rundir, autostart, self.rundir, prox_config_file_name)
