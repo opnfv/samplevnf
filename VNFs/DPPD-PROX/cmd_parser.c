@@ -1880,7 +1880,7 @@ static void handle_lat_stats(unsigned lcore_id, unsigned task_id, struct input *
 	if (input->reply) {
 		char buf[128];
 		snprintf(buf, sizeof(buf),
-			 "%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%u,%u\n",
+			 "%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%u,%u,%"PRIu64",%"PRIu64",%"PRIu64"\n",
 			 lat_min_usec,
 			 lat_max_usec,
 			 lat_avg_usec,
@@ -1889,7 +1889,10 @@ static void handle_lat_stats(unsigned lcore_id, unsigned task_id, struct input *
 			 last_tsc,
 			 rte_get_tsc_hz(),
 			 lcore_id,
-			 task_id);
+			 task_id,
+			 stats->mis_ordered,
+			 stats->extent,
+			 stats->duplicate);
 		input->reply(input, buf, strlen(buf));
 	}
 	else {
