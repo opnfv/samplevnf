@@ -183,6 +183,7 @@ class RapidTest(object):
         r = 0;
         sleep_time = 2
         while (r < self.test['maxr']):
+            self.gen_machine.start_latency_cores()
             time.sleep(sleep_time)
             # Sleep_time is needed to be able to do accurate measurements to check for packet loss. We need to make this time large enough so that we do not take the first measurement while some packets from the previous tests migth still be in flight
             t1_rx, t1_non_dp_rx, t1_tx, t1_non_dp_tx, t1_drop, t1_tx_fail, t1_tsc, abs_tsc_hz = self.gen_machine.core_stats()
@@ -424,4 +425,5 @@ class RapidTest(object):
                 drop_rate = 100.0*tot_dp_drop/dp_tx
                 if ((drop_rate < self.test['drop_rate_threshold']) or (tot_dp_drop == self.test['drop_rate_threshold'] ==0) or (tot_dp_drop > self.test['maxz'])):
                     break
+            self.gen_machine.stop_latency_cores()
         return(pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat_avg,percentile,percentile_max,lat_max,dp_tx,dp_rx,tot_dp_drop,(t4_tx_fail - t1_tx_fail),drop_rate,lat_min,used_avg,r,tot_core_measurement_duration,avg_bg_rate,bucket_size,buckets)

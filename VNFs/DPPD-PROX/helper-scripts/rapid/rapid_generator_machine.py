@@ -74,6 +74,10 @@ class RapidGeneratorMachine(RapidMachine):
         self.udp_dest_port_offset = udp_header_start_offset + 2
         self.udp_length_offset = udp_header_start_offset + 4
         self.ipv6 = ipv6
+        if 'bucket_size_exp' in machine_params.keys():
+            self.bucket_size_exp = machine_params['bucket_size_exp']
+        else:
+            self.bucket_size_exp = 11
         super().__init__(key, user, vim, rundir, resultsdir, machine_params,
                 configonly)
 
@@ -99,7 +103,7 @@ class RapidGeneratorMachine(RapidMachine):
             RapidLog.debug('{} ({}): latcores {} remapped to {}'.format(self.name, self.ip, self.machine_params['latcores'], cpus_remapped))
             self.machine_params['latcores'] = cpus_remapped
 
-    def generate_lua(self, vim, prox_config_file):
+    def generate_lua(self):
         appendix = 'gencores="%s"\n'% ','.join(map(str,
             self.machine_params['gencores']))
         appendix = appendix + 'latcores="%s"\n'% ','.join(map(str,
@@ -110,10 +114,6 @@ class RapidGeneratorMachine(RapidMachine):
                 appendix = appendix + 'gw_ip{}="{}"\n'.format(index, gw_ip)
                 appendix = (appendix + 'gw_hex_ip{}=convertIPToHex(gw_ip{})\n'.
                         format(index, index))
-        if 'bucket_size_exp' in self.machine_params.keys():
-            self.bucket_size_exp = self.machine_params['bucket_size_exp']
-        else:
-            self.bucket_size_exp = 11
         appendix = (appendix +
                 'bucket_size_exp="{}"\n'.format(self.bucket_size_exp))
         if 'heartbeat' in self.machine_params.keys():
@@ -121,7 +121,7 @@ class RapidGeneratorMachine(RapidMachine):
                     'heartbeat="%s"\n'% self.machine_params['heartbeat'])
         else:
             appendix = appendix + 'heartbeat="60"\n'
-        super().generate_lua(vim, prox_config_file, appendix)
+        super().generate_lua(appendix)
 
     def start_prox(self):
         # Start the generator with the -e option so that the cores don't
