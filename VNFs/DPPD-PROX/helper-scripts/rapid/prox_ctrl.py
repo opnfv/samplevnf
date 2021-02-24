@@ -230,6 +230,9 @@ class prox_sock(object):
             hz = int(stats[6])
             #coreid = int(stats[7])
             #taskid = int(stats[8])
+            mis_ordered = int(stats[9])
+            extent = int(stats[10])
+            duplicate = int(stats[11])
             stats = self._recv().split(':')
             if stats[0].startswith('error'):
                 RapidLog.critical("lat stats error: unexpected lat bucket \
