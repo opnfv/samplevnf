@@ -23,14 +23,10 @@ sh -c '(echo "vfio") > /etc/modules-load.d/vfio.conf'
 sh -c '(echo "vfio-pci") > /etc/modules-load.d/vfio.conf'
 # Enabling tuned with the realtime-virtual-guest profile
 pushd ${BUILD_DIR} > /dev/null 2>&1
-#wget http://linuxsoft.cern.ch/cern/centos/7/rt/x86_64/Packages/tuned-profiles-realtime-2.8.0-5.el7_4.2.noarch.rpm
 wget http://linuxsoft.cern.ch/cern/centos/7/rt/x86_64/Packages/tuned-profiles-realtime-2.9.0-1.el7_5.2.noarch.rpm
-#wget http://linuxsoft.cern.ch/cern/centos/7/rt/x86_64/Packages/tuned-profiles-nfv-guest-2.8.0-5.el7_4.2.noarch.rpm
 wget http://linuxsoft.cern.ch/cern/centos/7/rt/x86_64/Packages/tuned-profiles-nfv-guest-2.9.0-1.el7_5.2.noarch.rpm
 # Install with --nodeps. The latest CentOS cloud images come with a tuned version higher than 2.8. These 2 packages however
 # do not depend on v2.8 and also work with tuned 2.9. Need to be careful in the future
-#rpm -ivh ${BUILD_DIR}/tuned-profiles-realtime-2.8.0-5.el7_4.2.noarch.rpm --nodeps
-#rpm -ivh ${BUILD_DIR}/tuned-profiles-nfv-guest-2.8.0-5.el7_4.2.noarch.rpm --nodeps
 rpm -ivh ${BUILD_DIR}/tuned-profiles-realtime-2.9.0-1.el7_5.2.noarch.rpm --nodeps
 rpm -ivh ${BUILD_DIR}/tuned-profiles-nfv-guest-2.9.0-1.el7_5.2.noarch.rpm --nodeps
 # Although we do no know how many cores the VM will have when begin deployed for real testing, we already put a number for the
@@ -38,13 +34,17 @@ rpm -ivh ${BUILD_DIR}/tuned-profiles-nfv-guest-2.9.0-1.el7_5.2.noarch.rpm --node
 # When the VM will be instantiated, the check_kernel_params service will check for the real number of cores available to this VM
 # and update the realtime-virtual-guest-variables.conf accordingly.
 echo "isolated_cores=1-3" | tee -a /etc/tuned/realtime-virtual-guest-variables.conf
-tuned-adm profile realtime-virtual-guest
+# The actual tuned-adm profile is now done in check_prox_system_setup.sh and is started through
+# the check-prox-system-setup.service. This will happen when the system is booting.
 
 # Install the check_tuned_params service to make sure that the grub cmd line has the right cpus in isolcpu. The actual number of cpu's
 # assigned to this VM depends on the flavor used. We don't know at this time what that will be.
 chmod +x ${BUILD_DIR}/check_prox_system_setup.sh
 mv ${BUILD_DIR}/check_prox_system_setup.sh /usr/local/libexec/
 mv ${BUILD_DIR}/check-prox-system-setup.service /etc/systemd/system/
+# systemctl daemon-reload, will be skipped when building image with disk-image-builder. That is OK
 systemctl daemon-reload
 systemctl enable check-prox-system-setup.service
+# Add the default rapid key as an authorized key for the rapid user
+cat ${BUILD_DIR}/rapid_rsa_key.pub >> /home/rapid/.ssh/authorized_keys
 popd > /dev/null 2>&1

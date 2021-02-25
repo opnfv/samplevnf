@@ -24,4 +24,5 @@ cp helper-scripts/rapid/check_prox_system_setup.sh ${BUILD_DIR}
 cp helper-scripts/rapid/check-prox-system-setup.service ${BUILD_DIR}
 cp helper-scripts/rapid/sharkproxlog.sh ${BUILD_DIR}
 cp helper-scripts/rapid/deploycentostools.sh ${BUILD_DIR}
+cp helper-scripts/rapid/rapid_rsa_key.pub ${BUILD_DIR}
 popd > /dev/null 2>&1
