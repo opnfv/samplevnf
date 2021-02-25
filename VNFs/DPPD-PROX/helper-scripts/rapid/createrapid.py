@@ -53,7 +53,7 @@ def main():
     rapid_stack_params = {}
     RapidStackManager.parse_config(rapid_stack_params)
     log_file = 'CREATE{}.log'.format(rapid_stack_params['stack_name'])
-    RapidLog.log_init(log_file, 'DEBUG', 'INFO', '2021.01.27')
+    RapidLog.log_init(log_file, 'DEBUG', 'INFO', '2021.03.15')
     #cloud_name = 'openstackL6'
     #stack_name = 'rapid'
     #heat_template = 'openstack-rapid.yaml'

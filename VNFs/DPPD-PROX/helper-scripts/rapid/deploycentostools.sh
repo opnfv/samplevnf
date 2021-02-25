@@ -18,15 +18,15 @@
 # Directory for package build
 BUILD_DIR="/opt/rapid"
 DPDK_VERSION="20.05"
-PROX_COMMIT="80dfeb5c734cc4d681f467e853a541a8a91fe1cf"
+PROX_COMMIT="8442f6a8ce0962d818b7cd800150980c65983719"
 PROX_CHECKOUT="git checkout ${PROX_COMMIT}"
 ## Next line is overruling the PROX_COMMIT and will replace the version with a very specific patch. Should be commented out
 ## 	if you want to use a committed version of PROX with the COMMIT ID specified above
 ## As an example: Following line has the commit for testing IMIX, IPV6, ... It is the merge of all PROX commits on May 27th 2020
 #PROX_CHECKOUT="git fetch \"https://gerrit.opnfv.org/gerrit/samplevnf\" refs/changes/23/70223/1 && git checkout FETCH_HEAD"
 MULTI_BUFFER_LIB_VER="0.52"
-export RTE_SDK="${BUILD_DIR}/dpdk-${DPDK_VERSION}"
-export RTE_TARGET="x86_64-native-linuxapp-gcc"
+export RTE_SDK="${BUILD_DIR}/dpdk"
+export RTE_TARGET="build"
 
 # By default, do not update OS
 OS_UPDATE="n"
