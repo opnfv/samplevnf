@@ -43,13 +43,13 @@ committers:
       company: 'intel.com'
       id: 'trev'
     - name: 'Xavier Simonart'
-      email: 'xavier.simonart@intel.com'
-      company: 'intel.com'
+      email: 'simonartxavier@gmail.com'
+      company: '-'
       id: 'simonarx'
     - name: 'Patrice Buriez'
       email: 'patrice.buriez@intel.com'
       company: 'intel.com'
-      id: 'pburiez'
+      id: 'pburiez'      
 tsc:
     # yamllint disable rule:line-length
     approval: 'https://ircbot.wl.linuxfoundation.org/meetings/opnfv-meeting/2020/opnfv_tsc_09_29_20/opnfv-meeting-opnfv_tsc_09_29_20.2020-09-29-13.06.html'
