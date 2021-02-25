@@ -53,6 +53,8 @@ class prox_ctrl(object):
                 self.test_connect()
                 break
             except RuntimeWarning as ex:
+                RapidLog.debug("RuntimeWarning %d:\n%s"
+                    % (ex.returncode, ex.output.strip()))
                 attempts += 1
                 if attempts > 20:
                     RapidLog.exception("Failed to connect to instance after %d\
