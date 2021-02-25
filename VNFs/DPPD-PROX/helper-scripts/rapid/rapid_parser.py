@@ -55,6 +55,12 @@ class RapidConfigParser(object):
         test_params['vim_type'] = config.get('Varia', 'vim')
         test_params['key'] = config.get('ssh', 'key')
         test_params['user'] = config.get('ssh', 'user')
+        if test_params['user'] in ['rapid']:
+            if test_params['key'] != 'rapid_rsa_key':
+                RapidLog.debug(("Key file {} for user {} overruled by key file:"
+                        " rapid_rsa_key").format(test_params['key'],
+                        test_params['user']))
+                test_params['key'] = 'rapid_rsa_key'
         test_params['total_number_of_machines'] = int(config.get('rapid',
             'total_number_of_machines'))
         tests = []

@@ -152,7 +152,8 @@ class StackDeployment(object):
 
     def deploy(self, stack_name, keypair_name, heat_template, heat_param):
         self.key_name = keypair_name
-        self.private_key_filename = '{}.pem'.format(keypair_name)
+        #self.private_key_filename = '{}.pem'.format(keypair_name)
+        self.private_key_filename = keypair_name
         if not self.IsDeployed(stack_name):
             if not self.IsKey():
                 self.create_key()
