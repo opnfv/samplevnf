@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "0f461839_63e83766",
+        "filename": "VNFs/DPPD-PROX/handle_mirror.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 74,
+      "author": {
+        "id": 7717
+      },
+      "writtenOn": "2021-03-05T09:20:26Z",
+      "side": 1,
+      "message": "Using this is breaking compatibility with old DPDK (e.g. does not compile on 19.05)",
+      "range": {
+        "startLine": 74,
+        "startChar": 57,
+        "endLine": 74,
+        "endChar": 76
+      },
+      "revId": "b7541865102edde8377d3965df658da8bd638a62",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    }
+  ]
+}
