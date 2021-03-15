@@ -15,30 +15,31 @@
 # A shell script to build the PROX VM image using diskimage-builder
 #
 usage() {
-    echo "Usage: $0 [-v]"
-    echo "   -v    verify only (build but do not push to google storage)"
+    echo "Usage: $0 [-i image_name] [-g gs-url] [-v]"
+    echo "   -i image_appendix    image name to be pushed to google storage)"
+    echo "   -g gs_url            url to store the image"
+    echo "   -v                   verify only (build but do not push to google storage)"
     exit 1
 }
 
-# Takes only 1 optional argument
-if [ $# -gt 1 ]; then
-   usage
-fi
+#set -e
+#default values
+image_appendix="test"
+gs_url="artifacts.opnfv.org/samplevnf/images"
 verify_only=0
-
-if [ $# -eq 1 ]; then
-   if [ $1 = "-v" ]; then
-        verify_only=1
-    else
-        usage
-    fi
-fi
-set -e
-
-# Artifact URL
-gs_url=artifacts.opnfv.org/samplevnf/images
-
-image_name=rapid-${GIT_BRANCH##*/}
+while getopts i:g:v flag
+do
+    case "${flag}" in
+        i) image_appendix=${OPTARG};;
+        g) gs_url=${OPTARG};;
+        v) verify_only=1;;
+        *) usage;exit 1;;
+    esac
+done
+echo "gs_url: $gs_url";
+echo "Verify only: $verify_only";
+image_name=rapid-${image_appendix}
+echo "image name: $image_name.qcow2"
 
 # if image exists skip building
 echo "Checking if image exists in google storage..."
