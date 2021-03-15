@@ -15,32 +15,41 @@
 # A shell script to build the PROX VM image using diskimage-builder
 #
 usage() {
-    echo "Usage: $0 [-v]"
-    echo "   -v    verify only (build but do not push to google storage)"
+    echo "Usage: $0 [-i image_name] [-g gs-url] [-v]"
+    echo "   -i image_appendix    image name to be pushed to google storage)"
+    echo "   -g gs_url            url to store the image"
+    echo "   -v                   verify only (build but do not push to google storage)"
     exit 1
 }
 
-# Takes only 1 optional argument
-if [ $# -gt 1 ]; then
-   usage
-fi
+# set -e
+#default values
+image_appendix="test"
+gs_url="artifacts.opnfv.org/samplevnf/images"
 verify_only=0
+while getopts i:g:v flag
+do
+    case "${flag}" in
+        i) image_appendix=${OPTARG};;
+        g) gs_url=${OPTARG};;
+        v) verify_only=1;;
+        *) usage;exit 1;;
+    esac
+done
+echo "gs_url: $gs_url";
+echo "Verify only: $verify_only";
+image_name=rapid-${image_appendix}
+echo "image name: $image_name.qcow2"
 
-if [ $# -eq 1 ]; then
-   if [ $1 = "-v" ]; then
-        verify_only=1
-    else
-        usage
-    fi
-fi
-set -e
+# install diskimage-builder
 
-# Artifact URL
-gs_url=artifacts.opnfv.org/samplevnf/images
+python3 -m venv dib-rapid-venv
+. dib-rapid-venv/bin/activate
+pip3 install --upgrade pip
+pip3 install six
+pip3 install diskimage-builder
+pip3 install gsutil
 
-image_name=rapid-${GIT_BRANCH##*/}
-
-# if image exists skip building
 echo "Checking if image exists in google storage..."
 if  command -v gsutil >/dev/null; then
     if gsutil -q stat gs://$gs_url/$image_name.qcow2; then
@@ -52,14 +61,6 @@ else
     echo "Cannot check image availability in OPNFV artifact repository (gsutil not available)"
 fi
 
-# install diskimage-builder
-if [ -d dib-venv ]; then
-    . dib-venv/bin/activate
-else
-    virtualenv dib-venv
-    . dib-venv/bin/activate
-    pip install diskimage-builder
-fi
 # Add rapid elements directory to the DIB elements path
 export ELEMENTS_PATH=`pwd`/elements
 # canned user/password for direct login
@@ -83,7 +84,7 @@ else
     if command -v gsutil >/dev/null; then
         echo "Uploading $image_name.qcow2..."
         gsutil cp $image_name.qcow2 gs://$gs_url/$image_name.qcow2
-        echo "You can access to image at http://$gs_url/$image_name.qcow2"
+        echo "You can access image at http://$gs_url/$image_name.qcow2"
     else
         echo "Cannot upload new image to the OPNFV artifact repository (gsutil not available)"
         exit 1
