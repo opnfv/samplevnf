@@ -1014,6 +1014,10 @@ static void handle_route_event(struct task_base *tbase)
 	int rtm_family = rtmsg->rtm_family;
 	if ((rtm_family == AF_INET) && (rtmsg->rtm_table != RT_TABLE_MAIN) &&(rtmsg->rtm_table != RT_TABLE_LOCAL))
 		return;
+	if (rtm_family == AF_INET6) {
+		plog_warn("Unhandled IPV6 routing message\n");
+		return;
+	}
 	int dst_len = rtmsg->rtm_dst_len;
 
 	struct rtattr *rta = (struct rtattr *)RTM_RTA(rtmsg);
