@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "d7da0b47_c4774052",
+        "filename": "VNFs/DPPD-PROX/handle_master.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1019,
+      "author": {
+        "id": 7520
+      },
+      "writtenOn": "2021-03-23T15:59:16Z",
+      "side": 1,
+      "message": "Space.",
+      "range": {
+        "startLine": 1019,
+        "startChar": 43,
+        "endLine": 1019,
+        "endChar": 44
+      },
+      "revId": "877a415994c31fdddb77316092c80b2ad1cef6e4",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    }
+  ]
+}
