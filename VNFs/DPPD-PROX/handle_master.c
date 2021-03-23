@@ -969,7 +969,7 @@ void init_ctrl_plane(struct task_base *tbase)
 	struct sockaddr_nl sockaddr2;
 	memset(&sockaddr2, 0, sizeof(struct sockaddr_nl));
 	sockaddr2.nl_family = AF_NETLINK;
-	sockaddr2.nl_groups = RTMGRP_IPV6_ROUTE | RTMGRP_IPV4_ROUTE | RTMGRP_NOTIFY;
+	sockaddr2.nl_groups = RTMGRP_IPV4_ROUTE | RTMGRP_NOTIFY;
 	rc = bind(fd, (struct sockaddr *)&sockaddr2, sizeof(struct sockaddr_nl));
 	PROX_PANIC(rc < 0, "Failed to bind to RTMGRP_NEIGH netlink group\n");
 	task->route_fds.fd = fd;
@@ -1012,12 +1012,12 @@ static void handle_route_event(struct task_base *tbase)
 
 	struct rtmsg *rtmsg = (struct rtmsg *)NLMSG_DATA(nl_hdr);
 	int rtm_family = rtmsg->rtm_family;
-	if ((rtm_family == AF_INET) && (rtmsg->rtm_table != RT_TABLE_MAIN) &&(rtmsg->rtm_table != RT_TABLE_LOCAL))
-		return;
-	if (rtm_family == AF_INET6) {
-		plog_warn("Unhandled IPV6 routing message\n");
+	if (rtm_family != AF_INET) {
+		plog_warn("Unhandled non IPV4 routing message\n");
 		return;
 	}
+	if ((rtmsg->rtm_table != RT_TABLE_MAIN) &&(rtmsg->rtm_table != RT_TABLE_LOCAL))
+		return;
 	int dst_len = rtmsg->rtm_dst_len;
 
 	struct rtattr *rta = (struct rtattr *)RTM_RTA(rtmsg);
