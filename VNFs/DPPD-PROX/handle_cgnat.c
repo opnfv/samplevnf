@@ -114,7 +114,7 @@ struct pkt_eth_ipv4 {
 	prox_rte_ether_hdr ether_hdr;
 	prox_rte_ipv4_hdr  ipv4_hdr;
 	prox_rte_udp_hdr  udp_hdr;
-} __attribute__((packed));
+} __attribute__((packed)) __attribute__((__aligned__(2)));
 
 void task_cgnat_dump_public_hash(struct task_nat *task)
 {

@@ -30,7 +30,7 @@ struct _arp_ipv4 {
 	uint32_t spa;          /* Sender protocol address */
 	prox_rte_ether_addr tha; /* Target hardware address */
 	uint32_t tpa;          /* Target protocol address */
-} __attribute__((__packed__));
+} __attribute__((__packed__)) __attribute__((__aligned__(2)));
 typedef struct _arp_ipv4 arp_ipv4_t;
 
 struct my_arp_t {
@@ -40,7 +40,7 @@ struct my_arp_t {
 	uint8_t    plen;
 	uint16_t   oper;
 	arp_ipv4_t data;
-} __attribute__((__packed__));
+} __attribute__((__packed__)) __attribute__((__aligned__(2)));
 
 struct ether_hdr_arp {
 	prox_rte_ether_hdr ether_hdr;

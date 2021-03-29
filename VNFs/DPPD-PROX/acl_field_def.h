@@ -27,7 +27,7 @@ struct pkt_eth_ipv4_udp {
 	prox_rte_ether_hdr ether_hdr;
 	prox_rte_ipv4_hdr ipv4_hdr;
 	prox_rte_udp_hdr udp_hdr;
-} __attribute__((packed));
+} __attribute__((packed)) __attribute__((__aligned__(2)));
 
 static struct rte_acl_field_def pkt_eth_ipv4_udp_defs[] = {
 	/* first input field - always one byte long. */

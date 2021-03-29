@@ -47,7 +47,7 @@ struct task_nat {
 struct pkt_eth_ipv4 {
 	prox_rte_ether_hdr ether_hdr;
 	prox_rte_ipv4_hdr  ipv4_hdr;
-} __attribute__((packed));
+} __attribute__((packed)) __attribute__((__aligned__(2)));
 
 static int handle_nat(struct task_nat *task, struct rte_mbuf *mbuf)
 {

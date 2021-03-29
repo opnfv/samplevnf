@@ -37,12 +37,12 @@ struct cpe_pkt {
 #endif
 	prox_rte_ipv4_hdr ipv4_hdr;
 	prox_rte_udp_hdr udp_hdr;
-} __attribute__((packed));
+} __attribute__((packed)) __attribute__((__aligned__(2)));
 
 struct cpe_packet_arp {
 	struct qinq_hdr qinq_hdr;
 	struct my_arp_t arp;
-} __attribute__((packed));
+} __attribute__((packed)) __attribute__((__aligned__(2)));
 
 /* Struct used for setting all the values a packet
    going to the core netwerk. Payload may follow
@@ -59,7 +59,7 @@ struct core_net_pkt_m {
 	struct gre_hdr gre_hdr;
 	prox_rte_ipv4_hdr ip_hdr;
 	prox_rte_udp_hdr udp_hdr;
-} __attribute__((packed));
+} __attribute__((packed)) __attribute__((__aligned__(2)));
 
 struct core_net_pkt {
 	prox_rte_ether_hdr ether_hdr;
@@ -67,7 +67,7 @@ struct core_net_pkt {
 	struct gre_hdr gre_hdr;
 	prox_rte_ipv4_hdr ip_hdr;
 	prox_rte_udp_hdr udp_hdr;
-} __attribute__((packed));
+} __attribute__((packed)) __attribute__((__aligned__(2)));
 
 #define UPSTREAM_DELTA   ((uint32_t)(sizeof(struct core_net_pkt) - sizeof(struct cpe_pkt)))
 #define DOWNSTREAM_DELTA ((uint32_t)(sizeof(struct core_net_pkt_m) - sizeof(struct cpe_pkt)))
@@ -75,7 +75,7 @@ struct core_net_pkt {
 struct cpe_pkt_delta {
 	uint8_t encap[DOWNSTREAM_DELTA];
 	struct cpe_pkt pkt;
-} __attribute__((packed));
+} __attribute__((packed)) __attribute__((__aligned__(2)));
 
 static inline void extract_key_cpe(struct rte_mbuf *mbuf, uint64_t* key)
 {

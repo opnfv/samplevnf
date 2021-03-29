@@ -73,7 +73,7 @@ struct ipv6_tun_binding_entry {
 	prox_rte_ether_addr       next_hop_mac;   // mac addr of next hop towards lwB4
 	uint32_t                public_ipv4;    // Public IPv4 address
 	uint16_t                public_port;    // Public base port (together with port mask, defines the Port Set)
-} __attribute__((__packed__));
+} __attribute__((__packed__)) __attribute__((__aligned__(2)));
 
 struct ipv6_tun_binding_table {
 	uint32_t                num_binding_entries;

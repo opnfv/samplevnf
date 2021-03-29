@@ -36,6 +36,6 @@ struct qinq_hdr {
 	struct my_vlan_hdr svlan;
 	struct my_vlan_hdr cvlan;
 	uint16_t ether_type;
-} __attribute__((packed));
+} __attribute__((packed)) __attribute__((__aligned__(2)));
 
 #endif /* _QINQ_H_ */

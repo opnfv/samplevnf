@@ -57,7 +57,7 @@ struct eth_ip4_udp {
 		prox_rte_udp_hdr   udp;
 		prox_rte_tcp_hdr   tcp;
 	} l4;
-} __attribute__((packed));
+} __attribute__((packed)) __attribute__((__aligned__(2)));
 
 union pkt_type {
 	struct {

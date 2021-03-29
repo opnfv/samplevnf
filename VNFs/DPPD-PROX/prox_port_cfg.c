@@ -190,7 +190,7 @@ static void set_ip_address(char *devname, uint32_t ip, uint8_t prefix)
 	in_addr.sin_family = AF_INET;
 	in_addr.sin_addr = *(struct in_addr *)&ip_cpu;
 
-	strncpy(ifreq.ifr_name, devname, IFNAMSIZ);
+	prox_strncpy(ifreq.ifr_name, devname, IFNAMSIZ);
 	ifreq.ifr_addr = *(struct sockaddr *)&in_addr;
 	rc = ioctl(fd, SIOCSIFADDR, &ifreq);
 	PROX_PANIC(rc < 0, "Failed to set IP address %x on device %s: error = %d (%s)\n", ip_cpu, devname, errno, strerror(errno));
