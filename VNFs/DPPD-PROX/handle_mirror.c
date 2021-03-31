@@ -69,7 +69,7 @@ static int handle_mirror_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, 
 		PREFETCH0(hdr[j]);
 	}
 	for (uint16_t j = 0; j < n_pkts; ++j) {
-		rte_pktmbuf_refcnt_update(mbufs2[j], (task->n_dests - 1) * task->multiplier);
+		rte_pktmbuf_refcnt_update(mbufs2[j], task->n_dests * task->multiplier - 1);
 		prox_rte_ipv4_hdr *pip = (prox_rte_ipv4_hdr *) (hdr[j] + 1);
 		if ((task->mirror_size != 0) && (hdr[j]->ether_type == ETYPE_IPv4) && ((pip->next_proto_id == IPPROTO_UDP) || (pip->next_proto_id == IPPROTO_TCP))) {
 			rte_pktmbuf_pkt_len(mbufs2[j]) = task->mirror_size;
