@@ -498,15 +498,16 @@ static int handle_nat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
         	return task->base.tx_pkt(&task->base, mbufs, n_pkts, out);
 	} else {
 		struct public_key public_key[MAX_PKT_BURST];
-        	for (j = 0; j < n_pkts; ++j) {
+		struct public_key null_key ={0};
+        for (j = 0; j < n_pkts; ++j) {
 			/* Currently, only support eth/ipv4 packets */
 			if (pkt[j]->ether_hdr.ether_type != ETYPE_IPv4) {
 				plogx_info("Currently, only support eth/ipv4 packets\n");
 				out[j] = OUT_DISCARD;
-				keys[j] = (void *)NULL;
+				keys[j] = (void *)&null_key;
 				continue;
 			}
-       			public_key[j].ip_addr = pkt[j]->ipv4_hdr.dst_addr;
+            public_key[j].ip_addr = pkt[j]->ipv4_hdr.dst_addr;
 			public_key[j].l4_port = pkt[j]->udp_hdr.dst_port;
 			keys[j] = &public_key[j];
 		}
