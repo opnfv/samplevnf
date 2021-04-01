@@ -16,6 +16,24 @@
       "revId": "0078e500e5ff5e0452a8b2b12a1e0f125efcbc1d",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "e1a64c63_7de26c54",
+        "filename": "VNFs/DPPD-PROX/handle_cgnat.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 523,
+      "author": {
+        "id": 6991
+      },
+      "writtenOn": "2021-04-01T19:28:29Z",
+      "side": 1,
+      "message": "Shouldn\u0027t we have a new if (out[j] !\u003d OUT_DISCARD) around this if else statement? If we are about to discard the message, we do not want to log the fact that we failed to find the ip/port, but we also do not want to log that we found an ip/port.",
+      "parentUuid": "5c402190_f21a0d1f",
+      "revId": "0078e500e5ff5e0452a8b2b12a1e0f125efcbc1d",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
     }
   ]
 }
