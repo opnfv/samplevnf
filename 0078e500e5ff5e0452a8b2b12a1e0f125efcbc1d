@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5c402190_f21a0d1f",
+        "filename": "VNFs/DPPD-PROX/handle_cgnat.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 523,
+      "author": {
+        "id": 7717
+      },
+      "writtenOn": "2021-04-01T17:17:30Z",
+      "side": 1,
+      "message": "In case of non IPv4 packet, keys[j] is now set to null_key (line 507), so port_idx will be -1.  So, the error printed here might be wrong (and confusing): for non IPv4 packets, we will print an (non existing) ip/port. You could modify the if statement to if ((port_idx \u003c 0) || (out[j] \u003d\u003d OUT_DISCARD))",
+      "revId": "0078e500e5ff5e0452a8b2b12a1e0f125efcbc1d",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    }
+  ]
+}
