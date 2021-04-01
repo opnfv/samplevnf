@@ -148,7 +148,7 @@ static uint8_t route_ipv4(struct task_nat *task, struct rte_mbuf *mbuf)
 		break;
 	default:
 		/* Routing for other protocols is not implemented */
-		plogx_info("Routing nit implemented for this protocol\n");
+		plogx_info("Routing not implemented for this protocol\n");
 		return OUT_DISCARD;
 	}
 
@@ -286,7 +286,7 @@ static int add_new_port_entry(struct task_nat *task, uint8_t proto, int public_i
 	task->private_flow_entries[ret].ip_addr = ip;
 	task->private_flow_entries[ret].l4_port = *port;
 	task->private_flow_entries[ret].flow_time = tsc;
-       	task->private_flow_entries[ret].private_ip_idx = private_ip_idx;
+	task->private_flow_entries[ret].private_ip_idx = private_ip_idx;
 
 	public_key.ip_addr = ip;
 	public_key.l4_port = *port;
@@ -303,15 +303,15 @@ static int add_new_port_entry(struct task_nat *task, uint8_t proto, int public_i
 	task->public_entries[ret].ip_addr = private_src_ip;
 	task->public_entries[ret].l4_port = private_udp_port;
 	task->public_entries[ret].dpdk_port = mbuf->port;
-       	task->public_entries[ret].private_ip_idx = private_ip_idx;
+	task->public_entries[ret].private_ip_idx = private_ip_idx;
 	return ret;
 }
 
 static int handle_nat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts)
 {
-        struct task_nat *task = (struct task_nat *)tbase;
-        uint8_t out[MAX_PKT_BURST];
-        uint16_t j;
+	struct task_nat *task = (struct task_nat *)tbase;
+	uint8_t out[MAX_PKT_BURST];
+	uint16_t j;
 	uint32_t *ip_addr, public_ip, private_ip;
 	uint16_t *udp_src_port, port, private_port, public_port;
 	struct pkt_eth_ipv4 *pkt[MAX_PKT_BURST];
@@ -322,6 +322,7 @@ static int handle_nat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 	void *keys[MAX_PKT_BURST];
 	int32_t positions[MAX_PKT_BURST];
 	int map[MAX_PKT_BURST] = {0};
+	struct public_key null_key ={0};
 
 	if (unlikely(task->dump_public_hash)) {
 		const struct public_key *next_key;
@@ -348,24 +349,24 @@ static int handle_nat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 		task->dump_private_hash = 0;
 	}
 
-       	for (j = 0; j < n_pkts; ++j) {
-               	PREFETCH0(mbufs[j]);
+	for (j = 0; j < n_pkts; ++j) {
+		PREFETCH0(mbufs[j]);
 	}
-       	for (j = 0; j < n_pkts; ++j) {
+	for (j = 0; j < n_pkts; ++j) {
 		pkt[j] = rte_pktmbuf_mtod(mbufs[j], struct pkt_eth_ipv4 *);
-               	PREFETCH0(pkt[j]);
+		PREFETCH0(pkt[j]);
 	}
 	if (task->private) {
-       		struct private_key key[MAX_PKT_BURST];
-        	for (j = 0; j < n_pkts; ++j) {
+		struct private_key key[MAX_PKT_BURST];
+		for (j = 0; j < n_pkts; ++j) {
 			/* Currently, only support eth/ipv4 packets */
 			if (pkt[j]->ether_hdr.ether_type != ETYPE_IPv4) {
 				plogx_info("Currently, only support eth/ipv4 packets\n");
 				out[j] = OUT_DISCARD;
-				keys[j] = (void *)NULL;
+				keys[j] = (void *)&null_key;
 				continue;
 			}
-       			key[j].ip_addr = pkt[j]->ipv4_hdr.src_addr;
+			key[j].ip_addr = pkt[j]->ipv4_hdr.src_addr;
 			key[j].l4_port = pkt[j]->udp_hdr.src_port;
 			keys[j] = &key[j];
 		}
@@ -375,27 +376,29 @@ static int handle_nat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 			return -1;
 		}
 		int n_new_mapping = 0;
-        	for (j = 0; j < n_pkts; ++j) {
+		for (j = 0; j < n_pkts; ++j) {
 			port_idx = positions[j];
-			if (unlikely(port_idx < 0)) {
-				plogx_dbg("ip %d.%d.%d.%d / port %x not found in private ip/port hash\n", IP4(pkt[j]->ipv4_hdr.src_addr), pkt[j]->udp_hdr.src_port);
-				map[n_new_mapping] = j;
-				keys[n_new_mapping++] = (void *)&(pkt[j]->ipv4_hdr.src_addr);
-			} else {
-				ip_addr = &(pkt[j]->ipv4_hdr.src_addr);
-				udp_src_port = &(pkt[j]->udp_hdr.src_port);
-				plogx_dbg("ip/port %d.%d.%d.%d / %x found in private ip/port hash\n", IP4(pkt[j]->ipv4_hdr.src_addr), pkt[j]->udp_hdr.src_port);
-       				*ip_addr = task->private_flow_entries[port_idx].ip_addr;
-       				*udp_src_port = task->private_flow_entries[port_idx].l4_port;
-				uint64_t flow_time = task->private_flow_entries[port_idx].flow_time;
-				if (flow_time + tsc_hz < tsc) {
-					task->private_flow_entries[port_idx].flow_time = tsc;
+			if (out[j] != OUT_DISCARD) {
+				if (unlikely(port_idx < 0)) {
+					plogx_dbg("ip %d.%d.%d.%d / port %x not found in private ip/port hash\n", IP4(pkt[j]->ipv4_hdr.src_addr), pkt[j]->udp_hdr.src_port);
+					map[n_new_mapping] = j;
+					keys[n_new_mapping++] = (void *)&(pkt[j]->ipv4_hdr.src_addr);
+				} else {
+					ip_addr = &(pkt[j]->ipv4_hdr.src_addr);
+					udp_src_port = &(pkt[j]->udp_hdr.src_port);
+					plogx_dbg("ip/port %d.%d.%d.%d / %x found in private ip/port hash\n", IP4(pkt[j]->ipv4_hdr.src_addr), pkt[j]->udp_hdr.src_port);
+					*ip_addr = task->private_flow_entries[port_idx].ip_addr;
+					*udp_src_port = task->private_flow_entries[port_idx].l4_port;
+					uint64_t flow_time = task->private_flow_entries[port_idx].flow_time;
+					if (flow_time + tsc_hz < tsc) {
+						task->private_flow_entries[port_idx].flow_time = tsc;
+					}
+					private_ip_idx = task->private_flow_entries[port_idx].private_ip_idx;
+					if (task->private_ip_info[private_ip_idx].mac_aging_time + tsc_hz < tsc)
+						task->private_ip_info[private_ip_idx].mac_aging_time = tsc;
+					prox_ip_udp_cksum(mbufs[j], &pkt[j]->ipv4_hdr, sizeof(prox_rte_ether_hdr), sizeof(prox_rte_ipv4_hdr), task->offload_crc);
+					out[j] =  route_ipv4(task, mbufs[j]);
 				}
-				private_ip_idx = task->private_flow_entries[port_idx].private_ip_idx;
-				if (task->private_ip_info[private_ip_idx].mac_aging_time + tsc_hz < tsc)
-					task->private_ip_info[private_ip_idx].mac_aging_time = tsc;
-				prox_ip_udp_cksum(mbufs[j], &pkt[j]->ipv4_hdr, sizeof(prox_rte_ether_hdr), sizeof(prox_rte_ipv4_hdr), task->offload_crc);
-				out[j] =  route_ipv4(task, mbufs[j]);
 			}
 		}
 
@@ -410,7 +413,7 @@ static int handle_nat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 				}
 				n_new_mapping = 0;
 			}
-       			for (int k = 0; k < n_new_mapping; ++k) {
+			for (int k = 0; k < n_new_mapping; ++k) {
 				private_ip_idx = positions[k];
 				j = map[k];
 				ip_addr = &(pkt[j]->ipv4_hdr.src_addr);
@@ -476,10 +479,10 @@ static int handle_nat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 					private_port = *udp_src_port;
 					plogx_info("Added new ip/port: private ip/port = %d.%d.%d.%d/%x public ip/port = %d.%d.%d.%d/%x, index = %d\n", IP4(private_ip), private_port, IP4(public_ip), public_port, port_idx);
 				}
-       				// task->private_flow_entries[port_idx].ip_addr = task->private_ip_info[private_ip_idx].public_ip;
+				// task->private_flow_entries[port_idx].ip_addr = task->private_ip_info[private_ip_idx].public_ip;
 				plogx_info("Added new port: private ip/port = %d.%d.%d.%d/%x, public ip/port = %d.%d.%d.%d/%x\n", IP4(private_ip), private_port, IP4(task->private_ip_info[private_ip_idx].public_ip), public_port);
-       				*ip_addr = public_ip ;
-       				*udp_src_port = public_port;
+				*ip_addr = public_ip ;
+				*udp_src_port = public_port;
 				uint64_t flow_time = task->private_flow_entries[port_idx].flow_time;
 				if (flow_time + tsc_hz < tsc) {
 					task->private_flow_entries[port_idx].flow_time = tsc;
@@ -495,18 +498,18 @@ static int handle_nat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 				}
 			}
 		}
-        	return task->base.tx_pkt(&task->base, mbufs, n_pkts, out);
+		return task->base.tx_pkt(&task->base, mbufs, n_pkts, out);
 	} else {
 		struct public_key public_key[MAX_PKT_BURST];
-        	for (j = 0; j < n_pkts; ++j) {
+		for (j = 0; j < n_pkts; ++j) {
 			/* Currently, only support eth/ipv4 packets */
 			if (pkt[j]->ether_hdr.ether_type != ETYPE_IPv4) {
 				plogx_info("Currently, only support eth/ipv4 packets\n");
 				out[j] = OUT_DISCARD;
-				keys[j] = (void *)NULL;
+				keys[j] = (void *)&null_key;
 				continue;
 			}
-       			public_key[j].ip_addr = pkt[j]->ipv4_hdr.dst_addr;
+			public_key[j].ip_addr = pkt[j]->ipv4_hdr.dst_addr;
 			public_key[j].l4_port = pkt[j]->udp_hdr.dst_port;
 			keys[j] = &public_key[j];
 		}
@@ -515,26 +518,28 @@ static int handle_nat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 			plogx_err("Failed lookup bulk public_ip_port_hash\n");
 			return -1;
 		}
-        	for (j = 0; j < n_pkts; ++j) {
+		for (j = 0; j < n_pkts; ++j) {
 			port_idx = positions[j];
-       			ip_addr = &(pkt[j]->ipv4_hdr.dst_addr);
+			ip_addr = &(pkt[j]->ipv4_hdr.dst_addr);
 			udp_src_port = &(pkt[j]->udp_hdr.dst_port);
-			if (port_idx < 0) {
-				plogx_err("Failed to find ip/port %d.%d.%d.%d/%x in public_ip_port_hash\n", IP4(*ip_addr), *udp_src_port);
-				out[j] = OUT_DISCARD;
-			} else {
-				plogx_dbg("Found ip/port %d.%d.%d.%d/%x in public_ip_port_hash\n", IP4(*ip_addr), *udp_src_port);
-        			*ip_addr = task->public_entries[port_idx].ip_addr;
-				*udp_src_port = task->public_entries[port_idx].l4_port;
-				private_ip_idx = task->public_entries[port_idx].private_ip_idx;
-				plogx_dbg("Found private IP info for ip %d.%d.%d.%d\n", IP4(*ip_addr));
-				rte_memcpy(((uint8_t *)(pkt[j])) + 0, &task->private_ip_info[private_ip_idx].private_mac, 6);
-				rte_memcpy(((uint8_t *)(pkt[j])) + 6, &task->src_mac_from_dpdk_port[task->public_entries[port_idx].dpdk_port], 6);
-				out[j] = task->public_entries[port_idx].dpdk_port;
+			if (out[j] != OUT_DISCARD) {
+				if (port_idx < 0) {
+					plogx_err("Failed to find ip/port %d.%d.%d.%d/%x in public_ip_port_hash\n", IP4(*ip_addr), *udp_src_port);
+					out[j] = OUT_DISCARD;
+				} else {
+					plogx_dbg("Found ip/port %d.%d.%d.%d/%x in public_ip_port_hash\n", IP4(*ip_addr), *udp_src_port);
+						*ip_addr = task->public_entries[port_idx].ip_addr;
+					*udp_src_port = task->public_entries[port_idx].l4_port;
+					private_ip_idx = task->public_entries[port_idx].private_ip_idx;
+					plogx_dbg("Found private IP info for ip %d.%d.%d.%d\n", IP4(*ip_addr));
+					rte_memcpy(((uint8_t *)(pkt[j])) + 0, &task->private_ip_info[private_ip_idx].private_mac, 6);
+					rte_memcpy(((uint8_t *)(pkt[j])) + 6, &task->src_mac_from_dpdk_port[task->public_entries[port_idx].dpdk_port], 6);
+					out[j] = task->public_entries[port_idx].dpdk_port;
+				}
 			}
 			prox_ip_udp_cksum(mbufs[j], &pkt[j]->ipv4_hdr, sizeof(prox_rte_ether_hdr), sizeof(prox_rte_ipv4_hdr), task->offload_crc);
 		}
-        	return task->base.tx_pkt(&task->base, mbufs, n_pkts, out);
+		return task->base.tx_pkt(&task->base, mbufs, n_pkts, out);
 	}
 
 }
@@ -562,9 +567,9 @@ static int lua_to_hash_nat(struct task_args *targ, struct lua_State *L, enum lua
         }
 
 	struct tmp_public_ip {
-        	uint32_t ip_beg;
+		uint32_t ip_beg;
 		uint32_t ip_end;
-        	uint16_t port_beg;
+		uint16_t port_beg;
 		uint16_t port_end;
 	};
 	struct tmp_static_ip {
@@ -595,10 +600,10 @@ static int lua_to_hash_nat(struct task_args *targ, struct lua_State *L, enum lua
 		plogx_info("No dynamic table found\n");
 	} else {
 		uint64_t n_ip, n_port;
-        	if (!lua_istable(L, -1)) {
-                	plogx_err("Can't read cgnat since data is not a table\n");
-                	return -1;
-        	}
+		if (!lua_istable(L, -1)) {
+			plogx_err("Can't read cgnat since data is not a table\n");
+			return -1;
+		}
 		lua_len(L, -1);
 		n_public_groups = lua_tointeger(L, -1);
 		plogx_info("%d groups of public IP\n", n_public_groups);
@@ -609,9 +614,9 @@ static int lua_to_hash_nat(struct task_args *targ, struct lua_State *L, enum lua
 
 		while (lua_next(L, -2)) {
 			if (lua_to_ip(L, TABLE, "public_ip_range_start", &dst_ip1) ||
-		    		lua_to_ip(L, TABLE, "public_ip_range_stop", &dst_ip2) ||
-		    		lua_to_val_range(L, TABLE, "public_port", &dst_port))
-					return -1;
+					lua_to_ip(L, TABLE, "public_ip_range_stop", &dst_ip2) ||
+					lua_to_val_range(L, TABLE, "public_port", &dst_port))
+				return -1;
 			PROX_PANIC(dst_ip2 < dst_ip1, "public_ip_range error: %d.%d.%d.%d < %d.%d.%d.%d\n", (dst_ip2 >> 24), (dst_ip2 >> 16) & 0xFF, (dst_ip2 >> 8) & 0xFF, dst_ip2 & 0xFF, dst_ip1 >> 24, (dst_ip1 >> 16) & 0xFF, (dst_ip1 >> 8) & 0xFF, dst_ip1 & 0xFF);
 			PROX_PANIC(dst_port.end < dst_port.beg, "public_port error: %d < %d\n", dst_port.end, dst_port.beg);
 			n_ip = dst_ip2 - dst_ip1 + 1;
@@ -632,9 +637,9 @@ static int lua_to_hash_nat(struct task_args *targ, struct lua_State *L, enum lua
 	if ((pop2 = lua_getfrom(L, TABLE, "static_ip")) < 0) {
 		plogx_info("No static ip table found\n");
 	} else {
-        	if (!lua_istable(L, -1)) {
-                	plogx_err("Can't read cgnat since data is not a table\n");
-                	return -1;
+		if (!lua_istable(L, -1)) {
+			plogx_err("Can't read cgnat since data is not a table\n");
+			return -1;
 		}
 
 		lua_len(L, -1);
@@ -646,7 +651,7 @@ static int lua_to_hash_nat(struct task_args *targ, struct lua_State *L, enum lua
 		lua_pushnil(L);
 		while (lua_next(L, -2)) {
 			if (lua_to_ip(L, TABLE, "src_ip", &ip_from) ||
-		    		lua_to_ip(L, TABLE, "dst_ip", &ip_to))
+					lua_to_ip(L, TABLE, "dst_ip", &ip_to))
 					return -1;
 			ip_from = rte_bswap32(ip_from);
 			ip_to = rte_bswap32(ip_to);
@@ -667,9 +672,9 @@ static int lua_to_hash_nat(struct task_args *targ, struct lua_State *L, enum lua
 	if ((pop2 = lua_getfrom(L, TABLE, "static_ip_port")) < 0) {
 		plogx_info("No static table found\n");
 	} else {
-        	if (!lua_istable(L, -1)) {
-                	plogx_err("Can't read cgnat since data is not a table\n");
-                	return -1;
+		if (!lua_istable(L, -1)) {
+			plogx_err("Can't read cgnat since data is not a table\n");
+			return -1;
 		}
 
 		lua_len(L, -1);
@@ -682,10 +687,10 @@ static int lua_to_hash_nat(struct task_args *targ, struct lua_State *L, enum lua
 
 		while (lua_next(L, -2)) {
 			if (lua_to_ip(L, TABLE, "src_ip", &ip_from) ||
-		    		lua_to_ip(L, TABLE, "dst_ip", &ip_to) ||
-		    		lua_to_port(L, TABLE, "src_port", &port_from) ||
-		    		lua_to_port(L, TABLE, "dst_port", &port_to))
-					return -1;
+					lua_to_ip(L, TABLE, "dst_ip", &ip_to) ||
+					lua_to_port(L, TABLE, "src_port", &port_from) ||
+					lua_to_port(L, TABLE, "dst_port", &port_to))
+				return -1;
 
 			ip_from = rte_bswap32(ip_from);
 			ip_to = rte_bswap32(ip_to);
@@ -740,7 +745,7 @@ static int lua_to_hash_nat(struct task_args *targ, struct lua_State *L, enum lua
 			ip_info = &tmp_public_ip_config_info[ip_free_count];
 			ip_info->public_ip = rte_bswap32(ip);
 			ip_info->port_list = (uint16_t *)prox_zmalloc((dst_port.end - dst_port.beg) * sizeof(uint16_t), socket);
-                       	PROX_PANIC(ip_info->port_list == NULL, "Failed to allocate list of ports for ip %x\n", ip);
+			PROX_PANIC(ip_info->port_list == NULL, "Failed to allocate list of ports for ip %x\n", ip);
 			for (uint32_t port = tmp_public_ip[i].port_beg; port <= tmp_public_ip[i].port_end; port++) {
 				ip_info->port_list[ip_info->port_free_count] = rte_bswap16(port);
 				ip_info->port_free_count++;
@@ -763,7 +768,7 @@ static int lua_to_hash_nat(struct task_args *targ, struct lua_State *L, enum lua
 			ip_info = &tmp_public_ip_config_info[ip_free_count];
 			ip_info->public_ip = tmp_static_ip_port[i].public_ip;
 			ip_info->port_list = (uint16_t *)prox_zmalloc(tmp_static_ip_port[i].n_ports * sizeof(uint16_t), socket);
-                	PROX_PANIC(ip_info->port_list == NULL, "Failed to allocate list of ports for ip %x\n", tmp_static_ip_port[i].public_ip);
+			PROX_PANIC(ip_info->port_list == NULL, "Failed to allocate list of ports for ip %x\n", tmp_static_ip_port[i].public_ip);
 			ip_info->port_list[ip_info->port_free_count] = tmp_static_ip_port[i].public_port;
 			ip_info->port_free_count++;
 			ip_info->max_port_count = ip_info->port_free_count;
