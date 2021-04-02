@@ -59,8 +59,6 @@ class prox_ctrl(object):
                 if attempts > 20:
                     RapidLog.exception("Failed to connect to instance after %d\
                             attempts:\n%s" % (attempts, ex))
-                    raise Exception("Failed to connect to instance after %d \
-                            attempts:\n%s" % (attempts, ex))
                 time.sleep(2)
                 RapidLog.debug("Trying to connect to machine \
                        on %s, attempt: %d" % (self._ip, attempts))
@@ -78,8 +76,6 @@ class prox_ctrl(object):
             attempts += 1
             if attempts > 20:
                 RapidLog.exception("Failed to connect to PROX on %s after %d \
-                        attempts" % (self._ip, attempts))
-                raise Exception("Failed to connect to PROX on %s after %d \
                         attempts" % (self._ip, attempts))
             time.sleep(2)
             RapidLog.debug("Trying to connect to PROX (just launched) on %s, \
@@ -101,10 +97,7 @@ class prox_ctrl(object):
         try:
             return subprocess.check_output(cmd, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as ex:
-            #if _connect and ex.returncode == 255:
-            if _connect:
-                raise RuntimeWarning(ex.output.strip())
-            raise RuntimeError('ssh returned exit status %d:\n%s'
+            RapidLog.exception('ssh returned exit status %d:\n%s'
                     % (ex.returncode, ex.output.strip()))
 
     def prox_sock(self, port=8474):
@@ -139,7 +132,7 @@ class prox_ctrl(object):
             # Actually ignore output on success, but capture stderr on failure
             subprocess.check_output(cmd, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as ex:
-            raise RuntimeError('scp returned exit status %d:\n%s'
+            RapidLog.exception('scp returned exit status %d:\n%s'
                     % (ex.returncode, ex.output.strip()))
 
     def scp_get(self, src, dst):
@@ -161,7 +154,7 @@ class prox_ctrl(object):
             # Actually ignore output on success, but capture stderr on failure
             subprocess.check_output(cmd, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as ex:
-            raise RuntimeError('scp returned exit status %d:\n%s'
+            RapidLog.exception('scp returned exit status %d:\n%s'
                     % (ex.returncode, ex.output.strip()))
 
     def _build_ssh(self, command):
