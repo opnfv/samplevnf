@@ -52,6 +52,24 @@
       "revId": "0078e500e5ff5e0452a8b2b12a1e0f125efcbc1d",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "454cf942_4f632f85",
+        "filename": "VNFs/DPPD-PROX/handle_cgnat.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 523,
+      "author": {
+        "id": 6991
+      },
+      "writtenOn": "2021-04-02T12:26:51Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "add6eeb4_24403f6c",
+      "revId": "0078e500e5ff5e0452a8b2b12a1e0f125efcbc1d",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
     }
   ]
 }
