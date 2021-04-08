@@ -4,5 +4,6 @@ parameters:
   PROX_image: rapidVM
   my_availability_zone: nova
   security_group: prox_security_group
-  PROXVM_count: 4
-  PROX2VM_count: 0
+  PROXType1VM_count: 3
+  PROXType2VM_count: 0
+  PROXType3VM_count: 0

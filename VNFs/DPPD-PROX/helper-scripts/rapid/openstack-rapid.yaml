@@ -13,8 +13,9 @@ parameters:
   PROX_key: {description: DO NOT CHANGE THIS DEFAULT KEY NAME, type: string, default: rapid_key}
   my_availability_zone: {description: availability_zone for Hosting VMs, type: string, default: nova}
   security_group: {description: Security Group to use, type: string, default: prox_security_group}
-  PROXVM_count: {description: Total number of testVMs to create, type: number, default: 2}
-  PROX2VM_count: {description: Total number of testVMs to create, type: number, default: 1}
+  PROXType1VM_count: {description: Total number of testVMs to create, type: number, default: 2}
+  PROXType2VM_count: {description: Total number of testVMs type 2 to create, type: number, default: 1}
+  PROXType3VM_count: {description: Total number of testVMs type 3 to create, type: number, default: 1}
 
 # The following paramters are not used, but are here in case you want to also
 # create the management and dataplane networks in this template
@@ -26,6 +27,7 @@ parameters:
   data_net_cidr: {description: PROX private network CIDR,type: string, default: 30.30.1.0/24}
   data_net_pool_start: {description: Start of private network IP address allocation pool, type: string, default: 30.30.1.100}
   data_net_pool_end: {description: End of private network IP address allocation pool, type: string, default: 30.30.1.200}
+  data2_net_name: {description: Name of PROX private network 2 to be created, type: string, default: data2}
   dns:
     type: comma_delimited_list
     label: DNS nameservers
@@ -33,11 +35,11 @@ parameters:
     default: '8.8.8.8'
 
 resources:
-  PROXVMs:
+  PROXType1VMs:
     type: OS::Heat::ResourceGroup
     description: Group of PROX VMs according to specs described in this section
     properties:
-      count: { get_param: PROXVM_count }
+      count: { get_param: PROXType1VM_count }
       resource_def:
         type: rapid-openstack-server.yaml
         properties:
@@ -53,13 +55,13 @@ resources:
     depends_on:
       - MyConfig
   
-  PROX2VMs:
+  PROXType2VMs:
     type: OS::Heat::ResourceGroup
     description: Group of PROX VMs according to specs described in this section
     properties:
-      count: { get_param: PROX2VM_count }
+      count: { get_param: PROXType2VM_count }
       resource_def:
-        type: rapid-openstack-server.yaml
+        type: rapid-openstack-server-2ports.yaml
         properties:
           PROX_availability_zone : {get_param: my_availability_zone}
           PROX_security_group : {get_param: security_group}
@@ -69,6 +71,27 @@ resources:
           PROX_public_net: {get_param: public_net_name}
           PROX_mgmt_net_id: {get_param: mgmt_net_name}
           PROX_data_net_id: {get_param: data_net_name}
+          PROX_data2_net_id: {get_param: data2_net_name}
+          PROX_config: {get_resource: MyConfig}
+    depends_on:
+      - MyConfig
+  
+  PROXType3VMs:
+    type: OS::Heat::ResourceGroup
+    description: Group of PROX VMs according to specs described in this section
+    properties:
+      count: { get_param: PROXType3VM_count }
+      resource_def:
+        type: rapid-openstack-server.yaml
+        properties:
+          PROX_availability_zone : {get_param: my_availability_zone}
+          PROX_security_group : {get_param: security_group}
+          PROX_image: {get_param: PROX_image}
+          PROX_key: {get_param: PROX_key}
+          PROX_server_name: rapidType3VM-%index%
+          PROX_public_net: {get_param: public_net_name}
+          PROX_mgmt_net_id: {get_param: mgmt_net_name}
+          PROX_data_net_id: {get_param: data2_net_name}
           PROX_config: {get_resource: MyConfig}
     depends_on:
       - MyConfig
@@ -91,7 +114,8 @@ resources:
               rapid:rapid
           expire: False
         write_files:
-        - path: /opt/rapid/after_boot_do_not_run.sh
+        - path: /opt/rapid/after_boot.sh
+          # - path: /opt/rapid/after_boot_do_not_run.sh
           # after_boot.sh is ran by check_prox_system_setup.sh, if it exists
           # This can be used to fix some issues, like in the example below
           # Remove this section or rename the file, if you do not want to run
@@ -113,25 +137,30 @@ outputs:
   number_of_servers:
     description: List of number or PROX instance
     value: 
-      - {get_param: PROXVM_count}
-      - {get_param: PROX2VM_count}
+      - {get_param: PROXType1VM_count}
+      - {get_param: PROXType2VM_count}
+      - {get_param: PROXType3VM_count}
   server_name:
     description: List of list of names of the PROX instances
     value: 
-      - {get_attr: [PROXVMs, name]}
-      - {get_attr: [PROX2VMs, name]}
+      - {get_attr: [PROXType1VMs, name]}
+      - {get_attr: [PROXType2VMs, name]}
+      - {get_attr: [PROXType3VMs, name]}
   mngmt_ips:
     description: List of list of Management IPs of the VMs
     value: 
-      - {get_attr: [PROXVMs, mngmt_ip]}
-      - {get_attr: [PROX2VMs, mngmt_ip]}
+      - {get_attr: [PROXType1VMs, mngmt_ip]}
+      - {get_attr: [PROXType2VMs, mngmt_ip]}
+      - {get_attr: [PROXType3VMs, mngmt_ip]}
   data_plane_ips:
     description: List of list of list of DataPlane IPs of the VMs
     value: 
-      - {get_attr: [PROXVMs, data_plane_ips]}
-      - {get_attr: [PROX2VMs, data_plane_ips]}
+      - {get_attr: [PROXType1VMs, data_plane_ips]}
+      - {get_attr: [PROXType2VMs, data_plane_ips]}
+      - {get_attr: [PROXType3VMs, data_plane_ips]}
   data_plane_macs:
     description: List of list of list of DataPlane MACs of the VMs
     value: 
-      - {get_attr: [PROXVMs, data_plane_mac]}
-      - {get_attr: [PROX2VMs, data_plane_mac]}
+      - {get_attr: [PROXType1VMs, data_plane_mac]}
+      - {get_attr: [PROXType2VMs, data_plane_mac]}
+      - {get_attr: [PROXType3VMs, data_plane_mac]}
