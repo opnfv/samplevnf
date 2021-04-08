@@ -310,7 +310,7 @@ static int add_new_port_entry(struct task_nat *task, uint8_t proto, int public_i
 static int handle_nat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts)
 {
 	struct task_nat *task = (struct task_nat *)tbase;
-	uint8_t out[MAX_PKT_BURST];
+	uint8_t out[MAX_PKT_BURST] = {0};
 	uint16_t j;
 	uint32_t *ip_addr, public_ip, private_ip;
 	uint16_t *udp_src_port, port, private_port, public_port;
