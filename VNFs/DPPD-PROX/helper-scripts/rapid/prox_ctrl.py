@@ -198,10 +198,11 @@ class prox_sock(object):
         self._send('reset stats')
 
     def lat_stats(self, cores, tasks=[0]):
-        min_lat = 999999999
-        max_lat = avg_lat = 0
+        result = {}
+        result['lat_min'] = 999999999
+        result['lat_max'] = result['lat_avg'] = 0
         number_tasks_returning_stats = 0
-        buckets = [0] * 128
+        result['buckets'] = [0] * 128
         self._send('lat all stats %s %s' % (','.join(map(str, cores)),
             ','.join(map(str, tasks))))
         for core in cores:
@@ -214,15 +215,15 @@ class prox_sock(object):
                         (potential incompatibility between scripts and PROX)")
                 raise Exception("lat stats error")
             number_tasks_returning_stats += 1
-            min_lat = min(int(stats[0]),min_lat)
-            max_lat = max(int(stats[1]),max_lat)
-            avg_lat += int(stats[2])
+            result['lat_min'] = min(int(stats[0]),result['lat_min'])
+            result['lat_max'] = max(int(stats[1]),result['lat_max'])
+            result['lat_avg'] += int(stats[2])
             #min_since begin = int(stats[3])
             #max_since_begin = int(stats[4])
-            tsc = int(stats[5]) # Taking the last tsc as the timestamp since
+            result['lat_tsc'] = int(stats[5]) # Taking the last tsc as the timestamp since
                                 # PROX will return the same tsc for each 
                                 # core/task combination 
-            hz = int(stats[6])
+            result['lat_hz'] = int(stats[6])
             #coreid = int(stats[7])
             #taskid = int(stats[8])
             mis_ordered = int(stats[9])
@@ -234,17 +235,18 @@ class prox_sock(object):
                         reply (potential incompatibility between scripts \
                         and PROX)")
                 raise Exception("lat bucket reply error")
-            buckets[0] = int(stats[1])
+            result['buckets'][0] = int(stats[1])
             for i in range(1, 128):
                 stats = self._recv().split(':')
-                buckets[i] = int(stats[1])
-        avg_lat = old_div(avg_lat,number_tasks_returning_stats)
+                result['buckets'][i] = int(stats[1])
+        result['lat_avg'] = old_div(result['lat_avg'],
+                number_tasks_returning_stats)
         self._send('stats latency(0).used')
         used = float(self._recv())
         self._send('stats latency(0).total')
         total = float(self._recv())
-        return (min_lat, max_lat, avg_lat, (old_div(used,total)), tsc, hz,
-                buckets)
+        result['lat_used'] = old_div(used,total)
+        return (result)
 
     def irq_stats(self, core, bucket, task=0):
         self._send('stats task.core(%s).task(%s).irq(%s)' % 

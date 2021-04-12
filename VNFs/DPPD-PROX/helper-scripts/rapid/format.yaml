@@ -11,16 +11,17 @@
   Flows: Flows 
   Size: Size
   RequestedSpeed: RequestedSpeed
-  CoreGenerated: CoreGenerated
-  SentByNIC: SentByNIC
-  FwdBySUT: FwdBySUT
-  RevByCore: RevByCore
-  AvgLatency: AvgLatency
-  PCTLatency: PCTLatency
-  MaxLatency: MaxLatency
-  PacketsSent: PacketsSent
-  PacketsReceived: PacketsReceived
-  PacketsLost: PacketsLost
+  CoreGenerated: pps_req_tx
+  SentByNIC: pps_tx
+  FwdBySUT: pps_sut_tx
+  RevByCore: pps_rx
+  AvgLatency: lat_avg
+  PCTLatency: lat_perc
+  MinLatency: lat_min
+  MaxLatency: lat_max
+  PacketsSent: abs_tx
+  PacketsReceived: abs_rx
+  PacketsLost: abs_dropped
 rapid_flowsizetest:
   Environment: environment_file
   Test: test
@@ -28,21 +29,22 @@ rapid_flowsizetest:
   Size: Size
   Speed (Mpps):
     RequestedSpeed: RequestedSpeed
-    CoreGenerated: CoreGenerated
-    SentByNIC: SentByNIC
-    FwdBySUT: FwdBySUT
-    RevByCore: RevByCore
+    CoreGenerated: pps_req_tx
+    SentByNIC: pps_tx
+    FwdBySUT: pps_sut_tx
+    RevByCore: pps_rx
   Latency (usec):
-    AvgLatency: AvgLatency
-    PCTLatency: PCTLatency
-    MaxLatency: MaxLatency
+    AvgLatency: lat_avg
+    PCTLatency: lat_perc
+    MinLatency: lat_min
+    MaxLatency: lat_max
     Distribution:
       bucket_size: bucket_size
       buckets: buckets
   Absolute Packet Count:
-    PacketsSent: PacketsSent
-    PacketsReceived: PacketsReceived
-    PacketsLost: PacketsLost
+    PacketsSent: abs_tx
+    PacketsReceived: abs_rx
+    PacketsLost: abs_dropped
 rapid_irqtest:
   Environment: environment_file
   Test: test
