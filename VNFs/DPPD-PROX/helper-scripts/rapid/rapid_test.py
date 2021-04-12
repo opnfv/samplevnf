@@ -125,64 +125,63 @@ class RapidTest(object):
         return (var[test])
 
     @staticmethod
-    def report_result(flow_number, size, speed, pps_req_tx, pps_tx, pps_sut_tx,
-        pps_rx, lat_avg, lat_perc, lat_perc_max, lat_max, tx, rx, tot_drop,
-        elapsed_time,speed_prefix='', lat_avg_prefix='', lat_perc_prefix='',
-        lat_max_prefix='', abs_drop_rate_prefix='', drop_rate_prefix=''):
+    def report_result(flow_number, size, data, prefix):
         if flow_number < 0:
             flow_number_str = '| ({:>4}) |'.format(abs(flow_number))
         else:
             flow_number_str = '|{:>7} |'.format(flow_number)
-        if pps_req_tx is None:
+        if data['pps_req_tx'] is None:
             pps_req_tx_str = '{0: >14}'.format('   NA     |')
         else:
-            pps_req_tx_str = '{:>7.3f} Mpps |'.format(pps_req_tx)
-        if pps_tx is None:
+            pps_req_tx_str = '{:>7.3f} Mpps |'.format(data['pps_req_tx'])
+        if data['pps_tx'] is None:
             pps_tx_str = '{0: >14}'.format('   NA     |')
         else:
-            pps_tx_str = '{:>7.3f} Mpps |'.format(pps_tx) 
-        if pps_sut_tx is None:
+            pps_tx_str = '{:>7.3f} Mpps |'.format(data['pps_tx']) 
+        if data['pps_sut_tx'] is None:
             pps_sut_tx_str = '{0: >14}'.format('   NA     |')
         else:
-            pps_sut_tx_str = '{:>7.3f} Mpps |'.format(pps_sut_tx)
-        if pps_rx is None:
+            pps_sut_tx_str = '{:>7.3f} Mpps |'.format(data['pps_sut_tx'])
+        if data['pps_rx'] is None:
             pps_rx_str = '{0: >25}'.format('NA        |')
         else:
             pps_rx_str = bcolors.OKBLUE + '{:>4.1f} Gb/s |{:7.3f} Mpps {}|'.format(
-                    RapidTest.get_speed(pps_rx,size),pps_rx,bcolors.ENDC)
-        if tot_drop is None:
+                    RapidTest.get_speed(data['pps_rx'],size),data['pps_rx'],bcolors.ENDC)
+        if data['abs_dropped'] is None:
             tot_drop_str = ' |       NA  | '
         else:
-            tot_drop_str = ' | {:>9.0f} | '.format(tot_drop)
-        if lat_perc is None:
-            lat_perc_str = ' |{:^10.10}|'.format('NA')
-        elif lat_perc_max == True:
-            lat_perc_str = '|>{}{:>5.0f} us{} |'.format(lat_perc_prefix,
-                    float(lat_perc), bcolors.ENDC) 
+            tot_drop_str = ' | {:>9.0f} | '.format(data['abs_dropped'])
+        if data['lat_perc'] is None:
+            lat_perc_str = '|{:^10.10}|'.format('NA')
+        elif data['lat_perc_max'] == True:
+            lat_perc_str = '|>{}{:>5.0f} us{} |'.format(prefix['lat_perc'],
+                    float(data['lat_perc']), bcolors.ENDC) 
         else:
-            lat_perc_str = '| {}{:>5.0f} us{} |'.format(lat_perc_prefix,
-                    float(lat_perc), bcolors.ENDC) 
-        if elapsed_time is None:
+            lat_perc_str = '| {}{:>5.0f} us{} |'.format(prefix['lat_perc'],
+                    float(data['lat_perc']), bcolors.ENDC) 
+        if data['actual_duration'] is None:
             elapsed_time_str = ' NA |'
         else:
-            elapsed_time_str = '{:>3.0f} |'.format(elapsed_time)
-        return(flow_number_str + '{:>5.1f}'.format(speed) + '% ' + speed_prefix
-                + '{:>6.3f}'.format(RapidTest.get_pps(speed,size)) + ' Mpps|' +
+            elapsed_time_str = '{:>3.0f} |'.format(data['actual_duration'])
+        return(flow_number_str + '{:>5.1f}'.format(data['speed']) + '% ' + prefix['speed']
+                + '{:>6.3f}'.format(RapidTest.get_pps(data['speed'],size)) + ' Mpps|' +
                 pps_req_tx_str + pps_tx_str + bcolors.ENDC + pps_sut_tx_str +
-                pps_rx_str + lat_avg_prefix + ' {:>6.0f}'.format(lat_avg) +
-                ' us' + lat_perc_str +lat_max_prefix+'{:>6.0f}'.format(lat_max)
-                + ' us | ' + '{:>9.0f}'.format(tx) + ' | {:>9.0f}'.format(rx) +
-                ' | '+ abs_drop_rate_prefix+ '{:>9.0f}'.format(tx-rx) +
-                tot_drop_str +drop_rate_prefix +
-                '{:>5.2f}'.format(100*old_div(float(tx-rx),tx)) + bcolors.ENDC +
+                pps_rx_str + prefix['lat_avg'] + ' {:>6.0f}'.format(data['lat_avg']) +
+                ' us' + lat_perc_str +prefix['lat_max']+'{:>6.0f}'.format(data['lat_max'])
+                + ' us | ' + '{:>9.0f}'.format(data['abs_tx']) + ' | {:>9.0f}'.format(data['abs_rx']) +
+                ' | '+ prefix['abs_drop_rate']+ '{:>9.0f}'.format(data['abs_tx']-data['abs_rx']) +
+                tot_drop_str + prefix['drop_rate'] +
+                '{:>5.2f}'.format(100*old_div(float(data['abs_tx']-data['abs_rx']),data['abs_tx'])) + bcolors.ENDC +
                 ' |' + elapsed_time_str)
-            
+
     def run_iteration(self, requested_duration, flow_number, size, speed):
         BUCKET_SIZE_EXP = self.gen_machine.bucket_size_exp
         LAT_PERCENTILE = self.test['lat_percentile']
-        r = 0;
+        iteration_data= {}
+        time_loop_data= {}
+        iteration_data['r'] = 0;
         sleep_time = 2
-        while (r < self.test['maxr']):
+        while (iteration_data['r'] < self.test['maxr']):
             self.gen_machine.start_latency_cores()
             time.sleep(sleep_time)
             # Sleep_time is needed to be able to do accurate measurements to check for packet loss. We need to make this time large enough so that we do not take the first measurement while some packets from the previous tests migth still be in flight
@@ -207,6 +206,7 @@ class RapidTest(object):
             self.gen_machine.set_generator_speed(speed)
             if self.background_machines:
                 self.set_background_speed(self.background_machines, speed)
+            iteration_data['speed'] = time_loop_data['speed'] = speed
             time.sleep(2) ## Needs to be 2 seconds since this 1 sec is the time that PROX uses to refresh the stats. Note that this can be changed in PROX!! Don't do it.
             start_bg_gen_stats = []
             for bg_gen_machine in self.background_machines:
@@ -221,66 +221,76 @@ class RapidTest(object):
                 t2_sut_rx, t2_sut_non_dp_rx, t2_sut_tx, t2_sut_non_dp_tx, t2_sut_drop, t2_sut_tx_fail, t2_sut_tsc, sut_tsc_hz = self.sut_machine.core_stats()
             t2_rx, t2_non_dp_rx, t2_tx, t2_non_dp_tx, t2_drop, t2_tx_fail, t2_tsc, tsc_hz = self.gen_machine.core_stats()
             tx = t2_tx - t1_tx
-            dp_tx =  tx - (t2_non_dp_tx - t1_non_dp_tx )
-            dp_rx =  t2_rx - t1_rx - (t2_non_dp_rx - t1_non_dp_rx) 
-            tot_dp_drop = dp_tx - dp_rx
+            iteration_data['abs_tx'] =  tx - (t2_non_dp_tx - t1_non_dp_tx )
+            iteration_data['abs_rx'] =  t2_rx - t1_rx - (t2_non_dp_rx - t1_non_dp_rx) 
+            iteration_data['abs_dropped'] = iteration_data['abs_tx'] - iteration_data['abs_rx']
             if tx == 0:
                 RapidLog.critical("TX = 0. Test interrupted since no packet has been sent.")
-            if dp_tx == 0:
+            if iteration_data['abs_tx'] == 0:
                 RapidLog.critical("Only non-dataplane packets (e.g. ARP) sent. Test interrupted since no packet has been sent.")
             # Ask PROX to calibrate the bucket size once we have a PROX function to do this.
             # Measure latency statistics per second
-            lat_min, lat_max, lat_avg, used_avg, t2_lat_tsc, lat_hz, buckets = self.gen_machine.lat_stats()
-            lat_samples = sum(buckets)
+            iteration_data.update(self.gen_machine.lat_stats())
+            t2_lat_tsc = iteration_data['lat_tsc']
             sample_count = 0
-            for sample_percentile, bucket in enumerate(buckets,start=1):
+            for sample_percentile, bucket in enumerate(iteration_data['buckets'],start=1):
                 sample_count += bucket
-                if sample_count > (lat_samples * LAT_PERCENTILE):
+                if sample_count > sum(iteration_data['buckets']) * LAT_PERCENTILE:
                     break
-            percentile_max = (sample_percentile == len(buckets))
-            sample_percentile = sample_percentile *  float(2 ** BUCKET_SIZE_EXP) / (old_div(float(lat_hz),float(10**6)))
+            iteration_data['lat_perc_max'] = (sample_percentile == len(iteration_data['buckets']))
+            iteration_data['bucket_size'] = float(2 ** BUCKET_SIZE_EXP) / (old_div(float(iteration_data['lat_hz']),float(10**6)))
+            time_loop_data['bucket_size'] = iteration_data['bucket_size']
+            iteration_data['lat_perc'] = sample_percentile * iteration_data['bucket_size'] 
             if self.test['test'] == 'fixed_rate':
-                RapidLog.info(self.report_result(flow_number,size,speed,None,None,None,None,lat_avg,sample_percentile,percentile_max,lat_max, dp_tx, dp_rx , None, None))
+                iteration_data['pps_req_tx'] = None
+                iteration_data['pps_tx'] = None
+                iteration_data['pps_sut_tx'] = None
+                iteration_data['pps_rx'] = None
+                iteration_data['lat_perc'] = None
+                iteration_data['actual_duration'] = None
+                iteration_prefix = {'speed' : '',
+                        'lat_avg' : '',
+                        'lat_perc' : '',
+                        'lat_max' : '',
+                        'abs_drop_rate' : '',
+                        'drop_rate' : ''}
+                RapidLog.info(self.report_result(flow_number, size,
+                    iteration_data, iteration_prefix ))
             tot_rx = tot_non_dp_rx = tot_tx = tot_non_dp_tx = tot_drop = 0
-            lat_avg = used_avg = 0
-            buckets_total = buckets
-            tot_lat_samples = sum(buckets)
+            iteration_data['lat_avg'] = iteration_data['lat_used'] = 0
             tot_lat_measurement_duration = float(0)
-            tot_core_measurement_duration = float(0)
+            iteration_data['actual_duration'] = float(0)
             tot_sut_core_measurement_duration = float(0)
             tot_sut_rx = tot_sut_non_dp_rx = tot_sut_tx = tot_sut_non_dp_tx = tot_sut_drop = tot_sut_tx_fail = tot_sut_tsc = 0
             lat_avail = core_avail = sut_avail = False
-            while (tot_core_measurement_duration - float(requested_duration) <= 0.1) or (tot_lat_measurement_duration - float(requested_duration) <= 0.1):
+            while (iteration_data['actual_duration'] - float(requested_duration) <= 0.1) or (tot_lat_measurement_duration - float(requested_duration) <= 0.1):
                 time.sleep(0.5)
-                lat_min_sample, lat_max_sample, lat_avg_sample, used_sample, t3_lat_tsc, lat_hz, buckets = self.gen_machine.lat_stats()
+                time_loop_data.update(self.gen_machine.lat_stats())
                 # Get statistics after some execution time
-                if t3_lat_tsc != t2_lat_tsc:
-                    single_lat_measurement_duration = (t3_lat_tsc - t2_lat_tsc) * 1.0 / lat_hz  # time difference between the 2 measurements, expressed in seconds.
+                if time_loop_data['lat_tsc'] != t2_lat_tsc:
+                    single_lat_measurement_duration = (time_loop_data['lat_tsc'] - t2_lat_tsc) * 1.0 / time_loop_data['lat_hz']  # time difference between the 2 measurements, expressed in seconds.
                     # A second has passed in between to lat_stats requests. Hence we need to process the results
                     tot_lat_measurement_duration = tot_lat_measurement_duration + single_lat_measurement_duration
-                    if lat_min > lat_min_sample:
-                        lat_min = lat_min_sample
-                    if lat_max < lat_max_sample:
-                        lat_max = lat_max_sample
-                    lat_avg = lat_avg + lat_avg_sample * single_lat_measurement_duration # Sometimes, There is more than 1 second between 2 lat_stats. Hence we will take the latest measurement
-                    used_avg = used_avg + used_sample * single_lat_measurement_duration  # and give it more weigth.
-                    lat_samples = sum(buckets)
-                    tot_lat_samples += lat_samples
+                    if iteration_data['lat_min'] > time_loop_data['lat_min']:
+                        iteration_data['lat_min'] = time_loop_data['lat_min']
+                    if iteration_data['lat_max'] < time_loop_data['lat_max']:
+                        iteration_data['lat_max'] = time_loop_data['lat_max']
+                    iteration_data['lat_avg'] = iteration_data['lat_avg'] + time_loop_data['lat_avg'] * single_lat_measurement_duration # Sometimes, There is more than 1 second between 2 lat_stats. Hence we will take the latest measurement
+                    iteration_data['lat_used'] = iteration_data['lat_used'] + time_loop_data['lat_used'] * single_lat_measurement_duration # and give it more weigth.
                     sample_count = 0
-                    for sample_percentile, bucket in enumerate(buckets,start=1):
+                    for sample_percentile, bucket in enumerate(time_loop_data['buckets'],start=1):
                         sample_count += bucket
-                        if sample_count > lat_samples * LAT_PERCENTILE:
+                        if sample_count > sum(time_loop_data['buckets']) * LAT_PERCENTILE:
                             break
-                    percentile_max = (sample_percentile == len(buckets))
-                    bucket_size = float(2 ** BUCKET_SIZE_EXP) / (old_div(float(lat_hz),float(10**6)))
-                    sample_percentile = sample_percentile *  bucket_size
-                    buckets_total = [buckets_total[i] + buckets[i] for i in range(len(buckets_total))]
-                    t2_lat_tsc = t3_lat_tsc
+                    time_loop_data['lat_perc_max'] = (sample_percentile == len(time_loop_data['buckets']))
+                    time_loop_data['lat_perc'] = sample_percentile *  iteration_data['bucket_size']
+                    iteration_data['buckets'] = [iteration_data['buckets'][i] + time_loop_data['buckets'][i] for i in range(len(iteration_data['buckets']))]
+                    t2_lat_tsc = time_loop_data['lat_tsc'] 
                     lat_avail = True
                 t3_rx, t3_non_dp_rx, t3_tx, t3_non_dp_tx, t3_drop, t3_tx_fail, t3_tsc, tsc_hz = self.gen_machine.core_stats()
                 if t3_tsc != t2_tsc:
-                    single_core_measurement_duration = (t3_tsc - t2_tsc) * 1.0 / tsc_hz  # time difference between the 2 measurements, expressed in seconds.
-                    tot_core_measurement_duration = tot_core_measurement_duration + single_core_measurement_duration
+                    time_loop_data['actual_duration'] = (t3_tsc - t2_tsc) * 1.0 / tsc_hz  # time difference between the 2 measurements, expressed in seconds.
+                    iteration_data['actual_duration'] = iteration_data['actual_duration'] + time_loop_data['actual_duration']
                     delta_rx = t3_rx - t2_rx
                     tot_rx += delta_rx
                     delta_non_dp_rx = t3_non_dp_rx - t2_non_dp_rx
@@ -291,8 +301,8 @@ class RapidTest(object):
                     tot_non_dp_tx += delta_non_dp_tx
                     delta_dp_tx = delta_tx -delta_non_dp_tx
                     delta_dp_rx = delta_rx -delta_non_dp_rx
-                    delta_dp_drop = delta_dp_tx - delta_dp_rx
-                    tot_dp_drop += delta_dp_drop
+                    time_loop_data['abs_dropped'] = delta_dp_tx - delta_dp_rx
+                    iteration_data['abs_dropped'] += time_loop_data['abs_dropped']
                     delta_drop = t3_drop - t2_drop
                     tot_drop += delta_drop
                     t2_rx, t2_non_dp_rx, t2_tx, t2_non_dp_tx, t2_drop, t2_tx_fail, t2_tsc = t3_rx, t3_non_dp_rx, t3_tx, t3_non_dp_tx, t3_drop, t3_tx_fail, t3_tsc
@@ -313,37 +323,30 @@ class RapidTest(object):
                 if self.test['test'] == 'fixed_rate':
                     if lat_avail == core_avail == True:
                         lat_avail = core_avail = False
-                        pps_req_tx = (delta_tx + delta_drop - delta_rx)/single_core_measurement_duration/1000000
-                        pps_tx = delta_tx/single_core_measurement_duration/1000000
+                        time_loop_data['pps_req_tx'] = (delta_tx + delta_drop - delta_rx)/time_loop_data['actual_duration']/1000000
+                        time_loop_data['pps_tx'] = delta_tx/time_loop_data['actual_duration']/1000000
                         if self.sut_machine != None and sut_avail:
-                            pps_sut_tx = delta_sut_tx/single_sut_core_measurement_duration/1000000
+                            time_loop_data['pps_sut_tx'] = delta_sut_tx/single_sut_core_measurement_duration/1000000
                             sut_avail = False
                         else:
-                            pps_sut_tx = None
-                        pps_rx = delta_rx/single_core_measurement_duration/1000000
-                        RapidLog.info(self.report_result(flow_number, size,
-                            speed, pps_req_tx, pps_tx, pps_sut_tx, pps_rx,
-                            lat_avg_sample, sample_percentile, percentile_max,
-                            lat_max_sample, delta_dp_tx, delta_dp_rx,
-                            tot_dp_drop, single_core_measurement_duration))
-                        variables = {
-                                'Flows': flow_number,
-                                'Size': size,
-                                'RequestedSpeed': self.get_pps(speed,size),
-                                'CoreGenerated': pps_req_tx,
-                                'SentByNIC': pps_tx,
-                                'FwdBySUT': pps_sut_tx,
-                                'RevByCore': pps_rx,
-                                'AvgLatency': lat_avg_sample,
-                                'PCTLatency': sample_percentile,
-                                'MaxLatency': lat_max_sample,
-                                'PacketsSent': delta_dp_tx,
-                                'PacketsReceived': delta_dp_rx,
-                                'PacketsLost': tot_dp_drop,
-                                'bucket_size': bucket_size,
-                                'buckets': buckets}
-
-                        self.post_data('rapid_flowsizetest', variables)
+                            time_loop_data['pps_sut_tx'] = None
+                        time_loop_data['pps_rx'] = delta_rx/time_loop_data['actual_duration']/1000000
+                        time_loop_data['abs_tx'] = delta_dp_tx
+                        time_loop_data['abs_rx'] = delta_dp_rx
+                        time_loop_prefix = {'speed' : '',
+                                'lat_avg' : '',
+                                'lat_perc' : '',
+                                'lat_max' : '',
+                                'abs_drop_rate' : '',
+                                'drop_rate' : ''}
+                        RapidLog.info(self.report_result(flow_number, size, time_loop_data,
+                            time_loop_prefix))
+                        time_loop_data['test'] = self.test['testname']
+                        time_loop_data['environment_file'] = self.test['environment_file']
+                        time_loop_data['Flows'] = flow_number
+                        time_loop_data['Size'] = size
+                        time_loop_data['RequestedSpeed'] = RapidTest.get_pps(speed, size)
+                        _ = self.post_data('rapid_flowsizetest', time_loop_data)
             end_bg_gen_stats = []
             for bg_gen_machine in self.background_machines:
                 bg_rx, bg_non_dp_rx, bg_tx, bg_non_dp_tx, _, _, bg_tsc, bg_hz = bg_gen_machine.core_stats()
@@ -353,6 +356,8 @@ class RapidTest(object):
                         "bg_hz"    : bg_hz
                         }
                 end_bg_gen_stats.append(dict(bg_gen_stat))
+            if self.background_machines:
+                self.stop_background_traffic(self.background_machines)
             i = 0
             bg_rates =[]
             while i < len(end_bg_gen_stats):
@@ -361,69 +366,65 @@ class RapidTest(object):
                     start_bg_gen_stats[i]['bg_tsc']) * 1.0 / end_bg_gen_stats[i]['bg_hz']))
                 i += 1
             if len(bg_rates):
-                avg_bg_rate = sum(bg_rates) / len(bg_rates)
-                RapidLog.debug('Average Background traffic rate: {:>7.3f} Mpps'.format(avg_bg_rate))
+                iteration_data['avg_bg_rate'] = sum(bg_rates) / len(bg_rates)
+                RapidLog.debug('Average Background traffic rate: {:>7.3f} Mpps'.format(iteration_data['avg_bg_rate']))
             else:
-                avg_bg_rate = None
+                iteration_data['avg_bg_rate'] = None
             #Stop generating
             self.gen_machine.stop_gen_cores()
-            r += 1
-            lat_avg = old_div(lat_avg, float(tot_lat_measurement_duration))
-            used_avg = old_div(used_avg, float(tot_lat_measurement_duration))
+            iteration_data['r'] += 1
+            iteration_data['lat_avg'] = old_div(iteration_data['lat_avg'], float(tot_lat_measurement_duration))
+            iteration_data['lat_used'] = old_div(iteration_data['lat_used'], float(tot_lat_measurement_duration))
             t4_tsc = t2_tsc
             while t4_tsc == t2_tsc:
                 t4_rx, t4_non_dp_rx, t4_tx, t4_non_dp_tx, t4_drop, t4_tx_fail, t4_tsc, abs_tsc_hz = self.gen_machine.core_stats()
             if self.test['test'] == 'fixed_rate':
-                t4_lat_tsc = t2_lat_tsc
-                while t4_lat_tsc == t2_lat_tsc:
-                    lat_min_sample, lat_max_sample, lat_avg_sample, used_sample, t4_lat_tsc, lat_hz, buckets = self.gen_machine.lat_stats()
+                iteration_data['lat_tsc'] = t2_lat_tsc
+                while iteration_data['lat_tsc'] == t2_lat_tsc:
+                    iteration_data.update(self.gen_machine.lat_stats())
                 sample_count = 0
-                lat_samples = sum(buckets)
-                for percentile, bucket in enumerate(buckets,start=1):
+                for percentile, bucket in enumerate(iteration_data['buckets'],start=1):
                     sample_count += bucket
-                    if sample_count > lat_samples * LAT_PERCENTILE:
+                    if sample_count > sum(iteration_data['buckets']) * LAT_PERCENTILE:
                         break
-                percentile_max = (percentile == len(buckets))
-                percentile = percentile *  bucket_size
-                lat_max = lat_max_sample
-                lat_avg = lat_avg_sample
+                iteration_data['lat_perc_max'] = (percentile == len(iteration_data['buckets']))
+                iteration_data['lat_perc'] = percentile *  iteration_data['bucket_size']
                 delta_rx = t4_rx - t2_rx
                 delta_non_dp_rx = t4_non_dp_rx - t2_non_dp_rx
                 delta_tx = t4_tx - t2_tx
                 delta_non_dp_tx = t4_non_dp_tx - t2_non_dp_tx
                 delta_dp_tx = delta_tx -delta_non_dp_tx
                 delta_dp_rx = delta_rx -delta_non_dp_rx
-                dp_tx = delta_dp_tx
-                dp_rx = delta_dp_rx
-                tot_dp_drop += delta_dp_tx - delta_dp_rx
-                pps_req_tx = None
-                pps_tx = None
-                pps_sut_tx = None
-                pps_rx = None
-                drop_rate = 100.0*(dp_tx-dp_rx)/dp_tx
-                tot_core_measurement_duration = None
+                iteration_data['abs_tx'] = delta_dp_tx
+                iteration_data['abs_rx'] = delta_dp_rx
+                iteration_data['abs_dropped'] += delta_dp_tx - delta_dp_rx
+                iteration_data['pps_req_tx'] = None
+                iteration_data['pps_tx'] = None
+                iteration_data['pps_sut_tx'] = None
+                iteration_data['drop_rate'] = 100.0*(iteration_data['abs_tx']-iteration_data['abs_rx'])/iteration_data['abs_tx']
+                iteration_data['actual_duration'] = None
                 break ## Not really needed since the while loop will stop when evaluating the value of r
             else:
                 sample_count = 0
-                buckets = buckets_total
-                for percentile, bucket in enumerate(buckets_total,start=1):
+                for percentile, bucket in enumerate(iteration_data['buckets'],start=1):
                     sample_count += bucket
-                    if sample_count > tot_lat_samples * LAT_PERCENTILE:
+                    if sample_count > sum(iteration_data['buckets']) * LAT_PERCENTILE:
                         break
-                percentile_max = (percentile == len(buckets_total))
-                percentile = percentile *  bucket_size
-                pps_req_tx = (tot_tx + tot_drop - tot_rx)/tot_core_measurement_duration/1000000.0 # tot_drop is all packets dropped by all tasks. This includes packets dropped at the generator task + packets dropped by the nop task. In steady state, this equals to the number of packets received by this VM
-                pps_tx = tot_tx/tot_core_measurement_duration/1000000.0 # tot_tx is all generated packets actually accepted by the interface
-                pps_rx = tot_rx/tot_core_measurement_duration/1000000.0 # tot_rx is all packets received by the nop task = all packets received in the gen VM
+                iteration_data['lat_perc_max'] = (percentile == len(iteration_data['buckets']))
+                iteration_data['lat_perc'] = percentile *  iteration_data['bucket_size']
+                iteration_data['pps_req_tx'] = (tot_tx + tot_drop - tot_rx)/iteration_data['actual_duration']/1000000.0 # tot_drop is all packets dropped by all tasks. This includes packets dropped at the generator task + packets dropped by the nop task. In steady state, this equals to the number of packets received by this VM
+                iteration_data['pps_tx'] = tot_tx/iteration_data['actual_duration']/1000000.0 # tot_tx is all generated packets actually accepted by the interface
+                iteration_data['pps_rx'] = tot_rx/iteration_data['actual_duration']/1000000.0 # tot_rx is all packets received by the nop task = all packets received in the gen VM
                 if self.sut_machine != None and sut_avail:
-                    pps_sut_tx = tot_sut_tx / tot_sut_core_measurement_duration / 1000000.0
+                    iteration_data['pps_sut_tx'] = tot_sut_tx / tot_sut_core_measurement_duration / 1000000.0
                 else:
-                    pps_sut_tx = None
-                dp_tx = (t4_tx - t1_tx) - (t4_non_dp_tx - t1_non_dp_tx)
-                dp_rx = (t4_rx - t1_rx) - (t4_non_dp_rx - t1_non_dp_rx)
-                tot_dp_drop = dp_tx - dp_rx
-                drop_rate = 100.0*tot_dp_drop/dp_tx
-                if ((drop_rate < self.test['drop_rate_threshold']) or (tot_dp_drop == self.test['drop_rate_threshold'] ==0) or (tot_dp_drop > self.test['maxz'])):
+                    iteration_data['pps_sut_tx'] = None
+                iteration_data['abs_tx'] = (t4_tx - t1_tx) - (t4_non_dp_tx - t1_non_dp_tx)
+                iteration_data['abs_rx'] = (t4_rx - t1_rx) - (t4_non_dp_rx - t1_non_dp_rx)
+                iteration_data['abs_dropped'] = iteration_data['abs_tx'] - iteration_data['abs_rx']
+                iteration_data['drop_rate'] = 100.0*iteration_data['abs_dropped']/iteration_data['abs_tx']
+                if ((iteration_data['drop_rate'] < self.test['drop_rate_threshold']) or (iteration_data['abs_dropped'] == self.test['drop_rate_threshold'] ==0) or (iteration_data['abs_dropped'] > self.test['maxz'])):
                     break
             self.gen_machine.stop_latency_cores()
-        return(pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat_avg,percentile,percentile_max,lat_max,dp_tx,dp_rx,tot_dp_drop,(t4_tx_fail - t1_tx_fail),drop_rate,lat_min,used_avg,r,tot_core_measurement_duration,avg_bg_rate,bucket_size,buckets)
+        iteration_data['abs_tx_fail'] = t4_tx_fail - t1_tx_fail
+        return (iteration_data)

@@ -58,30 +58,38 @@ class ImpairTest(RapidTest):
             sys.stdout.flush()
             time.sleep(1)
             # Get statistics now that the generation is stable and NO ARP messages any more
-            pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat_avg, lat_perc, lat_perc_max, lat_max, abs_tx, abs_rx, abs_dropped, abs_tx_fail, drop_rate, lat_min, lat_used, r, actual_duration, _,bucket_size, buckets = self.run_iteration(float(self.test['runtime']),flow_number,size,speed)
+            iteration_data = self.run_iteration(float(self.test['runtime']),flow_number,size,speed)
+            iteration_data['speed'] = speed
             # Drop rate is expressed in percentage. lat_used is a ratio (0 to 1). The sum of these 2 should be 100%.
             # If the sum is lower than 95, it means that more than 5% of the latency measurements where dropped for accuracy reasons.
-            if (drop_rate + lat_used * 100) < 95:
-                lat_warning = bcolors.WARNING + ' Latency accuracy issue?: {:>3.0f}%'.format(lat_used*100) +  bcolors.ENDC
+            if (iteration_data['drop_rate'] + iteration_data['lat_used'] * 100) < 95:
+                lat_warning = bcolors.WARNING + ' Latency accuracy issue?: {:>3.0f}%'.format(iteration_data['lat_used']*100) +  bcolors.ENDC
             else:
                 lat_warning = ''
-            RapidLog.info(self.report_result(attempts,size,speed,pps_req_tx,pps_tx,pps_sut_tx,pps_rx,lat_avg,lat_perc,lat_perc_max,lat_max,abs_tx,abs_rx,abs_dropped,actual_duration))
+            iteration_prefix = {'speed' : '',
+                    'lat_avg' : '',
+                    'lat_perc' : '',
+                    'lat_max' : '',
+                    'abs_drop_rate' : '',
+                    'drop_rate' : ''}
+            RapidLog.info(self.report_result(attempts, size, iteration_data,
+                iteration_prefix))
             result_details = {'test': self.test['test'],
                     'environment_file': self.test['environment_file'],
                     'Flows': flow_number,
                     'Size': size,
                     'RequestedSpeed': RapidTest.get_pps(speed,size),
-                    'CoreGenerated': pps_req_tx,
-                    'SentByNIC': pps_tx,
-                    'FwdBySUT': pps_sut_tx,
-                    'RevByCore': pps_rx,
-                    'AvgLatency': lat_avg,
-                    'PCTLatency': lat_perc,
-                    'MaxLatency': lat_max,
-                    'PacketsLost': abs_dropped,
-                    'DropRate': drop_rate,
-                    'bucket_size': bucket_size,
-                    'buckets': buckets}
+                    'CoreGenerated': iteration_data['pps_req_tx'],
+                    'SentByNIC': iteration_data['pps_tx'],
+                    'FwdBySUT': iteration_data['pps_sut_tx'],
+                    'RevByCore': iteration_data['pps_rx'],
+                    'AvgLatency': iteration_data['lat_avg'],
+                    'PCTLatency': iteration_data['lat_perc'],
+                    'MaxLatency': iteration_data['lat_max'],
+                    'PacketsLost': iteration_data['abs_dropped'],
+                    'DropRate': iteration_data['drop_rate'],
+                    'bucket_size': iteration_data['bucket_size'],
+                    'buckets': iteration_data['buckets']}
             result_details = self.post_data('rapid_impairtest', result_details)
         self.gen_machine.stop_latency_cores()
         return (True, result_details)
