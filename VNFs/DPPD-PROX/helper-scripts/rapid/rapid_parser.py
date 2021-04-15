@@ -70,16 +70,16 @@ class RapidConfigParser(object):
             section = 'test%d'%test_index
             options = testconfig.options(section)
             for option in options:
-                if option in ['imix','imixs','flows']:
+                if option in ['imix','imixs','flows', 'warmupimix']:
                     test[option] = ast.literal_eval(testconfig.get(section,
                         option))
                 elif option in ['maxframespersecondallingress','stepsize',
-                        'flowsize']:
+                        'flowsize','warmupflowsize','warmuptime', 'steps']:
                     test[option] = int(testconfig.get(section, option))
                 elif option in ['startspeed', 'step', 'drop_rate_threshold',
                         'lat_avg_threshold','lat_perc_threshold',
                         'lat_max_threshold','accuracy','maxr','maxz',
-                        'ramp_step']:
+                        'ramp_step','warmupspeed']:
                     test[option] = float(testconfig.get(section, option))
                 else:
                     test[option] = testconfig.get(section, option)
@@ -99,7 +99,9 @@ class RapidConfigParser(object):
             raise Exception("Not enough VMs for this test: %d needed and only %d available" % (required_number_of_test_machines,total_number_of_machines))
         map_info = test_params['machine_map_file'].strip('[]').split(',')
         map_info_length = len(map_info)
-        if map_info_length > 1:
+        # If map_info is a list where the first entry is numeric, we assume we
+        # are dealing with a list of machines and NOT the machine.map file
+        if map_info[0].isnumeric():
             if map_info_length < test_params[
                     'required_number_of_test_machines']:
                 RapidLog.exception('Not enough machine indices in --map \

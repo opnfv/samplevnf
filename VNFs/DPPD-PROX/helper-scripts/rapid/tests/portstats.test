@@ -27,4 +27,4 @@ cores = [1]
 ports = [0]
 
 [test1]
-test=portstats
+test=portstatstest

@@ -26,4 +26,4 @@ mcore = [0]
 cores = [1]
 
 [test1]
-test=corestats
+test=corestatstest

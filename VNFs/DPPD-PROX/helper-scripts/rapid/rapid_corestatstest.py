@@ -30,7 +30,7 @@ class CoreStatsTest(RapidTest):
     def __init__(self, test_param,  runtime, testname, environment_file,
             machines):
         super().__init__(test_param, runtime, testname, environment_file)
-        self.machines = machines 
+        self.machines = machines
 
     def run(self):
         result_details = {'Details': 'Nothing'}
@@ -81,7 +81,7 @@ class CoreStatsTest(RapidTest):
                         'NonDPReceived': non_dp_rx,
                         'NonDPSent': non_dp_tx,
                         'Dropped': tot_drop[i]}
-                result_details = self.post_data('rapid_corestatstest', result_details)
+                result_details = self.post_data(result_details)
                 if machines_to_go == 0:
                     duration = duration - 1
                     machines_to_go = len (self.machines)

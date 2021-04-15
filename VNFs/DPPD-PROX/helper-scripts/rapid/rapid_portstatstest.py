@@ -75,7 +75,7 @@ class PortStatsTest(RapidTest):
                         'Sent': tx,
                         'NoMbufs': no_mbufs,
                         'iErrMiss': errors}
-                result_details = self.post_data('rapid_corestatstest', result_details)
+                result_details = self.post_data(result_details)
                 if machines_to_go == 0:
                     duration = duration - 1
                     machines_to_go = len (self.machines)

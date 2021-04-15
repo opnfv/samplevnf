@@ -7,7 +7,7 @@
   part2: test
   part3: /instance/
   part4: environment_file
-;rapid_flowsizetest:
+;FlowsizeTest:
   Flows: Flows 
   Size: Size
   RequestedSpeed: RequestedSpeed
@@ -19,10 +19,13 @@
   PCTLatency: lat_perc
   MinLatency: lat_min
   MaxLatency: lat_max
-  PacketsSent: abs_tx
-  PacketsReceived: abs_rx
-  PacketsLost: abs_dropped
-rapid_flowsizetest:
+  Sent: abs_tx
+  Received: abs_rx
+  Lost: abs_dropped
+  Misordered: mis_ordered
+  Extent: extent
+  Duplicated: duplicate
+FlowSizeTest:
   Environment: environment_file
   Test: test
   Flows: Flows 
@@ -42,11 +45,61 @@ rapid_flowsizetest:
       bucket_size: bucket_size
       buckets: buckets
   Absolute Packet Count:
-    PacketsSent: abs_tx
-    PacketsReceived: abs_rx
-    PacketsLost: abs_dropped
-rapid_irqtest:
+    Sent: abs_tx
+    Received: abs_rx
+    Lost: abs_dropped
+  Re-ordering:
+    Misordered: mis_ordered
+    Extent: extent
+    Duplicated: duplicate
+IrqTest:
   Environment: environment_file
   Test: test
   Buckets: buckets
-  Machine_data: machine_data 
+  Machine_data: machine_data
+ImpairTest:
+  Environment: environment_file
+  Test: test
+  Flows: Flows 
+  Size: Size
+  Speed (Mpps):
+    RequestedSpeed: RequestedSpeed
+    CoreGenerated: pps_req_tx
+    SentByNIC: pps_tx
+    FwdBySUT: pps_sut_tx
+    RevByCore: pps_rx
+  Latency (usec):
+    AvgLatency: lat_avg
+    PCTLatency: lat_perc
+    MinLatency: lat_min
+    MaxLatency: lat_max
+    Distribution:
+      bucket_size: bucket_size
+      buckets: buckets
+  Absolute Packet Count:
+    Sent: abs_tx
+    Received: abs_rx
+    Lost: abs_dropped
+  Re-ordering:
+    Misordered: mis_ordered
+    Extent: extent
+    Duplicated: duplicate
+CoreStatsTest:
+  Environment: environment_file
+  Test: test
+  PROXID: PROXID
+  StepSize: StepSize
+  Received: Received
+  Sent: Sent
+  NonDPReceived: NonDPReceived
+  NonDPSent: NonDPSent
+  Dropped: Dropped
+PortStatsTest:
+  Environment: environment_file
+  Test: test
+  PROXID: PROXID
+  StepSize: StepSize
+  Received: Received
+  Sent: Sent
+  NoMbufs: NoMbufs
+  iErrMiss: iErrMiss

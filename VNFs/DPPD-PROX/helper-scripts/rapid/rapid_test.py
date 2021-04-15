@@ -105,24 +105,25 @@ class RapidTest(object):
                 if v in variables.keys():
                     data_format[k] = variables[v]
 
-    def post_data(self, test, variables):
+    def post_data(self, variables):
+        test_type = type(self).__name__
         var = copy.deepcopy(self.data_format)
         self.parse_data_format_dict(var, variables)
-        if var.keys() >= {'URL', test, 'Format'}:
+        if var.keys() >= {'URL', test_type, 'Format'}:
             URL=''
             for value in var['URL'].values():
                 URL = URL + value
             HEADERS = {'X-Requested-With': 'Python requests', 'Content-type': 'application/rapid'}
             if var['Format'] == 'PushGateway':
-                data = "\n".join("{} {}".format(k, v) for k, v in var[test].items()) + "\n"
+                data = "\n".join("{} {}".format(k, v) for k, v in var[test_type].items()) + "\n"
                 response = requests.post(url=URL, data=data,headers=HEADERS)
             elif var['Format'] == 'Xtesting':
-                data = var[test]
+                data = var[test_type]
                 response = requests.post(url=URL, json=data)
             if (response.status_code >= 300):
                 RapidLog.info('Cannot send metrics to {}'.format(URL))
                 RapidLog.info(data)
-        return (var[test])
+        return (var[test_type])
 
     @staticmethod
     def report_result(flow_number, size, data, prefix):
@@ -190,23 +191,21 @@ class RapidTest(object):
             t1_dp_tx = t1_tx - t1_non_dp_tx
             self.gen_machine.set_generator_speed(0)
             self.gen_machine.start_gen_cores()
-            if self.background_machines:
-                self.set_background_speed(self.background_machines, 0)
-                self.start_background_traffic(self.background_machines)
+            self.set_background_speed(self.background_machines, 0)
+            self.start_background_traffic(self.background_machines)
             if 'ramp_step' in self.test.keys():
                 ramp_speed = self.test['ramp_step']
             else:
                 ramp_speed = speed
             while ramp_speed < speed:
                 self.gen_machine.set_generator_speed(ramp_speed)
-                if self.background_machines:
-                    self.set_background_speed(self.background_machines, ramp_speed)
+                self.set_background_speed(self.background_machines, ramp_speed)
                 time.sleep(2)
                 ramp_speed = ramp_speed + self.test['ramp_step']
             self.gen_machine.set_generator_speed(speed)
-            if self.background_machines:
-                self.set_background_speed(self.background_machines, speed)
-            iteration_data['speed'] = time_loop_data['speed'] = speed
+            self.set_background_speed(self.background_machines, speed)
+            iteration_data['speed'] = speed
+            time_loop_data['speed'] = speed
             time.sleep(2) ## Needs to be 2 seconds since this 1 sec is the time that PROX uses to refresh the stats. Note that this can be changed in PROX!! Don't do it.
             start_bg_gen_stats = []
             for bg_gen_machine in self.background_machines:
@@ -346,7 +345,7 @@ class RapidTest(object):
                         time_loop_data['Flows'] = flow_number
                         time_loop_data['Size'] = size
                         time_loop_data['RequestedSpeed'] = RapidTest.get_pps(speed, size)
-                        _ = self.post_data('rapid_flowsizetest', time_loop_data)
+                        _ = self.post_data(time_loop_data)
             end_bg_gen_stats = []
             for bg_gen_machine in self.background_machines:
                 bg_rx, bg_non_dp_rx, bg_tx, bg_non_dp_tx, _, _, bg_tsc, bg_hz = bg_gen_machine.core_stats()
@@ -356,8 +355,7 @@ class RapidTest(object):
                         "bg_hz"    : bg_hz
                         }
                 end_bg_gen_stats.append(dict(bg_gen_stat))
-            if self.background_machines:
-                self.stop_background_traffic(self.background_machines)
+            self.stop_background_traffic(self.background_machines)
             i = 0
             bg_rates =[]
             while i < len(end_bg_gen_stats):

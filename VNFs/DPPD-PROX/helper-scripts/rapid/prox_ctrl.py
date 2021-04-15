@@ -201,8 +201,11 @@ class prox_sock(object):
         result = {}
         result['lat_min'] = 999999999
         result['lat_max'] = result['lat_avg'] = 0
-        number_tasks_returning_stats = 0
         result['buckets'] = [0] * 128
+        result['mis_ordered'] = 0
+        result['extent'] = 0
+        result['duplicate'] = 0
+        number_tasks_returning_stats = 0
         self._send('lat all stats %s %s' % (','.join(map(str, cores)),
             ','.join(map(str, tasks))))
         for core in cores:
@@ -226,9 +229,9 @@ class prox_sock(object):
             result['lat_hz'] = int(stats[6])
             #coreid = int(stats[7])
             #taskid = int(stats[8])
-            mis_ordered = int(stats[9])
-            extent = int(stats[10])
-            duplicate = int(stats[11])
+            result['mis_ordered'] += int(stats[9])
+            result['extent'] += int(stats[10])
+            result['duplicate'] += int(stats[11])
             stats = self._recv().split(':')
             if stats[0].startswith('error'):
                 RapidLog.critical("lat stats error: unexpected lat bucket \

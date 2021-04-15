@@ -35,10 +35,10 @@ class WarmupTest(RapidTest):
     # If not doing this, the ARP message could be dropped by a switch in overload and then the test will not give proper results
     # Note hoever that if we would run the test steps during a very long time, the ARP would expire in the switch.
     # PROX will send a new ARP request every seconds so chances are very low that they will all fail to get through
-        imix = self.test['imix']
-        FLOWSIZE = int(self.test['flowsize'])
-        WARMUPSPEED = int(self.test['warmupspeed'])
-        WARMUPTIME = int(self.test['warmuptime'])
+        imix = self.test['warmupimix']
+        FLOWSIZE = self.test['warmupflowsize']
+        WARMUPSPEED = self.test['warmupspeed']
+        WARMUPTIME = self.test['warmuptime']
         self.gen_machine.set_generator_speed(WARMUPSPEED)
         self.gen_machine.set_udp_packet_size(imix)
     #    gen_machine['socket'].set_value(gencores,0,56,1,1)

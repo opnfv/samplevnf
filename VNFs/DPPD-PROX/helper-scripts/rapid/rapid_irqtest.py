@@ -102,5 +102,5 @@ class IrqTest(RapidTest):
                 core_details['Core {}'.format(row_names[j])] = row
             machine_details[machine.name] = core_details
         result_details['machine_data'] = machine_details
-        result_details = self.post_data('rapid_irqtest', result_details)
+        result_details = self.post_data(result_details)
         return (500000 - max_loop_duration, result_details)
