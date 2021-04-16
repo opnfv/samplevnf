@@ -1,0 +1,194 @@
+##
+## Copyright (c) 2021 Intel Corporation
+##
+## Licensed under the Apache License, Version 2.0 (the "License");
+## you may not use this file except in compliance with the License.
+## You may obtain a copy of the License at
+##
+##     http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+# This README is describing the format of all the rapid test files that you can
+# find in this directory.
+# These files can be specified as a parameter for the runrapid.py script, using
+# the --test [testfile] option. The default file name is specified in
+# rapid_defaults.py and is basicrapid.test.
+# 
+# There are 3 types of sections in this config file:
+# - the [TestParameters] section, which defines how many [TestMx] sections and
+#   how many [testy] sections need to be present in this file.
+# - at least one TestMachine section [TestMx], where x is the index of the Test
+#   machines starting at index 1
+# - at least one tests definition section [testy], where y is the index of the
+#   test to be run. Index starts at 1.
+ 
+[TestParameters]
+# The name of this test. Can be chosen freely to describe this test
+name = BasicSwapTesting
+
+# Defines how may different tests will be executed when running this test file.
+# This is usually set to 1. You need to define as many [testy] sections as
+# defined in this parameter.
+number_of_tests = 1
+
+# The next parameter defines how many PROX instance are needed to run this test.
+# You need to define as many [TestMx] sections as defined in this parameter.
+total_number_of_test_machines = 2
+
+# Some rapid tests are reporting the latency percentile statistics. This
+# parameter defines which latency percentile will be used for this test.
+lat_percentile = 99
+
+# When doing ipv6 testing, this parameter needs to be set to True, default is
+# False. This is used by the generator code to calculate the proper packet
+# header length offsets.
+ipv6 = True
+
+# The following section describes the role of the first Test Machine. Note that
+# the connection details for each PROX instance are defined in the environment
+# file (default: rapid.env). There is a --map parameter for runrapid.py that
+# specifies how the Test machines are mapped onto the available PROX instances.
+[TestM1]
+# Name can be freely chosen
+name = Generator
+# the PROX configuration files that will be used to start PROX on this Test
+# machine. This configuration file will define the role that PROX will play in
+# this Test machine.
+config_file = configs/gen.cfg
+# The values of the remaining parameters in this section are passed on to the
+# PROX configuration file through a file called parameters.lua
+#
+# The next parameter defines the destination Test machine index. This will be
+# used by a generator to define which destination MAC or IP addresses should be
+# used in the generated packets. The fact that we use MAC or IP addresses is
+# defined by the use of l2 or l3.
+dest_vm = 2
+# The next parameter defines the GW Test machine index. This will be
+# used by a generator to define which GW MAC or IP addresses should be
+# used in the generated packets. The fact that we use MAC or IP addresses is
+# defined by the use of l2 or l3.
+#gw_vm = 2
+# mcore defines whichmaster core PROX will use. It is not advised to change
+# this. The PROX instances are optimized to use core 0 for the master and all
+# other cores for DPDK usage.
+mcore = [0]
+# gencores defines which cores will be used to generate packets. If the
+# generator is not able to generate enough packets, you migth want to assign
+# more cores to the generator. Make sure not to use more cores in these
+# variables than you have available in your PROX instance.
+gencores = [1]
+# latcores defines that cores that will do the task of measuring latency,
+# reordering and other statistics.
+latcores = [3]
+# Non generator Test machines only require the cores parameter to find out on
+# which cores they need to place the PROX tasks.
+# cores = [1-3]
+# cores = [1,2,3]
+# The bucket_size_exp parameter is only needed for generator machines when
+# collecting percentile latency statistics. PROX is assigning every packet to
+# one of the 128 latency buckets. The size of the latency buckets depends on
+# the processor frequency and this parameter using some complicated formula.
+# iteration_data['bucket_size'] = float(2 ** BUCKET_SIZE_EXP) /
+# (old_div(float(iteration_data['lat_hz']),float(10**6)))
+# Teh result is expressing the width of each bucket in micro-seconds.
+# The minimum value (which is also the default value) for this parameter is 11.
+# For a processor with a frequency of 2Ghz, and a parameter of 11, this results
+# in a bucket size of 1.024 us. Since we have 128 buckets, the maximum latency
+# that can be stored in the buckets is in theory 128 * 1.024 = 131.072 us. We
+# will however place every measurement with a latency higher than 131.072 us in
+# the last bucket. When you are dealing with higher latency, you will have to
+# increase this parameter. Each time you increase this parameter by 1, you will
+# double the bucket size. 
+#bucket_size_exp = 12
+# We can only monitor one generator and one reflector (swap) Test machine.
+# Monitoring means that we will sue the statistics coming from these Test
+# machines to report statistics and make decisions on the success of a test.
+# Test machines not playing a role in this process, need to have the monitor
+# parameter set to false. You can only have 1 generator machines and 1 SUT Test
+# machine. The parameter can be set to false for background traffic Test
+# machines, GW Test machines, etc... Default is true
+#monitor = false
+# The prox_socket parameter instruct the rapid scripts to connect to the PROX
+# instance and collect statistics. Default is true. If set to none, we will not
+# collect any statistics from this machine
+#prox_socket = false
+# The prox_launch_exit parameter instructs the script to actually start PROX at
+# the beginning of a test, and to stop it at the end. The default is true. You
+# can set this parameter to false in case you want to start PROX manually and
+# inspect the PROX UI, while the rapid scripts are dringing the testing.
+#prox_launch_exit = false
+
+[TestM2]
+name = Swap
+config_file = configs/swap.cfg
+mcore = [0]
+cores = [1]
+#prox_socket = false
+#prox_launch_exit = false
+
+# The following section describes the first test that will run. You need at
+# least 1 test section. In most cases, you will only have one.
+[test1]
+# The test that we will run. A limited set of tests are available: you need to
+# select from the available tests as you can see in the runrapid.py code.
+# At the moment of the writing of this text, we have the following tests
+# available: flowsizetest, TST009test, fixed_rate, increment_till_fail,
+# corestatstest, portstatstest, impairtest, irqtest, warmuptest
+test=flowsizetest
+# The next warmup parameters, are used to warm up the system before the actual
+# test is started. This is to make sure ARP is being resolved in PROX and in the
+# underlying infrastructure so that this does not influence the results.
+# warmupflowsize instruct how many parallel flows need to be generated during
+# warmup
+warmupflowsize=512
+# Give the imix packet size that will be used during warmup. It is a list of
+# packet sizes
+warmupimix=[64, 300, 250, 250, 80]
+# The speed at whcih we will generate packets during the warmup phase. The speed
+# is expressed as a percentage of 10Gb/s. You could say this is expressed in
+# units of 100Mb/s.
+warmupspeed=1
+# warmuptime is the time this warmup phase will run. It is expressed in seconds.
+warmuptime=2
+# Each element in the imix list will result in a separate test. Each element
+# is on its turn a list of packet sizes which will be used during one test
+# execution. If you only want to test 1 size, define a list with only one
+# element.
+imixs=[[64],[64,250,800,800]]
+# the number of flows in the list need to be powers of 2, max 2^30
+# If not a power of 2, we will use the lowest power of 2 that is larger than
+# the requested number of flows. e.g. 9 will result in 16 flows
+# Each element in this list will result in an seperate test.
+flows=[64,500000]
+# The drop_rate_threshold defines the maximum amount of packets that can be
+# dropped without decalring the test as failed. This number is expressed as a
+# percentage of the total amount of packets being sent by the generator. If this
+# number is set to 0, the test will only be declared succesful, if zero packets
+# were dropped during this test
+drop_rate_threshold = 0.1
+# Setting one of the following thresholds to infinity (inf), results in the
+# criterion not being evaluated to rate the test as succesful. The latency
+# tresholds are expressed in micro-seconds.
+lat_avg_threshold = 50
+lat_perc_threshold = 80
+lat_max_threshold = inf
+# When we run binary searches, we are always trying at a new speed, halfway
+# between the last failed speed and the last succesful speed (initially, we
+# consider 0 as that last succesful speed). When stop doing this binary search
+# when the difference between the last speed and the news speed is less than
+# what is defined by accuracy, expressed in percentages.
+accuracy = 1
+# Speed at which we will start the binary search, expressed in percentage of
+# 10Gb/s.
+startspeed = 50
+# When using ramp_step, we will at the beginning of each measurement, increase
+# the traffic slowly, till we reach the requested speed. Can be used with
+# certain soft switches that are reconfiguring the resource usage, based on the
+# actual traffic. In order not the influence the measurement, we then slowly go
+# to the requested traffic rate.
+#ramp_step = 1
