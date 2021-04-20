@@ -400,6 +400,7 @@ static void lat_stop(struct task_base *tbase)
 	if (task->unique_id_pos) {
 		task_lat_count_remaining_lost_packets(task);
 		task_lat_reset_eld(task);
+		memset(task->previous_packet, 0, sizeof(task->previous_packet) * task->generator_count);
 	}
 	if (task->latency_buffer)
 		lat_write_latency_to_file(task);
