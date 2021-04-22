@@ -309,7 +309,7 @@ class RapidTest(object):
                 if self.sut_machine!=None:
                     t3_sut_rx, t3_sut_non_dp_rx, t3_sut_tx, t3_sut_non_dp_tx, t3_sut_drop, t3_sut_tx_fail, t3_sut_tsc, sut_tsc_hz = self.sut_machine.core_stats()
                     if t3_sut_tsc != t2_sut_tsc:
-                        single_sut_core_measurement_duration = (t3_sut_tsc - t2_sut_tsc) * 1.0 / tsc_hz  # time difference between the 2 measurements, expressed in seconds.
+                        single_sut_core_measurement_duration = (t3_sut_tsc - t2_sut_tsc) * 1.0 / sut_tsc_hz  # time difference between the 2 measurements, expressed in seconds.
                         tot_sut_core_measurement_duration = tot_sut_core_measurement_duration + single_sut_core_measurement_duration
                         tot_sut_rx += t3_sut_rx - t2_sut_rx
                         tot_sut_non_dp_rx += t3_sut_non_dp_rx - t2_sut_non_dp_rx
