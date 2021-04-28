@@ -42,11 +42,10 @@ class RapidStackManager(object):
         stack_name = rapid_stack_params['stack_name']
         heat_template = rapid_stack_params['heat_template']
         heat_param = rapid_stack_params['heat_param']
-        keypair_name = rapid_stack_params['keypair_name']
         user = rapid_stack_params['user']
         dataplane_subnet_mask = rapid_stack_params['dataplane_subnet_mask']
         deployment = StackDeployment(cloud_name)
-        deployment.deploy(stack_name, keypair_name, heat_template, heat_param)
+        deployment.deploy(stack_name, heat_template, heat_param)
         deployment.generate_env_file(user, dataplane_subnet_mask)
 
 def main():
@@ -58,7 +57,6 @@ def main():
     #stack_name = 'rapid'
     #heat_template = 'openstack-rapid.yaml'
     #heat_param = 'params_rapid.yaml'
-    #keypair_name = 'prox_key'
     #user = 'centos'
     RapidStackManager.deploy_stack(rapid_stack_params)
 

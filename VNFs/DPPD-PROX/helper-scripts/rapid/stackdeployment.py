@@ -102,21 +102,20 @@ class StackDeployment(object):
                     env_file.write('dp_mac1 = {}\n'.format(str(self.dp_macs[count])))
                 env_file.write('\n')
             env_file.write('[ssh]\n')
-            env_file.write('key = {}\n'.format(self.private_key_filename))
+            env_file.write('key = {}\n'.format(self.key_name))
             env_file.write('user = {}\n'.format(user))
             env_file.write('\n')
             env_file.write('[Varia]\n')
             env_file.write('vim = OpenStack\n')
             env_file.write('stack = {}\n'.format(self.stack.stack_name))
 
-    def create_stack(self, stack_name, stack_file_path, param_file):
+    def create_stack(self, stack_name, stack_file_path, heat_parameters):
         files, template = template_utils.process_template_path(stack_file_path)
-        heat_parameters = open(param_file)
-        temp_params = yaml.load(heat_parameters,Loader=yaml.BaseLoader)
-        heat_parameters.close()
-        stack_created = self.heatclient.stacks.create(stack_name=stack_name, template=template,
-        parameters=temp_params["parameters"], files=files)
-        stack = self.heatclient.stacks.get(stack_created['stack']['id'], resolve_outputs=True)
+        stack_created = self.heatclient.stacks.create(stack_name = stack_name,
+                template = template, parameters = heat_parameters,
+                files = files)
+        stack = self.heatclient.stacks.get(stack_created['stack']['id'],
+                resolve_outputs=True)
         # Poll at 5 second intervals, until the status is no longer 'BUILD'
         while stack.stack_status == 'CREATE_IN_PROGRESS':
             print('waiting..')
@@ -128,11 +127,22 @@ class StackDeployment(object):
             RapidLog.exception('Error in stack deployment')
 
     def create_key(self):
-        keypair = self.nova_client.keypairs.create(name=self.key_name)
+        if os.path.exists(self.key_name):
+            public_key_file = "{}.pub".format(self.key_name)
+            if not os.path.exists(public_key_file):
+                RapidLog.critical('Keypair {}.pub does not exist'.format(
+                    self.key_name))
+            with open(public_key_file, mode='rb') as public_file:
+                public_key = public_file.read()
+        else:
+            public_key = None
+        keypair = self.nova_client.keypairs.create(name = self.key_name, 
+                public_key = public_key)
         # Create a file for writing that can only be read and written by owner
-        fp = os.open(self.private_key_filename, os.O_WRONLY | os.O_CREAT, 0o600)
-        with os.fdopen(fp, 'w') as f:
-                f.write(keypair.private_key)
+        if not os.path.exists(self.key_name):
+            fp = os.open(self.key_name, os.O_WRONLY | os.O_CREAT, 0o600)
+            with os.fdopen(fp, 'w') as f:
+                    f.write(keypair.private_key)
         RapidLog.info('Keypair {} created'.format(self.key_name))
 
     def IsDeployed(self, stack_name):
@@ -150,14 +160,17 @@ class StackDeployment(object):
             return True
         return False
 
-    def deploy(self, stack_name, keypair_name, heat_template, heat_param):
-        self.key_name = keypair_name
-        #self.private_key_filename = '{}.pem'.format(keypair_name)
-        self.private_key_filename = keypair_name
+    def deploy(self, stack_name, heat_template, heat_param):
+        heat_parameters_file = open(heat_param)
+        heat_parameters = yaml.load(heat_parameters_file,
+                Loader=yaml.BaseLoader)['parameters']
+        heat_parameters_file.close()
+        self.key_name = heat_parameters['PROX_key']
         if not self.IsDeployed(stack_name):
             if not self.IsKey():
                 self.create_key()
-            self.stack = self.create_stack(stack_name, heat_template, heat_param)
+            self.stack = self.create_stack(stack_name, heat_template,
+                    heat_parameters)
 
     def generate_env_file(self, user = 'centos', dataplane_subnet_mask = '24'):
         self.generate_paramDict()

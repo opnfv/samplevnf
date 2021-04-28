@@ -10,7 +10,7 @@ parameters:
   public_net_name: {description: Public network to allocate (floating) IPs to VMs', type: string, default: admin_floating_net}
   mgmt_net_name: {description: Name of PROX mgmt network to be created, type: string, default: admin_internal_net}
   PROX_image: {description: Image name to use for PROX, type: string, default: rapidVM}
-  PROX_key: {description: DO NOT CHANGE THIS DEFAULT KEY NAME, type: string, default: rapid_key}
+  PROX_key: {description: DO NOT CHANGE THIS DEFAULT KEY NAME, type: string, default: rapid_rsa_key}
   my_availability_zone: {description: availability_zone for Hosting VMs, type: string, default: nova}
   security_group: {description: Security Group to use, type: string, default: prox_security_group}
   PROXType1VM_count: {description: Total number of testVMs to create, type: number, default: 2}
