@@ -19,20 +19,23 @@ usage() {
     echo "   -i image_appendix    image name to be pushed to google storage)"
     echo "   -g gs_url            url to store the image"
     echo "   -v                   verify only (build but do not push to google storage)"
+    echo "   -w cache             cache directory for disk-image-create"
     exit 1
 }
 
 # set -e
 #default values
 image_appendix="test"
+workspace="/home/jenkins-ci/opnfv/slave_root/workspace"
 gs_url="artifacts.opnfv.org/samplevnf/images"
 verify_only=0
-while getopts i:g:v flag
+while getopts i:g:vw: flag
 do
     case "${flag}" in
         i) image_appendix=${OPTARG};;
         g) gs_url=${OPTARG};;
         v) verify_only=1;;
+        w) workspace=${OPTARG};;
         *) usage;exit 1;;
     esac
 done
@@ -40,9 +43,9 @@ echo "gs_url: $gs_url";
 echo "Verify only: $verify_only";
 image_name=rapid-${image_appendix}
 echo "image name: $image_name.qcow2"
+echo "workspace: $workspace"
 
-# install diskimage-builder
-
+ install diskimage-builder
 python3 -m venv dib-rapid-venv
 . dib-rapid-venv/bin/activate
 pip3 install --upgrade pip
@@ -72,7 +75,9 @@ export DIB_CLOUD_INIT_DATASOURCES="Ec2, ConfigDrive, OpenStack"
 # Use ELRepo to have latest kernel
 export DIB_USE_ELREPO_KERNEL=True
 echo "Building $image_name.qcow2..."
-time disk-image-create -o $image_name centos7 cloud-init rapid vm
+cache=$workspace/cache
+mkdir $cache
+time disk-image-create -o $image_name --image-cache $cache centos7 cloud-init rapid vm
 
 ls -l $image_name.qcow2
 
@@ -90,3 +95,5 @@ else
         exit 1
     fi
 fi
+deactivate
+rm -r dib-rapid-venv
