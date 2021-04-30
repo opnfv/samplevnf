@@ -114,12 +114,13 @@ resources:
               rapid:rapid
           expire: False
         write_files:
-        - path: /opt/rapid/after_boot.sh
-          # - path: /opt/rapid/after_boot_do_not_run.sh
+        - path: /opt/rapid/after_boot_do_not_run.sh
+          # - path: /opt/rapid/after_boot.sh
           # after_boot.sh is ran by check_prox_system_setup.sh, if it exists
           # This can be used to fix some issues, like in the example below
           # Remove this section or rename the file, if you do not want to run
           # this after booting
+          # The code below is just an example of what could be ran after boot
           content: |
             OLDIFS="${IFS}"
             IFS=$'\n'
@@ -128,6 +129,7 @@ resources:
             for item in ${list}
               do /bin/bash -c "sudo ip route del ${item}"
             done
+            # Make sure to replace the IP address with your gateway
             /bin/bash -c "sudo ip route add default via 10.6.6.1 dev eth0"
             /bin/bash -c "echo nameserver 8.8.8.8 > /etc/resolv.conf"
             IFS="${OLDIFS}"
