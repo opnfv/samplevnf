@@ -54,7 +54,7 @@ resources:
           PROX_config: {get_resource: MyConfig}
     depends_on:
       - MyConfig
-  
+ 
   PROXType2VMs:
     type: OS::Heat::ResourceGroup
     description: Group of PROX VMs according to specs described in this section
@@ -75,7 +75,7 @@ resources:
           PROX_config: {get_resource: MyConfig}
     depends_on:
       - MyConfig
-  
+ 
   PROXType3VMs:
     type: OS::Heat::ResourceGroup
     description: Group of PROX VMs according to specs described in this section
@@ -95,7 +95,7 @@ resources:
           PROX_config: {get_resource: MyConfig}
     depends_on:
       - MyConfig
-  
+ 
   MyConfig:
     type: OS::Heat::CloudConfig
     properties:
@@ -114,12 +114,13 @@ resources:
               rapid:rapid
           expire: False
         write_files:
-        - path: /opt/rapid/after_boot.sh
-          # - path: /opt/rapid/after_boot_do_not_run.sh
+        - path: /opt/rapid/after_boot_do_not_run.sh
+          # - path: /opt/rapid/after_boot.sh
           # after_boot.sh is ran by check_prox_system_setup.sh, if it exists
           # This can be used to fix some issues, like in the example below
           # Remove this section or rename the file, if you do not want to run
           # this after booting
+          # The code below is just an example of what could be ran after boot
           content: |
             OLDIFS="${IFS}"
             IFS=$'\n'
@@ -128,6 +129,7 @@ resources:
             for item in ${list}
               do /bin/bash -c "sudo ip route del ${item}"
             done
+            # Make sure to replace the IP address with your gateway
             /bin/bash -c "sudo ip route add default via 10.6.6.1 dev eth0"
             /bin/bash -c "echo nameserver 8.8.8.8 > /etc/resolv.conf"
             IFS="${OLDIFS}"
@@ -136,31 +138,31 @@ resources:
 outputs:
   number_of_servers:
     description: List of number or PROX instance
-    value: 
+    value:
       - {get_param: PROXType1VM_count}
       - {get_param: PROXType2VM_count}
       - {get_param: PROXType3VM_count}
   server_name:
     description: List of list of names of the PROX instances
-    value: 
+    value:
       - {get_attr: [PROXType1VMs, name]}
       - {get_attr: [PROXType2VMs, name]}
       - {get_attr: [PROXType3VMs, name]}
   mngmt_ips:
     description: List of list of Management IPs of the VMs
-    value: 
+    value:
       - {get_attr: [PROXType1VMs, mngmt_ip]}
       - {get_attr: [PROXType2VMs, mngmt_ip]}
       - {get_attr: [PROXType3VMs, mngmt_ip]}
   data_plane_ips:
     description: List of list of list of DataPlane IPs of the VMs
-    value: 
+    value:
       - {get_attr: [PROXType1VMs, data_plane_ips]}
       - {get_attr: [PROXType2VMs, data_plane_ips]}
       - {get_attr: [PROXType3VMs, data_plane_ips]}
   data_plane_macs:
     description: List of list of list of DataPlane MACs of the VMs
-    value: 
+    value:
       - {get_attr: [PROXType1VMs, data_plane_mac]}
       - {get_attr: [PROXType2VMs, data_plane_mac]}
       - {get_attr: [PROXType3VMs, data_plane_mac]}
