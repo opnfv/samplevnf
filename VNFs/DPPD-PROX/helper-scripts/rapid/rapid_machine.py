@@ -50,10 +50,11 @@ class RapidMachine(object):
         self.machine_params = machine_params
         self.vim = vim
         self.cpu_mapping = None
-        PROXConfigfile =  open (self.machine_params['config_file'], 'r')
-        PROXConfig = PROXConfigfile.read()
-        PROXConfigfile.close()
-        self.all_tasks_for_this_cfg = set(re.findall("task\s*=\s*(\d+)",PROXConfig))
+        if 'config_file' in self.machine_params.keys():
+            PROXConfigfile =  open (self.machine_params['config_file'], 'r')
+            PROXConfig = PROXConfigfile.read()
+            PROXConfigfile.close()
+            self.all_tasks_for_this_cfg = set(re.findall("task\s*=\s*(\d+)",PROXConfig))
 
     def __del__(self):
         if ((not self.configonly) and self.machine_params['prox_socket']):
@@ -154,6 +155,12 @@ class RapidMachine(object):
                     LuaFile.write('dest_ip{}="{}"\n'.format(index, dest_port['ip']))
                     LuaFile.write('dest_hex_ip{}=convertIPToHex(dest_ip{})\n'.format(index, index))
                     LuaFile.write('dest_hex_mac{}="{}"\n'.format(index , dest_port['mac'].replace(':',' ')))
+            if 'gw_vm' in self.machine_params.keys():
+                for index, gw_ip in enumerate(self.machine_params['gw_ips'],
+                        start = 1):
+                    LuaFile.write('gw_ip{}="{}"\n'.format(index, gw_ip))
+                    LuaFile.write('gw_hex_ip{}=convertIPToHex(gw_ip{})\n'.
+                            format(index, index))
             LuaFile.write(appendix)
         self._client.scp_put(self.LuaFileName, self.rundir + '/parameters.lua')
         self._client.scp_put('helper.lua', self.rundir + '/helper.lua')

@@ -108,12 +108,6 @@ class RapidGeneratorMachine(RapidMachine):
             self.machine_params['gencores']))
         appendix = appendix + 'latcores="%s"\n'% ','.join(map(str,
             self.machine_params['latcores']))
-        if 'gw_vm' in self.machine_params.keys():
-            for index, gw_ip in enumerate(self.machine_params['gw_ips'],
-                    start = 1):
-                appendix = appendix + 'gw_ip{}="{}"\n'.format(index, gw_ip)
-                appendix = (appendix + 'gw_hex_ip{}=convertIPToHex(gw_ip{})\n'.
-                        format(index, index))
         appendix = (appendix +
                 'bucket_size_exp="{}"\n'.format(self.bucket_size_exp))
         if 'heartbeat' in self.machine_params.keys():
