@@ -41,7 +41,7 @@ class RapidXt(testcase.TestCase):
             _, environment_file_name = os.path.split(
                     test_params['environment_file'])
             log_file = '{}/RUN{}.{}.log'.format(self.res_dir,
-                    environment_file_name, test_file)
+                    environment_file_name, test_file_name)
             RapidLog.log_init(log_file, test_params['loglevel'],
                 test_params['screenloglevel'] , test_params['version']  )
             test_manager = RapidTestManager()

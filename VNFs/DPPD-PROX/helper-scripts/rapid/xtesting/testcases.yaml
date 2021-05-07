@@ -18,6 +18,7 @@ tiers:
                     args:
                         test_file: tests/irq.test
                         runtime: 5
+                        environment_file: config/rapid.env
     -
         name: TST009_rapid_benchmarking
         order: 2
@@ -36,6 +37,7 @@ tiers:
                     args:
                         test_file: tests/TST009_Throughput_64B_64F.test
                         runtime: 5
+                        environment_file: config/rapid.env
             -
                 case_name: rapid_tst009_acaeab_16384f
                 project_name: rapidxt
@@ -49,3 +51,4 @@ tiers:
                     args:
                         test_file: tests/TST009_Throughput_acaeab_16384F.test
                         runtime: 5
+                        environment_file: config/rapid.env

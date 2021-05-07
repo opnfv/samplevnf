@@ -1,5 +1,5 @@
 ##
-## Copyright (c) 2020 Intel Corporation
+## Copyright (c) 2020-2021 Intel Corporation
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
 ## you may not use this file except in compliance with the License.
@@ -22,8 +22,7 @@ ENV RAPID_TEST =rapid_tst009_throughput
 
 RUN git clone https://git.opnfv.org/samplevnf /samplevnf
 WORKDIR /samplevnf/VNFs/DPPD-PROX/helper-scripts/rapid
-COPY rapid.env /samplevnf/VNFs/DPPD-PROX/helper-scripts/rapid/.
-COPY rapid_key.pem /samplevnf/VNFs/DPPD-PROX/helper-scripts/rapid/.
+RUN chmod 400 /samplevnf/VNFs/DPPD-PROX/helper-scripts/rapid/rapid_rsa_key
 COPY testcases.yaml /usr/lib/python3.8/site-packages/xtesting/ci/testcases.yaml
 RUN apk add python3-dev openssh-client && cd /samplevnf/VNFs/DPPD-PROX/helper-scripts/rapid/ && git init && pip3 install .
 CMD ["run_tests", "-t", "all"]
