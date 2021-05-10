@@ -52,6 +52,12 @@ then
                 ## Only then, they will be able to connect to the PROX instance
                 ## and start the testing
                 touch "$system_ready"
+                ## On some systems, we still need to use the igb_uio driver.
+                ## Example: good performance on AWS with the ENA interface.
+                ## Make sure that you change devbind.sh to use the preferred
+                ## driver. vfio is the default.
+                modprobe uio
+                insmod /opt/rapid/dpdk/build/kmod/igb_uio.ko wc_activate=1
                 exit 0
             ;;
             isolated_cores=*)
