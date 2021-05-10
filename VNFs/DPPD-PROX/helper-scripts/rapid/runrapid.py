@@ -87,52 +87,74 @@ class RapidTestManager(object):
                         if machine_params['prox_socket']:
                             sut_machine = machine
             self.machines.append(machine)
-        prox_executor = concurrent.futures.ThreadPoolExecutor(max_workers=len(self.machines))
-        self.future_to_prox = {prox_executor.submit(machine.start_prox): machine for machine in self.machines}
-        if configonly:
-            concurrent.futures.wait(self.future_to_prox,return_when=ALL_COMPLETED)
-            sys.exit()
-        with concurrent.futures.ThreadPoolExecutor(max_workers=len(self.machines)) as executor:
-            future_to_connect_prox = {executor.submit(machine.connect_prox): machine for machine in self.machines}
+        try:
+            prox_executor = concurrent.futures.ThreadPoolExecutor(max_workers=len(self.machines))
+            self.future_to_prox = {prox_executor.submit(machine.start_prox): machine for machine in self.machines}
+            if configonly:
+                concurrent.futures.wait(self.future_to_prox,return_when=ALL_COMPLETED)
+                sys.exit()
+            socket_executor = concurrent.futures.ThreadPoolExecutor(max_workers=len(self.machines))
+            future_to_connect_prox = {socket_executor.submit(machine.connect_prox): machine for machine in self.machines}
             concurrent.futures.wait(future_to_connect_prox,return_when=ALL_COMPLETED)
-        result = 0
-        for test_param in test_params['tests']:
-            RapidLog.info(test_param['test'])
-            if test_param['test'] in ['flowsizetest', 'TST009test',
-                    'fixed_rate', 'increment_till_fail']:
-                test = FlowSizeTest(test_param, test_params['lat_percentile'],
-                        test_params['runtime'], 
-                        test_params['TestName'], 
-                        test_params['environment_file'], gen_machine,
-                        sut_machine, background_machines)
-            elif test_param['test'] in ['corestatstest']:
-                test = CoreStatsTest(test_param, test_params['runtime'],
-                        test_params['TestName'], 
-                        test_params['environment_file'], self.machines)
-            elif test_param['test'] in ['portstatstest']:
-                test = PortStatsTest(test_param, test_params['runtime'],
-                        test_params['TestName'], 
-                        test_params['environment_file'], self.machines)
-            elif test_param['test'] in ['impairtest']:
-                test = ImpairTest(test_param, test_params['lat_percentile'],
-                        test_params['runtime'],
-                        test_params['TestName'], 
-                        test_params['environment_file'], gen_machine,
-                        sut_machine, background_machines)
-            elif test_param['test'] in ['irqtest']:
-                test = IrqTest(test_param, test_params['runtime'],
-                        test_params['TestName'], 
-                        test_params['environment_file'], self.machines)
-            elif test_param['test'] in ['warmuptest']:
-                test = WarmupTest(test_param, gen_machine)
-            else:
-                RapidLog.debug('Test name ({}) is not valid:'.format(
-                    test_param['test']))
-            single_test_result, result_details = test.run()
-            result = result + single_test_result
-        for machine in self.machines:
-            machine.close_prox()
-        concurrent.futures.wait(self.future_to_prox,return_when=ALL_COMPLETED)
+            result = 0
+            for test_param in test_params['tests']:
+                RapidLog.info(test_param['test'])
+                if test_param['test'] in ['flowsizetest', 'TST009test',
+                        'fixed_rate', 'increment_till_fail']:
+                    test = FlowSizeTest(test_param,
+                            test_params['lat_percentile'],
+                            test_params['runtime'],
+                            test_params['TestName'],
+                            test_params['environment_file'],
+                            gen_machine,
+                            sut_machine, background_machines)
+                elif test_param['test'] in ['corestatstest']:
+                    test = CoreStatsTest(test_param,
+                            test_params['runtime'],
+                            test_params['TestName'],
+                            test_params['environment_file'],
+                            self.machines)
+                elif test_param['test'] in ['portstatstest']:
+                    test = PortStatsTest(test_param,
+                            test_params['runtime'],
+                            test_params['TestName'],
+                            test_params['environment_file'],
+                            self.machines)
+                elif test_param['test'] in ['impairtest']:
+                    test = ImpairTest(test_param,
+                            test_params['lat_percentile'],
+                            test_params['runtime'],
+                            test_params['TestName'],
+                            test_params['environment_file'],
+                            gen_machine,
+                            sut_machine, background_machines)
+                elif test_param['test'] in ['irqtest']:
+                    test = IrqTest(test_param,
+                            test_params['runtime'],
+                            test_params['TestName'],
+                            test_params['environment_file'],
+                            self.machines)
+                elif test_param['test'] in ['warmuptest']:
+                    test = WarmupTest(test_param,
+                            gen_machine)
+                else:
+                    RapidLog.debug('Test name ({}) is not valid:'.format(
+                        test_param['test']))
+                single_test_result, result_details = test.run()
+                result = result + single_test_result
+            for machine in self.machines:
+                machine.close_prox()
+            concurrent.futures.wait(self.future_to_prox,
+                    return_when=ALL_COMPLETED)
+        except (ConnectionError, KeyboardInterrupt) as e:
+            result = result_details = None
+            socket_executor.shutdown(wait=False)
+            socket_executor._threads.clear()
+            prox_executor.shutdown(wait=False)
+            prox_executor._threads.clear()
+            concurrent.futures.thread._threads_queues.clear()
+            RapidLog.error("Test interrupted: {} {}".format(
+                type(e).__name__,e))
         return (result, result_details)
 
 def main():
