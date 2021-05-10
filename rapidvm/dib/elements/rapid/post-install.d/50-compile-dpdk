@@ -24,7 +24,9 @@ export RTE_KERNELDIR="/lib/modules/${LATEST_KERNEL_INSTALLED}/build"
 
 pushd ${RTE_SDK} > /dev/null 2>&1
 make config T=${RTE_TARGET}
-#sed -i 's/CONFIG_RTE_EAL_IGB_UIO=n/CONFIG_RTE_EAL_IGB_UIO=y/g' ${RTE_SDK}/build/.config
+# Starting from DPDK 20.05, the IGB_UIO driver is not compiled by default.
+# Uncomment the sed command to enable the driver compilation
+sed -i 's/CONFIG_RTE_EAL_IGB_UIO=n/CONFIG_RTE_EAL_IGB_UIO=y/g' ${RTE_SDK}/build/.config
 #sed -i 's/CONFIG_RTE_LIBRTE_PMD_AESNI_MB=n/CONFIG_RTE_LIBRTE_PMD_AESNI_MB=y/g' ${RTE_SDK}/build/.config
 sed -i 's/CONFIG_RTE_APP_TEST=y/CONFIG_RTE_APP_TEST=n/g' ${RTE_SDK}/build/.config
 sed -i 's/CONFIG_RTE_TEST_PMD=y/CONFIG_RTE_TEST_PMD=n/g' ${RTE_SDK}/build/.config
