@@ -120,11 +120,12 @@ class RapidLog(object):
     @staticmethod
     def exception(exception_info):
         RapidLog.log.exception(exception_info)
-        raise Exception(exception_info)
+        exit(1)
 
+    @staticmethod
     def critical(critical_info):
         RapidLog.log.critical(critical_info)
-        raise Exception(critical_info)
+        exit(1)
 
     @staticmethod
     def error(error_info):
