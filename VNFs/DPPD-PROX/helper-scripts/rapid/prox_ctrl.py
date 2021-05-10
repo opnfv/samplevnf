@@ -241,7 +241,7 @@ class prox_sock(object):
             result['buckets'][0] = int(stats[1])
             for i in range(1, 128):
                 stats = self._recv().split(':')
-                result['buckets'][i] = int(stats[1])
+                result['buckets'][i] += int(stats[1])
         result['lat_avg'] = old_div(result['lat_avg'],
                 number_tasks_returning_stats)
         self._send('stats latency(0).used')
@@ -330,16 +330,24 @@ class prox_sock(object):
         """Append LF and send command to the PROX instance."""
         if self._sock is None:
             raise RuntimeError("PROX socket closed, cannot send '%s'" % cmd)
-        self._sock.sendall(cmd.encode() + b'\n')
+        try:
+            self._sock.sendall(cmd.encode() + b'\n')
+        except ConnectionResetError as e:
+            RapidLog.error('Pipe reset by Prox instance: traffic too high?')
+            raise
 
     def _recv(self):
         """Receive response from PROX instance, return it with LF removed."""
         if self._sock is None:
             raise RuntimeError("PROX socket closed, cannot receive anymore")
-        pos = self._rcvd.find(b'\n')
-        while pos == -1:
-            self._rcvd += self._sock.recv(256)
+        try:
             pos = self._rcvd.find(b'\n')
-        rsp = self._rcvd[:pos]
-        self._rcvd = self._rcvd[pos+1:]
+            while pos == -1:
+                self._rcvd += self._sock.recv(256)
+                pos = self._rcvd.find(b'\n')
+            rsp = self._rcvd[:pos]
+            self._rcvd = self._rcvd[pos+1:]
+        except ConnectionResetError as e:
+            RapidLog.error('Pipe reset by Prox instance: traffic too high?')
+            raise
         return rsp.decode()
