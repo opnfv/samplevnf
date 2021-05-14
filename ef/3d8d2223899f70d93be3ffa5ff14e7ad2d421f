@@ -1,0 +1,8 @@
+Verified+1: Luc Provoost <luc.provoost@intel.com>
+Verified+1: jenkins-ci <jenkins-opnfv-ci@opnfv.org>
+Code-Review+2: Luc Provoost <luc.provoost@intel.com>
+Submitted-by: Luc Provoost <luc.provoost@intel.com>
+Submitted-at: Fri, 14 May 2021 09:45:15 +0000
+Reviewed-on: https://gerrit.opnfv.org/gerrit/c/samplevnf/+/72501
+Project: samplevnf
+Branch: refs/heads/master
