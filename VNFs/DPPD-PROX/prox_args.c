@@ -41,7 +41,7 @@
 #include "ip_subnet.h"
 
 #define MAX_RTE_ARGV 64
-#define MAX_ARG_LEN  64
+#define MAX_ARG_LEN  256
 
 struct cfg_depr {
 	const char *opt;
@@ -2295,7 +2295,7 @@ int prox_setup_rte(const char *prog_name)
 			if (ptr) {
 				*ptr++ = '\0';
 			}
-			strcpy(rte_arg[++argc], ptr2);
+			prox_strncpy(rte_arg[++argc], ptr2, MAX_ARG_LEN);
 			rte_argv[argc] = rte_arg[argc];
 		}
 	}
