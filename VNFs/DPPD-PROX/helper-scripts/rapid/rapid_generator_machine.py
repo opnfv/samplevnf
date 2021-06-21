@@ -121,8 +121,6 @@ class RapidGeneratorMachine(RapidMachine):
         # Start the generator with the -e option so that the cores don't
         # start automatically
         super().start_prox('-e')
-        if self.vim in ['kubernetes']:
-            self.remap_all_cpus()
 
     def set_generator_speed(self, speed):
         # The assumption is that we only use task 0 for generating

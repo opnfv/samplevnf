@@ -17,12 +17,12 @@ spec:
       name: hugepages
     resources:
       requests:
-        hugepages-2Mi: 512Mi
+        hugepages-2Mi: 1Gi
         memory: 1Gi
         cpu: 8
         intel.com/intel_sriov_vfio: '1'
       limits:
-        hugepages-2Mi: 512Mi
+        hugepages-2Mi: 1Gi
         memory: 1Gi
         cpu: 8
         intel.com/intel_sriov_vfio: '1'

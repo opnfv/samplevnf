@@ -50,6 +50,8 @@ class RapidMachine(object):
         self.machine_params = machine_params
         self.vim = vim
         self.cpu_mapping = None
+        self.numa_nodes = [ 0 ]
+        self.socket_mem_mb = '512'
         if 'config_file' in self.machine_params.keys():
             PROXConfigfile =  open (self.machine_params['config_file'], 'r')
             PROXConfig = PROXConfigfile.read()
@@ -64,19 +66,19 @@ class RapidMachine(object):
     def get_cores(self):
         return (self.machine_params['cores'])
 
-    def expand_cpuset(self, cpuset):
-        """Expand cpuset provided as comma-separated list of CPU numbers and
-        CPU ranges of numbers. For more information please see
+    def expand_list_format(self, list):
+        """Expand cpuset list format provided as comma-separated list of
+        numbers and ranges of numbers. For more information please see
         https://man7.org/linux/man-pages/man7/cpuset.7.html
         """
-        cpuset_expanded = []
-        for cpu in cpuset.split(','):
-            if '-' in cpu:
-                cpu_range = cpu.split('-')
-                cpuset_expanded += range(int(cpu_range[0]), int(cpu_range[1]) + 1)
+        list_expanded = []
+        for num in list.split(','):
+            if '-' in num:
+                num_range = num.split('-')
+                list_expanded += range(int(num_range[0]), int(num_range[1]) + 1)
             else:
-                cpuset_expanded.append(int(cpu))
-        return cpuset_expanded
+                list_expanded.append(int(num))
+        return list_expanded
 
     def read_cpuset(self):
         """Read list of cpus on which we allowed to execute
@@ -84,7 +86,7 @@ class RapidMachine(object):
         cmd = 'cat /sys/fs/cgroup/cpuset/cpuset.cpus'
         cpuset_cpus = self._client.run_cmd(cmd).decode().rstrip()
         RapidLog.debug('{} ({}): Allocated cpuset: {}'.format(self.name, self.ip, cpuset_cpus))
-        self.cpu_mapping = self.expand_cpuset(cpuset_cpus)
+        self.cpu_mapping = self.expand_list_format(cpuset_cpus)
         RapidLog.debug('{} ({}): Expanded cpuset: {}'.format(self.name, self.ip, self.cpu_mapping))
 
         # Log CPU core mapping for user information
@@ -120,6 +122,25 @@ class RapidMachine(object):
             RapidLog.debug('{} ({}): cores {} remapped to {}'.format(self.name, self.ip, self.machine_params['cores'], cpus_remapped))
             self.machine_params['cores'] = cpus_remapped
 
+    def read_cpuset_mems(self):
+        """Read list of NUMA nodes on which we allowed to allocate memory
+        """
+        cmd = 'cat /sys/fs/cgroup/cpuset/cpuset.mems'
+        cpuset_mems = self._client.run_cmd(cmd).decode().rstrip()
+        RapidLog.debug('{} ({}): Allowed NUMA nodes: {}'.format(self.name, self.ip, cpuset_mems))
+        self.numa_nodes = self.expand_list_format(cpuset_mems)
+        RapidLog.debug('{} ({}): Expanded allowed NUMA nodes: {}'.format(self.name, self.ip, self.numa_nodes))
+
+    def get_prox_socket_mem_str(self):
+        socket_mem_str = ''
+        for node in range(self.numa_nodes[-1] + 1):
+            if node in self.numa_nodes:
+                socket_mem_str += self.socket_mem_mb + ','
+            else:
+                socket_mem_str += '0,'
+        socket_mem_str = socket_mem_str[:-1]
+        return socket_mem_str
+
     def devbind(self):
         # Script to bind the right network interface to the poll mode driver
         for index, dp_port in enumerate(self.dp_ports, start = 1):
@@ -141,7 +162,9 @@ class RapidMachine(object):
                 LuaFile.write('local_ip{}="{}"\n'.format(index, dp_port['ip']))
                 LuaFile.write('local_hex_ip{}=convertIPToHex(local_ip{})\n'.format(index, index))
             if self.vim in ['kubernetes']:
-                LuaFile.write("eal=\"--socket-mem=512,0 --file-prefix %s --pci-whitelist %s\"\n" % (self.name, self.machine_params['dp_pci_dev']))
+                socket_mem_str = self.get_prox_socket_mem_str()
+                RapidLog.debug('{} ({}): PROX socket mem str: {}'.format(self.name, self.ip, socket_mem_str))
+                LuaFile.write("eal=\"--socket-mem=%s --file-prefix %s --pci-whitelist %s\"\n" % (socket_mem_str, self.name, self.machine_params['dp_pci_dev']))
             else:
                 LuaFile.write("eal=\"\"\n")
             if 'mcore' in self.machine_params.keys():
@@ -173,6 +196,7 @@ class RapidMachine(object):
                 self.devbind()
             if self.vim in ['kubernetes']:
                 self.read_cpuset()
+                self.read_cpuset_mems()
                 self.remap_all_cpus()
             _, prox_config_file_name = os.path.split(self.machine_params['config_file'])
             self.generate_lua()
