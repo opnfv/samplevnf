@@ -25,12 +25,13 @@ class RapidMachine(object):
     """
     Class to deal with a PROX instance (VM, bare metal, container)
     """
-    def __init__(self, key, user, vim, rundir, resultsdir, machine_params,
-            configonly):
+    def __init__(self, key, user, password, vim, rundir, resultsdir,
+            machine_params, configonly):
         self.name = machine_params['name']
         self.ip = machine_params['admin_ip']
         self.key = key
         self.user = user
+        self.password = password
         self.rundir = rundir
         self.resultsdir = resultsdir
         self.dp_ports = []
@@ -57,11 +58,6 @@ class RapidMachine(object):
             PROXConfig = PROXConfigfile.read()
             PROXConfigfile.close()
             self.all_tasks_for_this_cfg = set(re.findall("task\s*=\s*(\d+)",PROXConfig))
-
-    def __del__(self):
-        if ((not self.configonly) and self.machine_params['prox_socket']):
-            self._client.scp_get('/prox.log', '{}/{}.prox.log'.format(
-                self.resultsdir, self.name))
 
     def get_cores(self):
         return (self.machine_params['cores'])
@@ -190,26 +186,36 @@ class RapidMachine(object):
 
     def start_prox(self, autostart=''):
         if self.machine_params['prox_socket']:
-            self._client = prox_ctrl(self.ip, self.key, self.user)
-            self._client.connect()
+            self._client = prox_ctrl(self.ip, self.key, self.user,
+                    self.password)
+            self._client.test_connection()
             if self.vim in ['OpenStack']:
                 self.devbind()
             if self.vim in ['kubernetes']:
                 self.read_cpuset()
                 self.read_cpuset_mems()
                 self.remap_all_cpus()
-            _, prox_config_file_name = os.path.split(self.machine_params['config_file'])
+            _, prox_config_file_name = os.path.split(self.
+                    machine_params['config_file'])
             self.generate_lua()
-            self._client.scp_put(self.machine_params['config_file'], '{}/{}'.format(self.rundir, prox_config_file_name))
-            if ((not self.configonly) and self.machine_params['prox_launch_exit']):
-                cmd = 'sudo {}/prox {} -t -o cli -f {}/{}'.format(self.rundir, autostart, self.rundir, prox_config_file_name)
-                RapidLog.debug("Starting PROX on {}: {}".format(self.name, cmd))
-                result = self._client.run_cmd(cmd, 'PROX Testing on {}'.format(self.name))
-                RapidLog.debug("Finished PROX on {}: {}".format(self.name, cmd))
+            self._client.scp_put(self.machine_params['config_file'], '{}/{}'.
+                    format(self.rundir, prox_config_file_name))
+            if ((not self.configonly) and
+                    self.machine_params['prox_launch_exit']):
+                cmd = 'sudo {}/prox {} -t -o cli -f {}/{}'.format(self.rundir,
+                        autostart, self.rundir, prox_config_file_name)
+                RapidLog.debug("Starting PROX on {}: {}".format(self.name,
+                    cmd))
+                result = self._client.run_cmd(cmd)
+                RapidLog.debug("Finished PROX on {}: {}".format(self.name,
+                    cmd))
 
     def close_prox(self):
-        if (not self.configonly) and self.machine_params['prox_socket'] and self.machine_params['prox_launch_exit']:
+        if (not self.configonly) and self.machine_params[
+                'prox_socket'] and self.machine_params['prox_launch_exit']:
             self.socket.quit_prox()
+            self._client.scp_get('/prox.log', '{}/{}.prox.log'.format(
+                self.resultsdir, self.name))
 
     def connect_prox(self):
         if self.machine_params['prox_socket']:

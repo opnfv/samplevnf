@@ -26,31 +26,28 @@ import time
 import subprocess
 import socket
 from rapid_log import RapidLog
+from rapid_sshclient import SSHClient
 
 class prox_ctrl(object):
-    def __init__(self, ip, key=None, user=None):
+    def __init__(self, ip, key=None, user=None, password = None):
         self._ip   = ip
         self._key  = key
         self._user = user
+        self._password = password
         self._proxsock = []
+        self._sshclient = SSHClient(ip = ip, user = user, password = password,
+                rsa_private_key = key)
 
     def ip(self):
         return self._ip
 
-    def test_connect(self):
-        """Simply try to run 'true' over ssh on remote system.
-        On failure, raise RuntimeWarning exception when possibly worth
-        retrying, and raise RuntimeError exception otherwise.
-        """
-        return self.run_cmd('test -e /opt/rapid/system_ready_for_rapid', True)
-
-    def connect(self):
+    def test_connection(self):
         attempts = 1
         RapidLog.debug("Trying to connect to machine \
                 on %s, attempt: %d" % (self._ip, attempts))
         while True:
             try:
-                self.test_connect()
+                self.run_cmd('test -e /opt/rapid/system_ready_for_rapid')
                 break
             except RuntimeWarning as ex:
                 RapidLog.debug("RuntimeWarning %d:\n%s"
@@ -87,18 +84,8 @@ class prox_ctrl(object):
         for sock in self._proxsock:
             sock.quit()
 
-    def run_cmd(self, command, _connect=False):
-        """Execute command over ssh on remote system.
-        Wait for remote command completion.
-        Return command output (combined stdout and stderr).
-        _connect argument is reserved for connect() method.
-        """
-        cmd = self._build_ssh(command)
-        try:
-            return subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError as ex:
-            RapidLog.exception('ssh returned exit status %d:\n%s'
-                    % (ex.returncode, ex.output.strip()))
+    def run_cmd(self, command):
+        self._sshclient.run_cmd(command)
 
     def prox_sock(self, port=8474):
         """Connect to the PROX instance on remote system.
@@ -114,64 +101,10 @@ class prox_ctrl(object):
             return None
 
     def scp_put(self, src, dst):
-        """Copy src file from local system to dst on remote system."""
-        cmd = [ 'scp',
-                '-B',
-                '-oStrictHostKeyChecking=no',
-                '-oUserKnownHostsFile=/dev/null',
-                '-oLogLevel=ERROR' ]
-        if self._key is not None:
-            cmd.extend(['-i', self._key])
-        cmd.append(src)
-        remote = ''
-        if self._user is not None:
-            remote += self._user + '@'
-        remote += self._ip + ':' + dst
-        cmd.append(remote)
-        try:
-            # Actually ignore output on success, but capture stderr on failure
-            subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError as ex:
-            RapidLog.exception('scp returned exit status %d:\n%s'
-                    % (ex.returncode, ex.output.strip()))
+        self._sshclient.scp_put(src, dst)
 
     def scp_get(self, src, dst):
-        """Copy src file from remote system to dst on local system."""
-        cmd = [ 'scp',
-                '-B',
-                '-oStrictHostKeyChecking=no',
-                '-oUserKnownHostsFile=/dev/null',
-                '-oLogLevel=ERROR' ]
-        if self._key is not None:
-            cmd.extend(['-i', self._key])
-        remote = ''
-        if self._user is not None:
-            remote += self._user + '@'
-        remote += self._ip + ':/home/' + self._user + src
-        cmd.append(remote)
-        cmd.append(dst)
-        try:
-            # Actually ignore output on success, but capture stderr on failure
-            subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError as ex:
-            RapidLog.exception('scp returned exit status %d:\n%s'
-                    % (ex.returncode, ex.output.strip()))
-
-    def _build_ssh(self, command):
-        cmd = [ 'ssh',
-                '-oBatchMode=yes',
-                '-oStrictHostKeyChecking=no',
-                '-oUserKnownHostsFile=/dev/null',
-                '-oLogLevel=ERROR' ]
-        if self._key is not None:
-            cmd.extend(['-i', self._key])
-        remote = ''
-        if self._user is not None:
-            remote += self._user + '@'
-        remote += self._ip
-        cmd.append(remote)
-        cmd.append(command)
-        return cmd
+        self._sshclient.scp_get('/home/' + self._user + src, dst)
 
 class prox_sock(object):
     def __init__(self, sock):

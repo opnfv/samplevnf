@@ -62,9 +62,10 @@ class RapidTestManager(object):
         for machine_params in test_params['machines']:
             if 'gencores' in machine_params.keys():
                 machine = RapidGeneratorMachine(test_params['key'],
-                        test_params['user'], test_params['vim_type'],
-                        test_params['rundir'], test_params['resultsdir'],
-                        machine_params, configonly, test_params['ipv6'])
+                        test_params['user'], test_params['password'],
+                        test_params['vim_type'], test_params['rundir'],
+                        test_params['resultsdir'], machine_params, configonly,
+                        test_params['ipv6'])
                 if machine_params['monitor']:
                     if monitor_gen:
                         RapidLog.exception("Can only monitor 1 generator")
@@ -76,8 +77,9 @@ class RapidTestManager(object):
                     background_machines.append(machine)
             else:
                 machine = RapidMachine(test_params['key'], test_params['user'],
-                        test_params['vim_type'], test_params['rundir'],
-                        test_params['resultsdir'], machine_params, configonly)
+                        test_params['password'], test_params['vim_type'],
+                        test_params['rundir'], test_params['resultsdir'],
+                        machine_params, configonly)
                 if machine_params['monitor']:
                     if monitor_sut:
                         RapidLog.exception("Can only monitor 1 sut")

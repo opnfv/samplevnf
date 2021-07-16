@@ -17,7 +17,6 @@
 ##
 
 from rapid_log import RapidLog 
-from prox_ctrl import prox_ctrl
 from rapid_machine import RapidMachine
 from math import ceil, log2
 
@@ -49,8 +48,8 @@ class RapidGeneratorMachine(RapidMachine):
     """
     Class to deal with a generator PROX instance (VM, bare metal, container)
     """
-    def __init__(self, key, user, vim, rundir, resultsdir, machine_params,
-            configonly, ipv6):
+    def __init__(self, key, user, password, vim, rundir, resultsdir,
+            machine_params, configonly, ipv6):
         mac_address_size = 6
         ethertype_size = 2
         FCS_size = 4
@@ -78,8 +77,8 @@ class RapidGeneratorMachine(RapidMachine):
             self.bucket_size_exp = machine_params['bucket_size_exp']
         else:
             self.bucket_size_exp = 11
-        super().__init__(key, user, vim, rundir, resultsdir, machine_params,
-                configonly)
+        super().__init__(key, user, password, vim, rundir, resultsdir,
+                machine_params, configonly)
 
     def get_cores(self):
         return (self.machine_params['gencores'] +

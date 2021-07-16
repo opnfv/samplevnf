@@ -53,14 +53,21 @@ class RapidConfigParser(object):
         config = configparser.RawConfigParser()
         config.read(test_params['environment_file'])
         test_params['vim_type'] = config.get('Varia', 'vim')
-        test_params['key'] = config.get('ssh', 'key')
         test_params['user'] = config.get('ssh', 'user')
-        if test_params['user'] in ['rapid']:
-            if test_params['key'] != 'rapid_rsa_key':
-                RapidLog.debug(("Key file {} for user {} overruled by key file:"
-                        " rapid_rsa_key").format(test_params['key'],
-                        test_params['user']))
-                test_params['key'] = 'rapid_rsa_key'
+        if config.has_option('ssh', 'key'):
+            test_params['key'] = config.get('ssh', 'key')
+            if test_params['user'] in ['rapid']:
+                if test_params['key'] != 'rapid_rsa_key':
+                    RapidLog.debug(("Key file {} for user {} overruled by key file:"
+                            " rapid_rsa_key").format(test_params['key'],
+                            test_params['user']))
+                    test_params['key'] = 'rapid_rsa_key'
+        else:
+            test_params['key'] = None
+        if config.has_option('ssh', 'password'):
+            test_params['password'] = config.get('ssh', 'password')
+        else:
+            test_params['password'] = None
         test_params['total_number_of_machines'] = int(config.get('rapid',
             'total_number_of_machines'))
         tests = []
