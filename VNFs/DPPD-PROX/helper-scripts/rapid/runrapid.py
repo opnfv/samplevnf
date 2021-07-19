@@ -168,7 +168,12 @@ def main():
     test_params = RapidCli.process_cli(test_params)
     _, test_file_name = os.path.split(test_params['test_file'])
     _, environment_file_name = os.path.split(test_params['environment_file'])
-    log_file = 'RUN{}.{}.log'.format(environment_file_name, test_file_name)
+    if 'resultsdir' in test_params:
+        res_dir = test_params['resultsdir']
+        log_file = '{}/RUN{}.{}.log'.format(res_dir,environment_file_name,
+                test_file_name)
+    else:
+        log_file = 'RUN{}.{}.log'.format(environment_file_name, test_file_name)
     RapidLog.log_init(log_file, test_params['loglevel'],
             test_params['screenloglevel'] , test_params['version']  )
     test_manager = RapidTestManager()
