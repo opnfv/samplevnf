@@ -197,18 +197,18 @@ class RapidMachine(object):
                 self.remap_all_cpus()
             _, prox_config_file_name = os.path.split(self.
                     machine_params['config_file'])
-            self.generate_lua()
-            self._client.scp_put(self.machine_params['config_file'], '{}/{}'.
-                    format(self.rundir, prox_config_file_name))
-            if ((not self.configonly) and
-                    self.machine_params['prox_launch_exit']):
-                cmd = 'sudo {}/prox {} -t -o cli -f {}/{}'.format(self.rundir,
-                        autostart, self.rundir, prox_config_file_name)
-                RapidLog.debug("Starting PROX on {}: {}".format(self.name,
-                    cmd))
-                result = self._client.run_cmd(cmd)
-                RapidLog.debug("Finished PROX on {}: {}".format(self.name,
-                    cmd))
+            if self.machine_params['prox_launch_exit']:
+                self.generate_lua()
+                self._client.scp_put(self.machine_params['config_file'], '{}/{}'.
+                        format(self.rundir, prox_config_file_name))
+                if not self.configonly:
+                    cmd = 'sudo {}/prox {} -t -o cli -f {}/{}'.format(self.rundir,
+                            autostart, self.rundir, prox_config_file_name)
+                    RapidLog.debug("Starting PROX on {}: {}".format(self.name,
+                        cmd))
+                    result = self._client.run_cmd(cmd)
+                    RapidLog.debug("Finished PROX on {}: {}".format(self.name,
+                        cmd))
 
     def close_prox(self):
         if (not self.configonly) and self.machine_params[
