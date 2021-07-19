@@ -20,12 +20,15 @@
 import yaml
 import requests
 import time
+import os
 import copy
 from past.utils import old_div
 from rapid_log import RapidLog
 from rapid_log import bcolors
 inf = float("inf")
 from datetime import datetime as dt
+
+_CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 
 class RapidTest(object):
     """
@@ -40,7 +43,7 @@ class RapidTest(object):
             self.test['maxr'] = 1
         if 'maxz' not in self.test.keys():
             self.test['maxz'] = inf
-        with open('format.yaml') as f:
+        with open(os.path.join(_CURR_DIR,'format.yaml')) as f:
             self.data_format = yaml.load(f, Loader=yaml.FullLoader)
 
     @staticmethod
