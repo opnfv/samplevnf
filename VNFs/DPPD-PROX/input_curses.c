@@ -27,7 +27,10 @@
 #include "cmd_parser.h"
 #include "input_curses.h"
 #include "histedit.h"
+
+#ifdef COMPILED_WITH_MAKE
 #include "libedit_autoconf.h"
+#endif
 
 static EditLine *el;
 static History *hist;

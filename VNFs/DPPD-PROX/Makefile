@@ -15,11 +15,27 @@
 ##
 
 ifeq ($(RTE_SDK),)
-$(error "Please define RTE_SDK environment variable")
+define err_msg
+
+Please define RTE_SDK environment variable.
+If DPDK was built with Meson, please use meson to build Prox too.
+***
+endef
+$(error $(err_msg))
 endif
 
 # Default target, can be overriden by command line or environment
 RTE_TARGET ?= x86_64-native-linuxapp-gcc
+
+ifeq ($(wildcard $(RTE_SDK)/$(RTE_TARGET)/.),)
+define err_msg
+
+Could not find build target: $(RTE_TARGET)
+Perhaps DPDK was built using meson?
+***
+endef
+$(error $(err_msg))
+endif
 
 rte_version_h := $(RTE_SDK)/$(RTE_TARGET)/include/rte_version.h
 rte_config_h := $(RTE_SDK)/$(RTE_TARGET)/include/rte_config.h
@@ -56,6 +72,7 @@ include $(RTE_SDK)/mk/rte.vars.mk
 # binary name
 APP = prox
 CFLAGS += -DPROGRAM_NAME=\"$(APP)\"
+CFLAGS += -DCOMPILED_WITH_MAKE
 
 CFLAGS += -O2 -g
 CFLAGS += -fno-stack-protector -Wno-deprecated-declarations
