@@ -1,0 +1,9 @@
+#Keep the options sorted alphabetically
+option('crc', type: 'string', value: 'soft')
+option('bng_qinq', type: 'feature', value: 'enabled')
+option('dbg', type: 'boolean', value: false)
+option('gen_decap_ipv6_to_ipv4_cksum', type: 'feature', value: 'enabled')
+option('hw_direct_stats', type: 'feature', value: 'enabled')
+option('log', type: 'boolean', value: true)
+option('mpls_routing', type: 'feature', value: 'enabled')
+option('prox_stats', type: 'feature', value: 'enabled')

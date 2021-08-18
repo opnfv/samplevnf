@@ -26,8 +26,39 @@ Compiling and running this application
 --------------------------------------
 This application supports DPDK 16.04, 16.11, 16.11.1, 17.02, 17.05, 17.08, 
 17.11, 18.02, 18.05, 18.08, 18.11, 19.02, 19.05, 19.08, 19.11, 20.02 and
-20.05.
+20.05 20.11
 
+Meson compilation
+-----------------
+Support for 'make' has been deprecated in DPDK from v20.11 onward.
+
+Example: DPDK 20.11 installation with meson
+-------------------------------------------
+git clone http://dpdk.org/git/dpdk-stable
+git checkout 20.11
+meson build
+cd build
+ninja
+ninja install
+ldconfig
+
+PROX meson compilation (From the root of this repo)
+--------------------------------------------------
+Depending on the distribution in use the DPDK libraries will be installed in
+different locations. The 'PKG_CONFIG_PATH' environment variable is used to
+point to the correct location.
+
+For RHEL/CentOS systems:
+export PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig
+meson build
+cd build
+ninja
+
+Additional options can be passed to the meson build system. See the
+'meson_options.txt' file for possible options
+
+Legacy Make compilation
+-----------------------
 The following commands assume that the following variables have been set:
 
 export RTE_SDK=/path/to/dpdk
@@ -40,14 +71,14 @@ the multi-buffer library which can be downloaded from
 <https://github.com/01org/intel-ipsec-mb>. 
 See doc/guides/cryptodevs/aesni_mb.rst within dpdk for more details
 
-Example: DPDK 17.05 installation
---------------------------------
+Example: DPDK 17.05 installation with make
+------------------------------------------
 git clone http://dpdk.org/git/dpdk
 cd dpdk
 git checkout v17.05
 make install T=$RTE_TARGET
 
-PROX compilation
+PROX make compilation
 ----------------
 The Makefile with this application expects RTE_SDK to point to the
 root directory of DPDK (e.g. export RTE_SDK=/root/dpdk). If RTE_TARGET
