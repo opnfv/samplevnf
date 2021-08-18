@@ -135,7 +135,11 @@ static void init_task_qos(struct task_base *tbase, struct task_args *targ)
 	PROX_PANIC(task->sched_port == NULL, "failed to create sched_port");
 
 	plog_info("number of pipes: %d\n\n", targ->qos_conf.port_params.n_pipes_per_subport);
+#if RTE_VERSION >= RTE_VERSION_NUM(20,11,0,0)
+	int err = rte_sched_subport_config(task->sched_port, 0, targ->qos_conf.subport_params, 0);
+#else
 	int err = rte_sched_subport_config(task->sched_port, 0, targ->qos_conf.subport_params);
+#endif
 	PROX_PANIC(err != 0, "Failed setting up sched_port subport, error: %d", err);
 
 	/* only single subport and single pipe profile is supported */
