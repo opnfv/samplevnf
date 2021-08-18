@@ -183,6 +183,10 @@ __attribute__((cold)) static void handle_error(struct rte_mbuf *mbuf)
 
 	svlan = rte_be_to_cpu_16(svlan & 0xFF0F);
 	cvlan = rte_be_to_cpu_16(cvlan & 0xFF0F);
+#if RTE_VERSION >= RTE_VERSION_NUM(20,11,0,0)
+	plogx_err("Can't convert key %016lx qinq %d|%d (%x|%x) to gre_id, rss=%x flags=%lx, status_err_len=%x, L2Tag=%d type=%d\n",
+		  key, svlan, cvlan, svlan, cvlan, mbuf->hash.rss, mbuf->ol_flags, mbuf->dynfield1[0], mbuf->vlan_tci_outer, mbuf->packet_type);
+#else
 #if RTE_VERSION >= RTE_VERSION_NUM(2,1,0,0)
 	plogx_err("Can't convert key %016lx qinq %d|%d (%x|%x) to gre_id, rss=%x flags=%lx, status_err_len=%lx, L2Tag=%d type=%d\n",
 		  key, svlan, cvlan, svlan, cvlan, mbuf->hash.rss, mbuf->ol_flags, mbuf->udata64, mbuf->vlan_tci_outer, mbuf->packet_type);
@@ -193,6 +197,7 @@ __attribute__((cold)) static void handle_error(struct rte_mbuf *mbuf)
 #else
 	plogx_err("Can't convert key %016lx qinq %d|%d (%x|%x) to gre_id, flags=%x, L2Tag=%d\n",
 		  key, svlan, cvlan, svlan, cvlan, mbuf->ol_flags, mbuf->reserved);
+#endif
 #endif
 #endif
 #else

@@ -31,7 +31,11 @@ static int handle_bulk_tsc(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 	const uint64_t rx_tsc = rte_rdtsc();
 
 	for (uint16_t j = 0; j < n_pkts; ++j)
+#if RTE_VERSION >= RTE_VERSION_NUM(20,11,0,0)
+		memcpy(&mbufs[j]->dynfield1[0], &rx_tsc, sizeof(rx_tsc));
+#else
 		mbufs[j]->udata64 = rx_tsc;
+#endif
 
 	return task->base.tx_pkt(&task->base, mbufs, n_pkts, NULL);
 }

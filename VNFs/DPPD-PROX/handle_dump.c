@@ -42,7 +42,12 @@ static uint16_t buffer_packets(struct task_dump *task, struct rte_mbuf **mbufs, 
 		return 0;
 
 	for (j = 0; j < n_pkts && task->n_mbufs < task->n_pkts; ++j) {
+#if RTE_VERSION >= RTE_VERSION_NUM(20,11,0,0)
+		uint64_t rdtsc = rte_rdtsc();
+		memcpy(&mbufs[j]->dynfield1[0], &rdtsc, sizeof(rdtsc));
+#else
 		mbufs[j]->udata64 = rte_rdtsc();
+#endif
 		task->mbufs[task->n_mbufs++] = mbufs[j];
 	}
 
@@ -93,10 +98,20 @@ static void stop(struct task_base *tbase)
 	pcap_dump_handle = pcap_dump_open(handle, task->pcap_file);
 
 	if (task->n_mbufs) {
+#if RTE_VERSION >= RTE_VERSION_NUM(20,11,0,0)
+		memcpy(&beg, &task->mbufs[0]->dynfield1[0], sizeof(beg));
+#else
 		beg = task->mbufs[0]->udata64;
+#endif
 	}
 	for (uint32_t j = 0; j < task->n_mbufs; ++j) {
+#if RTE_VERSION >= RTE_VERSION_NUM(20,11,0,0)
+		uint64_t mbufs_beg;
+		memcpy(&mbufs_beg, &task->mbufs[j]->dynfield1[0], sizeof(mbufs_beg));
+		tsc = mbufs_beg - beg;
+#else
 		tsc = task->mbufs[j]->udata64 - beg;
+#endif
 		header.len = rte_pktmbuf_pkt_len(task->mbufs[j]);
 		header.caplen = header.len;
 		tsc_to_tv(&header.ts, tsc);
