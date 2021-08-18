@@ -68,26 +68,43 @@ static inline uint8_t handle_decap_nsh(__attribute__((unused)) struct task_decap
 		mbuf->data_len = (uint16_t)(mbuf->data_len - hdr_len);
 		mbuf->data_off += hdr_len;
 		mbuf->pkt_len = (uint32_t)(mbuf->pkt_len - hdr_len);
+#if RTE_VERSION >= RTE_VERSION_NUM(20,11,0,0)
+		/* save length of header in the dynfield1 of rte_mbuf */
+		mbuf->dynfield1[0] = hdr_len;
+#else
 		/* save length of header in reserved 16bits of rte_mbuf */
 		mbuf->udata64 = hdr_len;
+#endif
 	}
 	else {
 		if (mbuf->data_len < VXLAN_GPE_HDR_SZ) {
+#if RTE_VERSION >= RTE_VERSION_NUM(20,11,0,0)
+			mbuf->dynfield1[0] = 0;
+#else
 			mbuf->udata64 = 0;
+#endif
 			return 0;
 		}
 
 		/* check the UDP destination port */
 		udp_hdr = (prox_rte_udp_hdr *)(((unsigned char *)eth_hdr) + sizeof(prox_rte_ether_hdr) + sizeof(prox_rte_ipv4_hdr));
 		if (udp_hdr->dst_port != VXLAN_GPE_NSH_TYPE) {
+#if RTE_VERSION >= RTE_VERSION_NUM(20,11,0,0)
+			mbuf->dynfield1[0] = 0;
+#else
 			mbuf->udata64 = 0;
+#endif
 			return 0;
 		}
 
 		/* check the Next Protocol field in VxLAN-GPE header */
 		vxlan_gpe_hdr = (prox_rte_vxlan_gpe_hdr *)(((unsigned char *)eth_hdr) + sizeof(prox_rte_ether_hdr) + sizeof(prox_rte_ipv4_hdr) + sizeof(prox_rte_udp_hdr));
 		if (vxlan_gpe_hdr->proto != VXLAN_GPE_NP) {
+#if RTE_VERSION >= RTE_VERSION_NUM(20,11,0,0)
+			mbuf->dynfield1[0] = 0;
+#else
 			mbuf->udata64 = 0;
+#endif
 			return 0;
 		}
 
@@ -97,8 +114,13 @@ static inline uint8_t handle_decap_nsh(__attribute__((unused)) struct task_decap
 		mbuf->data_len = (uint16_t)(mbuf->data_len - hdr_len);
 		mbuf->data_off += hdr_len;
 		mbuf->pkt_len  = (uint32_t)(mbuf->pkt_len - hdr_len);
+#if RTE_VERSION >= RTE_VERSION_NUM(20,11,0,0)
+		/* save length of header in the dynfield1 of rte_mbuf */
+		mbuf->dynfield1[0] = hdr_len;
+#else
 		/* save length of header in reserved 16bits of rte_mbuf */
 		mbuf->udata64 = hdr_len;
+#endif
 	}
 
 	return 0;
@@ -143,14 +165,26 @@ static inline uint8_t handle_encap_nsh(__attribute__((unused)) struct task_encap
 
 	if (mbuf == NULL)
 		return 0;
+#if RTE_VERSION >= RTE_VERSION_NUM(20,11,0,0)
+	if (mbuf->dynfield1[0] == 0)
+#else
 	if (mbuf->udata64 == 0)
+#endif
 		return 0;
 
+#if RTE_VERSION >= RTE_VERSION_NUM(20,11,0,0)
+	/* use header length saved in dynfields1 of rte_mbuf to
+	   "encapsulate" transport + NSH header by moving packet pointer */
+	mbuf->data_len = (uint16_t)(mbuf->data_len + mbuf->dynfield1[0]);
+	mbuf->data_off -= mbuf->dynfield1[0];
+	mbuf->pkt_len  = (uint32_t)(mbuf->pkt_len + mbuf->dynfield1[0]);
+#else
 	/* use header length saved in reserved 16bits of rte_mbuf to
 	   "encapsulate" transport + NSH header by moving packet pointer */
 	mbuf->data_len = (uint16_t)(mbuf->data_len + mbuf->udata64);
 	mbuf->data_off -= mbuf->udata64;
 	mbuf->pkt_len  = (uint32_t)(mbuf->pkt_len + mbuf->udata64);
+#endif
 
 	eth_hdr = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 	if (eth_hdr->ether_type == ETHER_NSH_TYPE) {
