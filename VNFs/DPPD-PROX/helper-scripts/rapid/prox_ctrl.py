@@ -36,7 +36,7 @@ class prox_ctrl(object):
         self._password = password
         self._proxsock = []
         self._sshclient = SSHClient(ip = ip, user = user, password = password,
-                rsa_private_key = key)
+                rsa_private_key = key, timeout = None)
 
     def ip(self):
         return self._ip
