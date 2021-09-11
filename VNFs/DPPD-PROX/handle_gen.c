@@ -65,6 +65,8 @@ struct pkt_template {
 #define FROM_PCAP	1
 #define NOT_FROM_PCAP	0
 
+#define MAX_RANGES	64
+
 #define TASK_OVERWRITE_SRC_MAC_WITH_PORT_MAC 1
 
 static void pkt_template_init_mbuf(struct pkt_template *pkt_template, struct rte_mbuf *mbuf, uint8_t *pkt)
@@ -114,6 +116,7 @@ struct task_gen {
 	uint32_t socket_id;
 	uint8_t generator_id;
 	uint8_t n_rands; /* number of randoms */
+	uint8_t n_ranges; /* number of ranges */
 	uint8_t min_bulk_size;
 	uint8_t max_bulk_size;
 	uint8_t lat_enabled;
@@ -125,6 +128,7 @@ struct task_gen {
 		uint16_t rand_offset; /* each random has an offset*/
 		uint8_t rand_len; /* # bytes to take from random (no bias introduced) */
 	} rand[64];
+	struct range ranges[MAX_RANGES];
 	uint64_t accur[ACCURACY_WINDOW];
 	uint64_t pkt_tsc_offset[64];
 	struct pkt_template *pkt_template_orig; /* packet templates (from inline or from pcap) */
@@ -377,6 +381,25 @@ static void task_gen_apply_all_random_fields(struct task_gen *task, uint8_t **pk
 
 	for (uint16_t i = 0; i < count; ++i)
 		task_gen_apply_random_fields(task, pkt_hdr[i]);
+}
+
+static void task_gen_apply_all_ranges(struct task_gen *task, uint8_t **pkt_hdr, uint32_t count)
+{
+	uint32_t ret;
+	if (!task->n_ranges)
+		return;
+
+	for (uint16_t i = 0; i < count; ++i) {
+		for (uint16_t j = 0; j < task->n_ranges; ++j) {
+			if (unlikely(task->ranges[j].value == task->ranges[j].max))
+				task->ranges[j].value = task->ranges[j].min;
+			else
+				task->ranges[j].value++;
+			ret = rte_bswap32(task->ranges[j].value);
+			uint8_t *pret = (uint8_t*)&ret;
+			rte_memcpy(pkt_hdr[i] + task->ranges[j].offset, pret + 4 - task->ranges[j].range_len, task->ranges[j].range_len);
+		}
+	}
 }
 
 static void task_gen_apply_accur_pos(struct task_gen *task, uint8_t *pkt_hdr, uint32_t accuracy)
@@ -953,6 +976,7 @@ static int handle_gen_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 	task_gen_load_and_prefetch(new_pkts, pkt_hdr, send_bulk);
 	task_gen_build_packets(task, new_pkts, pkt_hdr, send_bulk);
 	task_gen_apply_all_random_fields(task, pkt_hdr, send_bulk);
+	task_gen_apply_all_ranges(task, pkt_hdr, send_bulk);
 	task_gen_apply_all_accur_pos(task, new_pkts, pkt_hdr, send_bulk);
 	task_gen_apply_all_unique_id(task, new_pkts, pkt_hdr, send_bulk);
 
@@ -1428,6 +1452,26 @@ static int task_gen_find_random_with_offset(struct task_gen *task, uint32_t offs
 	return UINT32_MAX;
 }
 
+static int task_gen_add_range(struct task_base *tbase, struct range *range)
+{
+	struct task_gen *task = (struct task_gen *)tbase;
+	if (task->n_ranges == MAX_RANGES) {
+		plog_err("Too many ranges\n");
+		return -1;
+	}
+	task->ranges[task->n_ranges].min = range->min;
+	task->ranges[task->n_ranges].value = range->min;
+	uint32_t m = range->max;
+	task->ranges[task->n_ranges].range_len = 0;
+	while (m != 0) {
+    		m >>= 8;
+    		task->ranges[task->n_ranges].range_len++;
+	}
+	task->ranges[task->n_ranges].offset = range->offset;
+	task->ranges[task->n_ranges++].max = range->max;
+	return 0;
+}
+
 int task_gen_add_rand(struct task_base *tbase, const char *rand_str, uint32_t offset, uint32_t rand_id)
 {
 	struct task_gen *task = (struct task_gen *)tbase;
@@ -1608,6 +1652,9 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 	for (uint32_t i = 0; i < targ->n_rand_str; ++i) {
 		PROX_PANIC(task_gen_add_rand(tbase, targ->rand_str[i], targ->rand_offset[i], UINT32_MAX),
 			   "Failed to add random\n");
+	}
+	for (uint32_t i = 0; i < targ->n_ranges; ++i) {
+		PROX_PANIC(task_gen_add_range(tbase, &targ->range[i]), "Failed to add range\n");
 	}
 }
 
