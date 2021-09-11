@@ -1019,6 +1019,21 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 	if (STR_EQ(str, "random")) {
 		return parse_str(targ->rand_str[targ->n_rand_str++], pkey, sizeof(targ->rand_str[0]));
 	}
+	if (STR_EQ(str, "dump_tsc")) {
+		return parse_u64(&targ->dump_tsc, pkey);
+	}
+	if (STR_EQ(str, "range")) {
+		int rc = parse_range(&targ->range[targ->n_ranges].min, &targ->range[targ->n_ranges].max, pkey);
+		targ->n_ranges++;
+		return rc;
+	}
+	if (STR_EQ(str, "range_offset")) {
+		if (targ->n_ranges == 0) {
+			set_errf("No range defined previously (use range=...)");
+			return -1;
+		}
+		return parse_int(&targ->range[targ->n_ranges - 1].offset, pkey);
+	}
 	if (STR_EQ(str, "rand_offset")) {
 		if (targ->n_rand_str == 0) {
 			set_errf("No random defined previously (use random=...)");

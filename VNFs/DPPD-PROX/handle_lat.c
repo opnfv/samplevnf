@@ -116,6 +116,7 @@ struct task_lat {
 	struct prox_port_cfg *port;
 	uint64_t *bytes_to_tsc;
 	uint64_t *previous_packet;
+	uint64_t dump_tsc;
 };
 /* This function calculate the difference between rx and tx_time
  * Both values are uint32_t (see handle_lat_bulk)
@@ -522,11 +523,14 @@ static int task_lat_can_store_latency(struct task_lat *task)
 	return task->latency_buffer_idx < task->latency_buffer_size;
 }
 
-static void task_lat_store_lat(struct task_lat *task, uint64_t rx_packet_index, uint64_t rx_time, uint64_t tx_time, uint64_t rx_error, uint64_t tx_error, uint32_t packet_id, uint8_t generator_id)
+static void task_lat_store_lat(struct task_lat *task, struct rte_mbuf *mbuf, uint64_t rx_packet_index, uint64_t rx_time, uint64_t tx_time, uint64_t rx_error, uint64_t tx_error, uint32_t packet_id, uint8_t generator_id)
 {
 	uint32_t lat_tsc = diff_time(rx_time, tx_time) << LATENCY_ACCURACY;
 
 	lat_test_add_latency(task->lat_test, lat_tsc, rx_error + tx_error);
+	if ((task->dump_tsc) && (lat_tsc > task->dump_tsc)) {
+		plogdx_info(mbuf, "High TSC: ");
+	}
 
 	if (task_lat_can_store_latency(task)) {
 		task_lat_store_lat_buf(task, rx_packet_index, rx_time, tx_time, rx_error, tx_error, packet_id, generator_id);
@@ -654,7 +658,7 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 			struct delayed_latency_entry *delayed_latency_entry = delayed_latency_get(task->delayed_latency_entries, generator_id, packet_id - ACCURACY_WINDOW);
 
 			if (delayed_latency_entry) {
-				task_lat_store_lat(task,
+				task_lat_store_lat(task, mbufs[j],
 						   delayed_latency_entry->rx_packet_id,
 						   delayed_latency_entry->pkt_rx_time,
 						   delayed_latency_entry->pkt_tx_time,
@@ -672,7 +676,7 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 			delayed_latency_entry->tx_packet_id = packet_id;
 			delayed_latency_entry->generator_id = generator_id;
 		} else {
-			task_lat_store_lat(task, task->rx_packet_index, pkt_rx_time, pkt_tx_time, 0, 0, packet_id, generator_id);
+			task_lat_store_lat(task, mbufs[j], task->rx_packet_index, pkt_rx_time, pkt_tx_time, 0, 0, packet_id, generator_id);
 		}
 
 		// Bad/unexpected packets do not need to be indexed
@@ -757,6 +761,7 @@ static void init_task_lat(struct task_base *tbase, struct task_args *targ)
 	task->accur_pos = targ->accur_pos;
 	task->sig_pos = targ->sig_pos;
 	task->sig = targ->sig;
+	task->dump_tsc = targ->dump_tsc;
 
 	task->unique_id_pos = targ->packet_id_pos;
 	task->latency_buffer_size = targ->latency_buffer_size;

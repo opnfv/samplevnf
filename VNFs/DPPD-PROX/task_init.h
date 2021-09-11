@@ -100,6 +100,14 @@ enum police_action {
 	ACT_INVALID = 4
 };
 
+struct range {
+	uint32_t min;
+	uint32_t value;
+	uint32_t max;
+	uint32_t offset;
+	uint8_t range_len;
+};
+
 /* Configuration for task that is only used during startup. */
 struct task_args {
 	struct task_base       *tbase;
@@ -191,8 +199,10 @@ struct task_args {
 	/* gen related*/
 	uint64_t               rate_bps;
 	uint32_t               n_rand_str;
-	char                   rand_str[64][64];
+	uint32_t               n_ranges;
 	uint32_t               rand_offset[64];
+	char                   rand_str[64][64];
+	struct range           range[64];
 	char                   pcap_file[256];
 	uint32_t               accur_pos;
 	uint32_t               sig_pos;
@@ -248,6 +258,7 @@ struct task_args {
 	uint32_t 		imix_pkt_sizes[MAX_IMIX_PKTS];
 	uint32_t        multiplier;
 	uint32_t        mirror_size;
+	uint64_t dump_tsc;
 };
 
 /* Return the first port that is reachable through the task. If the

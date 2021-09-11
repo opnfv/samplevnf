@@ -196,6 +196,8 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 	struct igmpv2_hdr *pigmp;
 	prox_rte_icmp_hdr *picmp;
 	uint8_t type;
+	static int llc_printed = 0;
+	static int lldp_printed = 0;
 
 	for (j = 0; j < n_pkts; ++j) {
 		PREFETCH0(mbufs[j]);
@@ -279,9 +281,31 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 			handle_ipv6(task, mbufs[j], ipv6_hdr, &out[j]);
 			continue;
 		case ETYPE_LLDP:
+			if (!lldp_printed) {
+				plog_info("Discarding LLDP packets (only printed once)\n");
+				lldp_printed = 1;
+			}
 			out[j] = OUT_DISCARD;
 			continue;
 		default:
+			if ((rte_bswap16(hdr->ether_type) < 0x600) && (rte_bswap16(hdr->ether_type) >= 16)) {
+				// 802.3
+				struct prox_llc {
+					uint8_t dsap;
+					uint8_t lsap;
+					uint8_t control;
+				};
+				struct prox_llc *llc = (struct prox_llc *)(hdr + 1);
+				if ((llc->dsap == 0x42) && (llc->lsap == 0x42)) {
+					// STP Protocol
+					out[j] = OUT_DISCARD;
+					if (!llc_printed) {
+						plog_info("Discarding STP packets (only printed once)\n");
+						llc_printed = 1;
+					}
+					continue;
+				}
+			}
 			plog_warn("Unsupported ether_type 0x%x\n", hdr->ether_type);
 			out[j] = OUT_DISCARD;
 			continue;

@@ -373,7 +373,9 @@ class RapidTest(object):
                 iteration_data['avg_bg_rate'] = None
             #Stop generating
             self.gen_machine.stop_gen_cores()
+            time.sleep(2.0)
             self.gen_machine.stop_latency_cores()
+            time.sleep(2.0)
             iteration_data['r'] += 1
             iteration_data['lat_avg'] = old_div(iteration_data['lat_avg'], float(tot_lat_measurement_duration))
             iteration_data['lat_used'] = old_div(iteration_data['lat_used'], float(tot_lat_measurement_duration))
