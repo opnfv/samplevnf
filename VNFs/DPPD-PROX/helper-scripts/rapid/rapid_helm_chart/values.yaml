@@ -1,0 +1,8 @@
+namespace: rapid-testing
+
+image:
+  repository: opnfv/rapid
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+nodeSelector: {}

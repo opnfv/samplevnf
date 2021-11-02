@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rapid-testing
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: rapid-testing
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rapid-testing
+  template:
+    metadata:
+      labels:
+        app: rapid-testing
+    spec:
+      serviceAccountName: rapid-testing-sa
+      containers:
+      - name: rapid-mgmt
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

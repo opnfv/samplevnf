@@ -16,6 +16,7 @@
 
 [DEFAULT]
 total_number_of_pods=2
+namespace=rapid-testing
 
 [POD1]
 nodeSelector_hostname=k8s-node1

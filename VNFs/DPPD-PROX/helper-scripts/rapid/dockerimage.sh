@@ -16,7 +16,7 @@
 ##
 
 PROX_DEPLOY_DIR="."
-PROX_IMAGE_NAME="prox_slim"
+PROX_IMAGE_NAME="rapid"
 RSA_KEY_FILE_NAME="rapid_rsa_key"
 
 DOCKERFILE="Dockerfile"

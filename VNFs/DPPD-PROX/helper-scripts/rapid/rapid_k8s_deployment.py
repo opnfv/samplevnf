@@ -40,6 +40,7 @@ class K8sDeployment:
     _create_config = None
     _runtime_config = None
     _total_number_of_pods = 0
+    _namespace = "rapid-testing"
     _pods = []
 
     def __init__(self):
@@ -64,7 +65,11 @@ class K8sDeployment:
         self._log.addHandler(console_handler)
 
         # Initialize k8s plugin
-        config.load_kube_config()
+        try:
+            config.load_kube_config()
+        except:
+            config.load_incluster_config()
+
         Pod.k8s_CoreV1Api = client.CoreV1Api()
 
     def load_create_config(self, config_file_name):
@@ -88,6 +93,15 @@ class K8sDeployment:
             return -1
 
         self._log.debug("Total number of pods %d" % self._total_number_of_pods)
+
+        if self._create_config.has_option("DEFAULT", "namespace"):
+            self._namespace = self._create_config.get(
+                "DEFAULT", "namespace")
+        else:
+            self._log.error("No option namespace in DEFAULT section")
+            return -1
+
+        self._log.debug("Using namespace %s" % self._total_number_of_pods)
 
         # Parse [PODx] sections
         for i in range(1, int(self._total_number_of_pods) + 1):
@@ -123,7 +137,7 @@ class K8sDeployment:
             else:
                 pod_dp_subnet = "24"
 
-            pod = Pod(pod_name)
+            pod = Pod(pod_name, self._namespace)
             pod.set_nodeselector(pod_nodeselector_hostname)
             pod.set_dp_ip(pod_dp_ip)
             pod.set_dp_subnet(pod_dp_subnet)

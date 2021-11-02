@@ -86,6 +86,7 @@ class prox_ctrl(object):
 
     def run_cmd(self, command):
         self._sshclient.run_cmd(command)
+        return self._sshclient.get_output()
 
     def prox_sock(self, port=8474):
         """Connect to the PROX instance on remote system.

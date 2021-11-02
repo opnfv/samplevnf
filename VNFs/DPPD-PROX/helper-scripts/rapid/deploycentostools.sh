@@ -44,7 +44,8 @@ function os_pkgs_install()
 			 numactl-devel vim tuna openssl-devel wireshark \
 			 make driverctl
 
-	${SUDO} wget https://www.nasm.us/pub/nasm/releasebuilds/2.14.02/linux/nasm-2.14.02-0.fc27.x86_64.rpm
+	${SUDO} wget --no-check-certificate \
+		https://www.nasm.us/pub/nasm/releasebuilds/2.14.02/linux/nasm-2.14.02-0.fc27.x86_64.rpm
 	${SUDO} rpm -ivh nasm-2.14.02-0.fc27.x86_64.rpm
 }
 
@@ -55,6 +56,12 @@ function k8s_os_pkgs_runtime_install()
 	# Install required dynamically linked libraries + required packages
 	${SUDO} yum install -y numactl-libs libpcap openssh openssh-server \
 		  openssh-clients sudo
+
+	# Install additional packets for universal image
+	${SUDO} yum install -y epel-release python3 kubernetes-client
+	${SUDO} yum install -y python3-paramiko python3-future
+	${SUDO} python3 -m pip install --upgrade pip
+	${SUDO} pip3 install scp kubernetes
 }
 
 function os_cfg()
