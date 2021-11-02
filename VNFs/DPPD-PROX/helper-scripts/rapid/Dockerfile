@@ -48,6 +48,11 @@ EXPOSE 22 8474
 COPY ./rapid_rsa_key.pub /home/centos/.ssh/authorized_keys
 COPY ./rapid_rsa_key.pub /root/.ssh/authorized_keys
 
+RUN chown centos:centos /home/centos/.ssh/authorized_keys \
+ && chmod 600 /home/centos/.ssh/authorized_keys \
+ && chown root:root /root/.ssh/authorized_keys \
+ && chmod 600 /root/.ssh/authorized_keys
+
 # Copy startup script
 COPY ./start.sh /start.sh
 RUN chmod +x /start.sh

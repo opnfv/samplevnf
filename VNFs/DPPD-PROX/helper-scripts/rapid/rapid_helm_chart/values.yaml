@@ -1,0 +1,9 @@
+namespace: rapid-testing
+
+image:
+#  repository: opnfv/rapid
+  repository: ykylulin/rapid
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+nodeSelector: {}
