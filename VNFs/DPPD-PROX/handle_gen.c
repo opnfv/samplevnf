@@ -57,6 +57,13 @@ struct pkt_template {
 	uint8_t  *buf;
 };
 
+#define MAX_STORE_PKT_SIZE	2048
+
+struct packet {
+	unsigned int len;
+	unsigned char buf[MAX_STORE_PKT_SIZE];
+};
+
 #define IP4(x) x & 0xff, (x >> 8) & 0xff, (x >> 16) & 0xff, x >> 24
 
 #define DO_PANIC	1
@@ -140,6 +147,10 @@ struct task_gen {
 	uint32_t imix_pkt_sizes[MAX_IMIX_PKTS];
 	uint32_t imix_nb_pkts;
 	uint32_t new_imix_nb_pkts;
+	uint32_t store_pkt_id;
+	uint32_t store_msk;
+	struct packet *store_buf;
+	FILE *fp;
 } __rte_cache_aligned;
 
 static void task_gen_set_pkt_templates_len(struct task_gen *task, uint32_t *pkt_sizes);
@@ -984,6 +995,17 @@ static int handle_gen_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 
 	tsc_before_tx = task_gen_write_latency(task, pkt_hdr, send_bulk);
 	task_gen_checksum_packets(task, new_pkts, pkt_hdr, send_bulk);
+	if (task->store_msk) {
+		for (uint32_t i = 0; i < send_bulk; i++) {
+			if (out[i] != OUT_DISCARD) {
+				uint8_t *hdr;
+				hdr = (uint8_t *)rte_pktmbuf_mtod(new_pkts[i], prox_rte_ether_hdr *);
+				memcpy(&task->store_buf[task->store_pkt_id & task->store_msk].buf, hdr, rte_pktmbuf_pkt_len(new_pkts[i]));
+				task->store_buf[task->store_pkt_id & task->store_msk].len = rte_pktmbuf_pkt_len(new_pkts[i]);
+				task->store_pkt_id++;
+			}
+		}
+	}
 	ret = task->base.tx_pkt(&task->base, new_pkts, send_bulk, out);
 	task_gen_store_accuracy(task, send_bulk, tsc_before_tx);
 
@@ -1529,6 +1551,31 @@ static void start(struct task_base *tbase)
 	*/
 }
 
+static void stop_gen(struct task_base *tbase)
+{
+	uint32_t i, j;
+	struct task_gen *task = (struct task_gen *)tbase;
+	if (task->store_msk) {
+		for (i = task->store_pkt_id & task->store_msk; i < task->store_msk + 1; i++) {
+			if (task->store_buf[i].len) {
+				fprintf(task->fp, "%06d: ", i);
+				for (j = 0; j < task->store_buf[i].len; j++) {
+					fprintf(task->fp, "%02x ", task->store_buf[i].buf[j]);
+				}
+				fprintf(task->fp, "\n");
+			}
+		}
+		for (i = 0; i < (task->store_pkt_id & task->store_msk); i++) {
+			if (task->store_buf[i].len) {
+				fprintf(task->fp, "%06d: ", i);
+				for (j = 0; j < task->store_buf[i].len; j++) {
+					fprintf(task->fp, "%02x ", task->store_buf[i].buf[j]);
+				}
+				fprintf(task->fp, "\n");
+			}
+		}
+	}
+}
 static void start_pcap(struct task_base *tbase)
 {
 	struct task_gen_pcap *task = (struct task_gen_pcap *)tbase;
@@ -1656,6 +1703,17 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 	for (uint32_t i = 0; i < targ->n_ranges; ++i) {
 		PROX_PANIC(task_gen_add_range(tbase, &targ->range[i]), "Failed to add range\n");
 	}
+	if (targ->store_max) {
+		char filename[256];
+		sprintf(filename, "gen_buf_%02d_%02d", targ->lconf->id, targ->task);
+
+		task->store_msk = targ->store_max - 1;
+		task->store_buf = (struct packet *)malloc(sizeof(struct packet) * targ->store_max);
+		task->fp = fopen(filename, "w+");
+		PROX_PANIC(task->fp == NULL, "Unable to open %s\n", filename);
+	} else {
+		task->store_msk = 0;
+	}
 }
 
 static struct task_init task_init_gen = {
@@ -1671,7 +1729,8 @@ static struct task_init task_init_gen = {
 #else
 	.flag_features = TASK_FEATURE_NEVER_DISCARDS | TASK_FEATURE_NO_RX,
 #endif
-	.size = sizeof(struct task_gen)
+	.size = sizeof(struct task_gen),
+	.stop_last = stop_gen
 };
 
 static struct task_init task_init_gen_l3 = {

@@ -32,6 +32,13 @@
 #include "prox_cksum.h"
 #include "prox_compat.h"
 
+#define MAX_STORE_PKT_SIZE	2048
+
+struct packet {
+	unsigned int len;
+	unsigned char buf[MAX_STORE_PKT_SIZE];
+};
+
 struct task_swap {
 	struct task_base base;
 	struct rte_mempool *igmp_pool;
@@ -44,6 +51,10 @@ struct task_swap {
 	uint64_t last_echo_rep_rcvd_tsc;
 	uint32_t n_echo_req;
 	uint32_t n_echo_rep;
+	uint32_t store_pkt_id;
+	uint32_t store_msk;
+	struct packet *store_buf;
+	FILE *fp;
 };
 
 #define NB_IGMP_MBUF  		1024
@@ -136,10 +147,33 @@ static inline void build_igmp_message(struct task_base *tbase, struct rte_mbuf *
 
 static void stop_swap(struct task_base *tbase)
 {
+	uint32_t i, j;
 	struct task_swap *task = (struct task_swap *)tbase;
+
 	if (task->igmp_pool) {
 		rte_mempool_free(task->igmp_pool);
 		task->igmp_pool = NULL;
+	}
+
+	if (task->store_msk) {
+		for (i = task->store_pkt_id & task->store_msk; i < task->store_msk + 1; i++) {
+			if (task->store_buf[i].len) {
+				fprintf(task->fp, "%06d: ", i);
+				for (j = 0; j < task->store_buf[i].len; j++) {
+					fprintf(task->fp, "%02x ", task->store_buf[i].buf[j]);
+				}
+				fprintf(task->fp, "\n");
+			}
+		}
+		for (i = 0; i < (task->store_pkt_id & task->store_msk); i++) {
+			if (task->store_buf[i].len) {
+				fprintf(task->fp, "%06d: ", i);
+				for (j = 0; j < task->store_buf[i].len; j++) {
+					fprintf(task->fp, "%02x ", task->store_buf[i].buf[j]);
+				}
+				fprintf(task->fp, "\n");
+			}
+		}
 	}
 }
 
@@ -417,6 +451,16 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 			continue;
 		}
 	}
+	if (task->store_msk) {
+		for (int i = 0; i < n_pkts; i++) {
+			if (out[i] != OUT_DISCARD) {
+				hdr = rte_pktmbuf_mtod(mbufs[i], prox_rte_ether_hdr *);
+				memcpy(&task->store_buf[task->store_pkt_id & task->store_msk].buf, hdr, rte_pktmbuf_pkt_len(mbufs[i]));
+				task->store_buf[task->store_pkt_id & task->store_msk].len = rte_pktmbuf_pkt_len(mbufs[i]);
+				task->store_pkt_id++;
+			}
+		}
+	}
 	return task->base.tx_pkt(&task->base, mbufs, n_pkts, out);
 }
 
@@ -515,6 +559,18 @@ static void init_task_swap(struct task_base *tbase, struct task_args *targ)
 	struct prox_port_cfg *port = find_reachable_port(targ);
 	if (port) {
 		task->offload_crc = port->requested_tx_offload & (DEV_TX_OFFLOAD_IPV4_CKSUM | DEV_TX_OFFLOAD_UDP_CKSUM);
+	}
+	task->store_pkt_id = 0;
+	if (targ->store_max) {
+		char filename[256];
+		sprintf(filename, "swap_buf_%02d_%02d", targ->lconf->id, targ->task);
+
+		task->store_msk = targ->store_max - 1;
+		task->store_buf = (struct packet *)malloc(sizeof(struct packet) * targ->store_max);
+		task->fp = fopen(filename, "w+");
+		PROX_PANIC(task->fp == NULL, "Unable to open %s\n", filename);
+	} else {
+		task->store_msk = 0;
 	}
 }
 

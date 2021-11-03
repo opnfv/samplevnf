@@ -1599,6 +1599,8 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 		return parse_int(&targ->arp_ndp_retransmit_timeout, pkey);
 	if (STR_EQ(str, "number of packets"))
 		return parse_int(&targ->n_pkts, pkey);
+	if (STR_EQ(str, "store size"))
+		return parse_int(&targ->store_max, pkey);
 	if (STR_EQ(str, "pipes")) {
 		uint32_t val;
 		int err = parse_int(&val, pkey);
