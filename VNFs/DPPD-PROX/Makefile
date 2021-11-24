@@ -204,6 +204,7 @@ SRCS-y += stats_latency.c stats_global.c stats_core.c stats_task.c stats_prio.c 
 SRCS-y += cmd_parser.c input.c prox_shared.c prox_lua_types.c
 SRCS-y += genl4_bundle.c heap.c genl4_stream_tcp.c genl4_stream_udp.c cdf.c
 SRCS-y += stats.c stats_cons_log.c stats_cons_cli.c stats_parser.c hash_set.c prox_lua.c prox_malloc.c
+SRCS-$(call rte_ver_GE,17,8,0,16) += ethdev_tm_api_lua.c
 
 ifeq ($(FIRST_PROX_MAKE),)
 MAKEFLAGS += --no-print-directory

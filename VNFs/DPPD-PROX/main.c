@@ -1123,6 +1123,8 @@ int main(int argc, char **argv)
 	/* set en_US locale to print big numbers with ',' */
 	setlocale(LC_NUMERIC, "en_US.utf-8");
 
+	set_global_defaults(&prox_cfg);
+
 	if (prox_parse_args(argc, argv) != 0){
 		prox_usage(argv[0]);
 	}

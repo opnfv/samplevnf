@@ -30,6 +30,9 @@
 #endif
 #endif
 #endif
+#include <lua.h>
+#include <lualib.h>
+#include <lauxlib.h>
 
 #include "prox_port_cfg.h"
 #include "prox_globals.h"
@@ -466,6 +469,7 @@ static void init_port(struct prox_port_cfg *port_cfg)
 	struct rte_eth_link link;
 	uint8_t port_id;
 	int ret;
+	lua_State *L;
 
 	get_max_link_speed(port_cfg);
 	print_port_capa(port_cfg);
@@ -718,6 +722,43 @@ static void init_port(struct prox_port_cfg *port_cfg)
 			}
 		}
 	}
+	/* Execute Lua-based initialization script */
+#if (RTE_VERSION >= RTE_VERSION_NUM(17,8,0,16))
+	L = ethdev_lua();
+	if (L==NULL) {
+		plog_err("Failed creating Lua context\n");
+		return;
+	}
+	for (int ii=0; ii<port_cfg->luaconfig_idx; ii++) {
+		if (strlen(port_cfg->luaconfig[ii]) > 0) {
+			char luafile[MAX_PATH_LEN];
+			char *lua_extra = index(port_cfg->luaconfig[ii], ' ');
+			strncpy(luafile, prox_cfg.cfg_path, sizeof(luafile)-1);
+			strncat(luafile, "/", sizeof(luafile)-1);
+			if (lua_extra) {
+				ret = luaL_dostring(L, lua_extra);
+				strncat(luafile, port_cfg->luaconfig[ii], lua_extra-port_cfg->luaconfig[ii]);
+			} else {
+				strncat(luafile, port_cfg->luaconfig[ii], sizeof(luafile)-1);
+			}
+			struct timespec startt, endt;
+			unsigned long deltat;
+			clock_gettime(CLOCK_REALTIME, &startt);
+			if (luaL_dofile(L, luafile)) {
+				const char *errstr = lua_tostring(L, lua_gettop(L));
+				lua_pop(L, 1);
+				PROX_PANIC(1, "Cannot execute lua file '%s': %s\n", luafile, errstr);
+			}
+			clock_gettime(CLOCK_REALTIME, &endt);
+			deltat = (endt.tv_sec-startt.tv_sec)*1000000000+(endt.tv_nsec-startt.tv_nsec);
+			if (deltat > 1000000) {
+				plog_info("Executed '%s' in %.1fs\n", port_cfg->luaconfig[ii], deltat/1000000000.0);
+			} else {
+				plog_info("Executed '%s' in %.1fms\n", port_cfg->luaconfig[ii], deltat/1000000.0);
+			}
+		}
+	}
+#endif
 }
 
 void init_port_all(void)

@@ -27,6 +27,9 @@
 #include <rte_pci.h>
 
 #include "prox_globals.h"
+#if RTE_VERSION >= RTE_VERSION_NUM(17,8,0,16)
+#include "ethdev_tm_api_lua.h"
+#endif
 
 enum addr_type {PROX_PORT_MAC_HW, PROX_PORT_MAC_SET, PROX_PORT_MAC_RAND};
 
@@ -34,6 +37,7 @@ enum addr_type {PROX_PORT_MAC_HW, PROX_PORT_MAC_SET, PROX_PORT_MAC_RAND};
 #define UDP_CKSUM	2
 
 #define PROX_ETH_MAX_FILTERS 128
+#define LUACONFIG_MAX_FILES  16
 
 struct prox_port_cfg {
 	struct rte_mempool *pool[32];  /* Rx/Tx mempool */
@@ -68,6 +72,8 @@ struct prox_port_cfg {
 	uint64_t requested_tx_offload;
 	uint64_t disabled_tx_offload;
 	struct rte_eth_dev_info dev_info;
+	char           luaconfig[LUACONFIG_MAX_FILES][256];   /* Name of Lua config file */
+	int            luaconfig_idx;
 	struct {
 		int tx_offload_cksum;
 	} capabilities;

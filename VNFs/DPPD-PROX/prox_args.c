@@ -682,6 +682,16 @@ static int get_port_cfg(unsigned sindex, char *str, void *data)
 	else if (STR_EQ(str, "tx_ring")) {
 		parse_str(cfg->tx_ring, pkey, sizeof(cfg->tx_ring));
 	}
+	else if (STR_EQ(str, "lua_config")) {
+#if (RTE_VERSION >= RTE_VERSION_NUM(17,8,0,16))
+		if (cfg->luaconfig_idx==LUACONFIG_MAX_FILES)
+			return -1;
+		return parse_str(cfg->luaconfig[cfg->luaconfig_idx++], pkey, sizeof(cfg->luaconfig[0]));
+#else
+		plog_err("lua_config option only supported starting with DPDK 17.08\n");
+		return -1;
+#endif
+	}
 
 	return 0;
 }
@@ -1953,7 +1963,6 @@ static int is_using_no_drop(void)
 
 int prox_read_config_file(void)
 {
-	set_global_defaults(&prox_cfg);
 	set_task_defaults(&prox_cfg, lcore_cfg_init);
 	set_port_defaults();
 	plog_info("=== Parsing configuration file '%s' ===\n", cfg_file);
