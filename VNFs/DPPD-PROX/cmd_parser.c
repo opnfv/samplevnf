@@ -1574,7 +1574,10 @@ static int parse_cmd_port_info(const char *str, struct input *input)
 		val = -1;
 	}
 	else if (sscanf(str, "%d", &val) != 1) {
-		return -1;
+		if (parse_port_name((uint32_t*)&val, str) != 0) {
+			plog_err("Invalid port number or name: %s\n", str);
+			return -1;
+		}
 	}
 
 	char port_info[2048];
