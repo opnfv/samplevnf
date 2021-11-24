@@ -1618,6 +1618,12 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 
 		return parse_flag(&targ->runtime_flags, TASK_CLASSIFY, pkey);
 	}
+	if (STR_EQ(str, "flex_offset")) {
+		return parse_int(&targ->flex_offset, pkey);
+	}
+	if (STR_EQ(str, "flex_width")) {
+		return parse_int(&targ->flex_width, pkey);
+	}
 	if (STR_EQ(str, "flow table size")) {
 		return parse_int(&targ->flow_table_size, pkey);
 	}

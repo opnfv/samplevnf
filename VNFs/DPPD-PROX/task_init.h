@@ -210,6 +210,8 @@ struct task_args {
 	char                   user_table[256];
 	uint32_t               n_concur_conn;
 	char                   streams[256];
+	uint32_t               flex_offset;
+	uint32_t               flex_width;
 	uint32_t               min_bulk_size;
 	uint32_t               max_bulk_size;
 	uint32_t               max_setup_rate;

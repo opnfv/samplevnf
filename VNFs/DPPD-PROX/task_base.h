@@ -93,10 +93,16 @@ struct rx_params_hw {
 	};
 	uint8_t           last_read_portid;
 	struct port_queue *rx_pq;
+	uint32_t flex_offset;
+	uint32_t flex_shift;
+	uint32_t flex_width;
 } __attribute__((packed));
 
 struct rx_params_hw1 {
 	struct port_queue rx_pq;
+	uint32_t flex_offset;
+	uint32_t flex_shift;
+	uint32_t flex_width;
 } __attribute__((packed));
 
 struct rx_params_sw {

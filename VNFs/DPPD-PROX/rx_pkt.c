@@ -105,6 +105,20 @@ static inline void dump_l3(struct task_base *tbase, struct rte_mbuf *mbuf)
 	}
 }
 
+/** Read entry from mbuf and assign to mbuf metadata 'hash.fdir.hi' field. */
+static inline void apply_flexbyte_fdir_xform(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t nb_rx, uint32_t offset, uint32_t shift)
+{
+	for (uint16_t i = 0; i < nb_rx; ++i) {
+		struct rte_mbuf *cur = mbufs[i];
+		uint32_t classif = rte_be_to_cpu_32(
+			*(uint32_t *)(rte_pktmbuf_mtod(cur, uint8_t *) + offset)) >> shift;
+		cur->hash.fdir.hi = classif;
+		plog_dbg("Flex Bytes:hw_param: flex_bytes=0x%x, mbuf[%u]->hash.fdir.hi=%u\n",
+			 rte_be_to_cpu_32(*(uint32_t *)(rte_pktmbuf_mtod(cur, uint8_t *) + offset)),
+			 i, cur->hash.fdir.hi);
+	}
+}
+
 static uint16_t rx_pkt_hw_param(struct task_base *tbase, struct rte_mbuf ***mbufs_ptr, int multi,
 				void (*next)(struct rx_params_hw *rx_param_hw), int l3)
 {
@@ -142,6 +156,8 @@ static uint16_t rx_pkt_hw_param(struct task_base *tbase, struct rte_mbuf ***mbuf
 			}
 		}
 	}
+	if (unlikely(tbase->rx_params_hw.flex_width))
+		apply_flexbyte_fdir_xform(tbase, *mbufs_ptr, nb_rx, tbase->rx_params_hw.flex_offset, tbase->rx_params_hw.flex_shift);
 
 	if (skip)
 		TASK_STATS_ADD_RX_NON_DP(&tbase->aux->stats, skip);
@@ -196,6 +212,8 @@ static inline uint16_t rx_pkt_hw1_param(struct task_base *tbase, struct rte_mbuf
 			}
 		}
 	}
+	if (unlikely(tbase->rx_params_hw1.flex_width))
+		apply_flexbyte_fdir_xform(tbase, *mbufs_ptr, nb_rx, tbase->rx_params_hw1.flex_offset, tbase->rx_params_hw1.flex_shift);
 
 	if (skip)
 		TASK_STATS_ADD_RX_NON_DP(&tbase->aux->stats, skip);

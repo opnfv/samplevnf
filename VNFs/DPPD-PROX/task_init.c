@@ -180,6 +180,11 @@ static size_t init_rx_tx_rings_ports(struct task_args *targ, struct task_base *t
 				tbase->rx_pkt = (targ->task_init->flag_features & TASK_FEATURE_MULTI_RX)? rx_pkt_hw1_multi : rx_pkt_hw1;
 			tbase->rx_params_hw1.rx_pq.port =  targ->rx_port_queue[0].port;
 			tbase->rx_params_hw1.rx_pq.queue = targ->rx_port_queue[0].queue;
+			tbase->rx_params_hw1.flex_offset = targ->flex_offset;
+			tbase->rx_params_hw1.flex_width = targ->flex_width;
+			tbase->rx_params_hw1.flex_shift = sizeof(uint32_t) * 8 - RTE_MIN(sizeof(uint32_t) * 8, targ->flex_width);
+			plog_dbg("flex_offset=%u, flex_width=%u, rx flex_shift=%u\n",
+				targ->flex_offset, targ->flex_width, tbase->rx_params_hw1.flex_shift);
 		}
 		else {
 			PROX_ASSERT((targ->nb_rxports != 0) || (targ->task_init->flag_features & TASK_FEATURE_NO_RX));
@@ -202,6 +207,11 @@ static size_t init_rx_tx_rings_ports(struct task_args *targ, struct task_base *t
 					tbase->rx_pkt = (targ->task_init->flag_features & TASK_FEATURE_MULTI_RX)? rx_pkt_hw_pow2_multi : rx_pkt_hw_pow2;
 				tbase->rx_params_hw.rxport_mask = targ->nb_rxports - 1;
 			}
+			tbase->rx_params_hw.flex_offset = targ->flex_offset;
+			tbase->rx_params_hw.flex_width = targ->flex_width;
+			tbase->rx_params_hw.flex_shift = sizeof(uint32_t) * 8 - RTE_MIN(sizeof(uint32_t) * 8, targ->flex_width);
+			plog_dbg("flex_offset=%u, flex_width=%u, rx flex_shift=%u\n",
+				targ->flex_offset, targ->flex_width, tbase->rx_params_hw.flex_shift);
 		}
 	}
 
