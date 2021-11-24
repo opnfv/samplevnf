@@ -57,7 +57,8 @@ struct rte_ring *ctrl_rings[RTE_MAX_LCORE*MAX_TASKS_PER_CORE];
 
 static void __attribute__((noreturn)) prox_usage(const char *prgname)
 {
-	plog_info("\nUsage: %s [-f CONFIG_FILE] [-a|-e] [-m|-s|-i] [-w DEF] [-u] [-t]\n"
+	plog_info("\nUsage: %s [-P PATH] [-f CONFIG_FILE] [-a|-e] [-m|-s|-i] [-w DEF] [-u] [-t]\n"
+		  "\t-P PATH : Path to config file(s)\n"
 		  "\t-f CONFIG_FILE : configuration file to load, ./prox.cfg by default\n"
 		  "\t-l LOG_FILE : log file name, ./prox.log by default\n"
 		  "\t-p : include PID in log file name if default log file is used\n"

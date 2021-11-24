@@ -18,6 +18,7 @@
 #define _PROX_CFG_H
 
 #include <inttypes.h>
+#include <limits.h>
 
 #include "prox_globals.h"
 
@@ -59,7 +60,9 @@ struct prox_cfg {
 	uint64_t        core_mask[PROX_CM_DIM]; /* Active cores without master core */
 	uint32_t	start_time;	/* if set (not 0), average pps will be calculated starting after start_time seconds */
 	uint32_t	duration_time;      /* if set (not 0), prox will exit duration_time seconds after start_time */
-	char            name[MAX_NAME_SIZE];
+	char            name[PATH_MAX];     /* Full path to config file (cfg_path+'/'+cfg_name) */
+	char            cfg_path[PATH_MAX];
+	char            cfg_name[MAX_NAME_SIZE];
 	uint8_t         log_name_pid;
 	char            log_name[MAX_PATH_LEN];
 	int32_t         cpe_table_ports[PROX_MAX_PORTS];

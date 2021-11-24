@@ -1615,8 +1615,11 @@ int prox_parse_args(int argc, char **argv)
 	}
 	plog_info("\n");
 
-	while ((opt = getopt(argc, argv, "f:dnzpo:tkuar:emsiw:l:v:q:")) != EOF) {
+	while ((opt = getopt(argc, argv, "P:f:dnzpo:tkuar:emsiw:l:v:q:")) != EOF) {
 		switch (opt) {
+		case 'P':
+			strncpy(prox_cfg.cfg_path, optarg, PATH_MAX);
+			break;
 		case 'f':
 			/* path to config file */
 			cfg_file = optarg;
@@ -1627,7 +1630,7 @@ int prox_parse_args(int argc, char **argv)
 				}
 			}
 
-			strncpy(prox_cfg.name, cfg_file + offset, MAX_NAME_SIZE);
+			strncpy(prox_cfg.cfg_name, cfg_file + offset, MAX_NAME_SIZE);
 			break;
 		case 'v':
 			plog_set_lvl(atoi(optarg));
@@ -1740,6 +1743,15 @@ int prox_parse_args(int argc, char **argv)
 			return -1;
 		}
 	}
+
+	if (strlen(prox_cfg.cfg_path) > 0) {
+		strncpy(prox_cfg.name, prox_cfg.cfg_path, PATH_MAX-1);
+		strncat(prox_cfg.name, "/", PATH_MAX-1);
+		strncat(prox_cfg.name, prox_cfg.cfg_name, PATH_MAX-1);
+	} else {
+		strncpy(prox_cfg.name, cfg_file, PATH_MAX-1);
+	}
+	cfg_file = prox_cfg.name;
 
 	/* reset getopt lib for DPDK */
 	optind = 0;

@@ -20,6 +20,7 @@
 #include "prox_lua.h"
 #include "lua_compat.h"
 #include "parse_utils.h"
+#include "prox_cfg.h"
 
 static struct lua_State *lua_instance;
 
@@ -381,6 +382,24 @@ struct lua_State *prox_lua(void)
 		lua_instance = luaL_newstate();
 
 		luaL_openlibs(lua_instance);
+
+		if (prox_cfg.cfg_path[0] != 0) {
+			const char *oldpath;
+			char newpath[4096];
+			lua_getglobal(lua_instance, "package");
+			lua_getfield(lua_instance, -1, "path");
+			oldpath = lua_tostring(lua_instance, -1);
+			if (strlen((oldpath)+strlen(prox_cfg.cfg_path)+8) > sizeof(newpath))
+				return NULL;
+			strncpy(newpath, oldpath, sizeof(newpath)-1);
+			strncat(newpath, ";", sizeof(newpath)-1);
+			strncat(newpath, prox_cfg.cfg_path, sizeof(newpath)-1);
+			strncat(newpath, "/?.lua", sizeof(newpath)-1);
+			lua_pop(lua_instance, 1);
+			lua_pushstring(lua_instance, newpath);
+			lua_setfield(lua_instance, -2, "path");
+			lua_pop(lua_instance, 1);
+		}
 
 		lua_pushcfunction(lua_instance, l_ip);
 		lua_setglobal(lua_instance, "ip");
