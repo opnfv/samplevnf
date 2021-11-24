@@ -758,6 +758,38 @@ static int parse_cmd_set_random(const char *str, struct input *input)
 	return 0;
 }
 
+static int parse_cmd_task_info(const char *str, struct input *input)
+{
+	struct task_base *task;
+	struct task_args *targ;
+	char buf[64*RTE_MAX_LCORE*4];
+	char tmp[64];
+	int cnt=0;
+
+	buf[0] = 0;
+	for (int lcore_id=0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
+		for (int task_id=0; task_id<lcore_cfg[lcore_id].n_tasks_all; task_id++) {
+			task = lcore_cfg[lcore_id].tasks_all[task_id];
+			targ = &lcore_cfg[lcore_id].targs[task_id];
+			if (input->reply) {
+				snprintf(tmp, sizeof(tmp), "%s%u,%u,%s,%s",
+					 cnt==0 ? "" : ";",
+					 lcore_id, task_id, targ->lconf->name, targ->task_init->mode_str);
+				strncat(buf, tmp, sizeof(buf));
+				cnt++;
+			} else {
+				plog_info("Core %u, task %u: name='%s', mode='%s'\n",
+					  lcore_id, task_id, targ->lconf->name, targ->task_init->mode_str);
+			}
+		}
+	}
+	if (input->reply) {
+		strncat(buf, "\n", sizeof(buf));
+		input->reply(input, buf, strlen(buf));
+	}
+	return 0;
+}
+
 static int parse_cmd_thread_info(const char *str, struct input *input)
 {
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
@@ -2207,6 +2239,7 @@ static struct cmd_str cmd_strings[] = {
 	{"quit_force", "", "Quit without waiting on cores to stop", parse_cmd_quit_force},
 	{"help", "<substr>", "Show list of commands that have <substr> as a substring. If no substring is provided, all commands are shown.", parse_cmd_help},
 	{"verbose", "<level>", "Set verbosity level", parse_cmd_verbose},
+	{"task info", "", "Get list of tasks", parse_cmd_task_info},
 	{"thread info", "<core_id> <task_id>", "", parse_cmd_thread_info},
 	{"mem info", "", "Show information about system memory (number of huge pages and addresses of these huge pages)", parse_cmd_mem_info},
 	{"update interval", "<value>", "Update statistics refresh rate, in msec (must be >=10). Default is 1 second", parse_cmd_update_interval},
