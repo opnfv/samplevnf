@@ -160,6 +160,7 @@ void set_task_defaults(struct prox_cfg* prox_cfg, struct lcore_cfg* lcore_cfg_in
 			targ->lb_friend_core = 0xFF;
 			targ->n_pkts = 1024*64;
 			targ->runtime_flags |= TASK_TX_CRC;
+			targ->pkt_inline_replication_cnt = 1;
 			targ->accuracy_limit_nsec = 5000;
 		}
 	}

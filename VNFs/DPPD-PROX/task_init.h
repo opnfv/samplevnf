@@ -195,6 +195,7 @@ struct task_args {
 	uint32_t               lat_enabled;
 	uint32_t               pkt_size;
 	uint8_t                pkt_inline[MAX_PKT_SIZE];
+	uint32_t               pkt_inline_replication_cnt;
 	uint32_t               probability;
 	char                   nat_table[256];
 	uint32_t               use_src;

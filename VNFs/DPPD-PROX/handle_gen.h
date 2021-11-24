@@ -37,7 +37,7 @@ static void unique_id_get(struct unique_id *unique_id, uint8_t *generator_id, ui
 struct task_base;
 
 void task_gen_set_pkt_count(struct task_base *tbase, uint32_t count);
-int task_gen_set_pkt_size(struct task_base *tbase, uint32_t pkt_size);
+int task_gen_set_pkt_size(struct task_base *tbase, uint32_t pkt_size, int template_idx);
 void task_gen_set_rate(struct task_base *tbase, uint64_t bps);
 void task_gen_reset_randoms(struct task_base *tbase);
 void task_gen_reset_values(struct task_base *tbase);

@@ -798,42 +798,45 @@ static int check_all_pkt_size(struct task_gen *task, int do_panic)
 	return 0;
 }
 
-static int check_fields_in_bounds(struct task_gen *task, uint32_t pkt_size, int do_panic)
+static int check_fields_in_bounds(struct task_gen *task, int do_panic)
 {
-	if (task->lat_enabled) {
-		uint32_t pos_beg = task->lat_pos;
-		uint32_t pos_end = task->lat_pos + 3U;
+	for (size_t i = 0; i < task->n_pkts; ++i) {
+		const uint32_t pkt_size = task->pkt_template[i].len;
+		if (task->lat_enabled) {
+			uint32_t pos_beg = task->lat_pos;
+			uint32_t pos_end = task->lat_pos + 3U;
 
-		if (do_panic)
-			PROX_PANIC(pkt_size <= pos_end, "Writing latency at %u-%u, but packet size is %u bytes\n",
-			   pos_beg, pos_end, pkt_size);
-		else if (pkt_size <= pos_end) {
-			plog_err("Writing latency at %u-%u, but packet size is %u bytes\n", pos_beg, pos_end, pkt_size);
-			return -1;
+			if (do_panic)
+				PROX_PANIC(pkt_size <= pos_end, "Writing latency at %u-%u, but packet size is %u bytes\n",
+				pos_beg, pos_end, pkt_size);
+			else if (pkt_size <= pos_end) {
+				plog_err("Writing latency at %u-%u, but packet size is %u bytes\n", pos_beg, pos_end, pkt_size);
+				return -1;
+			}
 		}
-	}
-	if (task->packet_id_pos) {
-		uint32_t pos_beg = task->packet_id_pos;
-		uint32_t pos_end = task->packet_id_pos + 4U;
+		if (task->packet_id_pos) {
+			uint32_t pos_beg = task->packet_id_pos;
+			uint32_t pos_end = task->packet_id_pos + 4U;
 
-		if (do_panic)
-			PROX_PANIC(pkt_size <= pos_end, "Writing packet at %u-%u, but packet size is %u bytes\n",
-			   pos_beg, pos_end, pkt_size);
-		else if (pkt_size <= pos_end) {
-			plog_err("Writing packet at %u-%u, but packet size is %u bytes\n", pos_beg, pos_end, pkt_size);
-			return -1;
+			if (do_panic)
+				PROX_PANIC(pkt_size <= pos_end, "Writing packet at %u-%u, but packet size is %u bytes\n",
+				pos_beg, pos_end, pkt_size);
+			else if (pkt_size <= pos_end) {
+				plog_err("Writing packet at %u-%u, but packet size is %u bytes\n", pos_beg, pos_end, pkt_size);
+				return -1;
+			}
 		}
-	}
-	if (task->accur_pos) {
-		uint32_t pos_beg = task->accur_pos;
-		uint32_t pos_end = task->accur_pos + 3U;
+		if (task->accur_pos) {
+			uint32_t pos_beg = task->accur_pos;
+			uint32_t pos_end = task->accur_pos + 3U;
 
-		if (do_panic)
-			PROX_PANIC(pkt_size <= pos_end, "Writing accuracy at %u%-u, but packet size is %u bytes\n",
-			   pos_beg, pos_end, pkt_size);
-		else if (pkt_size <= pos_end) {
-			plog_err("Writing accuracy at %u%-u, but packet size is %u bytes\n", pos_beg, pos_end, pkt_size);
-			return -1;
+			if (do_panic)
+				PROX_PANIC(pkt_size <= pos_end, "Writing accuracy at %u%-u, but packet size is %u bytes\n",
+				pos_beg, pos_end, pkt_size);
+			else if (pkt_size <= pos_end) {
+				plog_err("Writing accuracy at %u%-u, but packet size is %u bytes\n", pos_beg, pos_end, pkt_size);
+				return -1;
+			}
 		}
 	}
 	return 0;
@@ -926,7 +929,9 @@ static void task_init_gen_load_pkt_inline(struct task_gen *task, struct task_arg
 {
 	const int socket_id = rte_lcore_to_socket_id(targ->lconf->id);
 
-	task->n_pkts = 1;
+	if (targ->pkt_size > sizeof(task->pkt_template[0].buf))
+		targ->pkt_size = sizeof(task->pkt_template[0].buf);
+	task->n_pkts = targ->pkt_inline_replication_cnt;
 
 	size_t mem_size = task->n_pkts * sizeof(*task->pkt_template);
 	task->pkt_template = prox_zmalloc(mem_size, socket_id);
@@ -936,21 +941,25 @@ static void task_init_gen_load_pkt_inline(struct task_gen *task, struct task_arg
 		   task->pkt_template_orig == NULL,
 		   "Failed to allocate %lu bytes (in huge pages) for packet template\n", mem_size);
 
-	task->pkt_template->buf = prox_zmalloc(task->max_frame_size, socket_id);
-	task->pkt_template_orig->buf = prox_zmalloc(task->max_frame_size, socket_id);
-	PROX_PANIC(task->pkt_template->buf == NULL ||
-		task->pkt_template_orig->buf == NULL,
-		"Failed to allocate %u bytes (in huge pages) for packet\n", task->max_frame_size);
-
 	PROX_PANIC(targ->pkt_size > task->max_frame_size,
 		targ->pkt_size > ETHER_MAX_LEN + 2 * PROX_VLAN_TAG_SIZE - 4 ?
 			"pkt_size too high and jumbo frames disabled" : "pkt_size > mtu");
 
-	rte_memcpy(task->pkt_template_orig[0].buf, targ->pkt_inline, targ->pkt_size);
-	task->pkt_template_orig[0].len = targ->pkt_size;
+	for (size_t i = 0; i < task->n_pkts; ++i) {
+		/* pkt_inline may be < pkt_size */
+		memset(task->pkt_template_orig[i].buf, 0, targ->pkt_size);
+		task->pkt_template[i].buf = prox_zmalloc(task->max_frame_size, socket_id);
+		task->pkt_template_orig[i].buf = prox_zmalloc(task->max_frame_size, socket_id);
+		PROX_PANIC(task->pkt_template[i].buf == NULL ||
+			task->pkt_template_orig[i].buf == NULL,
+			"Failed to allocate %u bytes (in huge pages) for packet\n", task->max_frame_size);
+
+		rte_memcpy(task->pkt_template_orig[i].buf, targ->pkt_inline, targ->pkt_size);
+		task->pkt_template_orig[i].len = targ->pkt_size;
+	}
 	task_gen_reset_pkt_templates(task);
 	check_all_pkt_size(task, 1);
-	check_fields_in_bounds(task, task->pkt_template[0].len, 1);
+	check_fields_in_bounds(task, 1);
 }
 
 static void task_init_gen_load_pcap(struct task_gen *task, struct task_args *targ)
@@ -1023,16 +1032,34 @@ void task_gen_set_pkt_count(struct task_base *tbase, uint32_t count)
 	task->pkt_count = count;
 }
 
-int task_gen_set_pkt_size(struct task_base *tbase, uint32_t pkt_size)
+int task_gen_set_pkt_size(struct task_base *tbase, uint32_t pkt_size, int template_idx)
 {
 	struct task_gen *task = (struct task_gen *)tbase;
 	int rc;
 
-	if ((rc = check_pkt_size(task, pkt_size, 0)) != 0)
+	// The original packet template is modified: no reset function does reset the packet size
+	if (template_idx < 0) {
+		plog_info("Setting all templates pktsize to %u \n", pkt_size);
+		for (size_t i = 0; i < task->n_pkts; ++i)
+			task->pkt_template_orig[i].len = pkt_size;
+	} else if ((uint32_t)template_idx >= task->n_pkts) {
+		plog_err("Too high template index, max is %u\n", task->n_pkts-1);
+	} else if (template_idx >= 0) {
+		task->pkt_template_orig[template_idx].len = pkt_size;
+	}
+	// Use task_gen_reset_pkt_templates_len instead of task_gen_reset_pkt_templates
+	// as there is no reason to reset the values and randoms
+	task_gen_reset_pkt_templates_len(task);
+
+	// Strictly speaking, if the original packet was correct, there is no reason to recalc the checksum
+	// But if the original packet was for instance containing a udp length higher than the packet size
+	// (i.e. pointing to random data) then we should not recalculate the checksums
+	task_gen_pkt_template_recalc_all(task);
+
+	if ((rc = check_all_pkt_size(task, 0)) != 0)
 		return rc;
-	if ((rc = check_fields_in_bounds(task, pkt_size, 0)) != 0)
+	if ((rc = check_fields_in_bounds(task, 0)) != 0)
 		return rc;
-	task->pkt_template[0].len = pkt_size;
 	return rc;
 }
 

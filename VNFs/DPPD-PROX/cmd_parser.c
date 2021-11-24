@@ -512,23 +512,32 @@ static int parse_cmd_reconnect(const char *str, struct input *input)
 static int parse_cmd_pkt_size(const char *str, struct input *input)
 {
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, pkt_size, nb_cores;
+	int idx = -1;
 
 	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 	if (!(str = strchr_skip_twice(str, ' ')))
 		return -1;
-	if (sscanf(str, "%d", &pkt_size) != 1)
-		return -1;
+
+	// set pkt size can have two syntaxes:
+	// - using one argument = pkt size
+	// - using two arguments: pkt_index, pkt_size
+	if (sscanf(str, "%d %d", &idx, &pkt_size) != 2) {
+		idx = -1;
+		if (sscanf(str, "%d", &pkt_size) != 1)
+			return -1;
+	}
 
 	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
 		for (unsigned int i = 0; i < nb_cores; i++) {
 			lcore_id = lcores[i];
 			if ((!task_is_mode_and_submode(lcore_id, task_id, "gen", "")) && (!task_is_mode_and_submode(lcore_id, task_id, "gen", "l3"))) {
 				plog_err("Core %u task %u is not generating packets\n", lcore_id, task_id);
-			} else {
-				struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
-				task_gen_set_pkt_size(tbase, pkt_size); /* error printed within function */
+				return -1;
 			}
+			struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
+			if (task_gen_set_pkt_size(tbase, pkt_size, idx) != 0)
+				return -1;
 		}
 	}
 	return 0;

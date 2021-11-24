@@ -957,6 +957,9 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 	if (STR_EQ(str, "pcap file")) {
 		return parse_str(targ->pcap_file, pkey, sizeof(targ->pcap_file));
 	}
+	if (STR_EQ(str, "pkt inline replication count")) {
+		return parse_int(&targ->pkt_inline_replication_cnt, pkey);
+	}
 	if (STR_EQ(str, "pkt inline")) {
 		char pkey2[MAX_CFG_STRING_LEN];
 		if (parse_str(pkey2, pkey, sizeof(pkey2)) != 0) {
