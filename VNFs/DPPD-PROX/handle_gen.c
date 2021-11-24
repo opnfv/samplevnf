@@ -954,8 +954,8 @@ static void task_init_gen_load_pkt_inline(struct task_gen *task, struct task_arg
 			task->pkt_template_orig[i].buf == NULL,
 			"Failed to allocate %u bytes (in huge pages) for packet\n", task->max_frame_size);
 
-		rte_memcpy(task->pkt_template_orig[i].buf, targ->pkt_inline, targ->pkt_size);
-		task->pkt_template_orig[i].len = targ->pkt_size;
+		rte_memcpy(task->pkt_template_orig[i].buf, targ->pkt_inline, targ->pkt_inline_size);
+		task->pkt_template_orig[i].len = targ->pkt_size > targ->pkt_inline_size ? targ->pkt_size : targ->pkt_inline_size;
 	}
 	task_gen_reset_pkt_templates(task);
 	check_all_pkt_size(task, 1);

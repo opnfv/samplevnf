@@ -968,7 +968,7 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 		}
 
 		const size_t pkey_len = strlen(pkey2);
-		targ->pkt_size = 0;
+		targ->pkt_inline_size = 0;
 
 		for (size_t i = 0; i < pkey_len; ++i) {
 			if (pkey2[i] == ' ')
@@ -1008,12 +1008,12 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 				set_errf("Invalid character in pkt inline at byte %d (%c)", i, pkey2[i + 1]);
 				return -1;
 			}
-			if (targ->pkt_size == sizeof(targ->pkt_inline)) {
+			if (targ->pkt_inline_size == sizeof(targ->pkt_inline)) {
 				set_errf("Inline packet definition can't be longer than %u", sizeof(targ->pkt_inline));
 				return -1;
 			}
 
-			targ->pkt_inline[targ->pkt_size++] = byte;
+			targ->pkt_inline[targ->pkt_inline_size++] = byte;
 			i += 1;
 		}
 
