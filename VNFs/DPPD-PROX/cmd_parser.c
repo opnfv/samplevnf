@@ -1611,10 +1611,19 @@ static int parse_cmd_ring_info(const char *str, struct input *input)
 
 static int parse_cmd_port_stats(const char *str, struct input *input)
 {
-	unsigned val;
+	unsigned val, ver;
 
-	if (sscanf(str, "%u", &val) != 1) {
-		return -1;
+	// Support a version in port stats command.
+	// Version 0 = default = old behavior (2018)
+	if (sscanf(str, "%u %u", &val, &ver) != 2) {
+		if (sscanf(str, "%u", &val) != 1) {
+			return -1;
+		}
+		ver = 0;
+	}
+	if (ver > 1) {
+		plog_err("Invalid version %u\n", ver);
+		return 1;
 	}
 
 	struct get_port_stats s;
@@ -1633,6 +1642,8 @@ static int parse_cmd_port_stats(const char *str, struct input *input)
 		 s.rx_tot, s.tx_tot,
 		 s.no_mbufs_tot, s.ierrors_tot + s.imissed_tot,
 		 s.last_tsc, s.prev_tsc);
+	if (ver == 1)
+		snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "%"PRIu64",%"PRIu64"\n", s.rx_bytes_tot, s.tx_bytes_tot);
 	plog_info("%s", buf);
 	if (input->reply)
 		input->reply(input, buf, strlen(buf));

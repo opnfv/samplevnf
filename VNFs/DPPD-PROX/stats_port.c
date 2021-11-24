@@ -397,6 +397,8 @@ int stats_port(uint8_t port_id, struct get_port_stats *gps)
 		gps->rx_pkts_diff = 0;
 	gps->rx_tot = last->rx_tot;
 	gps->tx_tot = last->tx_tot;
+	gps->rx_bytes_tot = last->rx_bytes;
+	gps->tx_bytes_tot = last->tx_bytes;
 	gps->no_mbufs_tot = last->no_mbufs;
 	gps->ierrors_tot = last->ierrors;
 	gps->imissed_tot = last->imissed;

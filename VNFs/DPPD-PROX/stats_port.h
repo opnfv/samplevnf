@@ -57,6 +57,8 @@ struct get_port_stats {
 	uint64_t tx_pkts_diff;
 	uint64_t rx_tot;
 	uint64_t tx_tot;
+	uint64_t rx_bytes_tot;
+	uint64_t tx_bytes_tot;
 	uint64_t no_mbufs_tot;
 	uint64_t ierrors_tot;
 	uint64_t imissed_tot;
