@@ -586,6 +586,7 @@ static void task_upd_latency_flow(struct task_gen *task, struct rte_mbuf **mbufs
 		struct ether_hdr *hdr = (struct ether_hdr *)pkt_hdr[i];
 		uint32_t flowid = get_flowid_from_pkt((uint8_t*)hdr, task->latency_flow_mask, task->latency_flow_offset, task->latency_flow_shift);
 		task->latency_flow_lt_gen[flowid].tot_pkts++;
+		task->latency_flow_lt_gen[flowid].tot_bytes += mbuf_wire_size(mbufs[i]);
 	}
 }
 

@@ -34,6 +34,7 @@ struct stats_latency {
 	struct time_unit period;   /**< Lenght of period during which stats where measured */
 	uint64_t         lost_packets;
 	uint64_t         tot_packets;
+	uint64_t         tot_bytes;
 	uint64_t         tot_all_packets;
 };
 

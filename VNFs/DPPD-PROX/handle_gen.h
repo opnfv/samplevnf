@@ -43,6 +43,7 @@ struct unique_id {
 /** Per-flow statistics */
 struct lat_test_gen {
 	uint64_t tot_pkts;
+	uint64_t tot_bytes;
 };
 
 struct task_gen {

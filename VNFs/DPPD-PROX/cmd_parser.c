@@ -1849,18 +1849,19 @@ static int parse_cmd_lat_stats(const char *str, struct input *input)
 						task_id);
 					if (compat == 0)
 						snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
-							"%"PRIu64",%"PRIu64",%lld,%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64"\n",
+							"%"PRIu64",%"PRIu64",%lld,%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64"\n",
 							lat_stddev,
 							tot_lat,
 							var_lat,
 							ipdv_lat,
 							stats->tot_packets,
+							stats->tot_bytes,
 							tot->tot_packets,
 							period_usec);
 
 					input->reply(input, buf, strlen(buf));
 				} else {
-					plog_info("core: %u, task: %u, min: %"PRIu64", max: %"PRIu64", avg: %"PRIu64", stddev:%"PRIu64", ipdv:%"PRIu64", pkts:%"PRIu64", min since reset: %"PRIu64", max since reset: %"PRIu64", pkts since reset: %"PRIu64"\n",
+					plog_info("core: %u, task: %u, min: %"PRIu64", max: %"PRIu64", avg: %"PRIu64", stddev:%"PRIu64", ipdv:%"PRIu64", pkts:%"PRIu64", bytes:%"PRIu64", min since reset: %"PRIu64", max since reset: %"PRIu64", pkts since reset: %"PRIu64"\n",
 						lcore_id,
 						task_id,
 						lat_min_usec,
@@ -1869,6 +1870,7 @@ static int parse_cmd_lat_stats(const char *str, struct input *input)
 						lat_stddev,
 						stats->ipdv_lat,
 						stats->tot_packets,
+						stats->tot_bytes,
 						tot_lat_min_usec,
 						tot_lat_max_usec,
 						tot->tot_packets);
@@ -1907,16 +1909,17 @@ static int parse_cmd_flow_gen_stats(const char *str, struct input *input)
 				lat_test_gen = &task_gen->latency_flow_lt_gen[i];
 
 				uint64_t tot_pkts = lat_test_gen->tot_pkts;
+				uint64_t tot_bytes = lat_test_gen->tot_bytes;
 
 				if (input->reply) {
-					snprintf(buf, sizeof(buf), "%"PRIu32",%"PRIu64"\n",
-						 i, tot_pkts);
+					snprintf(buf, sizeof(buf), "%"PRIu32",%"PRIu64",%"PRIu64"\n",
+						 i, tot_pkts, tot_bytes);
 					strncat(buf, "\n", sizeof(buf));
 					plog_dbg("%s", buf);
 					input->reply(input, buf, strlen(buf));
 				} else {
-					plog_info("latflowid: %"PRIu32", pkts: %"PRIu64"\n",
-						  i, tot_pkts);
+					plog_info("latflowid: %"PRIu32", pkts: %"PRIu64", bytes: %"PRIu64"\n",
+						  i, tot_pkts, tot_bytes);
 				}
 			}
 		}
@@ -1954,16 +1957,17 @@ static int parse_cmd_flow_gen_hz_stats(const char *str, struct input *input)
 				uint64_t tsc = rte_rdtsc();
 				uint64_t tsc_hz = rte_get_tsc_hz();
 				uint64_t tot_pkts = lat_test_gen->tot_pkts;
+				uint64_t tot_bytes = lat_test_gen->tot_bytes;
 
 				if (input->reply) {
-					snprintf(buf, sizeof(buf), "%"PRIu32",%"PRIu64",%"PRIu64",%"PRIu64"\n",
-						 i, tsc, tsc_hz, tot_pkts);
+					snprintf(buf, sizeof(buf), "%"PRIu32",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64"\n",
+						 i, tsc, tsc_hz, tot_pkts, tot_bytes);
 					strncat(buf, "\n", sizeof(buf));
 					plog_dbg("%s", buf);
 					input->reply(input, buf, strlen(buf));
 				} else {
-					plog_info("latflowid: %"PRIu32", tsc: %"PRIu64", hz: %"PRIu64", pkts: %"PRIu64"\n",
-						  i, tsc, tsc_hz, tot_pkts);
+					plog_info("latflowid: %"PRIu32", tsc: %"PRIu64", hz: %"PRIu64", pkts: %"PRIu64", bytes: %"PRIu64"\n",
+						  i, tsc, tsc_hz, tot_pkts, tot_bytes);
 				}
 			}
 		}

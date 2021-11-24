@@ -82,6 +82,7 @@ static struct delayed_latency_entry *delayed_latency_create(struct delayed_laten
 
 struct rx_pkt_meta_data {
 	uint8_t  *hdr;
+	uint32_t pktlen;
 	uint32_t pkt_tx_time;
 	uint32_t bytes_after_in_bulk;
 };
@@ -473,11 +474,12 @@ static void lat_test_add_lost(struct lat_test *lat_test, uint64_t lost_packets)
 	lat_test->lost_packets += lost_packets;
 }
 
-static void lat_test_add_latency(struct lat_test *lat_test, uint64_t lat_tsc, uint64_t error)
+static void lat_test_add_latency(struct lat_test *lat_test, uint64_t lat_tsc, uint64_t error, uint32_t pkt_bytes)
 {
 	if (error > lat_test->accuracy_limit_tsc)
 		return;
 	lat_test->tot_pkts++;
+	lat_test->tot_bytes += pkt_bytes;
 
 	lat_test->tot_lat += lat_tsc;
 	lat_test->tot_lat_error += error;
@@ -514,11 +516,11 @@ static int task_lat_can_store_latency(struct task_lat *task)
 	return task->latency_buffer_idx < task->latency_buffer_size;
 }
 
-static void task_lat_store_lat(struct task_lat *task, uint64_t rx_packet_index, uint64_t rx_time, uint64_t tx_time, uint64_t rx_error, uint64_t tx_error, uint32_t packet_id, uint8_t generator_id, uint32_t flowid)
+static void task_lat_store_lat(struct task_lat *task, uint64_t rx_packet_index, uint64_t rx_time, uint64_t tx_time, uint64_t rx_error, uint64_t tx_error, uint32_t packet_id, uint8_t generator_id, uint32_t flowid, uint32_t pkt_bytes)
 {
 	uint32_t lat_tsc = diff_time(rx_time, tx_time) << LATENCY_ACCURACY;
 
-	lat_test_add_latency(&task->lat_test_flows->flows[flowid], lat_tsc, rx_error + tx_error);
+	lat_test_add_latency(&task->lat_test_flows->flows[flowid], lat_tsc, rx_error + tx_error, pkt_bytes);
 
 	if (task_lat_can_store_latency(task)) {
 		task_lat_store_lat_buf(task, rx_packet_index, rx_time, tx_time, rx_error, tx_error, packet_id, generator_id);
@@ -557,6 +559,7 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 			non_dp_count++;
 		} else
 			BIT64_CLR(pkt_bad_len_sig, j);
+		task->rx_pkt_meta[j].pktlen = rte_pktmbuf_pkt_len(mbuf);
 	}
 
 	if (task->sig_pos) {
@@ -609,6 +612,7 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 
 		struct rx_pkt_meta_data *rx_pkt_meta = &task->rx_pkt_meta[j];
 		uint8_t *hdr = rx_pkt_meta->hdr;
+		uint32_t pktlen = rx_pkt_meta->pktlen;
 		uint32_t flowid = get_flowid_from_pkt(hdr, task->latency_flow_mask, task->latency_flow_offset, task->latency_flow_shift);
 
 		// Used to display % of packets within accuracy limit vs. total number of packets (used_col)
@@ -657,7 +661,7 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 						   tx_time_err,
 						   delayed_latency_entry->tx_packet_id,
 						   delayed_latency_entry->generator_id,
-						   flowid);
+						   flowid, pktlen);
 			}
 
 			delayed_latency_entry = delayed_latency_create(task->delayed_latency_entries, generator_id, packet_id);
@@ -668,7 +672,14 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 			delayed_latency_entry->tx_packet_id = packet_id;
 			delayed_latency_entry->generator_id = generator_id;
 		} else {
-			task_lat_store_lat(task, task->rx_packet_index, pkt_rx_time, pkt_tx_time, 0, 0, packet_id, generator_id, flowid);
+			task_lat_store_lat(task,
+					   task->rx_packet_index,
+					   pkt_rx_time,
+					   pkt_tx_time,
+					   0,
+					   0,
+					   packet_id, generator_id,
+					   flowid, pktlen);
 		}
 
 		// Bad/unexpected packets do not need to be indexed

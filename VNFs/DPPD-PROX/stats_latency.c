@@ -211,6 +211,7 @@ static void stats_latency_from_lat_test(struct stats_latency *dst, struct lat_te
 	dst->accuracy_limit = lat_test_get_accuracy_limit(src);
 	dst->period = lat_test_get_period(src);
 	dst->tot_packets = src->tot_pkts;
+	dst->tot_bytes = src->tot_bytes;
 	dst->tot_all_packets = src->tot_all_pkts;
 	dst->lost_packets = src->lost_packets;
 }

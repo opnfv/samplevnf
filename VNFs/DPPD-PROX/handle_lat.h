@@ -34,6 +34,7 @@
 struct lat_test {
 	uint64_t tot_all_pkts;
 	uint64_t tot_pkts;
+	uint64_t tot_bytes;
 	uint64_t max_lat;
 	uint64_t min_lat;
 	uint64_t tot_lat;
@@ -178,6 +179,7 @@ static void lat_test_reset(struct lat_test *lat_test)
 {
 	lat_test->tot_all_pkts = 0;
 	lat_test->tot_pkts = 0;
+	lat_test->tot_bytes = 0;
 	lat_test->max_lat = 0;
 	lat_test->min_lat = -1;
 	lat_test->tot_lat = 0;
