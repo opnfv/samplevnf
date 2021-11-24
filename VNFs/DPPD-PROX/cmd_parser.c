@@ -53,6 +53,7 @@
 #include "handle_cgnat.h"
 #include "handle_impair.h"
 #include "rx_pkt.h"
+#include "prox_lua.h"
 
 static int core_task_is_valid(int lcore_id, int task_id)
 {
@@ -2212,6 +2213,78 @@ static int parse_cmd_cgnat_private_hash(const char *str, struct input *input)
 	return 0;
 }
 
+static int parse_cmd_exec_lua(const char *str, struct input *input)
+{
+	int ret;
+	long int retcode;
+	lua_State *L;
+	int n_stack_elem;
+	int i;
+
+	if (strlen(str) > 0) {
+		L = prox_lua();
+		if (L==NULL) {
+			plog_err("Failed creating Lua context\n");
+			return -1;
+		}
+		struct timespec startt, endt;
+		unsigned long deltat;
+		char buf[128];
+
+		clock_gettime(CLOCK_REALTIME, &startt);
+		ret = luaL_dostring(L, str);
+		clock_gettime(CLOCK_REALTIME, &endt);
+		n_stack_elem = lua_gettop(L);
+		lua_Integer stack_elem[n_stack_elem];
+		retcode = lua_tointeger(L, -1);
+		lua_pop(L, 1);
+		if ((ret == 0) && (n_stack_elem > 1)) {
+			stack_elem[n_stack_elem - 1] = retcode;
+			for (i = n_stack_elem - 2; i >= 0; i--) {
+				stack_elem[i] = lua_tointeger(L, -1);
+				lua_pop(L, 1);
+			}
+		}
+		deltat = (endt.tv_sec-startt.tv_sec)*1000000000+(endt.tv_nsec-startt.tv_nsec);
+		if (ret != 0) {
+			const char *errstr = lua_tostring(L, lua_gettop(L));
+			lua_pop(L, 1);
+			snprintf(buf, sizeof(buf),
+				 "Error executing lua: %s\n", errstr);
+			if (input->reply) {
+				input->reply(input, buf, strlen(buf));
+			} else {
+				plog_err("%s\n", buf);
+			}
+		} else {
+			if (n_stack_elem > 1) {
+				int elem_size = 3 + 2 * sizeof(stack_elem[0]);
+				char buf_stack[128 + elem_size * n_stack_elem];
+				int init_lgt = snprintf(buf_stack, sizeof(buf_stack), "OK ");
+				for (i = 0; i < n_stack_elem - 1; i++)
+					snprintf(buf_stack + init_lgt + (i * elem_size), elem_size + 1, "%#018lx:", stack_elem[i]);
+				snprintf(buf_stack + init_lgt + ((n_stack_elem - 1) * elem_size),
+					 sizeof(buf_stack) - (init_lgt + ((n_stack_elem - 1) * elem_size)),
+					 "%#018lx, executed in %.1fms\n", stack_elem[n_stack_elem - 1], deltat/1000000.0);
+				if (input->reply) {
+					input->reply(input, buf_stack, strlen(buf_stack));
+				} else {
+					plog_info("%s\n", buf_stack);
+				}
+			} else {
+				snprintf(buf, sizeof(buf),
+					 "OK %lu, executed in %.1fms\n", retcode, deltat/1000000.0);
+				if (input->reply) {
+					input->reply(input, buf, strlen(buf));
+				} else {
+					plog_info("%s\n", buf);
+				}
+			}
+		}
+	}
+	return 0;
+}
+
 static int parse_cmd_accuracy(const char *str, struct input *input)
 {
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
@@ -2372,6 +2445,7 @@ static struct cmd_str cmd_strings[] = {
 	{"delay_us", "<core_id> <task_id> <delay_us>", "Set the delay in usec for the impair mode to <delay_us>", parse_cmd_delay_us},
 	{"random delay_us", "<core_id> <task_id> <random delay_us>", "Set the delay in usec for the impair mode to <random delay_us>", parse_cmd_random_delay_us},
 	{"probability", "<core_id> <task_id> <probability>", "Set the percent of forwarded packets for the impair mode", parse_cmd_set_probability},
+	{"exec lua", "<lua code snippet>", "Execute Lua code", parse_cmd_exec_lua},
 	{"version", "", "Show version", parse_cmd_version},
 	{0,0,0,0},
 };
