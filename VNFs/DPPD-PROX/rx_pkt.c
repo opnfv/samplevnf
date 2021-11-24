@@ -112,7 +112,7 @@ static inline void apply_flexbyte_fdir_xform(struct task_base *tbase, struct rte
 		struct rte_mbuf *cur = mbufs[i];
 		uint32_t classif = rte_be_to_cpu_32(
 			*(uint32_t *)(rte_pktmbuf_mtod(cur, uint8_t *) + offset)) >> shift;
-		cur->hash.fdir.hi = classif;
+		cur->hash.fdir.hi = RX_PKT_CLASSIF_REMAPPING(tbase, classif);
 		plog_dbg("Flex Bytes:hw_param: flex_bytes=0x%x, mbuf[%u]->hash.fdir.hi=%u\n",
 			 rte_be_to_cpu_32(*(uint32_t *)(rte_pktmbuf_mtod(cur, uint8_t *) + offset)),
 			 i, cur->hash.fdir.hi);

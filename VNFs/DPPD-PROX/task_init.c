@@ -381,6 +381,11 @@ struct task_base *init_task_struct(struct task_args *targ)
 		}
 	}
 
+#ifdef CLASSIF_REMAPPING_TABLE_SIZE
+	for (uint32_t ii=0; ii<CLASSIF_REMAPPING_TABLE_SIZE; ii++)
+		tbase->aux->remapping_table[ii] = ii;
+#endif
+
 	targ->tbase = tbase;
 	if (t->init) {
 		t->init(tbase, targ);

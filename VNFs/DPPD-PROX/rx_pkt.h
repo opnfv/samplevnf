@@ -19,6 +19,12 @@
 
 #include <inttypes.h>
 
+#ifdef CLASSIF_REMAPPING_TABLE_SIZE
+#define RX_PKT_CLASSIF_REMAPPING(_tbase, _in)  ((_tbase)->aux->remapping_table[_in])
+#else
+#define RX_PKT_CLASSIF_REMAPPING(_tbase, _in)  (_in)
+#endif
+
 struct rte_mbuf;
 struct task_base;
 struct rte_ring;

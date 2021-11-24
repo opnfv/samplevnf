@@ -187,6 +187,9 @@ struct task_base_aux {
 	void (*stop_last)(struct task_base *tbase);
 	void (*start_first)(struct task_base *tbase);
 	struct task_rt_dump task_rt_dump;
+#ifdef CLASSIF_REMAPPING_TABLE_SIZE
+	uint32_t remapping_table[CLASSIF_REMAPPING_TABLE_SIZE];
+#endif
 };
 
 /* The task_base is accessed for _all_ task types. In case
