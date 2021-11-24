@@ -1787,7 +1787,7 @@ static int parse_cmd_core_loadstats(const char *str, struct input *input)
 	struct task_base *tbase;
 	struct task_rt_stats  *stats;
 
-	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
 
 	if (!cores_task_are_valid(lcores, task_id, nb_cores)) {

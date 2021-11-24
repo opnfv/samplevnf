@@ -18,7 +18,9 @@
 #define _PARSE_UTILS_H_
 
 #include <inttypes.h>
+#include <rte_eth_ctrl.h>
 #include "ip_subnet.h"
+#include "prox_port_cfg.h"
 
 #define MAX_STR_LEN_PROC  (3 * MAX_PKT_SIZE + 20)
 
@@ -119,5 +121,11 @@ const char* get_parse_err(void);
 int is_virtualized(void);
 
 int parse_single_var(char *val, size_t len, const char *name);
+
+const char *dpdk_filter2txt(enum rte_filter_type filter);
+enum rte_filter_type dpdk_txt2filter(const char *filter);
+const char *dpdk_flow2txt(uint16_t flowtype);
+uint16_t dpdk_txt2flow(const char *flowtype);
+int parse_dpdk_filter(struct prox_port_cfg *cfg, char *str, enum rte_filter_type type);
 
 #endif /* _PARSE_UTILS_H_ */

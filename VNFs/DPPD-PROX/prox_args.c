@@ -603,6 +603,79 @@ static int get_port_cfg(unsigned sindex, char *str, void *data)
 			cfg->port_conf.rx_adv_conf.rss_conf.rss_hf = ETH_RSS_IPV4;
 		}
 	}
+	else if (STR_EQ(str, "rxfilter_ntuple")) {
+		if (parse_dpdk_filter(cfg, pkey, RTE_ETH_FILTER_NTUPLE)) {
+			return -1;
+		}
+	}
+	else if (STR_EQ(str, "rxfilter_fdir")) {
+		if (parse_dpdk_filter(cfg, pkey, RTE_ETH_FILTER_FDIR)) {
+			return -1;
+		}
+	}
+	else if (STR_EQ(str, "fdir_mode")) {
+		if (STR_EQ(pkey, "none")) {
+			cfg->port_conf.fdir_conf.mode = RTE_FDIR_MODE_NONE;
+		}
+		else if (STR_EQ(pkey, "signature")) {
+			cfg->port_conf.fdir_conf.mode = RTE_FDIR_MODE_SIGNATURE;
+		}
+		else if (STR_EQ(pkey, "perfect")) {
+			cfg->port_conf.fdir_conf.mode = RTE_FDIR_MODE_PERFECT;
+		}
+		else if (STR_EQ(pkey, "perfect_mac_vlan")) {
+			cfg->port_conf.fdir_conf.mode = RTE_FDIR_MODE_PERFECT_MAC_VLAN;
+		}
+		else if (STR_EQ(pkey, "perfect_tunnel")) {
+			cfg->port_conf.fdir_conf.mode = RTE_FDIR_MODE_PERFECT_TUNNEL;
+		}
+		else {
+			plog_err("Unsupported fdir mode: %s\n", pkey);
+			return -1;
+		}
+	}
+	else if (STR_EQ(str, "fdir_mask_ipv4_src_ip")) {
+		uint32_t tmp;
+		if (parse_int(&tmp, pkey))
+			return -1;
+		cfg->port_conf.fdir_conf.mask.ipv4_mask.src_ip = rte_cpu_to_be_32(tmp);
+	}
+	else if (STR_EQ(str, "fdir_mask_ipv4_dst_ip")) {
+		uint32_t tmp;
+		if (parse_int(&tmp, pkey))
+			return -1;
+		cfg->port_conf.fdir_conf.mask.ipv4_mask.dst_ip = rte_cpu_to_be_32(tmp);
+	}
+	else if (STR_EQ(str, "fdir_mask_ipv4_proto")) {
+		uint32_t tmp;
+		if (parse_int(&tmp, pkey))
+			return -1;
+		cfg->port_conf.fdir_conf.mask.ipv4_mask.proto = tmp;
+	}
+	else if (STR_EQ(str, "fdir_mask_ipv4_tos")) {
+		uint32_t tmp;
+		if (parse_int(&tmp, pkey))
+			return -1;
+		cfg->port_conf.fdir_conf.mask.ipv4_mask.tos = tmp;
+	}
+	else if (STR_EQ(str, "fdir_mask_ipv4_ttl")) {
+		uint32_t tmp;
+		if (parse_int(&tmp, pkey))
+			return -1;
+		cfg->port_conf.fdir_conf.mask.ipv4_mask.ttl = tmp;
+	}
+	else if (STR_EQ(str, "fdir_mask_src_port")) {
+		uint32_t tmp;
+		if (parse_int(&tmp, pkey))
+			return -1;
+		cfg->port_conf.fdir_conf.mask.src_port_mask = rte_cpu_to_be_16(tmp);
+	}
+	else if (STR_EQ(str, "fdir_mask_dst_port")) {
+		uint32_t tmp;
+		if (parse_int(&tmp, pkey))
+			return -1;
+		cfg->port_conf.fdir_conf.mask.dst_port_mask = rte_cpu_to_be_16(tmp);
+	}
 	else if (STR_EQ(str, "rx_ring")) {
 		parse_str(cfg->rx_ring, pkey, sizeof(cfg->rx_ring));
 	}

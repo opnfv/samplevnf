@@ -1420,3 +1420,208 @@ int parse_random_str(uint32_t *mask, uint32_t *fixed, uint32_t *len, const char 
 	}
 	return 0;
 }
+
+int parse_dpdk_filter(struct prox_port_cfg *cfg, char *str, enum rte_filter_type type)
+{
+	char *ptr, *tok, *key, *val;
+	uint32_t sip=0, dip=0, sip_mask=0, dip_mask=0;
+	uint32_t sport=0, dport=0, sport_mask=0, dport_mask=0;
+	uint32_t proto=0, proto_mask=0;
+	uint32_t prio=1, queue=0;
+	uint16_t flowtype=RTE_ETH_FLOW_UNKNOWN;
+	uint32_t tos=0, ttl=0;
+
+	if (!str || strlen(str)==0)
+		return -1;
+	if (cfg->n_filters==PROX_ETH_MAX_FILTERS-1) {
+		plog_err("too many filters defined\n");
+		return -1;
+	}
+
+	cfg->filters[cfg->n_filters].type = type;
+
+	while ((tok = strtok_r(str, " ", &ptr)) != NULL) {
+		val = strchr(tok, '=');
+		if (val != NULL) {
+			*val = 0;
+			val += 1;
+			/* TODO: Check for overflows below, but parse_int() takes an uint32_t... */
+			if (strcmp(tok, "dip")==0) {
+				parse_ip(&dip, val);
+				if (dip_mask==0)
+					dip_mask = 0xffffffff;
+			} else if (strcmp(tok, "dip_mask")==0) {
+				parse_int(&dip_mask, val);
+			} else if (strcmp(tok, "sip")==0) {
+				parse_ip(&sip, val);
+				if (sip_mask==0)
+					sip_mask = 0xffffffff;
+			} else if (strcmp(tok, "sip_mask")==0) {
+				parse_int(&sip_mask, val);
+			} else if (strcmp(tok, "dport")==0) {
+				parse_int(&dport, val);
+				if (dport_mask==0)
+					dport_mask = 0xffff;
+			} else if (strcmp(tok, "dport_mask")==0) {
+				parse_int(&dport_mask, val);
+			} else if (strcmp(tok, "sport")==0) {
+				parse_int(&sport, val);
+				if (sport_mask==0)
+					sport_mask = 0xffff;
+			} else if (strcmp(tok, "sport_mask")==0) {
+				parse_int(&sport_mask, val);
+			} else if (strcmp(tok, "proto")==0) {
+				parse_int(&proto, val);
+				if (proto_mask==0)
+					proto_mask = 0xff;
+			} else if (strcmp(tok, "proto_mask")==0) {
+				parse_int(&proto_mask, val);
+			} else if (strcmp(tok, "prio")==0) {
+				parse_int(&prio, val);
+			} else if (strcmp(tok, "queue")==0) {
+				parse_int(&queue, val);
+			} else if (strcmp(tok, "flowtype")==0) {
+				flowtype = dpdk_txt2flow(val);
+			} else if (strcmp(tok, "tos")==0) {
+				parse_int(&tos, val);
+			} else if (strcmp(tok, "ttl")==0) {
+				parse_int(&ttl, val);
+			}
+		}
+		str = NULL;
+	}
+	switch (type) {
+	case RTE_ETH_FILTER_NTUPLE:
+	{
+		struct rte_eth_ntuple_filter *filter = &cfg->filters[cfg->n_filters].filter.ntuple;
+		filter->flags = RTE_5TUPLE_FLAGS;
+		filter->src_ip_mask = rte_cpu_to_be_32(sip_mask);
+		filter->src_ip = rte_cpu_to_be_32(sip);
+		filter->dst_ip_mask = rte_cpu_to_be_32(dip_mask);
+		filter->dst_ip = rte_cpu_to_be_32(dip);
+		filter->src_port_mask = rte_cpu_to_be_16(sport_mask);
+		filter->src_port = rte_cpu_to_be_16(sport);
+		filter->dst_port_mask = rte_cpu_to_be_16(dport_mask);
+		filter->dst_port = rte_cpu_to_be_16(dport);
+		filter->proto_mask = proto_mask;
+		filter->proto = proto;
+		filter->priority = prio;
+		filter->queue = queue;
+		break;
+	}
+	case RTE_ETH_FILTER_FDIR:
+	{
+		struct rte_eth_fdir_filter *filter = &cfg->filters[cfg->n_filters].filter.fdir;
+		struct rte_eth_ipv4_flow *ip4flow=NULL;
+		switch (flowtype) {
+		case RTE_ETH_FLOW_IPV4:
+			ip4flow = &filter->input.flow.ip4_flow;
+			break;
+		case RTE_ETH_FLOW_NONFRAG_IPV4_UDP:
+			ip4flow = &filter->input.flow.udp4_flow.ip;
+			filter->input.flow.udp4_flow.src_port = rte_cpu_to_be_16(sport);
+			filter->input.flow.udp4_flow.dst_port = rte_cpu_to_be_16(dport);
+			break;
+		default:
+			plog_err("Unsupported flowtype: %s\n", dpdk_flow2txt(flowtype));
+			return -1;
+		}
+		if (ip4flow) {
+			ip4flow->src_ip = rte_cpu_to_be_32(sip);
+			ip4flow->dst_ip = rte_cpu_to_be_32(dip);
+			ip4flow->tos = tos;
+			ip4flow->ttl = ttl;
+			ip4flow->proto = proto;
+		}
+		filter->soft_id = cfg->n_filters+1;
+		filter->input.flow_type = flowtype;
+		filter->action.behavior = RTE_ETH_FDIR_ACCEPT;
+		filter->action.report_status = RTE_ETH_FDIR_NO_REPORT_STATUS;
+		filter->action.rx_queue = queue;
+		break;
+	}
+	default:
+		plog_err("Unsupported filter: %s\n", str);
+		return -1;
+	}
+	cfg->n_filters++;
+	return 0;
+}
+
+static struct {
+	const char *name;
+	enum rte_filter_type type;
+} dpdkfilters[] = {
+	{"NONE",      RTE_ETH_FILTER_NONE},
+	{"MACVLAN",   RTE_ETH_FILTER_MACVLAN},
+	{"ETHERTYPE", RTE_ETH_FILTER_ETHERTYPE},
+	{"FLEXIBLE",  RTE_ETH_FILTER_FLEXIBLE},
+	{"SYN",       RTE_ETH_FILTER_SYN},
+	{"NTUPLE",    RTE_ETH_FILTER_NTUPLE},
+	{"TUNNEL",    RTE_ETH_FILTER_TUNNEL},
+	{"FDIR",      RTE_ETH_FILTER_FDIR},
+	{"HASH",      RTE_ETH_FILTER_HASH},
+	{"L2TUNNEL",  RTE_ETH_FILTER_L2_TUNNEL}
+};
+const char *dpdk_filter2txt(enum rte_filter_type filter)
+{
+	for (unsigned int ii=0; ii<sizeof(dpdkfilters)/sizeof(dpdkfilters[0]); ii++) {
+		if (filter==dpdkfilters[ii].type)
+			return dpdkfilters[ii].name;
+	}
+	return "UNKNOWN";
+}
+
+enum rte_filter_type dpdk_txt2filter(const char *filter)
+{
+	for (unsigned int ii=0; ii<sizeof(dpdkfilters)/sizeof(dpdkfilters[0]); ii++) {
+		if (strcasecmp(filter,dpdkfilters[ii].name)==0)
+			return dpdkfilters[ii].type;
+	}
+	return RTE_ETH_FILTER_MAX;
+}
+
+static struct {
+	const char *name;
+	uint16_t    type;
+} dpdkflowtypes[] = {
+	{"UNKNOWN", RTE_ETH_FLOW_UNKNOWN},
+	{"RAW", RTE_ETH_FLOW_RAW},
+	{"IPV4", RTE_ETH_FLOW_IPV4},
+	{"FRAG_IPV4", RTE_ETH_FLOW_FRAG_IPV4},
+	{"NONFRAG_IPV4_TCP", RTE_ETH_FLOW_NONFRAG_IPV4_TCP},
+	{"NONFRAG_IPV4_UDP", RTE_ETH_FLOW_NONFRAG_IPV4_UDP},
+	{"NONFRAG_IPV4_SCTP", RTE_ETH_FLOW_NONFRAG_IPV4_SCTP},
+	{"NONFRAG_IPV4_OTHER", RTE_ETH_FLOW_NONFRAG_IPV4_OTHER},
+	{"IPV6", RTE_ETH_FLOW_IPV6},
+	{"FRAG_IPV6", RTE_ETH_FLOW_FRAG_IPV6},
+	{"NONFRAG_IPV6_TCP", RTE_ETH_FLOW_NONFRAG_IPV6_TCP},
+	{"NONFRAG_IPV6_UDP", RTE_ETH_FLOW_NONFRAG_IPV6_UDP},
+	{"NONFRAG_IPV6_SCTP", RTE_ETH_FLOW_NONFRAG_IPV6_SCTP},
+	{"NONFRAG_IPV6_OTHER", RTE_ETH_FLOW_NONFRAG_IPV6_OTHER},
+	{"L2_PAYLOAD", RTE_ETH_FLOW_L2_PAYLOAD},
+	{"IPV6_EX", RTE_ETH_FLOW_IPV6_EX},
+	{"IPV6_TCP_EX", RTE_ETH_FLOW_IPV6_TCP_EX},
+	{"IPV6_UDP_EX", RTE_ETH_FLOW_IPV6_UDP_EX},
+	{"PORT", RTE_ETH_FLOW_PORT},
+	{"VXLAN", RTE_ETH_FLOW_VXLAN},
+	{"GENEVE", RTE_ETH_FLOW_GENEVE},
+	{"NVGRE", RTE_ETH_FLOW_NVGRE}
+};
+const char *dpdk_flow2txt(uint16_t flowtype)
+{
+	for (unsigned int ii=0; ii<sizeof(dpdkflowtypes)/sizeof(dpdkflowtypes[0]); ii++) {
+		if (flowtype==dpdkflowtypes[ii].type)
+			return dpdkflowtypes[ii].name;
+	}
+	return "UNKNOWN";
+}
+
+uint16_t dpdk_txt2flow(const char *flowtype)
+{
+	for (unsigned int ii=0; ii<sizeof(dpdkflowtypes)/sizeof(dpdkflowtypes[0]); ii++) {
+		if (strcasecmp(flowtype, dpdkflowtypes[ii].name)==0)
+			return dpdkflowtypes[ii].type;
+	}
+	return RTE_ETH_FLOW_UNKNOWN;
+}

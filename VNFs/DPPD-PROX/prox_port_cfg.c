@@ -41,6 +41,7 @@
 #include "prox_cksum.h"
 #include "stats_irq.h"
 #include "prox_compat.h"
+#include "parse_utils.h"
 
 struct prox_port_cfg prox_port_cfg[PROX_MAX_PORTS];
 rte_atomic32_t lsc;
@@ -226,6 +227,13 @@ void init_rte_dev(int use_dummy_devices)
 
 		strncpy(port_cfg->driver_name, dev_info.driver_name, sizeof(port_cfg->driver_name));
 		plog_info("\tPort %u : driver='%s' tx_queues=%d rx_queues=%d\n", port_id, !strcmp(port_cfg->driver_name, "")? "null" : port_cfg->driver_name, port_cfg->max_txq, port_cfg->max_rxq);
+
+		plog_info("\t\tSupported ingress filters: [");
+		for (uint8_t ff=RTE_ETH_FILTER_NONE+1; ff<RTE_ETH_FILTER_MAX; ff++) {
+			if (rte_eth_dev_filter_supported(port_id, ff)==0)
+				plog_info("%s ", dpdk_filter2txt(ff));
+		}
+		plog_info("]\n");
 
 		if (strncmp(port_cfg->driver_name, "rte_", 4) == 0) {
 			strncpy(port_cfg->short_name, prox_port_cfg[port_id].driver_name + 4, sizeof(port_cfg->short_name));
@@ -462,6 +470,7 @@ static void init_port(struct prox_port_cfg *port_cfg)
 	get_max_link_speed(port_cfg);
 	print_port_capa(port_cfg);
 	port_id = port_cfg - prox_port_cfg;
+
 	PROX_PANIC(port_cfg->n_rxq == 0 && port_cfg->n_txq == 0,
 		   "\t\t port %u is enabled but no RX or TX queues have been configured", port_id);
 
@@ -470,9 +479,6 @@ static void init_port(struct prox_port_cfg *port_cfg)
 		plog_info("\t\tPort %u had no RX queues, setting to 1\n", port_id);
 		port_cfg->n_rxq = 1;
 		uint32_t mbuf_size = TX_MBUF_SIZE;
-                if (mbuf_size < port_cfg->min_rx_bufsize + RTE_PKTMBUF_HEADROOM + sizeof(struct rte_mbuf))
-                        mbuf_size = port_cfg->min_rx_bufsize + RTE_PKTMBUF_HEADROOM + sizeof(struct rte_mbuf);
-
 		plog_info("\t\tAllocating dummy memory pool on socket %u with %u elements of size %u\n",
 			  port_cfg->socket, port_cfg->n_rxd, mbuf_size);
 		port_cfg->pool[0] = rte_mempool_create(dummy_pool_name, port_cfg->n_rxd, mbuf_size,
@@ -499,6 +505,22 @@ static void init_port(struct prox_port_cfg *port_cfg)
 			/* not sending on this port */
 			plog_info("\t\tPort %u had no TX queues, setting to 1\n", port_id);
 			port_cfg->n_txq = 1;
+		}
+	}
+
+	if (port_cfg->n_rxq > 1)  {
+		if (port_cfg->n_filters > 0) {
+			plog_info("\t\tUsing ingress filters\n"); /* See below */
+		} else {
+			// Enable RSS if multiple receive queues
+			port_cfg->port_conf.rxmode.mq_mode       		|= ETH_MQ_RX_RSS;
+			port_cfg->port_conf.rx_adv_conf.rss_conf.rss_key 	= toeplitz_init_key;
+			port_cfg->port_conf.rx_adv_conf.rss_conf.rss_key_len 	= TOEPLITZ_KEY_LEN;
+#if RTE_VERSION >= RTE_VERSION_NUM(2,0,0,0)
+			port_cfg->port_conf.rx_adv_conf.rss_conf.rss_hf 	= ETH_RSS_IPV4|ETH_RSS_NONFRAG_IPV4_UDP;
+#else
+			port_cfg->port_conf.rx_adv_conf.rss_conf.rss_hf 	= ETH_RSS_IPV4|ETH_RSS_NONF_IPV4_UDP;
+#endif
 		}
 	}
 
@@ -644,6 +666,15 @@ static void init_port(struct prox_port_cfg *port_cfg)
 
 	PROX_PANIC(ret < 0, "\n\t\t\trte_eth_dev_start() failed on port %u: error %d\n", port_id, ret);
 	plog_info(" done: ");
+
+	if (port_cfg->n_filters>0) {
+		plog_info("\t\tConfiguring %u ingress filters\n", port_cfg->n_filters);
+		for (int ii=0; ii<port_cfg->n_filters; ii++) {
+			ret = rte_eth_dev_filter_ctrl(port_id, port_cfg->filters[ii].type,
+				RTE_ETH_FILTER_ADD, &port_cfg->filters[ii].filter);
+			PROX_PANIC(ret < 0, "\n\t\t\trte_eth_dev_filter_ctrl() failed on port %u: error %d, %s\n", port_id, ret, strerror(-ret));
+		}
+	}
 
 	/* Getting link status can be done without waiting if Link
 	   State Interrupt is enabled since in that case, if the link

@@ -33,6 +33,8 @@ enum addr_type {PROX_PORT_MAC_HW, PROX_PORT_MAC_SET, PROX_PORT_MAC_RAND};
 #define IPV4_CKSUM	1
 #define UDP_CKSUM	2
 
+#define PROX_ETH_MAX_FILTERS 128
+
 struct prox_port_cfg {
 	struct rte_mempool *pool[32];  /* Rx/Tx mempool */
 	size_t pool_size[32];
@@ -71,6 +73,14 @@ struct prox_port_cfg {
 	} capabilities;
 	uint32_t max_rx_pkt_len;
 	uint32_t min_rx_bufsize;
+	int     n_filters;
+	struct {
+		enum rte_filter_type type;
+		union {
+			struct rte_eth_ntuple_filter ntuple;
+			struct rte_eth_fdir_filter   fdir;
+		} filter;
+	} filters[PROX_ETH_MAX_FILTERS];
 };
 
 extern rte_atomic32_t lsc;

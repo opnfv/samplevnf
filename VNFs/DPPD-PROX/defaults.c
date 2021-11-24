@@ -58,6 +58,34 @@ static const struct rte_eth_conf default_port_conf = {
 	.intr_conf = {
 		.lsc = 1, /* lsc interrupt feature enabled */
 	},
+	.fdir_conf = {
+		.mode = RTE_FDIR_MODE_NONE,
+		.pballoc = RTE_FDIR_PBALLOC_64K,
+		.status = RTE_FDIR_REPORT_STATUS,
+		.mask = {
+			.vlan_tci_mask = 0x0,
+			.ipv4_mask     = {
+				.src_ip = 0xFFFFFFFF,
+				.dst_ip = 0xFFFFFFFF,
+				.tos    = 0xFF,
+				.ttl    = 0xFF,
+				.proto  = 0xFF,
+			},
+			.ipv6_mask     = {
+				.src_ip = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF},
+				.dst_ip = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF},
+				.tc     = 0xFF,
+				.proto  = 0xFF,
+				.hop_limits  = 0xFF,
+			},
+			.src_port_mask = 0xFFFF,
+			.dst_port_mask = 0xFFFF,
+			.mac_addr_byte_mask = 0xFF, /* bit 0 is first byte on wire */
+			.tunnel_type_mask = 1,
+			.tunnel_id_mask = 0xFFFFFFFF,
+		},
+		.drop_queue = 127,
+	}
 };
 
 static const struct rte_eth_rxconf default_rx_conf = {
