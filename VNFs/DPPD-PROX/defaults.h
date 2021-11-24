@@ -17,6 +17,7 @@
 #ifndef _DEFAULTS_H_
 #define _DEFAULTS_H_
 
+#include <rte_byteorder.h>
 #include <rte_ether.h>
 
 struct prox_cfg;
@@ -30,6 +31,15 @@ void set_port_defaults(void);
 #define MAX_PKT_BURST   64
 #define MAX_RING_BURST	64
 #define DUMP_PKT_LEN 	MAX_PKT_SIZE
+
+#ifndef LATENCY_NUMBER_OF_FLOWS
+#define LATENCY_NUMBER_OF_FLOWS       1
+#endif
+
+#if LATENCY_NUMBER_OF_FLOWS < 1
+#undef LATENCY_NUMBER_OF_FLOWS
+#define LATENCY_NUMBER_OF_FLOWS	1
+#endif
 
 #if MAX_RING_BURST < MAX_PKT_BURST
 #error MAX_RING_BURST < MAX_PKT_BURST

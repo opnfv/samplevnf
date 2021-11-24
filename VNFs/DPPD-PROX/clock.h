@@ -61,6 +61,7 @@ uint64_t nsec_to_tsc(uint64_t nsec);
 uint64_t freq_to_tsc(uint64_t times_per_sec);
 uint64_t tsc_to_msec(uint64_t tsc);
 uint64_t tsc_to_usec(uint64_t tsc);
+unsigned __int128 tsc_to_usec_128(unsigned __int128 tsc);
 uint64_t tsc_to_nsec(uint64_t tsc);
 uint64_t tsc_to_sec(uint64_t tsc);
 struct time_unit tsc_to_time_unit(uint64_t tsc);

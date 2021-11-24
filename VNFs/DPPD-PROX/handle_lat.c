@@ -97,14 +97,17 @@ struct task_lat {
 	uint32_t latency_buffer_size;
 	uint64_t begin;
 	uint16_t lat_pos;
+	uint32_t latency_flow_offset;  /**< Where in packet individual flow identifier is stored */
+	uint32_t latency_flow_mask;    /**< Mask to reduce number of simultaneous flows */
+	uint8_t  latency_flow_shift;   /**< Right-shift for flow identifier before referencing latency statistics table */
 	uint16_t unique_id_pos;
 	uint16_t accur_pos;
 	uint16_t sig_pos;
 	uint32_t sig;
 	volatile uint16_t use_lt; /* which lt to use, */
 	volatile uint16_t using_lt; /* 0 or 1 depending on which of the 2 measurements are used */
-	struct lat_test lt[2];
-	struct lat_test *lat_test;
+	struct lat_test_flows lt[2];
+	struct lat_test_flows *lat_test_flows;
 	uint32_t generator_count;
 	uint16_t min_pkt_len;
 	struct early_loss_detect *eld;
@@ -128,7 +131,7 @@ static uint32_t diff_time(uint32_t rx_time, uint32_t tx_time)
 	return rx_time - tx_time;
 }
 
-struct lat_test *task_lat_get_latency_meassurement(struct task_lat *task)
+struct lat_test_flows *task_lat_get_latency_meassurement(struct task_lat *task)
 {
 	if (task->use_lt == task->using_lt)
 		return &task->lt[!task->using_lt];
@@ -143,9 +146,15 @@ void task_lat_use_other_latency_meassurement(struct task_lat *task)
 static void task_lat_update_lat_test(struct task_lat *task)
 {
 	if (task->use_lt != task->using_lt) {
+		for (uint32_t i = 0; i < LATENCY_NUMBER_OF_FLOWS; i++) {
+			task->lat_test_flows->flows[i].end_tsc = rte_rdtsc();
+		}
 		task->using_lt = task->use_lt;
-		task->lat_test = &task->lt[task->using_lt];
-		task->lat_test->accuracy_limit_tsc = task->limit;
+		task->lat_test_flows = &task->lt[task->using_lt];
+		for (uint32_t i = 0; i < LATENCY_NUMBER_OF_FLOWS; i++) {
+			task->lat_test_flows->flows[i].accuracy_limit_tsc = task->limit;
+			task->lat_test_flows->flows[i].start_tsc = rte_rdtsc();
+		}
 	}
 }
 
@@ -234,12 +243,14 @@ static void fix_latency_buffer_tx_time(struct lat_info *lat, uint32_t count)
 
 static void task_lat_count_remaining_lost_packets(struct task_lat *task)
 {
-	struct lat_test *lat_test = task->lat_test;
+	for (uint32_t i = 0; i < LATENCY_NUMBER_OF_FLOWS; i++) {
+		struct lat_test *lat_test = &task->lat_test_flows->flows[i];
 
-	for (uint32_t j = 0; j < task->generator_count; j++) {
-		struct early_loss_detect *eld = &task->eld[j];
+		for (uint32_t j = 0; j < task->generator_count; j++) {
+			struct early_loss_detect *eld = &task->eld[j];
 
-		lat_test->lost_packets += early_loss_detect_count_remaining_loss(eld);
+			lat_test->lost_packets += early_loss_detect_count_remaining_loss(eld);
+		}
 	}
 }
 
@@ -488,6 +499,14 @@ static void lat_test_add_latency(struct lat_test *lat_test, uint64_t lat_tsc, ui
 #ifdef LATENCY_HISTOGRAM
 	lat_test_histogram_add(lat_test, lat_tsc);
 #endif
+	/* IPDV */
+	if (lat_test->tot_pkts > 0) {
+		if (lat_test->prev_lat >= lat_tsc)
+			lat_test->ipdv_lat += lat_test->prev_lat - lat_tsc;
+		else
+			lat_test->ipdv_lat += lat_tsc - lat_test->prev_lat;
+	}
+	lat_test->prev_lat = lat_tsc;
 }
 
 static int task_lat_can_store_latency(struct task_lat *task)
@@ -495,11 +514,11 @@ static int task_lat_can_store_latency(struct task_lat *task)
 	return task->latency_buffer_idx < task->latency_buffer_size;
 }
 
-static void task_lat_store_lat(struct task_lat *task, uint64_t rx_packet_index, uint64_t rx_time, uint64_t tx_time, uint64_t rx_error, uint64_t tx_error, uint32_t packet_id, uint8_t generator_id)
+static void task_lat_store_lat(struct task_lat *task, uint64_t rx_packet_index, uint64_t rx_time, uint64_t tx_time, uint64_t rx_error, uint64_t tx_error, uint32_t packet_id, uint8_t generator_id, uint32_t flowid)
 {
 	uint32_t lat_tsc = diff_time(rx_time, tx_time) << LATENCY_ACCURACY;
 
-	lat_test_add_latency(task->lat_test, lat_tsc, rx_error + tx_error);
+	lat_test_add_latency(&task->lat_test_flows->flows[flowid], lat_tsc, rx_error + tx_error);
 
 	if (task_lat_can_store_latency(task)) {
 		task_lat_store_lat_buf(task, rx_packet_index, rx_time, tx_time, rx_error, tx_error, packet_id, generator_id);
@@ -582,15 +601,18 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 
 	TASK_STATS_ADD_RX_NON_DP(&tbase->aux->stats, non_dp_count);
 	for (uint16_t j = 0; j < n_pkts; ++j) {
-		// Used to display % of packets within accuracy limit vs. total number of packets (used_col)
-		task->lat_test->tot_all_pkts++;
-
 		// Skip those packets with bad length or bad signature
-		if (unlikely(BIT64_TEST(pkt_bad_len_sig, j)))
+		if (unlikely(BIT64_TEST(pkt_bad_len_sig, j))) {
+			task->lat_test_flows->flows[0].tot_all_pkts++;
 			continue;
+		}
 
 		struct rx_pkt_meta_data *rx_pkt_meta = &task->rx_pkt_meta[j];
 		uint8_t *hdr = rx_pkt_meta->hdr;
+		uint32_t flowid = get_flowid_from_pkt(hdr, task->latency_flow_mask, task->latency_flow_offset, task->latency_flow_shift);
+
+		// Used to display % of packets within accuracy limit vs. total number of packets (used_col)
+		task->lat_test_flows->flows[flowid].tot_all_pkts++;
 
 		uint32_t pkt_rx_time = tsc_extrapolate_backward(task, rx_tsc, rx_pkt_meta->bytes_after_in_bulk, task->last_pkts_tsc) >> LATENCY_ACCURACY;
 		uint32_t pkt_tx_time = rx_pkt_meta->pkt_tx_time;
@@ -608,12 +630,13 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 				// Skip unexpected packet
 				continue;
 			}
-
-			lat_test_add_lost(task->lat_test, task_lat_early_loss_detect(task, packet_id, generator_id));
 		} else {
 			generator_id = 0;
 			packet_id = task->rx_packet_index;
 		}
+
+		uint32_t n_loss = task_lat_early_loss_detect(task, packet_id, generator_id);
+		lat_test_add_lost(&task->lat_test_flows->flows[flowid], n_loss);
 
 		/* If accuracy is enabled, latency is reported with a
 		   delay of ACCURACY_WINDOW packets since the generator puts the
@@ -633,7 +656,8 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 						   delayed_latency_entry->rx_time_err,
 						   tx_time_err,
 						   delayed_latency_entry->tx_packet_id,
-						   delayed_latency_entry->generator_id);
+						   delayed_latency_entry->generator_id,
+						   flowid);
 			}
 
 			delayed_latency_entry = delayed_latency_create(task->delayed_latency_entries, generator_id, packet_id);
@@ -644,7 +668,7 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 			delayed_latency_entry->tx_packet_id = packet_id;
 			delayed_latency_entry->generator_id = generator_id;
 		} else {
-			task_lat_store_lat(task, task->rx_packet_index, pkt_rx_time, pkt_tx_time, 0, 0, packet_id, generator_id);
+			task_lat_store_lat(task, task->rx_packet_index, pkt_rx_time, pkt_tx_time, 0, 0, packet_id, generator_id, flowid);
 		}
 
 		// Bad/unexpected packets do not need to be indexed
@@ -726,6 +750,13 @@ static void init_task_lat(struct task_base *tbase, struct task_args *targ)
 	const int socket_id = rte_lcore_to_socket_id(targ->lconf->id);
 
 	task->lat_pos = targ->lat_pos;
+	task->latency_flow_offset = targ->latency_flow_offset;
+	task->latency_flow_mask = targ->latency_flow_mask;
+	if (task->latency_flow_mask > 0) {
+		task->latency_flow_shift = rte_bsf32(task->latency_flow_mask);
+		plog_info("\tlatency_flow_offset=%u, latency_flow_mask=%x, latency_flow_shift=%u\n",
+			task->latency_flow_offset, task->latency_flow_mask, task->latency_flow_shift);
+	}
 	task->accur_pos = targ->accur_pos;
 	task->sig_pos = targ->sig_pos;
 	task->sig = targ->sig;
@@ -774,15 +805,18 @@ static void init_task_lat(struct task_base *tbase, struct task_args *targ)
 		}
 	}
 
-	task->lt[0].min_lat = -1;
-	task->lt[1].min_lat = -1;
-	task->lt[0].bucket_size = targ->bucket_size - LATENCY_ACCURACY;
-	task->lt[1].bucket_size = targ->bucket_size - LATENCY_ACCURACY;
+	for (uint32_t i = 0; i < LATENCY_NUMBER_OF_FLOWS; i++) {
+		task->lt[0].flows[i].min_lat = -1;
+		task->lt[1].flows[i].min_lat = -1;
+		task->lt[0].flows[i].bucket_size = targ->bucket_size - LATENCY_ACCURACY;
+		task->lt[1].flows[i].bucket_size = targ->bucket_size - LATENCY_ACCURACY;
+	}
+
         if (task->unique_id_pos) {
 		task_lat_init_eld(task, socket_id);
 		task_lat_reset_eld(task);
         }
-	task->lat_test = &task->lt[task->using_lt];
+	task->lat_test_flows = &task->lt[task->using_lt];
 
 	task_lat_set_accuracy_limit(task, targ->accuracy_limit_nsec);
 	task->rx_pkt_meta = prox_zmalloc(MAX_PKT_BURST * sizeof(*task->rx_pkt_meta), socket_id);

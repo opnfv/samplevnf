@@ -193,6 +193,8 @@ struct task_args {
 	uint32_t               latency_buffer_size;
 	uint32_t               bucket_size;
 	uint32_t               lat_enabled;
+	uint32_t               latency_flow_offset; /**< Where in packet individual flow identifier is stored */
+	uint32_t               latency_flow_mask;   /**< Mask to reduce number of simultaneous flows */
 	uint32_t               pkt_size;
 	uint8_t                pkt_inline[MAX_PKT_SIZE];
 	uint32_t               pkt_inline_size;

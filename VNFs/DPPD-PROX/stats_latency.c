@@ -24,10 +24,10 @@ struct stats_latency_manager_entry {
 	struct task_lat        *task;
 	uint8_t                lcore_id;
 	uint8_t                task_id;
-	struct lat_test        lat_test;
-	struct lat_test        tot_lat_test;
-	struct stats_latency   stats;
-	struct stats_latency   tot;
+	struct lat_test_flows        lat_test_flows;
+	struct lat_test_flows        tot_lat_test_flows;
+	struct stats_latency   stats[LATENCY_NUMBER_OF_FLOWS];
+	struct stats_latency   tot[LATENCY_NUMBER_OF_FLOWS];
 };
 
 struct stats_latency_manager {
@@ -39,8 +39,9 @@ static struct stats_latency_manager *slm;
 
 void stats_latency_reset(void)
 {
-	for (uint16_t i = 0; i < slm->n_latency; ++i)
-		lat_test_reset(&slm->entries[i].tot_lat_test);
+	for (uint32_t i = 0; i < LATENCY_NUMBER_OF_FLOWS; i++)
+		for (uint16_t i = 0; i < slm->n_latency; ++i)
+			lat_test_reset(&slm->entries[i].tot_lat_test_flows.flows[i]);
 }
 
 int stats_get_n_latency(void)
@@ -60,12 +61,12 @@ uint32_t stats_latency_get_task_id(uint32_t i)
 
 struct stats_latency *stats_latency_get(uint32_t i)
 {
-	return &slm->entries[i].stats;
+	return &slm->entries[i].stats[0]; /* TODO , support multiple flows*/
 }
 
 struct stats_latency *stats_latency_tot_get(uint32_t i)
 {
-	return &slm->entries[i].tot;
+	return &slm->entries[i].tot[0]; /* TODO , support multiple flows*/
 }
 
 static struct stats_latency_manager_entry *stats_latency_entry_find(uint8_t lcore_id, uint8_t task_id)
@@ -82,24 +83,24 @@ static struct stats_latency_manager_entry *stats_latency_entry_find(uint8_t lcor
 	return NULL;
 }
 
-struct stats_latency *stats_latency_tot_find(uint32_t lcore_id, uint32_t task_id)
+struct stats_latency *stats_latency_tot_find(uint32_t lcore_id, uint32_t task_id, uint32_t flowid)
 {
 	struct stats_latency_manager_entry *entry = stats_latency_entry_find(lcore_id, task_id);
 
 	if (!entry)
 		return NULL;
 	else
-		return &entry->tot;
+		return &entry->tot[flowid];
 }
 
-struct stats_latency *stats_latency_find(uint32_t lcore_id, uint32_t task_id)
+struct stats_latency *stats_latency_find(uint32_t lcore_id, uint32_t task_id, uint32_t flowid)
 {
 	struct stats_latency_manager_entry *entry = stats_latency_entry_find(lcore_id, task_id);
 
 	if (!entry)
 		return NULL;
 	else
-		return &entry->stats;
+		return &entry->stats[flowid];
 }
 
 static int task_runs_observable_latency(struct task_args *targ)
@@ -142,7 +143,9 @@ static void stats_latency_add_task(struct lcore_cfg *lconf, struct task_args *ta
 	new_entry->task = (struct task_lat *)targ->tbase;
 	new_entry->lcore_id = lconf->id;
 	new_entry->task_id = targ->id;
-	new_entry->tot_lat_test.min_lat = -1;
+	for (uint32_t i = 0; i < LATENCY_NUMBER_OF_FLOWS; i++) {
+		new_entry->tot_lat_test_flows.flows[i].min_lat = -1;
+	}
 	slm->n_latency++;
 }
 
@@ -160,7 +163,7 @@ void stats_latency_init(void)
 }
 
 #ifdef LATENCY_HISTOGRAM
-void stats_core_lat_histogram(uint8_t lcore_id, uint8_t task_id, uint64_t **buckets)
+void stats_core_lat_histogram(uint8_t lcore_id, uint8_t task_id, uint32_t flowid, uint64_t **buckets)
 {
 	struct stats_latency_manager_entry *lat_stats;
 	uint64_t tsc;
@@ -168,7 +171,7 @@ void stats_core_lat_histogram(uint8_t lcore_id, uint8_t task_id, uint64_t **buck
 	lat_stats = stats_latency_entry_find(lcore_id, task_id);
 
 	if (lat_stats)
-		*buckets = lat_stats->lat_test.buckets;
+		*buckets = lat_stats->lat_test_flows.flows[flowid].buckets;
 	else
 		*buckets = NULL;
 }
@@ -176,17 +179,17 @@ void stats_core_lat_histogram(uint8_t lcore_id, uint8_t task_id, uint64_t **buck
 
 static void stats_latency_fetch_entry(struct stats_latency_manager_entry *entry)
 {
-	struct stats_latency *cur = &entry->stats;
-	struct lat_test *lat_test_local = &entry->lat_test;
-	struct lat_test *lat_test_remote = task_lat_get_latency_meassurement(entry->task);
+	struct lat_test_flows *lat_test_remote = task_lat_get_latency_meassurement(entry->task);
 
 	if (!lat_test_remote)
 		return;
 
-	if (lat_test_remote->tot_all_pkts) {
-		lat_test_copy(&entry->lat_test, lat_test_remote);
-		lat_test_reset(lat_test_remote);
-		lat_test_combine(&entry->tot_lat_test, &entry->lat_test);
+	for (uint32_t i = 0; i < LATENCY_NUMBER_OF_FLOWS; i++) {
+		if (lat_test_remote->flows[i].tot_all_pkts) {
+			lat_test_copy(&entry->lat_test_flows.flows[i], &lat_test_remote->flows[i]);
+			lat_test_reset(&lat_test_remote->flows[i]);
+			lat_test_combine(&entry->tot_lat_test_flows.flows[i], &entry->lat_test_flows.flows[i]);
+		}
 	}
 
 	task_lat_use_other_latency_meassurement(entry->task);
@@ -201,8 +204,12 @@ static void stats_latency_from_lat_test(struct stats_latency *dst, struct lat_te
 		dst->min = lat_test_get_min(src);
 		dst->avg = lat_test_get_avg(src);
 		dst->stddev = lat_test_get_stddev(src);
+		dst->tot_lat = src->tot_lat;
+		dst->var_lat = src->var_lat;
+		dst->ipdv_lat = src->ipdv_lat;
 	}
 	dst->accuracy_limit = lat_test_get_accuracy_limit(src);
+	dst->period = lat_test_get_period(src);
 	dst->tot_packets = src->tot_pkts;
 	dst->tot_all_packets = src->tot_all_pkts;
 	dst->lost_packets = src->lost_packets;
@@ -210,11 +217,12 @@ static void stats_latency_from_lat_test(struct stats_latency *dst, struct lat_te
 
 static void stats_latency_update_entry(struct stats_latency_manager_entry *entry)
 {
-	if (!entry->lat_test.tot_all_pkts)
-		return;
-
-	stats_latency_from_lat_test(&entry->stats, &entry->lat_test);
-	stats_latency_from_lat_test(&entry->tot, &entry->tot_lat_test);
+	for (uint32_t i = 0; i < LATENCY_NUMBER_OF_FLOWS; i++) {
+		if (entry->lat_test_flows.flows[i].tot_all_pkts) {
+			stats_latency_from_lat_test(&entry->stats[i], &entry->lat_test_flows.flows[i]);
+			stats_latency_from_lat_test(&entry->tot[i], &entry->tot_lat_test_flows.flows[i]);
+		}
+	}
 }
 
 void stats_latency_update(void)

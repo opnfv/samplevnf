@@ -20,6 +20,7 @@
 #include <rte_cycles.h>
 #include <rte_version.h>
 
+#include "defaults.h"
 #include "input.h"
 #include "cmd_parser.h"
 #include "commands.h"
@@ -1735,6 +1736,8 @@ static int parse_cmd_dp_core_stats(const char *str, struct input *input)
 static int parse_cmd_lat_stats(const char *str, struct input *input)
 {
 	unsigned lcores[RTE_MAX_LCORE], tasks[MAX_TASKS_PER_CORE], lcore_id, task_id, nb_cores, nb_tasks;
+	uint32_t flowid_min, flowid_max;
+	uint32_t compat = 0;
 
 	// This function either outputs a single line, in case of syntax error on the lists of cores and/or tasks
 	if (parse_cores_tasks(str, lcores, tasks, &nb_cores, &nb_tasks)) {
@@ -1744,6 +1747,33 @@ static int parse_cmd_lat_stats(const char *str, struct input *input)
 			input->reply(input, buf, strlen(buf));
 		}
 		return -1;
+	}
+
+	// Default and backward compatible is to use only core/task argument
+	if (!(str = strchr_skip_twice(str, ' '))) {
+		flowid_min = 0; /* Flow range is optional, defaults to first flow */
+		flowid_max = 0;
+		compat = 1;
+	} else {
+		if (sscanf(str, "%u %u", &flowid_min, &flowid_max) != 2) {
+			if (input->reply) {
+				char buf[128];
+				snprintf(buf, sizeof(buf), "error: invalid syntax: missing flowid_min or flowid_max\n");
+				input->reply(input, buf, strlen(buf));
+			}
+			return -1;
+		}
+		if (! ((flowid_min < LATENCY_NUMBER_OF_FLOWS) &&
+			(flowid_max < LATENCY_NUMBER_OF_FLOWS) &&
+			(flowid_min <= flowid_max))) {
+			if (input->reply) {
+				char buf[128];
+				snprintf(buf, sizeof(buf), "error: invalid syntax: %d and %d must be less than %d and %d less than %d\n",
+					flowid_min, flowid_max, LATENCY_NUMBER_OF_FLOWS, flowid_min, flowid_max);
+				input->reply(input, buf, strlen(buf));
+			}
+			return -1;
+		}
 	}
 
 	// or outputs (nb_cores * nb_tasks) lines, one line for each core/task pair:
@@ -1773,54 +1803,168 @@ static int parse_cmd_lat_stats(const char *str, struct input *input)
 				}
 				continue;
 			}
+			for (uint32_t flowid = flowid_min; flowid<=flowid_max; flowid++) {
+				struct stats_latency *stats = stats_latency_find(lcore_id, task_id, flowid);
+				struct stats_latency *tot = stats_latency_tot_find(lcore_id, task_id, flowid);
 
-			struct stats_latency *stats = stats_latency_find(lcore_id, task_id);
-			struct stats_latency *tot = stats_latency_tot_find(lcore_id, task_id);
-			if (!stats || !tot) {
+				if (!stats || !tot) {
+					if (input->reply) {
+						char buf[128];
+						snprintf(buf, sizeof(buf),
+							"error: core %u task %u flowid %u stats = %p tot = %p\n",
+							lcore_id, task_id, flowid, stats, tot);
+						input->reply(input, buf, strlen(buf));
+					} else {
+						plog_info("error: core %u task %u flowid %u stats = %p tot = %p\n",
+							lcore_id, task_id, flowid, stats, tot);
+					}
+					continue;
+				}
+				uint64_t last_tsc = stats_core_task_last_tsc(lcore_id, task_id);
+				uint64_t lat_min_usec = time_unit_to_usec(&stats->min.time);
+				uint64_t lat_max_usec = time_unit_to_usec(&stats->max.time);
+				uint64_t tot_lat_min_usec = time_unit_to_usec(&tot->min.time);
+				uint64_t tot_lat_max_usec = time_unit_to_usec(&tot->max.time);
+				uint64_t lat_avg_usec = time_unit_to_usec(&stats->avg.time);
+
+				uint64_t period_usec = time_unit_to_usec(&stats->period);
+				uint64_t lat_stddev = time_unit_to_usec(&stats->stddev.time);
+				uint64_t tot_lat = tsc_to_usec(stats->tot_lat);
+				long long int var_lat = tsc_to_usec_128(stats->var_lat);
+				uint64_t ipdv_lat = tsc_to_usec(stats->ipdv_lat);
+
 				if (input->reply) {
-					char buf[128];
+					// when using TCP socket, keep backward compatibility
+					char buf[256];
 					snprintf(buf, sizeof(buf),
-						 "error: core %u task %u stats = %p tot = %p\n",
-						 lcore_id, task_id, stats, tot);
+						"%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%u,%u\n",
+						lat_min_usec,
+						lat_max_usec,
+						lat_avg_usec,
+						tot_lat_min_usec,
+						tot_lat_max_usec,
+						last_tsc,
+						rte_get_tsc_hz(),
+						lcore_id,
+						task_id);
+					if (compat == 0)
+						snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
+							"%"PRIu64",%"PRIu64",%lld,%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64"\n",
+							lat_stddev,
+							tot_lat,
+							var_lat,
+							ipdv_lat,
+							stats->tot_packets,
+							tot->tot_packets,
+							period_usec);
+
 					input->reply(input, buf, strlen(buf));
 				} else {
-					plog_info("error: core %u task %u stats = %p tot = %p\n",
-						  lcore_id, task_id, stats, tot);
+					plog_info("core: %u, task: %u, min: %"PRIu64", max: %"PRIu64", avg: %"PRIu64", stddev:%"PRIu64", ipdv:%"PRIu64", pkts:%"PRIu64", min since reset: %"PRIu64", max since reset: %"PRIu64", pkts since reset: %"PRIu64"\n",
+						lcore_id,
+						task_id,
+						lat_min_usec,
+						lat_max_usec,
+						lat_avg_usec,
+						lat_stddev,
+						stats->ipdv_lat,
+						stats->tot_packets,
+						tot_lat_min_usec,
+						tot_lat_max_usec,
+						tot->tot_packets);
 				}
-				continue;
 			}
+		}
+	}
+	return 0;
+}
 
-			uint64_t last_tsc = stats_core_task_last_tsc(lcore_id, task_id);
-			uint64_t lat_min_usec = time_unit_to_usec(&stats->min.time);
-			uint64_t lat_max_usec = time_unit_to_usec(&stats->max.time);
-			uint64_t tot_lat_min_usec = time_unit_to_usec(&tot->min.time);
-			uint64_t tot_lat_max_usec = time_unit_to_usec(&tot->max.time);
-			uint64_t lat_avg_usec = time_unit_to_usec(&stats->avg.time);
+static int parse_cmd_flow_gen_stats(const char *str, struct input *input)
+{
+	unsigned lcore_id, task_id, flow_id_min, flow_id_max;
+	char buf[128] = {0 };
 
-			if (input->reply) {
-				char buf[128];
-				snprintf(buf, sizeof(buf),
-					 "%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%u,%u\n",
-					 lat_min_usec,
-					 lat_max_usec,
-					 lat_avg_usec,
-					 tot_lat_min_usec,
-					 tot_lat_max_usec,
-					 last_tsc,
-					 rte_get_tsc_hz(),
-					 lcore_id,
-					 task_id);
-				input->reply(input, buf, strlen(buf));
+	if (sscanf(str, "%u %u %u %u", &lcore_id, &task_id, &flow_id_min, &flow_id_max) != 4) {
+		return -1;
+	}
+	if (! ((flow_id_min < LATENCY_NUMBER_OF_FLOWS) &&
+	       (flow_id_max < LATENCY_NUMBER_OF_FLOWS) &&
+	       (flow_id_min <= flow_id_max))) {
+		plog_err("invalid flow_id: %d must be < %d; %d < %d; and %d <= %d\n", flow_id_min, LATENCY_NUMBER_OF_FLOWS, flow_id_max, LATENCY_NUMBER_OF_FLOWS, flow_id_min, flow_id_max);
+		return -1;
+	}
+
+	if (core_task_is_valid(lcore_id, task_id)) {
+		if (strcmp(lcore_cfg[lcore_id].targs[task_id].task_init->mode_str, "gen")) {
+			plog_err("Core %u task %u is not measuring lat flow generation stats\n", lcore_id, task_id);
+			return -1;
+		} else {
+			struct task_gen *task_gen;
+			struct lat_test_gen *lat_test_gen;
+			task_gen = (struct task_gen *)lcore_cfg[lcore_id].tasks_all[task_id];
+
+			for (uint32_t i = flow_id_min; i <= flow_id_max; i++) {
+				lat_test_gen = &task_gen->latency_flow_lt_gen[i];
+
+				uint64_t tot_pkts = lat_test_gen->tot_pkts;
+
+				if (input->reply) {
+					snprintf(buf, sizeof(buf), "%"PRIu32",%"PRIu64"\n",
+						 i, tot_pkts);
+					strncat(buf, "\n", sizeof(buf));
+					plog_dbg("%s", buf);
+					input->reply(input, buf, strlen(buf));
+				} else {
+					plog_info("latflowid: %"PRIu32", pkts: %"PRIu64"\n",
+						  i, tot_pkts);
+				}
 			}
-			else {
-				plog_info("core: %u, task: %u, min: %"PRIu64", max: %"PRIu64", avg: %"PRIu64", min since reset: %"PRIu64", max since reset: %"PRIu64"\n",
-					  lcore_id,
-					  task_id,
-					  lat_min_usec,
-					  lat_max_usec,
-					  lat_avg_usec,
-					  tot_lat_min_usec,
-					  tot_lat_max_usec);
+		}
+	}
+	return 0;
+}
+
+static int parse_cmd_flow_gen_hz_stats(const char *str, struct input *input)
+{
+	unsigned lcore_id, task_id, flow_id_min, flow_id_max;
+	char buf[128] = {0 };
+
+	if (sscanf(str, "%u %u %u %u", &lcore_id, &task_id, &flow_id_min, &flow_id_max) != 4) {
+		return -1;
+	}
+	if (! ((flow_id_min < LATENCY_NUMBER_OF_FLOWS) &&
+	       (flow_id_max < LATENCY_NUMBER_OF_FLOWS) &&
+	       (flow_id_min <= flow_id_max))) {
+		plog_err("invalid flow_id: %d must be < %d; %d < %d; and %d <= %d\n", flow_id_min, LATENCY_NUMBER_OF_FLOWS, flow_id_max, LATENCY_NUMBER_OF_FLOWS, flow_id_min, flow_id_max);
+		return -1;
+	}
+
+	if (core_task_is_valid(lcore_id, task_id)) {
+		if (strcmp(lcore_cfg[lcore_id].targs[task_id].task_init->mode_str, "gen")) {
+			plog_err("Core %u task %u is not measuring lat flow generation stats\n", lcore_id, task_id);
+			return -1;
+		} else {
+			struct task_gen *task_gen;
+			struct lat_test_gen *lat_test_gen;
+			task_gen = (struct task_gen *)lcore_cfg[lcore_id].tasks_all[task_id];
+
+			for (uint32_t i = flow_id_min; i <= flow_id_max; i++) {
+				lat_test_gen = &task_gen->latency_flow_lt_gen[i];
+
+				uint64_t tsc = rte_rdtsc();
+				uint64_t tsc_hz = rte_get_tsc_hz();
+				uint64_t tot_pkts = lat_test_gen->tot_pkts;
+
+				if (input->reply) {
+					snprintf(buf, sizeof(buf), "%"PRIu32",%"PRIu64",%"PRIu64",%"PRIu64"\n",
+						 i, tsc, tsc_hz, tot_pkts);
+					strncat(buf, "\n", sizeof(buf));
+					plog_dbg("%s", buf);
+					input->reply(input, buf, strlen(buf));
+				} else {
+					plog_info("latflowid: %"PRIu32", tsc: %"PRIu64", hz: %"PRIu64", pkts: %"PRIu64"\n",
+						  i, tsc, tsc_hz, tot_pkts);
+				}
 			}
 		}
 	}
@@ -1872,12 +2016,12 @@ static int parse_cmd_irq(const char *str, struct input *input)
 	return 0;
 }
 
-static void task_lat_show_latency_histogram(uint8_t lcore_id, uint8_t task_id, struct input *input)
+static void task_lat_show_latency_histogram(uint8_t lcore_id, uint8_t task_id, uint32_t flowid, struct input *input)
 {
 #ifdef LATENCY_HISTOGRAM
 	uint64_t *buckets;
 
-	stats_core_lat_histogram(lcore_id, task_id, &buckets);
+	stats_core_lat_histogram(lcore_id, task_id, flowid, &buckets);
 
 	if (buckets == NULL)
 		return;
@@ -1901,9 +2045,23 @@ static void task_lat_show_latency_histogram(uint8_t lcore_id, uint8_t task_id, s
 static int parse_cmd_lat_packets(const char *str, struct input *input)
 {
 	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
+	uint32_t flowid;
 
 	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
 		return -1;
+
+	if (!(str = strchr_skip_twice(str, ' '))) {
+		flowid = 0; /* Flow range is optional, defaults to first flow */
+	} else {
+		if (sscanf(str, "%u", &flowid) != 1) {
+			plog_err("Failed to read flow_id\n");
+			return -1;
+		}
+		if (flowid >= LATENCY_NUMBER_OF_FLOWS) {
+			plog_err("Invalid flow_id: %d (ust be < %d\n", flowid, LATENCY_NUMBER_OF_FLOWS);
+			return -1;
+		}
+	}
 
 	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
 		for (unsigned int i = 0; i < nb_cores; i++) {
@@ -1912,7 +2070,7 @@ static int parse_cmd_lat_packets(const char *str, struct input *input)
 				plog_err("Core %u task %u is not measuring latency\n", lcore_id, task_id);
 			}
 			else {
-				task_lat_show_latency_histogram(lcore_id, task_id, input);
+				task_lat_show_latency_histogram(lcore_id, task_id, flowid, input);
 			}
 		}
 	}
@@ -2089,10 +2247,12 @@ static struct cmd_str cmd_strings[] = {
 	{"tot stats", "", "Print total RX and TX packets", parse_cmd_tot_stats},
 	{"tot ierrors tot", "", "Print total number of ierrors since reset", parse_cmd_tot_ierrors_tot},
 	{"tot imissed tot", "", "Print total number of imissed since reset", parse_cmd_tot_imissed_tot},
-	{"lat stats", "<core id> <task id>", "Print min,max,avg latency as measured during last sampling interval", parse_cmd_lat_stats},
+	{"lat stats", "<core id> <task id> [<flow_min> <flow_max>]", "Print min,max,avg latency as measured during last sampling interval", parse_cmd_lat_stats},
 	{"irq stats", "<core id> <task id>", "Print irq related infos", parse_cmd_irq},
 	{"show irq buckets", "<core id> <task id>", "Print irq buckets", parse_cmd_show_irq_buckets},
-	{"lat packets", "<core id> <task id>", "Print the latency for each of the last set of packets", parse_cmd_lat_packets},
+	{"lat packets", "<core id> <task id>> [<flowid>]", "Print the latency for each of the last set of packets", parse_cmd_lat_packets},
+	{"flow gen stats", "<core id> <task id> <flow id min> <flow id max>", "Print for a generator task the per flow tot pkts stats as measured since previous reset cmd for flows from <flow id min> through <flow id max>", parse_cmd_flow_gen_stats},
+	{"flow gen hz stats", "<core id> <task id> <flow id min> <flow id max>", "Print for a generator task the per flow tsc, tsc hz, tot pkts stats as measured since previous reset cmd for flows from <flow id min> through <flow id max>", parse_cmd_flow_gen_hz_stats},
 	{"accuracy limit", "<core id> <task id> <nsec>", "Only consider latency of packets that were measured with an error no more than <nsec>", parse_cmd_accuracy},
 	{"core stats", "<core id> <task id>", "Print rx/tx/drop for task <task id> running on core <core id>", parse_cmd_core_stats},
 	{"dp core stats", "<core id> <task id>", "Print rx/tx/non_dp_rx/non_dp_tx/drop for task <task id> running on core <core id>", parse_cmd_dp_core_stats},

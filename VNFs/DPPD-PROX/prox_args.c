@@ -1044,6 +1044,12 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 	if (STR_EQ(str, "packet id pos")) {
 		return parse_int(&targ->packet_id_pos, pkey);
 	}
+	if (STR_EQ(str, "latency flow offset")) {
+		return parse_int(&targ->latency_flow_offset, pkey);
+	}
+	if (STR_EQ(str, "latency flow mask")) {
+		return parse_int(&targ->latency_flow_mask, pkey);
+	}
 	if (STR_EQ(str, "probability")) {
 		float probability;
 		int rc = parse_float(&probability, pkey);

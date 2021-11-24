@@ -21,6 +21,7 @@
 #include <math.h>
 #include <string.h>
 
+#include "defaults.h"
 #include "task_base.h"
 #include "clock.h"
 
@@ -38,20 +39,35 @@ struct lat_test {
 	uint64_t tot_lat;
 	unsigned __int128 var_lat; /* variance */
 	uint64_t accuracy_limit_tsc;
+	uint64_t start_tsc;
+	uint64_t  end_tsc;
 
 	uint64_t max_lat_error;
 	uint64_t min_lat_error;
 	uint64_t tot_lat_error;
 	unsigned __int128 var_lat_error;
 
+	/* Average inter-packet delay variation: AAIPDV=sum(abs(lat_curr-lat_prev))/Npkts */
+	uint64_t prev_lat;      /**< Latency of previous packet */
+	uint64_t ipdv_lat;      /**< sum(abs(lat_curr-lat_prev)), updated for each packet, not divided by Npkts */
+
 	uint64_t buckets[128];
 	uint64_t bucket_size;
 	uint64_t lost_packets;
 };
 
+struct lat_test_flows {
+	struct lat_test flows[LATENCY_NUMBER_OF_FLOWS];
+};
+
 static struct time_unit lat_test_get_accuracy_limit(struct lat_test *lat_test)
 {
 	return tsc_to_time_unit(lat_test->accuracy_limit_tsc);
+}
+
+static struct time_unit lat_test_get_period(struct lat_test *lat_test)
+{
+	return tsc_to_time_unit(lat_test->end_tsc-lat_test->start_tsc);
 }
 
 static struct time_unit_err lat_test_get_avg(struct lat_test *lat_test)
@@ -185,7 +201,7 @@ static void lat_test_copy(struct lat_test *dst, struct lat_test *src)
 
 struct task_lat;
 
-struct lat_test *task_lat_get_latency_meassurement(struct task_lat *task);
+struct lat_test_flows *task_lat_get_latency_meassurement(struct task_lat *task);
 void task_lat_use_other_latency_meassurement(struct task_lat *task);
 void task_lat_set_accuracy_limit(struct task_lat *task, uint32_t accuracy_limit_nsec);
 

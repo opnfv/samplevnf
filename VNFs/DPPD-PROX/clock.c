@@ -170,6 +170,15 @@ uint64_t tsc_to_usec(uint64_t tsc)
 	}
 }
 
+unsigned __int128 tsc_to_usec_128(unsigned __int128 tsc)
+{
+	if (tsc < (UINT64_MAX*((unsigned __int128)UINT64_MAX)) / 1000000) {
+		return tsc * 1000000 / rte_get_tsc_hz();
+	} else {
+		return tsc / (rte_get_tsc_hz() / 1000000);
+	}
+}
+
 uint64_t tsc_to_nsec(uint64_t tsc)
 {
 	if (tsc < UINT64_MAX / 1000000000) {

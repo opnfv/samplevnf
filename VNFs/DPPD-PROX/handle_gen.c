@@ -47,13 +47,6 @@
 #include "tx_pkt.h"
 #include "handle_master.h"
 
-struct pkt_template {
-	uint16_t len;
-	uint16_t l2_len;
-	uint16_t l3_len;
-	uint8_t  *buf;
-};
-
 #define MAX_TEMPLATE_INDEX	65536
 #define TEMPLATE_INDEX_MASK	(MAX_TEMPLATE_INDEX - 1)
 
@@ -80,49 +73,6 @@ struct task_gen_pcap {
 	uint64_t last_tsc;
 	uint64_t *proto_tsc;
 };
-
-struct task_gen {
-	struct task_base base;
-	uint64_t hz;
-	struct token_time token_time;
-	struct local_mbuf local_mbuf;
-	struct pkt_template *pkt_template; /* packet templates used at runtime */
-	uint64_t write_duration_estimate; /* how long it took previously to write the time stamps in the packets */
-	uint64_t earliest_tsc_next_pkt;
-	uint64_t new_rate_bps;
-	uint64_t pkt_queue_index;
-	uint32_t n_pkts; /* number of packets in pcap */
-	uint32_t pkt_idx; /* current packet from pcap */
-	uint32_t pkt_count; /* how many pakets to generate */
-	uint32_t max_frame_size;
-	uint32_t runtime_flags;
-	uint16_t lat_pos;
-	uint16_t packet_id_pos;
-	uint16_t accur_pos;
-	uint16_t sig_pos;
-	uint32_t sig;
-	uint8_t generator_id;
-	uint8_t n_rands; /* number of randoms */
-	uint8_t min_bulk_size;
-	uint8_t max_bulk_size;
-	uint8_t lat_enabled;
-	uint8_t runtime_checksum_needed;
-	struct {
-		struct random state;
-		uint32_t rand_mask; /* since the random vals are uniform, masks don't introduce bias  */
-		uint32_t fixed_bits; /* length of each random (max len = 4) */
-		uint16_t rand_offset; /* each random has an offset*/
-		uint8_t rand_len; /* # bytes to take from random (no bias introduced) */
-	} rand[64];
-	uint64_t accur[ACCURACY_WINDOW];
-	uint64_t pkt_tsc_offset[64];
-	struct pkt_template *pkt_template_orig; /* packet templates (from inline or from pcap) */
-	struct ether_addr  src_mac;
-	uint8_t flags;
-	uint8_t cksum_offload;
-	struct prox_port_cfg *port;
-	uint64_t *bytes_to_tsc;
-} __rte_cache_aligned;
 
 static inline uint8_t ipv4_get_hdr_len(struct ipv4_hdr *ip)
 {
@@ -624,6 +574,21 @@ static inline void register_all_ip_to_ctrl_plane(struct task_gen *task)
 	}
 }
 
+static void task_upd_latency_flow(struct task_gen *task, struct rte_mbuf **mbufs, uint8_t **pkt_hdr, uint32_t count)
+{
+	if (!task->lat_enabled)
+		return;
+
+	if (!(task->latency_flow_mask > 0))
+		return;
+
+	for (uint16_t i = 0; i < count; ++i) {
+		struct ether_hdr *hdr = (struct ether_hdr *)pkt_hdr[i];
+		uint32_t flowid = get_flowid_from_pkt((uint8_t*)hdr, task->latency_flow_mask, task->latency_flow_offset, task->latency_flow_shift);
+		task->latency_flow_lt_gen[flowid].tot_pkts++;
+	}
+}
+
 static int handle_gen_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts)
 {
 	struct task_gen *task = (struct task_gen *)tbase;
@@ -661,6 +626,7 @@ static int handle_gen_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 	task_gen_apply_all_random_fields(task, pkt_hdr, send_bulk);
 	task_gen_apply_all_accur_pos(task, new_pkts, pkt_hdr, send_bulk);
 	task_gen_apply_all_unique_id(task, new_pkts, pkt_hdr, send_bulk);
+	task_upd_latency_flow(task, new_pkts, pkt_hdr, send_bulk);
 
 	uint64_t tsc_before_tx;
 
@@ -1297,6 +1263,14 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 	task->pkt_count = -1;
 	task->lat_enabled = targ->lat_enabled;
 	task->runtime_flags = targ->runtime_flags;
+
+	task->latency_flow_offset = targ->latency_flow_offset;
+	task->latency_flow_mask = targ->latency_flow_mask;
+	if (task->latency_flow_mask > 0) {
+		task->latency_flow_shift = rte_bsf32(task->latency_flow_mask);
+		plog_info("\tlatency_flow_offset=%u, latency_flow_mask=%x, latency_flow_shift=%u\n",
+		task->latency_flow_offset, task->latency_flow_mask, task->latency_flow_shift);
+	}
 	PROX_PANIC((task->lat_pos || task->accur_pos) && !task->lat_enabled, "lat not enabled by lat pos or accur pos configured\n");
 
 	task->generator_id = targ->generator_id;
