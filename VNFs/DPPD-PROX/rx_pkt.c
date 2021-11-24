@@ -112,7 +112,6 @@ static uint16_t rx_pkt_hw_param(struct task_base *tbase, struct rte_mbuf ***mbuf
 	uint16_t nb_rx;
 	int skip = 0;
 
-	START_EMPTY_MEASSURE();
 	*mbufs_ptr = tbase->ws_mbuf->mbuf[0] +
 		(RTE_ALIGN_CEIL(tbase->ws_mbuf->idx[0].prod, 2) & WS_MBUF_MASK);
 
@@ -150,7 +149,6 @@ static uint16_t rx_pkt_hw_param(struct task_base *tbase, struct rte_mbuf ***mbuf
 		TASK_STATS_ADD_RX(&tbase->aux->stats, nb_rx);
 		return nb_rx - skip;
 	}
-	TASK_STATS_ADD_IDLE(&tbase->aux->stats, rte_rdtsc() - cur_tsc);
 	return 0;
 }
 
@@ -159,7 +157,6 @@ static inline uint16_t rx_pkt_hw1_param(struct task_base *tbase, struct rte_mbuf
 	uint16_t nb_rx, n;
 	int skip = 0;
 
-	START_EMPTY_MEASSURE();
 	*mbufs_ptr = tbase->ws_mbuf->mbuf[0] +
 		(RTE_ALIGN_CEIL(tbase->ws_mbuf->idx[0].prod, 2) & WS_MBUF_MASK);
 
@@ -206,7 +203,6 @@ static inline uint16_t rx_pkt_hw1_param(struct task_base *tbase, struct rte_mbuf
 		TASK_STATS_ADD_RX(&tbase->aux->stats, nb_rx);
 		return nb_rx - skip;
 	}
-	TASK_STATS_ADD_IDLE(&tbase->aux->stats, rte_rdtsc() - cur_tsc);
 	return 0;
 }
 
@@ -291,7 +287,6 @@ uint16_t ring_deq(struct rte_ring *r, struct rte_mbuf **mbufs)
 
 uint16_t rx_pkt_sw(struct task_base *tbase, struct rte_mbuf ***mbufs)
 {
-	START_EMPTY_MEASSURE();
 	*mbufs = tbase->ws_mbuf->mbuf[0] + (tbase->ws_mbuf->idx[0].prod & WS_MBUF_MASK);
 	uint8_t lr = tbase->rx_params_sw.last_read_ring;
 	uint16_t nb_rx;
@@ -308,7 +303,6 @@ uint16_t rx_pkt_sw(struct task_base *tbase, struct rte_mbuf ***mbufs)
 		return nb_rx;
 	}
 	else {
-		TASK_STATS_ADD_IDLE(&tbase->aux->stats, rte_rdtsc() - cur_tsc);
 		return 0;
 	}
 }
@@ -317,7 +311,6 @@ uint16_t rx_pkt_sw(struct task_base *tbase, struct rte_mbuf ***mbufs)
    rings (can only be used if nb_rxring is a power of 2). */
 uint16_t rx_pkt_sw_pow2(struct task_base *tbase, struct rte_mbuf ***mbufs)
 {
-	START_EMPTY_MEASSURE();
 	*mbufs = tbase->ws_mbuf->mbuf[0] + (tbase->ws_mbuf->idx[0].prod & WS_MBUF_MASK);
 	uint8_t lr = tbase->rx_params_sw.last_read_ring;
 	uint16_t nb_rx;
@@ -334,14 +327,12 @@ uint16_t rx_pkt_sw_pow2(struct task_base *tbase, struct rte_mbuf ***mbufs)
 		return nb_rx;
 	}
 	else {
-		TASK_STATS_ADD_IDLE(&tbase->aux->stats, rte_rdtsc() - cur_tsc);
 		return 0;
 	}
 }
 
 uint16_t rx_pkt_self(struct task_base *tbase, struct rte_mbuf ***mbufs)
 {
-	START_EMPTY_MEASSURE();
 	uint16_t nb_rx = tbase->ws_mbuf->idx[0].nb_rx;
 	if (nb_rx) {
 		tbase->ws_mbuf->idx[0].nb_rx = 0;
@@ -350,7 +341,6 @@ uint16_t rx_pkt_self(struct task_base *tbase, struct rte_mbuf ***mbufs)
 		return nb_rx;
 	}
 	else {
-		TASK_STATS_ADD_IDLE(&tbase->aux->stats, rte_rdtsc() - cur_tsc);
 		return 0;
 	}
 }
@@ -370,7 +360,6 @@ uint16_t rx_pkt_dummy(__attribute__((unused)) struct task_base *tbase,
    function above can be used to save cycles. */
 uint16_t rx_pkt_sw1(struct task_base *tbase, struct rte_mbuf ***mbufs)
 {
-	START_EMPTY_MEASSURE();
 	*mbufs = tbase->ws_mbuf->mbuf[0] + (tbase->ws_mbuf->idx[0].prod & WS_MBUF_MASK);
 	uint16_t nb_rx = ring_deq(tbase->rx_params_sw1.rx_ring, *mbufs);
 
@@ -379,7 +368,6 @@ uint16_t rx_pkt_sw1(struct task_base *tbase, struct rte_mbuf ***mbufs)
 		return nb_rx;
 	}
 	else {
-		TASK_STATS_ADD_IDLE(&tbase->aux->stats, rte_rdtsc() - cur_tsc);
 		return 0;
 	}
 }

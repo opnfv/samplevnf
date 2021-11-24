@@ -103,7 +103,6 @@ int tx_pkt_l3(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts,
 static inline int txhw_drop(const struct port_queue *port_queue, struct rte_mbuf **mbufs, uint16_t n_pkts, struct task_base *tbase)
 {
 	uint16_t ntx;
-	int ret;
 
 	/* TX vector mode can't transmit more than 32 packets */
 	if (n_pkts > MAX_PMD_TX) {
@@ -114,9 +113,10 @@ static inline int txhw_drop(const struct port_queue *port_queue, struct rte_mbuf
 	}
 	TASK_STATS_ADD_TX(&tbase->aux->stats, ntx);
 
-	ret =  n_pkts - ntx;
 	if (ntx < n_pkts) {
+		int ret =  n_pkts - ntx;
 		plog_dbg("Failed to send %d packets from %p\n", ret, mbufs[0]);
+		tbase->flags |= TASK_BUSY;
 		TASK_STATS_ADD_DROP_TX_FAIL(&tbase->aux->stats, n_pkts - ntx);
 		if (tbase->tx_pkt == tx_pkt_bw) {
 			uint32_t drop_bytes = 0;
@@ -132,7 +132,7 @@ static inline int txhw_drop(const struct port_queue *port_queue, struct rte_mbuf
 			} while (ntx < n_pkts);
 		}
 	}
-	return ret;
+	return ntx;
 }
 
 static inline int txhw_no_drop(const struct port_queue *port_queue, struct rte_mbuf **mbufs, uint16_t n_pkts, struct task_base *tbase)
@@ -147,7 +147,8 @@ static inline int txhw_no_drop(const struct port_queue *port_queue, struct rte_m
 		n_pkts -= ret;
 	}
 	while (n_pkts);
-	return (n != ret);
+	tbase->flags |= ((n != ret) << TASK_BUSY_SHIFT);
+	return n;
 }
 
 static inline int ring_enq_drop(struct rte_ring *ring, struct rte_mbuf *const *mbufs, uint16_t n_pkts, __attribute__((unused)) struct task_base *tbase)
@@ -160,6 +161,7 @@ static inline int ring_enq_drop(struct rte_ring *ring, struct rte_mbuf *const *m
 #else
 	if (unlikely(rte_ring_enqueue_bulk(ring, (void *const *)mbufs, n_pkts, NULL) == 0)) {
 #endif
+		tbase->flags |= TASK_BUSY;
 		ret = n_pkts;
 		if (tbase->tx_pkt == tx_pkt_bw) {
 			uint32_t drop_bytes = 0;
@@ -175,11 +177,12 @@ static inline int ring_enq_drop(struct rte_ring *ring, struct rte_mbuf *const *m
 				rte_pktmbuf_free(mbufs[i]);
 			TASK_STATS_ADD_DROP_TX_FAIL(&tbase->aux->stats, n_pkts);
 		}
+		return 0;
 	}
 	else {
 		TASK_STATS_ADD_TX(&tbase->aux->stats, n_pkts);
+		return n_pkts;
 	}
-	return ret;
 }
 
 static inline int ring_enq_no_drop(struct rte_ring *ring, struct rte_mbuf *const *mbufs, uint16_t n_pkts, __attribute__((unused)) struct task_base *tbase)
@@ -193,7 +196,8 @@ static inline int ring_enq_no_drop(struct rte_ring *ring, struct rte_mbuf *const
 		i++;
 	};
 	TASK_STATS_ADD_TX(&tbase->aux->stats, n_pkts);
-	return (i != 0);
+	tbase->flags |= ((i != 0) << TASK_BUSY_SHIFT);
+	return n_pkts;
 }
 
 void flush_queues_hw(struct task_base *tbase)
@@ -398,8 +402,7 @@ int tx_pkt_never_discard_hw1_thrpt_opt(struct task_base *tbase, struct rte_mbuf 
    i.e. when the task needs to transmit both to hw and sw */
 int tx_pkt_no_drop_never_discard_hw1_no_pointer(struct task_base *tbase, struct rte_mbuf **mbufs, const uint16_t n_pkts, __attribute__((unused)) uint8_t *out)
 {
-	txhw_no_drop(&tbase->tx_params_hw_sw.tx_port_queue, mbufs, n_pkts, tbase);
-	return 0;
+	return txhw_no_drop(&tbase->tx_params_hw_sw.tx_port_queue, mbufs, n_pkts, tbase);
 }
 
 int tx_pkt_no_drop_never_discard_sw1(struct task_base *tbase, struct rte_mbuf **mbufs, const uint16_t n_pkts, __attribute__((unused)) uint8_t *out)
@@ -471,7 +474,7 @@ int tx_pkt_hw1(struct task_base *tbase, struct rte_mbuf **mbufs, const uint16_t 
 
 	if (likely(n_kept))
 		return txhw_drop(&tbase->tx_params_hw.tx_port_queue[0], mbufs, n_kept, tbase);
-	return n_pkts;
+	return 0;
 }
 
 int tx_pkt_sw1(struct task_base *tbase, struct rte_mbuf **mbufs, const uint16_t n_pkts, uint8_t *out)
@@ -493,7 +496,7 @@ int tx_pkt_self(struct task_base *tbase, struct rte_mbuf **mbufs, const uint16_t
 	for (uint16_t i = 0; i < n_kept; ++i) {
 		tx_mbuf[i] = mbufs[i];
 	}
-	return 0;
+	return n_kept;
 }
 
 int tx_pkt_never_discard_self(struct task_base *tbase, struct rte_mbuf **mbufs, const uint16_t n_pkts, __attribute__((unused)) uint8_t *out)
@@ -504,7 +507,7 @@ int tx_pkt_never_discard_self(struct task_base *tbase, struct rte_mbuf **mbufs, 
 	for (uint16_t i = 0; i < n_pkts; ++i) {
 		tx_mbuf[i] = mbufs[i];
 	}
-	return 0;
+	return n_pkts;
 }
 
 int tx_pkt_no_drop_hw(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts, uint8_t *out)

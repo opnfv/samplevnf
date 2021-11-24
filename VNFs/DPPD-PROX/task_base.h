@@ -36,6 +36,8 @@
 #define TASK_FP_HANDLE_ARP             0x0040
 #define TASK_TX_CRC                    0x0080
 #define TASK_L3                        0x0100
+#define TASK_BUSY                      0x0200
+#define TASK_BUSY_SHIFT                9
 
 // flag_features 64 bits
 #define TASK_FEATURE_ROUTING           0x0001

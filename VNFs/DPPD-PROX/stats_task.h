@@ -41,18 +41,45 @@ struct task_rt_stats {
 	uint32_t	drop_tx_fail;
 	uint32_t	drop_discard;
 	uint32_t        drop_handled;
-	uint32_t	idle_cycles;
 	uint64_t        rx_bytes;
 	uint64_t        tx_bytes;
 	uint64_t        drop_bytes;
 	uint64_t        rx_non_dp;
 	uint64_t        tx_non_dp;
+	// Timeslice related stats
+	uint64_t tsc;           /* Cycles when we entered current timeslice */
+	uint64_t busy_cycles;   /* Clock cycles we spent doing real work */
+	uint64_t idle_cycles;   /* Clock cycles we where no real work was done */
+	int      currently_busy;/* True when last iteration had real work */
 } __attribute__((packed)) __rte_cache_aligned;
 
 #ifdef PROX_STATS
-#define TASK_STATS_ADD_IDLE(stats, cycles) do {				\
-		(stats)->idle_cycles += (cycles) + rdtsc_overhead_stats; \
-	} while(0)							\
+#define LCORE_TIMESLICE_INIT(_stats, _tsc) do {                    \
+		(_stats)->tsc = _tsc;                              \
+		(_stats)->busy_cycles = (_stats)->idle_cycles = 0; \
+		(_stats)->currently_busy = 0;                      \
+	} while (0)
+
+#define LCORE_TIMESLICE_SYNC(_stats, _tsc) do {                        \
+		if ((_stats)->currently_busy)                          \
+			(_stats)->busy_cycles += (_tsc-(_stats)->tsc); \
+		else                                                   \
+			(_stats)->idle_cycles += (_tsc-(_stats)->tsc); \
+		(_stats)->tsc = _tsc;                                  \
+	} while (0)
+#define LCORE_TIMESLICE_BUSY(_stats, _tsc) do {                        \
+		LCORE_TIMESLICE_SYNC(_stats, _tsc);                    \
+		(_stats)->currently_busy = 1;                          \
+	} while (0)
+#define LCORE_TIMESLICE_IDLE(_stats, _tsc) do {                        \
+		LCORE_TIMESLICE_SYNC(_stats, _tsc);                    \
+		(_stats)->currently_busy = 0;                          \
+	} while (0)
+/* Return ratio between busy cycles and total cycles, i.e. 'load' indication.
+ * Value is multiplied by 100, i.e. range is 0 through 10000.
+ */
+#define LCORE_TIMESLICE_LOAD(_stats)   (((_stats)->busy_cycles+(_stats)->idle_cycles) > 0 ? _LCORE_TIMESLICE_LOAD(_stats) : 0)
+#define _LCORE_TIMESLICE_LOAD(_stats)  ((10000*(_stats)->busy_cycles)/((_stats)->busy_cycles+(_stats)->idle_cycles))
 
 #define TASK_STATS_ADD_TX(stats, ntx) do {	\
 		(stats)->tx_pkt_count += ntx;	\
@@ -94,9 +121,7 @@ struct task_rt_stats {
 		(stats)->drop_bytes += bytes;		\
 	} while (0)					\
 
-#define START_EMPTY_MEASSURE() uint64_t cur_tsc = rte_rdtsc();
 #else
-#define TASK_STATS_ADD_IDLE(stats, cycles) do {} while(0)
 #define TASK_STATS_ADD_TX(stats, ntx)  do {} while(0)
 #define TASK_STATS_ADD_DROP_TX_FAIL(stats, ntx)  do {} while(0)
 #define TASK_STATS_ADD_DROP_HANDLED(stats, ntx)  do {} while(0)
@@ -105,7 +130,9 @@ struct task_rt_stats {
 #define TASK_STATS_ADD_RX_BYTES(stats, bytes)  do {} while(0)
 #define TASK_STATS_ADD_TX_BYTES(stats, bytes)  do {} while(0)
 #define TASK_STATS_ADD_DROP_BYTES(stats, bytes) do {} while(0)
-#define START_EMPTY_MEASSURE()  do {} while(0)
+#define LCORE_TIMESLICE_INIT(_stats, _tsc)
+#define LCORE_TIMESLICE_BUSY(_stats, _tsc)
+#define LCORE_TIMESLICE_IDLE(_stats, _tsc)
 #endif
 
 struct task_stats_sample {
@@ -115,7 +142,8 @@ struct task_stats_sample {
 	uint32_t drop_discard;
 	uint32_t drop_handled;
 	uint32_t rx_pkt_count;
-	uint32_t empty_cycles;
+	uint32_t idle_cycles;
+	uint32_t busy_cycles;
 	uint64_t rx_bytes;
 	uint64_t tx_bytes;
 	uint64_t drop_bytes;

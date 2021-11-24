@@ -224,18 +224,15 @@ static void display_core_task_stats_per_sec(const struct task_stats_disp *t, str
 	/* delta_t in units of clock ticks */
 	uint64_t delta_t = last->tsc - prev->tsc;
 
-	uint64_t empty_cycles = last->empty_cycles - prev->empty_cycles;
-
-	if (empty_cycles > delta_t) {
-		empty_cycles = 10000;
-	}
-	else {
-		empty_cycles = empty_cycles * 10000 / delta_t;
-	}
+	uint64_t idle_cycles = last->idle_cycles - prev->idle_cycles;
+	uint64_t busy_cycles = last->busy_cycles - prev->busy_cycles;
+	uint64_t load = 0;
 
 	/* empty_cycles has 2 digits after point, (usefull when only a very small idle time) */
 
-	display_column_print(idle_col, row, "%3lu.%02lu", empty_cycles / 100, empty_cycles % 100);
+	if (idle_cycles + busy_cycles)
+		load = (10000 * busy_cycles) / (idle_cycles + busy_cycles);
+	display_column_print(idle_col, row, "%3lu.%02lu", load / 100, load % 100);
 
 	// Display per second statistics in Kpps unit
 	delta_t *= state->pps_unit;

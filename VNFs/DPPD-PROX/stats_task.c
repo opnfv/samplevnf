@@ -142,7 +142,8 @@ void stats_task_update(void)
 		last->drop_discard = stats->drop_discard;
 		last->drop_handled = stats->drop_handled;
 		last->rx_pkt_count = stats->rx_pkt_count;
-		last->empty_cycles = stats->idle_cycles;
+		last->idle_cycles = stats->idle_cycles;
+		last->busy_cycles = stats->busy_cycles;
 		last->tx_bytes     = stats->tx_bytes;
 		last->rx_bytes     = stats->rx_bytes;
 		last->drop_bytes   = stats->drop_bytes;

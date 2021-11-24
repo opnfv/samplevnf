@@ -19,6 +19,7 @@
 
 #include "task_init.h"
 #include "stats.h"
+#include "stats_core.h"
 
 enum lconf_msg_type {
 	LCONF_MSG_STOP,

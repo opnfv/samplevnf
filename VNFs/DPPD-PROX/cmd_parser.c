@@ -1779,6 +1779,44 @@ static int parse_cmd_dp_core_stats(const char *str, struct input *input)
 	return 0;
 }
 
+static int parse_cmd_core_loadstats(const char *str, struct input *input)
+{
+	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
+	struct lcore_cfg *lconf;
+	struct task_base *tbase;
+	struct task_rt_stats  *stats;
+
+	if (parse_core_task(str, lcores, &task_id, &nb_cores))
+		return -1;
+
+	if (!cores_task_are_valid(lcores, task_id, nb_cores)) {
+		plog_err("Invalid core or task\n");
+		return -1;
+	}
+
+	for (unsigned int i = 0; i < nb_cores; i++) {
+		lcore_id = lcores[i];
+		lconf = &lcore_cfg[lcore_id];
+		tbase = lconf->tasks_all[task_id];
+		stats = &tbase->aux->stats;
+
+		if (input->reply) {
+			char buf[128];
+			snprintf(buf, sizeof(buf),
+				 "%d,%d,%"PRIu64",%"PRIu64";\n",
+				 lcore_id, task_id, stats->busy_cycles, stats->idle_cycles);
+			input->reply(input, buf, strlen(buf));
+		}
+		else {
+			uint32_t load = LCORE_TIMESLICE_LOAD(stats);
+			plog_info("CORE: %d, TASK:%d, BUSY: %"PRIu64", IDLE: %"PRIu64", LOAD: %u.%02u%%\n",
+				  lcore_id, task_id, stats->busy_cycles, stats->idle_cycles,
+				  load/100, load%100);
+		}
+	}
+	return 0;
+}
+
 static int parse_cmd_lat_stats(const char *str, struct input *input)
 {
 	unsigned lcores[RTE_MAX_LCORE], tasks[MAX_TASKS_PER_CORE], lcore_id, task_id, nb_cores, nb_tasks;
@@ -2309,6 +2347,7 @@ static struct cmd_str cmd_strings[] = {
 	{"dp core stats", "<core id> <task id>", "Print rx/tx/non_dp_rx/non_dp_tx/drop for task <task id> running on core <core id>", parse_cmd_dp_core_stats},
 	{"port_stats", "<port id>", "Print rate for no_mbufs, ierrors + imissed, rx_bytes, tx_bytes, rx_pkts, tx_pkts; totals for RX, TX, no_mbufs, ierrors + imissed for port <port id>", parse_cmd_port_stats},
 	{"multi port stats", "<port list>", "Get stats for multiple ports, semi-colon separated: port id, total for rx_pkts, tx_pkts, no_mbufs, ierrors + imissed, last_tsc", parse_cmd_multi_port_stats},
+	{"core loadstats", "<core id><task_id>", "Print load statistics for core <core id> task<task_id>", parse_cmd_core_loadstats},
 	{"read reg", "", "Read register", parse_cmd_read_reg},
 	{"write reg", "", "Read register", parse_cmd_write_reg},
 	{"set vlan offload", "", "Set Vlan offload", parse_cmd_set_vlan_offload},

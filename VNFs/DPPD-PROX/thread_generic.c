@@ -86,7 +86,6 @@ static uint64_t tsc_ctrl(struct lcore_cfg *lconf)
 int thread_generic(struct lcore_cfg *lconf)
 {
 	struct task_base *tasks[MAX_TASKS_PER_CORE];
-	int next[MAX_TASKS_PER_CORE] = {0};
 	struct rte_mbuf **mbufs;
 	uint64_t cur_tsc = rte_rdtsc();
 	uint8_t zero_rx[MAX_TASKS_PER_CORE] = {0};
@@ -127,6 +126,12 @@ int thread_generic(struct lcore_cfg *lconf)
 			}
 		}
 	}
+
+	for (uint8_t task_id = 0; task_id < n_tasks_run; ++task_id) {
+		struct task_base *t = lconf->tasks_run[task_id];
+		LCORE_TIMESLICE_INIT(&t->aux->stats, rte_rdtsc());
+	}
+
 	struct tsc_task next_tsc = tsc_tasks[0];
 
 	for (;;) {
@@ -180,13 +185,19 @@ int thread_generic(struct lcore_cfg *lconf)
 			// Do not skip a task receiving packets from an optimized ring
 			// as the transmitting task expects such a receiving task to always run and consume
 			// the transmitted packets.
-			if (unlikely(next[task_id] && (targ->tx_opt_ring_task == NULL))) {
+			if (unlikely((t->flags & TASK_BUSY) && (targ->tx_opt_ring_task == NULL))) {
 				// plogx_info("task %d is too busy\n", task_id);
-				next[task_id] = 0;
+				t->flags |= ~TASK_BUSY;
 			} else {
 				nb_rx = t->rx_pkt(t, &mbufs);
 				if (likely(nb_rx || zero_rx[task_id])) {
-					next[task_id] = t->handle_bulk(t, mbufs, nb_rx);
+					int nb_tx = t->handle_bulk(t, mbufs, nb_rx);
+					if (likely(nb_rx || nb_tx))
+						LCORE_TIMESLICE_BUSY(&t->aux->stats, cur_tsc);
+					else
+						LCORE_TIMESLICE_IDLE(&t->aux->stats, cur_tsc);
+				} else {
+					LCORE_TIMESLICE_IDLE(&t->aux->stats, cur_tsc);
 				}
 			}
 

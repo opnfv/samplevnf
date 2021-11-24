@@ -33,6 +33,11 @@ int thread_nop(struct lcore_cfg *lconf)
 	uint64_t drain_tsc = cur_tsc;
 	uint8_t n_tasks_run = 0;
 
+	for (uint8_t task_id = 0; task_id < n_tasks_run; ++task_id) {
+		struct task_base *t = tasks[task_id];
+		LCORE_TIMESLICE_INIT(&t->aux->stats, rte_rdtsc());
+	}
+
 	for (;;) {
 		cur_tsc = rte_rdtsc();
 		if (cur_tsc > term_tsc) {
@@ -58,6 +63,9 @@ int thread_nop(struct lcore_cfg *lconf)
 
 			if (likely(nb_rx)) {
 				handle_nop_bulk(t, mbufs, nb_rx);
+				LCORE_TIMESLICE_BUSY(&t->aux->stats, cur_tsc);
+			} else {
+				LCORE_TIMESLICE_IDLE(&t->aux->stats, cur_tsc);
 			}
 		}
 	}
