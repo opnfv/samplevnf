@@ -86,6 +86,11 @@ struct rx_pkt_meta_data {
 	uint32_t bytes_after_in_bulk;
 };
 
+struct loss_buffer {
+	uint32_t packet_id;
+	uint32_t n;
+};
+
 struct task_lat {
 	struct task_base base;
 	uint64_t limit;
@@ -111,11 +116,14 @@ struct task_lat {
 	struct rx_pkt_meta_data *rx_pkt_meta;
 	// Following fields are only used when starting or stopping, not in general runtime
 	uint64_t *prev_tx_packet_index;
+	FILE *fp_loss;
 	FILE *fp_rx;
 	FILE *fp_tx;
 	struct prox_port_cfg *port;
 	uint64_t *bytes_to_tsc;
 	uint64_t *previous_packet;
+	struct loss_buffer loss_buffer[4096];
+	uint32_t loss_id;
 };
 /* This function calculate the difference between rx and tx_time
  * Both values are uint32_t (see handle_lat_bulk)
@@ -402,6 +410,12 @@ static void lat_stop(struct task_base *tbase)
 		task_lat_reset_eld(task);
 		memset(task->previous_packet, 0, sizeof(task->previous_packet) * task->generator_count);
 	}
+	if (task->loss_id) {
+		for (uint i = 0; i < task->loss_id; i++) {
+			fprintf(task->fp_loss, "packet %d: %d\n", task->loss_buffer[i].packet_id, task->loss_buffer[i].n);
+		}
+	}
+	task->lat_test->lost_packets = 0;
 	if (task->latency_buffer)
 		lat_write_latency_to_file(task);
 }
@@ -637,7 +651,14 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 			}
 			lat_test_check_ordering(task, task->lat_test, packet_id, generator_id);
 			lat_test_check_duplicate(task, task->lat_test, packet_id, generator_id);
-			lat_test_add_lost(task->lat_test, task_lat_early_loss_detect(task, packet_id, generator_id));
+			uint32_t loss =  task_lat_early_loss_detect(task, packet_id, generator_id);
+			if (loss) {
+				lat_test_add_lost(task->lat_test, loss);
+				if (task->loss_id < 4096) {
+					task->loss_buffer[task->loss_id].packet_id = packet_id;
+					task->loss_buffer[task->loss_id++].n = loss;
+				}
+			}
 		} else {
 			generator_id = 0;
 			packet_id = task->rx_packet_index;
@@ -779,6 +800,11 @@ static void init_task_lat(struct task_base *tbase, struct task_args *targ)
 	if (task->latency_buffer_size) {
 		init_task_lat_latency_buffer(task, targ->lconf->id);
 	}
+
+	char name[256];
+	sprintf(name, "loss_%u.txt", targ->lconf->id);
+	task->fp_loss = fopen(name, "w+");
+	PROX_PANIC(task->fp_loss == NULL, "Failed to open %s\n", name);
 
 	if (targ->bucket_size < DEFAULT_BUCKET_SIZE) {
 		targ->bucket_size = DEFAULT_BUCKET_SIZE;
