@@ -259,6 +259,7 @@ struct task_args {
 	uint32_t        multiplier;
 	uint32_t        mirror_size;
 	uint32_t store_max;
+	uint32_t loss_buffer_size;
 };
 
 /* Return the first port that is reachable through the task. If the

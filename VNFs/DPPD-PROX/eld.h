@@ -17,7 +17,7 @@
 #ifndef _ELD_H_
 #define _ELD_H_
 
-#define PACKET_QUEUE_BITS      14
+#define PACKET_QUEUE_BITS      20
 #define PACKET_QUEUE_SIZE      (1 << PACKET_QUEUE_BITS)
 #define PACKET_QUEUE_MASK      (PACKET_QUEUE_SIZE - 1)
 

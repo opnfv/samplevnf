@@ -1144,6 +1144,9 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 	if (STR_EQ(str, "latency buffer size")) {
 		return parse_int(&targ->latency_buffer_size, pkey);
 	}
+	if (STR_EQ(str, "loss buffer size")) {
+		return parse_int(&targ->loss_buffer_size, pkey);
+	}
 	if (STR_EQ(str, "accuracy pos")) {
 		return parse_int(&targ->accur_pos, pkey);
 	}
