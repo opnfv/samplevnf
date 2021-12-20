@@ -116,8 +116,9 @@ class FlowSizeTest(RapidTest):
         self.set_background_speed(self.background_machines, WARMUPSPEED)
         self.gen_machine.set_udp_packet_size(imix)
         self.set_background_size(self.background_machines, imix)
-        _ = self.gen_machine.set_flows(FLOWSIZE)
-        self.set_background_flows(self.background_machines, FLOWSIZE)
+        if FLOWSIZE:
+            _ = self.gen_machine.set_flows(FLOWSIZE)
+            self.set_background_flows(self.background_machines, FLOWSIZE)
         self.gen_machine.start()
         self.start_background_traffic(self.background_machines)
         time.sleep(WARMUPTIME)
@@ -163,8 +164,9 @@ class FlowSizeTest(RapidTest):
                 self.gen_machine.reset_stats()
                 if self.sut_machine:
                     self.sut_machine.reset_stats()
-                flow_number = self.gen_machine.set_flows(flow_number)
-                self.set_background_flows(self.background_machines, flow_number)
+                if flow_number != 0:
+                    flow_number = self.gen_machine.set_flows(flow_number)
+                    self.set_background_flows(self.background_machines, flow_number)
                 end_data['speed'] = None
                 speed = self.get_start_speed_and_init(size)
                 while True:
