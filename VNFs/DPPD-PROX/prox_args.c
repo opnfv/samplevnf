@@ -920,6 +920,9 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 		return parse_flag(&targ->runtime_flags, TASK_FP_HANDLE_ARP, pkey);
 	}
 
+	if (STR_EQ(str, "do not forward geneve")) {
+		return parse_flag(&targ->runtime_flags, TASK_DO_NOT_FWD_GENEVE, pkey);
+	}
 	/* Using tx port name, only a _single_ port can be assigned to a task. */
 	if (STR_EQ(str, "tx port")) {
 		if (targ->nb_txports > 0) {

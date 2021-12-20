@@ -42,6 +42,7 @@ struct packet {
 struct task_swap {
 	struct task_base base;
 	struct rte_mempool *igmp_pool;
+	uint32_t flags;
 	uint32_t runtime_flags;
 	uint32_t igmp_address;
 	uint8_t src_dst_mac[12];
@@ -61,28 +62,30 @@ struct task_swap {
 #define IGMP_MBUF_SIZE 		2048
 #define NB_CACHE_IGMP_MBUF  	256
 
+#define GENEVE_PORT		0xc117 // in be
+
 static void write_src_and_dst_mac(struct task_swap *task, struct rte_mbuf *mbuf)
 {
 	prox_rte_ether_hdr *hdr;
 	prox_rte_ether_addr mac;
 
-	if (unlikely((task->runtime_flags & (TASK_ARG_DST_MAC_SET|TASK_ARG_SRC_MAC_SET)) == (TASK_ARG_DST_MAC_SET|TASK_ARG_SRC_MAC_SET))) {
+	if (unlikely((task->flags & (TASK_ARG_DST_MAC_SET|TASK_ARG_SRC_MAC_SET)) == (TASK_ARG_DST_MAC_SET|TASK_ARG_SRC_MAC_SET))) {
 		/* Source and Destination mac hardcoded */
 		hdr = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
               	rte_memcpy(hdr, task->src_dst_mac, sizeof(task->src_dst_mac));
 	} else {
 		hdr = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
-		if (unlikely((task->runtime_flags & TASK_ARG_SRC_MAC_SET) == 0)) {
+		if (unlikely((task->flags & TASK_ARG_SRC_MAC_SET) == 0)) {
 			/* dst mac will be used as src mac */
 			prox_rte_ether_addr_copy(&hdr->d_addr, &mac);
 		}
 
-		if (unlikely(task->runtime_flags & TASK_ARG_DST_MAC_SET))
+		if (unlikely(task->flags & TASK_ARG_DST_MAC_SET))
 			prox_rte_ether_addr_copy((prox_rte_ether_addr *)&task->src_dst_mac[0], &hdr->d_addr);
 		else
 			prox_rte_ether_addr_copy(&hdr->s_addr, &hdr->d_addr);
 
-		if (likely(task->runtime_flags & TASK_ARG_SRC_MAC_SET)) {
+		if (likely(task->flags & TASK_ARG_SRC_MAC_SET)) {
 			prox_rte_ether_addr_copy((prox_rte_ether_addr *)&task->src_dst_mac[6], &hdr->s_addr);
 		} else {
 			prox_rte_ether_addr_copy(&mac, &hdr->s_addr);
@@ -232,6 +235,7 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 	uint8_t type;
 	static int llc_printed = 0;
 	static int lldp_printed = 0;
+	static int geneve_printed = 0;
 
 	for (j = 0; j < n_pkts; ++j) {
 		PREFETCH0(mbufs[j]);
@@ -378,10 +382,19 @@ static int handle_swap_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, ui
 				continue;
 			}
 			udp_hdr = (prox_rte_udp_hdr *)(ip_hdr + 1);
+			port = udp_hdr->dst_port;
 			ip_hdr->dst_addr = ip_hdr->src_addr;
 			ip_hdr->src_addr = ip;
 
-			port = udp_hdr->dst_port;
+			if ((port == GENEVE_PORT) && (task->runtime_flags & TASK_DO_NOT_FWD_GENEVE)) {
+				if (!geneve_printed) {
+					plog_info("Discarding geneve (only printed once)\n");
+					geneve_printed = 1;
+				}
+				out[j] = OUT_DISCARD;
+				continue;
+			}
+
 			udp_hdr->dst_port = udp_hdr->src_port;
 			udp_hdr->src_port = port;
 			write_src_and_dst_mac(task, mbufs[j]);
@@ -540,7 +553,8 @@ static void init_task_swap(struct task_base *tbase, struct task_args *targ)
 			plog_info("\t\tCore %d: src mac set from port\n", targ->lconf->id);
 		}
 	}
-	task->runtime_flags = targ->flags;
+	task->flags = targ->flags;
+	task->runtime_flags = targ->runtime_flags;
 	task->igmp_address =  rte_cpu_to_be_32(targ->igmp_address);
 	if (task->igmp_pool == NULL) {
 		static char name[] = "igmp0_pool";
