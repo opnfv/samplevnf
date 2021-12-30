@@ -205,6 +205,9 @@ struct task_args {
 	struct range           range[64];
 	char                   pcap_file[256];
 	uint32_t               accur_pos;
+	uint32_t               flow_id_pos;
+	uint32_t               packet_id_in_flow_pos;
+	uint32_t               flow_count;
 	uint32_t               sig_pos;
 	uint32_t               sig;
 	uint32_t               lat_pos;
