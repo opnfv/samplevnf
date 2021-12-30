@@ -1163,6 +1163,15 @@ static int get_core_cfg(unsigned sindex, char *str, void *data)
 	if (STR_EQ(str, "packet id pos")) {
 		return parse_int(&targ->packet_id_pos, pkey);
 	}
+	if (STR_EQ(str, "flow id pos")) {
+		return parse_int(&targ->flow_id_pos, pkey);
+	}
+	if (STR_EQ(str, "packet id in flow pos")) {
+		return parse_int(&targ->packet_id_in_flow_pos, pkey);
+	}
+	if (STR_EQ(str, "flow count")) {
+		return parse_int(&targ->flow_count, pkey);
+	}
 	if (STR_EQ(str, "probability")) { // old - use "probability no drop" instead
 		float probability;
 		int rc = parse_float(&probability, pkey);
