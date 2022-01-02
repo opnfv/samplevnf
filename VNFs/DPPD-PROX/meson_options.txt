@@ -1,5 +1,5 @@
 #Keep the options sorted alphabetically
-option('crc', type: 'string', value: 'soft')
+#option('crc', type: 'string', value: 'soft')
 option('bng_qinq', type: 'feature', value: 'enabled')
 option('dbg', type: 'boolean', value: false)
 option('gen_decap_ipv6_to_ipv4_cksum', type: 'feature', value: 'enabled')
