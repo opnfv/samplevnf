@@ -100,6 +100,16 @@ if not lua_dep.found()
 	error('Suitable lua version not found')
 endif
 
+has_sym_args = [
+        [ 'HAVE_LIBEDIT_EL_RFUNC_T', 'histedit.h',
+        'el_rfunc_t' ],
+]
+config = configuration_data()
+foreach arg:has_sym_args
+        config.set(arg[0], cc.has_header_symbol(arg[1], arg[2]))
+endforeach
+configure_file(output : 'libedit_autoconf.h', configuration : config)
+
 # All other dependencies
 dpdk_dep = dependency('libdpdk', required: true)
 tinfo_dep = dependency('tinfo', required: false)
