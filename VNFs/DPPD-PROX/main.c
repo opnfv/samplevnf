@@ -1192,7 +1192,7 @@ static void set_term_env(void)
 		plog_info("\tncurses version = %d.%d (%s)\n", max_ver, min_ver, ncurses_version);
 	}
 
-	if (((max_ver > 6) || ((max_ver == 6) && (min_ver >= 1))) && (strcmp(old_value, "xterm") == 0)) {
+	if ((old_value) && ((max_ver > 6) || ((max_ver == 6) && (min_ver >= 1))) && (strcmp(old_value, "xterm") == 0)) {
 		// On recent OSes such as RHEL 8.0, ncurses(6.1)  introduced support
 		// for ECMA-48 repeat character control.
 		// Some terminal emulators use TERM=xterm but do not support this feature.
