@@ -72,7 +72,6 @@ include $(RTE_SDK)/mk/rte.vars.mk
 # binary name
 APP = prox
 CFLAGS += -DPROGRAM_NAME=\"$(APP)\"
-CFLAGS += -DCOMPILED_WITH_MAKE
 
 CFLAGS += -O2 -g
 CFLAGS += -fno-stack-protector -Wno-deprecated-declarations
