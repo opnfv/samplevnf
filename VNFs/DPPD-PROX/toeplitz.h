@@ -17,7 +17,7 @@
 #ifndef _TOEPLITZ_H_
 #define _TOEPLITZ_H_
 
-#define TOEPLITZ_KEY_LEN	52
+#define TOEPLITZ_KEY_LEN	40
 extern uint8_t toeplitz_init_key[TOEPLITZ_KEY_LEN];
 uint32_t toeplitz_hash(uint8_t *buf_p, int buflen);
 #endif
