@@ -856,7 +856,7 @@ static void setup_mempool_for_rx_task(struct lcore_cfg *lconf, struct task_args 
 		sprintf(name, "core_%u_task_%u_pool", lconf->id, targ->id);
 	}
 
-	snprintf(memzone_name, sizeof(memzone_name)-1, "MP_%s", targ->pool_name);
+	snprintf(memzone_name, sizeof(memzone_name), "MP_%.*s", (int)(sizeof(memzone_name)-4), targ->pool_name);
 	mz = rte_memzone_lookup(memzone_name);
 
 	if (mz != NULL) {
