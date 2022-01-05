@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "6defd364_ea23d5d4",
+        "filename": "VNFs/DPPD-PROX/main.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 859,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2022-01-05T14:58:00Z",
+      "side": 1,
+      "message": "I understand that the main goal is to fix a compilation warning. However, this triggers several comments:\n- The terminating null byte is included in the max count of bytes written into the buffer, so sizeof(memzone_name) does not need to be decreased by 1.\n- With the current size of memzone_name at 64, the \"MP_\" prefix and the terminating null byte, at most 60 bytes could be copied from targ-\u003epool_name, rather than the hard-coded 59.\n- In order to automatically adjust to any future size of memzone_name, the precision could be specified as an int argument.\n- See https://man7.org/linux/man-pages/man3/printf.3.html\n\nAs a result, this line could be rewritten as:\nsnprintf(memzone_name, sizeof(memzone_name), \"MP_%.*s\", (int)(sizeof(memzone_name)-4), targ-\u003epool_name);\n\nThat\u0027s rather verbose, I agree ;-)",
+      "revId": "d7dab35df2a080d9da6d5cc80dfa3ed39b200217",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    }
+  ]
+}
