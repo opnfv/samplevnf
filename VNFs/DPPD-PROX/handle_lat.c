@@ -419,7 +419,7 @@ static void lat_stop(struct task_base *tbase)
 		task_lat_reset_eld(task);
 		memset(task->previous_packet, 0, sizeof(task->previous_packet) * task->generator_count);
 	}
-	if (task->loss_id) {
+	if (task->loss_id && task->fp_loss) {
 		for (uint i = 0; i < task->loss_id; i++) {
 			fprintf(task->fp_loss, "packet %d: %d\n", task->loss_buffer[i].packet_id, task->loss_buffer[i].n);
 		}
@@ -842,11 +842,6 @@ static void init_task_lat(struct task_base *tbase, struct task_args *targ)
 		init_task_lat_latency_buffer(task, targ->lconf->id);
 	}
 
-	char name[256];
-	sprintf(name, "loss_%u.txt", targ->lconf->id);
-	task->fp_loss = fopen(name, "w+");
-	PROX_PANIC(task->fp_loss == NULL, "Failed to open %s\n", name);
-
 	if (targ->bucket_size < DEFAULT_BUCKET_SIZE) {
 		targ->bucket_size = DEFAULT_BUCKET_SIZE;
 	}
@@ -901,6 +896,11 @@ static void init_task_lat(struct task_base *tbase, struct task_args *targ)
 	}
 	task->loss_buffer_size = targ->loss_buffer_size;
 	if (task->loss_buffer_size) {
+		char name[256];
+		sprintf(name, "loss_%u.txt", targ->lconf->id);
+		task->fp_loss = fopen(name, "w+");
+		PROX_PANIC(task->fp_loss == NULL, "Failed to open %s\n", name);
+
 		task->loss_buffer = prox_zmalloc(task->loss_buffer_size * sizeof(struct loss_buffer), rte_lcore_to_socket_id(targ->lconf->id));
 		PROX_PANIC(task->loss_buffer == NULL,
 			"Failed to allocate %lu bytes (in huge pages) for loss_buffer\n", task->loss_buffer_size * sizeof(struct loss_buffer));
