@@ -1530,6 +1530,14 @@ void task_gen_reset_randoms(struct task_base *tbase)
 	task->n_rands = 0;
 }
 
+void task_gen_reset_ranges(struct task_base *tbase)
+{
+	struct task_gen *task = (struct task_gen *)tbase;
+
+	memset(task->ranges, 0, task->n_ranges * sizeof(struct range));
+	task->n_ranges = 0;
+}
+
 int task_gen_set_value(struct task_base *tbase, uint32_t value, uint32_t offset, uint32_t len)
 {
 	struct task_gen *task = (struct task_gen *)tbase;
@@ -1570,6 +1578,13 @@ uint32_t task_gen_get_n_randoms(struct task_base *tbase)
 	struct task_gen *task = (struct task_gen *)tbase;
 
 	return task->n_rands;
+}
+
+uint32_t task_gen_get_n_ranges(struct task_base *tbase)
+{
+	struct task_gen *task = (struct task_gen *)tbase;
+
+	return task->n_ranges;
 }
 
 static void init_task_gen_pcap(struct task_base *tbase, struct task_args *targ)
@@ -1627,7 +1642,7 @@ static int task_gen_find_random_with_offset(struct task_gen *task, uint32_t offs
 	return UINT32_MAX;
 }
 
-static int task_gen_add_range(struct task_base *tbase, struct range *range)
+int task_gen_add_range(struct task_base *tbase, struct range *range)
 {
 	struct task_gen *task = (struct task_gen *)tbase;
 	if (task->n_ranges == MAX_RANGES) {

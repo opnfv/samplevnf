@@ -721,6 +721,27 @@ static int parse_cmd_reset_randoms_all(const char *str, struct input *input)
 	return 0;
 }
 
+static int parse_cmd_reset_ranges_all(const char *str, struct input *input)
+{
+	if (strcmp(str, "") != 0) {
+		return -1;
+	}
+
+	unsigned task_id, lcore_id = -1;
+	while (prox_core_next(&lcore_id, 0) == 0) {
+		for (task_id = 0; task_id < lcore_cfg[lcore_id].n_tasks_all; task_id++) {
+			if (task_is_mode(lcore_id, task_id, "gen")) {
+				struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
+				uint32_t n_ranges = task_gen_get_n_ranges(tbase);
+
+				plog_info("Resetting ranges on core %d task %d from %d ranges\n", lcore_id, task_id, n_ranges);
+				task_gen_reset_ranges(tbase);
+			}
+		}
+	}
+	return 0;
+}
+
 static int parse_cmd_reset_values_all(const char *str, struct input *input)
 {
 	if (strcmp(str, "") != 0) {
@@ -834,6 +855,39 @@ static int parse_cmd_set_random(const char *str, struct input *input)
 
 				if (task_gen_add_rand(tbase, rand_str, offset, rand_id)) {
 					plog_warn("Random not added on core %u task %u\n", lcore_id, task_id);
+				}
+			}
+		}
+	}
+	return 0;
+}
+
+static int parse_cmd_set_range(const char *str, struct input *input)
+{
+	unsigned lcores[RTE_MAX_LCORE], lcore_id, task_id, nb_cores;
+	struct range range;
+
+	if (parse_cores_task(str, lcores, &task_id, &nb_cores))
+		return -1;
+	if (!(str = strchr_skip_twice(str, ' ')))
+		return -1;
+	if (sscanf(str, "%u %u %u", &range.offset, &range.min, &range.max) != 3) {
+		return -1;
+	}
+
+	if (cores_task_are_valid(lcores, task_id, nb_cores)) {
+		for (unsigned int i = 0; i < nb_cores; i++) {
+			lcore_id = lcores[i];
+			if (!task_is_mode(lcore_id, task_id, "gen")) {
+				plog_err("Core %u task %u is not generating packets\n", lcore_id, task_id);
+			} else if (range.offset > PROX_RTE_ETHER_MAX_LEN) {
+				plog_err("Offset out of range (must be less then %u)\n", PROX_RTE_ETHER_MAX_LEN);
+			} else if (range.min > range.max) {
+				plog_err("Wrong range: end (%d) must be >= start (%d)\n", range.max, range.min);
+			} else {
+				struct task_base *tbase = lcore_cfg[lcore_id].tasks_all[task_id];
+				if (task_gen_add_range(tbase, &range)) {
+					plog_warn("Range not added on core %u task %u\n", lcore_id, task_id);
 				}
 			}
 		}
@@ -2265,8 +2319,10 @@ static struct cmd_str cmd_strings[] = {
 	{"speed_byte", "<core_id> <task_id> <speed>", "Change speed to <speed>. The speed is specified in units of bytes per second.", parse_cmd_speed_byte},
 	{"set value", "<core_id> <task_id> <offset> <value> <value_len>", "Set <value_len> bytes to <value> at offset <offset> in packets generated on <core_id> <task_id>", parse_cmd_set_value},
 	{"set random", "<core_id> <task_id> <offset> <random_str> <value_len>", "Set <value_len> bytes to <rand_str> at offset <offset> in packets generated on <core_id> <task_id>", parse_cmd_set_random},
+	{"set range", "<core_id> <task_id> <offset> <range_start> <range_end>", "Set bytes from <range_start>  to <range_end> at offset <offset> in packets generated on <core_id> <task_id>", parse_cmd_set_range},
 	{"reset values all", "", "Undo all \"set value\" commands on all cores/tasks", parse_cmd_reset_values_all},
 	{"reset randoms all", "", "Undo all \"set random\" commands on all cores/tasks", parse_cmd_reset_randoms_all},
+	{"reset ranges all", "", "Undo all \"set range\" commands on all cores/tasks", parse_cmd_reset_ranges_all},
 	{"reset values", "<core id> <task id>", "Undo all \"set value\" commands on specified core/task", parse_cmd_reset_values},
 
 	{"arp add", "<core id> <task id> <port id> <gre id> <svlan> <cvlan> <ip addr> <mac addr> <user>", "Add a single ARP entry into a CPE table on <core id>/<task id>.", parse_cmd_arp_add},
