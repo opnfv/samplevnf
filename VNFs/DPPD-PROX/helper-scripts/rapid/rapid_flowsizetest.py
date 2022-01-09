@@ -52,7 +52,7 @@ class FlowSizeTest(RapidTest):
                 self.test['TST009_S'].append((m+1) * self.test['stepsize'])
         elif self.test['test'] == 'fixed_rate':
             for key in['drop_rate_threshold','lat_avg_threshold',
-                    'lat_perc_threshold','lat_max_threshold']:
+                    'lat_perc_threshold','lat_max_threshold','mis_ordered_threshold']:
                 self.test[key] = inf
 
     def new_speed(self, speed,size,success):
@@ -109,6 +109,7 @@ class FlowSizeTest(RapidTest):
         FLOWSIZE = self.test['warmupflowsize']
         WARMUPSPEED = self.test['warmupspeed']
         WARMUPTIME = self.test['warmuptime']
+
         RapidLog.info(("Warming up during {} seconds..., packet size = {},"
             " flows = {}, speed = {}").format(WARMUPTIME, imix, FLOWSIZE,
                 WARMUPSPEED))
@@ -141,24 +142,24 @@ class FlowSizeTest(RapidTest):
             else:
                 backgroundinfo = '{}{}'.format(bcolors.FLASH,bcolors.ENDC)
             self.set_background_size(self.background_machines, imix)
-            RapidLog.info('+' + '-' * 188 + '+')
+            RapidLog.info('+' + '-' * 200 + '+')
             RapidLog.info(("| UDP, {:>5} bytes, different number of flows by "
-                "randomizing SRC & DST UDP port. {:116.116}|").
+                "randomizing SRC & DST UDP port. {:128.128}|").
                 format(round(size), backgroundinfo))
             RapidLog.info('+' + '-' * 8 + '+' + '-' * 18 + '+' + '-' * 13 +
                     '+' + '-' * 13 + '+' + '-' * 13 + '+' + '-' * 24 + '+' +
                     '-' * 10 + '+' + '-' * 10 + '+' + '-' * 10 + '+' + '-' * 11
                     + '+' + '-' * 11 + '+' + '-' * 11 + '+'  + '-' * 11 +  '+'
-                    + '-' * 7 + '+' + '-' * 4 + '+')
+                    + '-' * 7 + '+' + '-' * 11 + '+' + '-' * 4 + '+')
             RapidLog.info(('| Flows  | Speed requested  | Gen by core | Sent by'
                 ' NIC | Fwrd by SUT | Rec. by core           | Avg. Lat.|{:.0f}'
                 ' Pcentil| Max. Lat.|   Sent    |  Received |    Lost   | Total'
-                ' Lost|L.Ratio|Time|').format(self.test['lat_percentile']*100))
+                ' Lost|L.Ratio|Mis-ordered|Time').format(self.test['lat_percentile']*100))
             RapidLog.info('+' + '-' * 8 + '+' + '-' * 18 + '+' + '-' * 13 +
                     '+' + '-' * 13 + '+' + '-' * 13 + '+' + '-' * 24 + '+' +
                     '-' * 10 + '+' + '-' * 10 + '+' + '-' * 10 + '+' + '-' * 11
                     + '+' + '-' * 11 + '+' + '-' * 11 + '+'  + '-' * 11 +  '+'
-                    + '-' * 7 + '+' + '-' * 4 + '+')
+                    + '-' * 7 + '+' + '-' * 11 + '+' + '-' * 4 + '+')
             for flow_number in self.test['flows']:
                 attempts = 0
                 self.gen_machine.reset_stats()
@@ -201,6 +202,7 @@ class FlowSizeTest(RapidTest):
                             'lat_perc' : bcolors.ENDC,
                             'lat_max' : bcolors.ENDC,
                             'abs_drop_rate' : bcolors.ENDC,
+                            'mis_ordered' : bcolors.ENDC,
                             'drop_rate' : bcolors.ENDC}
                     if self.test['test'] == 'fixed_rate':
                         end_data = copy.deepcopy(iteration_data)
@@ -219,7 +221,7 @@ class FlowSizeTest(RapidTest):
                     # the drop rate is below a treshold, either we want that no
                     # packet has been lost during the test.
                     # This can be specified by putting 0 in the .test file
-                    elif ((iteration_data['drop_rate'] < self.test['drop_rate_threshold']) or (iteration_data['abs_dropped']==self.test['drop_rate_threshold']==0)) and (iteration_data['lat_avg']< self.test['lat_avg_threshold']) and (iteration_data['lat_perc']< self.test['lat_perc_threshold']) and (iteration_data['lat_max'] < self.test['lat_max_threshold']):
+                    elif ((iteration_data['drop_rate'] < self.test['drop_rate_threshold']) or (iteration_data['abs_dropped']==self.test['drop_rate_threshold']==0)) and (iteration_data['lat_avg']< self.test['lat_avg_threshold']) and (iteration_data['lat_perc']< self.test['lat_perc_threshold']) and (iteration_data['lat_max'] < self.test['lat_max_threshold'] and iteration_data['mis_ordered'] <= self.test['mis_ordered_threshold']):
                         if (old_div((self.get_pps(speed,size) - iteration_data['pps_tx']),self.get_pps(speed,size)))>0.01:
                             iteration_prefix['speed'] = bcolors.WARNING
                             if iteration_data['abs_tx_fail'] > 0:
@@ -242,7 +244,7 @@ class FlowSizeTest(RapidTest):
                         success_message=' FAILED'
                         if ((iteration_data['abs_dropped']>0) and (self.test['drop_rate_threshold'] ==0)):
                             iteration_prefix['abs_drop_rate'] = bcolors.FAIL
-                        if (iteration_data['drop_rate'] < self.test['drop_rate_threshold']):
+                        if (iteration_data['drop_rate'] <= self.test['drop_rate_threshold']):
                             iteration_prefix['drop_rate'] = bcolors.ENDC
                         else:
                             iteration_prefix['drop_rate'] = bcolors.FAIL
@@ -262,6 +264,11 @@ class FlowSizeTest(RapidTest):
                             iteration_prefix['speed'] = bcolors.ENDC
                         else:
                             iteration_prefix['speed'] = bcolors.FAIL
+                        if (iteration_data['mis_ordered']< self.test['mis_ordered_threshold']):
+                            iteration_prefix['mis_ordered'] = bcolors.ENDC
+                        else:
+                            iteration_prefix['mis_ordered'] = bcolors.FAIL
+
                         success = False 
                         RapidLog.debug(self.report_result(-attempts, size,
                             iteration_data, iteration_prefix) +
@@ -297,5 +304,6 @@ class FlowSizeTest(RapidTest):
                     '+' + '-' * 13 + '+' + '-' * 13 + '+' + '-' * 24 + '+' +
                     '-' * 10 + '+' + '-' * 10 + '+' + '-' * 10 + '+' + '-' * 11
                     + '+' + '-' * 11 + '+' + '-' * 11 + '+'  + '-' * 11 +  '+'
+                    + '+' + '-' * 11 + '+'
                     + '-' * 7 + '+' + '-' * 4 + '+')
         return (TestResult, result_details)

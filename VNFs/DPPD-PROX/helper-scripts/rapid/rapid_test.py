@@ -167,6 +167,10 @@ class RapidTest(object):
             elapsed_time_str = ' NA |'
         else:
             elapsed_time_str = '{:>3.0f} |'.format(data['actual_duration'])
+        if data['mis_ordered'] is None:
+            mis_ordered_str = '    NA   '
+        else:
+            mis_ordered_str = '{:>9.0f} '.format(data['mis_ordered'])
         return(flow_number_str + '{:>5.1f}'.format(data['speed']) + '% ' + prefix['speed']
                 + '{:>6.3f}'.format(RapidTest.get_pps(data['speed'],size)) + ' Mpps|' +
                 pps_req_tx_str + pps_tx_str + bcolors.ENDC + pps_sut_tx_str +
@@ -175,7 +179,8 @@ class RapidTest(object):
                 + ' us | ' + '{:>9.0f}'.format(data['abs_tx']) + ' | {:>9.0f}'.format(data['abs_rx']) +
                 ' | '+ prefix['abs_drop_rate']+ '{:>9.0f}'.format(data['abs_tx']-data['abs_rx']) +
                 tot_drop_str + prefix['drop_rate'] +
-                '{:>5.2f}'.format(100*old_div(float(data['abs_tx']-data['abs_rx']),data['abs_tx'])) + bcolors.ENDC +
+                '{:>5.2f}'.format(100*old_div(float(data['abs_tx']-data['abs_rx']),data['abs_tx'])) + ' |' + 
+                prefix['mis_ordered'] + mis_ordered_str + bcolors.ENDC +
                 ' |' + elapsed_time_str)
 
     def run_iteration(self, requested_duration, flow_number, size, speed):

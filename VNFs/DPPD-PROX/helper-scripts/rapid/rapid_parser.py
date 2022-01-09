@@ -46,6 +46,7 @@ class RapidConfigParser(object):
             test_params['lat_percentile'] = 0.99
         RapidLog.info('Latency percentile at {:.0f}%'.format(
             test_params['lat_percentile']*100))
+
         if testconfig.has_option('TestParameters', 'ipv6'):
             test_params['ipv6'] = testconfig.getboolean('TestParameters','ipv6')
         else:
@@ -86,7 +87,7 @@ class RapidConfigParser(object):
                 elif option in ['startspeed', 'step', 'drop_rate_threshold',
                         'lat_avg_threshold','lat_perc_threshold',
                         'lat_max_threshold','accuracy','maxr','maxz',
-                        'ramp_step','warmupspeed']:
+                        'ramp_step','warmupspeed','mis_ordered_threshold']:
                     test[option] = float(testconfig.get(section, option))
                 else:
                     test[option] = testconfig.get(section, option)
@@ -95,7 +96,7 @@ class RapidConfigParser(object):
             if test['test'] in ['flowsizetest','TST009test']:
                 if 'drop_rate_threshold' not in test.keys():
                     test['drop_rate_threshold'] = 0
-                latency_thresholds = ['lat_avg_threshold','lat_perc_threshold','lat_max_threshold']
+                latency_thresholds = ['lat_avg_threshold','lat_perc_threshold','lat_max_threshold','mis_ordered_threshold']
                 for threshold in latency_thresholds:
                     if threshold not in test.keys():
                         test[threshold] = inf
