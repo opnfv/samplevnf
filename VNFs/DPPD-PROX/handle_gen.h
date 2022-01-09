@@ -17,6 +17,8 @@
 #ifndef _HANDLE_GEN_H_
 #define _HANDLE_GEN_H_
 
+#include "task_init.h"
+
 struct unique_id {
 	uint8_t  generator_id;
 	uint32_t packet_id;
@@ -41,11 +43,14 @@ int task_gen_set_pkt_size(struct task_base *tbase, uint32_t pkt_size);
 int task_gen_set_imix(struct task_base *tbase, uint32_t nb_pkts, uint32_t *pkt_size);
 void task_gen_set_rate(struct task_base *tbase, uint64_t bps);
 void task_gen_reset_randoms(struct task_base *tbase);
+void task_gen_reset_ranges(struct task_base *tbase);
 void task_gen_reset_values(struct task_base *tbase);
 int task_gen_set_value(struct task_base *tbase, uint32_t value, uint32_t offset, uint32_t len);
 int task_gen_add_rand(struct task_base *tbase, const char *rand_str, uint32_t offset, uint32_t rand_id);
+int task_gen_add_range(struct task_base *tbase, struct range *range);
 
 uint32_t task_gen_get_n_randoms(struct task_base *tbase);
+uint32_t task_gen_get_n_ranges(struct task_base *tbase);
 uint32_t task_gen_get_n_values(struct task_base *tbase);
 
 #endif /* _HANDLE_GEN_H_ */
