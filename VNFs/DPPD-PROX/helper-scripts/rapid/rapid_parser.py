@@ -46,6 +46,12 @@ class RapidConfigParser(object):
             test_params['lat_percentile'] = 0.99
         RapidLog.info('Latency percentile at {:.0f}%'.format(
             test_params['lat_percentile']*100))
+        if testconfig.has_option('TestParameters', 'sleep_time'):
+            test_params['sleep_time'] = int(testconfig.get('TestParameters', 'sleep_time'))
+            if test_params['sleep_time'] < 2:
+                test_params['sleep_time'] = 2
+        else:
+            test_params['sleep_time'] = 2
 
         if testconfig.has_option('TestParameters', 'ipv6'):
             test_params['ipv6'] = testconfig.getboolean('TestParameters','ipv6')

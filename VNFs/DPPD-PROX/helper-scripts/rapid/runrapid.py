@@ -114,7 +114,8 @@ class RapidTestManager(object):
                             test_params['TestName'],
                             test_params['environment_file'],
                             gen_machine,
-                            sut_machine, background_machines)
+                            sut_machine, background_machines,
+                            test_params['sleep_time'])
                 elif test_param['test'] in ['corestatstest']:
                     test = CoreStatsTest(test_param,
                             test_params['runtime'],

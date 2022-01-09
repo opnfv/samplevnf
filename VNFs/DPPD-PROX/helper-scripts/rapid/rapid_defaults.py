@@ -31,5 +31,6 @@ class RapidDefaults(object):
         'configonly' : False, # If True, the system will upload all the necessary config fiels to the VMs, but not start PROX and the actual testing
         'rundir' : '/opt/rapid', # Directory where to find the tools in the machines running PROX
         'resultsdir' : '.', # Directory where to store log files
+        'sleep_time' : 2, # Sleep time between two loop iteration. Minimum is 2 seconds. Might be useful to let SUT clean caches
         'lat_percentile' : 0.99
         }
