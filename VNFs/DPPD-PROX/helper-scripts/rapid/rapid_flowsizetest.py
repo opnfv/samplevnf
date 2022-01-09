@@ -32,12 +32,13 @@ class FlowSizeTest(RapidTest):
     Class to manage the flowsizetesting
     """
     def __init__(self, test_param, lat_percentile, runtime, testname,
-            environment_file, gen_machine, sut_machine, background_machines):
+            environment_file, gen_machine, sut_machine, background_machines, sleep_time):
         super().__init__(test_param, runtime, testname, environment_file)
         self.gen_machine = gen_machine
         self.sut_machine = sut_machine
         self.background_machines = background_machines
         self.test['lat_percentile'] = lat_percentile
+        self.test['sleep_time'] = sleep_time
         if self.test['test'] == 'TST009test':
             # This test implements some of the testing as defined in
             # https://docbox.etsi.org/ISG/NFV/open/Publications_pdf/Specs-Reports/NFV-TST%20009v3.2.1%20-%20GS%20-%20NFVI_Benchmarks.pdf

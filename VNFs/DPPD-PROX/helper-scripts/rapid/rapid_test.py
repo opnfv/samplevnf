@@ -185,11 +185,12 @@ class RapidTest(object):
 
     def run_iteration(self, requested_duration, flow_number, size, speed):
         BUCKET_SIZE_EXP = self.gen_machine.bucket_size_exp
+        sleep_time = self.test['sleep_time']
         LAT_PERCENTILE = self.test['lat_percentile']
         iteration_data= {}
         time_loop_data= {}
         iteration_data['r'] = 0;
-        sleep_time = 2
+
         while (iteration_data['r'] < self.test['maxr']):
             self.gen_machine.start_latency_cores()
             time.sleep(sleep_time)
