@@ -110,6 +110,10 @@ class FlowSizeTest(RapidTest):
         WARMUPSPEED = self.test['warmupspeed']
         WARMUPTIME = self.test['warmuptime']
 
+        if WARMUPTIME == 0:
+            RapidLog.info(("Not Warming up"))
+            return
+
         RapidLog.info(("Warming up during {} seconds..., packet size = {},"
             " flows = {}, speed = {}").format(WARMUPTIME, imix, FLOWSIZE,
                 WARMUPSPEED))
