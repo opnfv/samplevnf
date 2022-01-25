@@ -1,15 +1,14 @@
 Project: Sample Virtual Network Function (SAMPLEVNF)
 Project Creation Date:27/03/2017
 Lifecycle State: Incubation
-Primary Contact: luc.provoost@intel.com
-Project Lead: luc.provoost@intel.com
+Primary Contact: luc.provoost@gmail.com
+Project Lead: luc.provoost@gmail.com
 Jira Name: Sample Virtual Network Function
 Jira Prefix: [SAMPLEVNF]
 mailing list tag:[samplevnf]
 Repo: samplevnf
 
 Committers:
-luc.provoost@intel.com
 acm@research.att.com
 trevor.cooper@intel.com
 simonartxavier@gmail.com
