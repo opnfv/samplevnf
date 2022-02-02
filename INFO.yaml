@@ -5,9 +5,9 @@ project_category: ''
 lifecycle_state: 'Incubation'
 project_lead: &opnfv_samplevnf_ptl
     name: 'Luc Provoost'
-    email: 'luc.provoost@intel.com'
+    email: 'luc.provoost@gmail.com'
     company: 'intel.com'
-    id: 'provoost'
+    id: 'LucProvoost'
     timezone: 'Unknown'
 primary_contact: *opnfv_samplevnf_ptl
 issue_tracking:
