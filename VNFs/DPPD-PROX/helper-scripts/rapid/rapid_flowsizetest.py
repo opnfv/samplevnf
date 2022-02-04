@@ -227,24 +227,29 @@ class FlowSizeTest(RapidTest):
                     # packet has been lost during the test.
                     # This can be specified by putting 0 in the .test file
                     elif ((iteration_data['drop_rate'] < self.test['drop_rate_threshold']) or (iteration_data['abs_dropped']==self.test['drop_rate_threshold']==0)) and (iteration_data['lat_avg']< self.test['lat_avg_threshold']) and (iteration_data['lat_perc']< self.test['lat_perc_threshold']) and (iteration_data['lat_max'] < self.test['lat_max_threshold'] and iteration_data['mis_ordered'] <= self.test['mis_ordered_threshold']):
+                        end_data = copy.deepcopy(iteration_data)
+                        end_prefix = copy.deepcopy(iteration_prefix)
+                        success = True
+                        success_message=' SUCCESS'
                         if (old_div((self.get_pps(speed,size) - iteration_data['pps_tx']),self.get_pps(speed,size)))>0.01:
                             iteration_prefix['speed'] = bcolors.WARNING
                             if iteration_data['abs_tx_fail'] > 0:
                                 gen_warning = bcolors.WARNING + ' Network limit?: requesting {:<.3f} Mpps and getting {:<.3f} Mpps - {} failed to be transmitted'.format(self.get_pps(speed,size), iteration_data['pps_tx'], iteration_data['abs_tx_fail']) + bcolors.ENDC
                             else:
                                 gen_warning = bcolors.WARNING + ' Generator limit?: requesting {:<.3f} Mpps and getting {:<.3f} Mpps'.format(self.get_pps(speed,size), iteration_data['pps_tx']) + bcolors.ENDC
+                            endwarning = '|        | {:186.186} |'.format(retry_warning + lat_warning + gen_warning)
+                            RapidLog.debug(self.report_result(-attempts, size,
+                                iteration_data, iteration_prefix) + success_message +
+                                retry_warning + lat_warning + gen_warning)
+                            break
                         else:
                             iteration_prefix['speed'] = bcolors.ENDC
                             gen_warning = ''
-                        end_data = copy.deepcopy(iteration_data)
-                        end_prefix = copy.deepcopy(iteration_prefix)
-                        if lat_warning or gen_warning or retry_warning:
-                            endwarning = '|        | {:186.186} |'.format(retry_warning + lat_warning + gen_warning)
-                        success = True
-                        success_message=' SUCCESS'
-                        RapidLog.debug(self.report_result(-attempts, size,
-                            iteration_data, iteration_prefix) + success_message +
-                            retry_warning + lat_warning + gen_warning)
+                            if lat_warning or retry_warning:
+                                endwarning = '|        | {:186.186} |'.format(retry_warning + lat_warning)
+                            RapidLog.debug(self.report_result(-attempts, size,
+                                iteration_data, iteration_prefix) + success_message +
+                                retry_warning + lat_warning + gen_warning)
                     else:
                         success_message=' FAILED'
                         if ((iteration_data['abs_dropped']>0) and (self.test['drop_rate_threshold'] ==0)):
