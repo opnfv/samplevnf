@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "11c47d70_0bf5bf5a",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/rapid_flowsizetest.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 233,
+      "author": {
+        "id": 7717
+      },
+      "writtenOn": "2022-02-05T21:18:41Z",
+      "side": 1,
+      "message": "Is it on purpose that endwarning is not set anymore?",
+      "revId": "588894002b6242e2412811e63b2d4387bfe39348",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "5d689cd3_c66fa82f",
+        "filename": "VNFs/DPPD-PROX/helper-scripts/rapid/rapid_flowsizetest.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 241,
+      "author": {
+        "id": 7717
+      },
+      "writtenOn": "2022-02-05T21:18:41Z",
+      "side": 1,
+      "message": "You can remove gen_warning from endwarning",
+      "revId": "588894002b6242e2412811e63b2d4387bfe39348",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    }
+  ]
+}
