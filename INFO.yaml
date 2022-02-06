@@ -6,7 +6,7 @@ lifecycle_state: 'Incubation'
 project_lead: &opnfv_samplevnf_ptl
     name: 'Luc Provoost'
     email: 'luc.provoost@gmail.com'
-    company: 'intel.com'
+    company: '-'
     id: 'LucProvoost'
     timezone: 'Unknown'
 primary_contact: *opnfv_samplevnf_ptl
@@ -47,8 +47,8 @@ committers:
       company: '-'
       id: 'xavier.simonart'
     - name: 'Patrice Buriez'
-      email: 'patrice.buriez@intel.com'
-      company: 'intel.com'
+      email: 'patrice.buriez@chenapan.org'
+      company: '-'
       id: 'pburiez'
 tsc:
     # yamllint disable rule:line-length
