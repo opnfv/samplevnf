@@ -376,7 +376,7 @@ static inline void build_icmp_reply_message(struct task_base *tbase, struct rte_
 static inline void handle_icmp(struct task_base *tbase, struct rte_mbuf *mbuf)
 {
 	struct task_master *task = (struct task_master *)tbase;
-	uint8_t port_id = mbuf->port;
+	uint8_t port_id = get_port(mbuf);
 	struct port_table *port = &task->internal_port_table[port_id];
 	prox_rte_ether_hdr *hdr = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 	if (hdr->ether_type != ETYPE_IPv4) {
@@ -419,21 +419,21 @@ static inline void handle_unknown_ip6(struct task_base *tbase, struct rte_mbuf *
 {
 	struct task_master *task = (struct task_master *)tbase;
 	struct ether_hdr_arp *hdr_arp = rte_pktmbuf_mtod(mbuf, struct ether_hdr_arp *);
-	uint8_t port = get_port(mbuf);
+	uint8_t port_id = get_port(mbuf);
 	struct ipv6_addr *ip_dst = ctrl_ring_get_ipv6_addr(mbuf);
 	uint16_t vlan = ctrl_ring_get_vlan(mbuf);
 	int ret1, ret2, i;
 
-	plogx_dbg("\tMaster trying to find MAC of external IP "IPv6_BYTES_FMT" for port %d\n", IPv6_BYTES(ip_dst->bytes), port);
-	if (unlikely(port >= PROX_MAX_PORTS)) {
-		plogx_dbg("Port %d not found", port);
+	plogx_dbg("\tMaster trying to find MAC of external IP "IPv6_BYTES_FMT" for port %d\n", IPv6_BYTES(ip_dst->bytes), port_id);
+	if (unlikely(port_id >= PROX_MAX_PORTS)) {
+		plogx_dbg("Port %d not found", port_id);
 		tx_drop(mbuf);
 		return;
 	}
-	struct ipv6_addr *local_ip_src = &task->internal_port_table[port].local_ipv6_addr;
-	struct ipv6_addr *global_ip_src = &task->internal_port_table[port].global_ipv6_addr;
+	struct ipv6_addr *local_ip_src = &task->internal_port_table[port_id].local_ipv6_addr;
+	struct ipv6_addr *global_ip_src = &task->internal_port_table[port_id].global_ipv6_addr;
 	struct ipv6_addr *ip_src;
-	if (memcmp(local_ip_src, ip_dst, 8) == 0)
+	if (memcmp(local_ip_src, ip_dst, prox_port_cfg[port_id].v6_mask_length) == 0)
 		ip_src = local_ip_src;
 	else if (memcmp(global_ip_src,  &null_addr, 16))
 		ip_src = global_ip_src;
@@ -445,7 +445,7 @@ static inline void handle_unknown_ip6(struct task_base *tbase, struct rte_mbuf *
 	struct rte_ring *ring = task->ctrl_tx_rings[get_core(mbuf) * MAX_TASKS_PER_CORE + get_task(mbuf)];
 
 	if (ring == NULL) {
-		plogx_dbg("Port %d not registered", port);
+		plogx_dbg("Port %d not registered", port_id);
 		tx_drop(mbuf);
 		return;
 	}
@@ -476,12 +476,12 @@ static inline void handle_unknown_ip6(struct task_base *tbase, struct rte_mbuf *
 		task->external_ip6_table[ret2].nb_requests++;
 		// Only needed for first request - but avoid test and copy the same 6 bytes
 		// In most cases we will only have one request per IP.
-		//memcpy(&task->external_ip6_table[ret2].mac, &task->internal_port_table[port].mac, sizeof(prox_rte_ether_addr));
+		//memcpy(&task->external_ip6_table[ret2].mac, &task->internal_port_table[port_id].mac, sizeof(prox_rte_ether_addr));
 	}
 
 	// As timers are not handled by master, we might send an NS request even if one was just sent
 	// (and not yet answered) by another task
-	build_neighbour_sollicitation(mbuf, &task->internal_port_table[port].mac, ip_dst, ip_src, vlan);
+	build_neighbour_sollicitation(mbuf, &task->internal_port_table[port_id].mac, ip_dst, ip_src, vlan);
 	tx_ring(tbase, ring, SEND_NDP_FROM_MASTER, mbuf);
 }
 
@@ -625,6 +625,7 @@ static inline void handle_ns(struct task_base *tbase, struct rte_mbuf *mbuf, pro
 		tx_drop(mbuf);
 	} else {
 		struct rte_ring *ring = task->internal_ip6_table[ret].ring;
+		if (ring == NULL) return;
 		build_neighbour_advertisement(tbase, mbuf, &task->internal_ip6_table[ret].mac, &key.ip6, PROX_SOLLICITED, vlan);
 		tx_ring(tbase, ring, SEND_NDP_FROM_MASTER, mbuf);
 	}
@@ -675,7 +676,7 @@ static inline void handle_na(struct task_base *tbase, struct rte_mbuf *mbuf, pro
 	}
 
 	if (target_address == NULL) {
-		tx_drop(mbuf);
+		target_address = (uint8_t *)&neighbour_advertisement->destination_address;
 	}
 	struct ether_hdr_arp *hdr_arp = rte_pktmbuf_mtod(mbuf, struct ether_hdr_arp *);
 	struct ipv6_addr *key = &neighbour_advertisement->destination_address;
@@ -683,6 +684,7 @@ static inline void handle_na(struct task_base *tbase, struct rte_mbuf *mbuf, pro
 	ret = rte_hash_lookup(task->external_ip6_hash, (const void *)key);
 	if (unlikely(ret < 0)) {
 		// entry not found for this IP: we did not ask a request, delete the reply
+		plog_err("Unkown IP "IPv6_BYTES_FMT"", IPv6_BYTES(neighbour_advertisement->destination_address.bytes));
 		tx_drop(mbuf);
 	} else {
 		// entry found for this IP
@@ -697,6 +699,7 @@ static inline void handle_na(struct task_base *tbase, struct rte_mbuf *mbuf, pro
 			}
 			task->external_ip6_table[ret].nb_requests = 0;
 		} else {
+			plog_err("UNEXPECTED nb_requests == 0");
 			tx_drop(mbuf);
 		}
 	}
