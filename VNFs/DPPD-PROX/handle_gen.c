@@ -1893,7 +1893,7 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 		n_entries = RTE_HASH_BUCKET_ENTRIES;
 
 	static char hash_name[30];
-	sprintf(hash_name, "A%03d_hash_gen_table", targ->lconf->id);
+	sprintf(hash_name, "A%03d_%02d_hash_gen_table", targ->lconf->id, targ->id);
 	struct rte_hash_parameters hash_params = {
 		.name = hash_name,
 		.entries = n_entries,
