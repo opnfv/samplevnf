@@ -259,7 +259,7 @@ static inline void handle_arp_request(struct task_base *tbase, struct rte_mbuf *
 		plogx_dbg("\tMaster handling ARP request for ip "IPv4_BYTES_FMT" on port %d which supports random ip\n", IP4(key.ip), key.port);
 		struct rte_ring *ring = task->internal_port_table[port].ring;
 		create_mac(arp, &mac);
-		mbuf->ol_flags &= ~(PKT_TX_IP_CKSUM|PKT_TX_UDP_CKSUM);
+		mbuf->ol_flags &= ~(RTE_MBUF_F_TX_IP_CKSUM|RTE_MBUF_F_TX_UDP_CKSUM);
 		build_arp_reply(ether_hdr, &mac, arp);
 		tx_ring(tbase, ring, SEND_ARP_REPLY_FROM_MASTER, mbuf);
 		return;
@@ -274,7 +274,7 @@ static inline void handle_arp_request(struct task_base *tbase, struct rte_mbuf *
 		tx_drop(mbuf);
 	} else {
 		struct rte_ring *ring = task->internal_ip_table[ret].ring;
-		mbuf->ol_flags &= ~(PKT_TX_IP_CKSUM|PKT_TX_UDP_CKSUM);
+		mbuf->ol_flags &= ~(RTE_MBUF_F_TX_IP_CKSUM|RTE_MBUF_F_TX_UDP_CKSUM);
 		build_arp_reply(ether_hdr, &task->internal_ip_table[ret].mac, arp);
 		tx_ring(tbase, ring, SEND_ARP_REPLY_FROM_MASTER, mbuf);
 	}
@@ -339,7 +339,7 @@ static inline void handle_unknown_ip(struct task_base *tbase, struct rte_mbuf *m
 		return;
 	}
 	// We send an ARP request even if one was just sent (and not yet answered) by another task
-	mbuf->ol_flags &= ~(PKT_TX_IP_CKSUM|PKT_TX_UDP_CKSUM);
+	mbuf->ol_flags &= ~(RTE_MBUF_F_TX_IP_CKSUM|RTE_MBUF_F_TX_UDP_CKSUM);
 	build_arp_request(mbuf, &task->internal_port_table[port].mac, ip_dst, ip_src, vlan);
 	tx_ring(tbase, ring, SEND_ARP_REQUEST_FROM_MASTER, mbuf);
 }
@@ -368,7 +368,7 @@ static inline void build_icmp_reply_message(struct task_base *tbase, struct rte_
 		tx_drop(mbuf);
 	} else {
 		struct rte_ring *ring = task->internal_ip_table[ret].ring;
-		mbuf->ol_flags &= ~(PKT_TX_IP_CKSUM|PKT_TX_UDP_CKSUM);
+		mbuf->ol_flags &= ~(RTE_MBUF_F_TX_IP_CKSUM|RTE_MBUF_F_TX_UDP_CKSUM);
 		tx_ring(tbase, ring, SEND_ICMP_FROM_MASTER, mbuf);
 	}
 }
