@@ -673,7 +673,7 @@ static int handle_lat_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uin
 			uint32_t packet_id_in_flow;
 			struct unique_id *unique_id = (struct unique_id *)(hdr + task->packet_id_in_flow_pos);
 			unique_id_get(unique_id, &generator_id, &packet_id_in_flow);
-			lat_test_check_flow_ordering(task, task->lat_test, flow_id + generator_id * task->generator_count, packet_id_in_flow);
+			lat_test_check_flow_ordering(task, task->lat_test, flow_id + generator_id * task->flow_count, packet_id_in_flow);
 		}
 		if (task->unique_id_pos) {
 			struct unique_id *unique_id = (struct unique_id *)(hdr + task->unique_id_pos);
