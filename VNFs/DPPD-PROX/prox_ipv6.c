@@ -141,7 +141,7 @@ void build_router_advertisement(struct rte_mbuf *mbuf, prox_rte_ether_addr *s_ad
 {
 	prox_rte_ether_hdr *peth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 	init_mbuf_seg(mbuf);
-	mbuf->ol_flags &= ~(PKT_TX_IP_CKSUM|PKT_TX_UDP_CKSUM);  // Software calculates the checksum
+	mbuf->ol_flags &= ~(RTE_MBUF_F_TX_IP_CKSUM|RTE_MBUF_F_TX_UDP_CKSUM);  // Software calculates the checksum
 
 	memcpy(peth->d_addr.addr_bytes, &prox_cfg.all_nodes_mac_addr, sizeof(prox_rte_ether_addr));
 	memcpy(peth->s_addr.addr_bytes, s_addr, sizeof(prox_rte_ether_addr));
@@ -191,7 +191,7 @@ void build_router_sollicitation(struct rte_mbuf *mbuf, prox_rte_ether_addr *s_ad
 	prox_rte_ether_hdr *peth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 
 	init_mbuf_seg(mbuf);
-	mbuf->ol_flags &= ~(PKT_TX_IP_CKSUM|PKT_TX_UDP_CKSUM);  // Software calculates the checksum
+	mbuf->ol_flags &= ~(RTE_MBUF_F_TX_IP_CKSUM|RTE_MBUF_F_TX_UDP_CKSUM);  // Software calculates the checksum
 
 	memcpy(peth->d_addr.addr_bytes, &prox_cfg.all_routers_mac_addr, sizeof(prox_rte_ether_addr));
 	memcpy(peth->s_addr.addr_bytes, s_addr, sizeof(prox_rte_ether_addr));
@@ -225,7 +225,7 @@ void build_neighbour_sollicitation(struct rte_mbuf *mbuf, prox_rte_ether_addr *s
 	set_mcast_mac_from_ipv6(&mac_dst, dst);
 
 	init_mbuf_seg(mbuf);
-	mbuf->ol_flags &= ~(PKT_TX_IP_CKSUM|PKT_TX_UDP_CKSUM);  // Software calculates the checksum
+	mbuf->ol_flags &= ~(RTE_MBUF_F_TX_IP_CKSUM|RTE_MBUF_F_TX_UDP_CKSUM);  // Software calculates the checksum
 
 	memcpy(peth->d_addr.addr_bytes, &mac_dst, sizeof(prox_rte_ether_addr));
 	memcpy(peth->s_addr.addr_bytes, s_addr, sizeof(prox_rte_ether_addr));
@@ -263,7 +263,7 @@ void build_neighbour_advertisement(struct task_base *tbase, struct rte_mbuf *mbu
 	uint8_t port_id = get_port(mbuf);
 
 	init_mbuf_seg(mbuf);
-	mbuf->ol_flags &= ~(PKT_TX_IP_CKSUM|PKT_TX_UDP_CKSUM);  // Software calculates the checksum
+	mbuf->ol_flags &= ~(RTE_MBUF_F_TX_IP_CKSUM|RTE_MBUF_F_TX_UDP_CKSUM);  // Software calculates the checksum
 
 	prox_rte_ipv6_hdr *ipv6_hdr = prox_set_vlan_ipv6(peth, vlan);
 

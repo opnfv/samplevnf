@@ -610,18 +610,18 @@ static int get_port_cfg(unsigned sindex, char *str, void *data)
 		if (parse_bool(&val, pkey)) {
 			return -1;
 		}
-#if defined(DEV_RX_OFFLOAD_CRC_STRIP)
+#if defined(RTE_ETH_RX_OFFLOAD_CRC_STRIP)
 		if (val)
-			cfg->requested_rx_offload |= DEV_RX_OFFLOAD_CRC_STRIP;
+			cfg->requested_rx_offload |= RTE_ETH_RX_OFFLOAD_CRC_STRIP;
 		else
-			cfg->requested_rx_offload &= ~DEV_RX_OFFLOAD_CRC_STRIP;
+			cfg->requested_rx_offload &= ~RTE_ETH_RX_OFFLOAD_CRC_STRIP;
 #else
-#if defined (DEV_RX_OFFLOAD_KEEP_CRC)
+#if defined (RTE_ETH_RX_OFFLOAD_KEEP_CRC)
 		if (val)
-			cfg->requested_rx_offload &= ~DEV_RX_OFFLOAD_KEEP_CRC;
+			cfg->requested_rx_offload &= ~RTE_ETH_RX_OFFLOAD_KEEP_CRC;
 		else
+			cfg->requested_rx_offload |= RTE_ETH_RX_OFFLOAD_KEEP_CRC;
 #endif
-			cfg->requested_rx_offload |= DEV_RX_OFFLOAD_KEEP_CRC;
 #endif
 
 	}
@@ -635,11 +635,11 @@ static int get_port_cfg(unsigned sindex, char *str, void *data)
 			return -1;
 		}
 		if (val) {
-			cfg->requested_rx_offload |= DEV_RX_OFFLOAD_VLAN_STRIP;
-			cfg->requested_tx_offload |= DEV_TX_OFFLOAD_VLAN_INSERT;
+			cfg->requested_rx_offload |= RTE_ETH_RX_OFFLOAD_VLAN_STRIP;
+			cfg->requested_tx_offload |= RTE_ETH_TX_OFFLOAD_VLAN_INSERT;
 		} else {
-			cfg->requested_rx_offload &= ~DEV_RX_OFFLOAD_VLAN_STRIP;
-			cfg->requested_tx_offload &= ~DEV_TX_OFFLOAD_VLAN_INSERT;
+			cfg->requested_rx_offload &= ~RTE_ETH_RX_OFFLOAD_VLAN_STRIP;
+			cfg->requested_tx_offload &= ~RTE_ETH_TX_OFFLOAD_VLAN_INSERT;
 		}
 #else
 		plog_warn("vlan option not supported : update DPDK at least to 18.08 to support this option\n");
@@ -662,7 +662,7 @@ static int get_port_cfg(unsigned sindex, char *str, void *data)
 			cfg->port_conf.rxmode.mtu = cfg->mtu;
 			if (cfg->port_conf.rxmode.mtu > PROX_RTE_ETHER_MAX_LEN - PROX_RTE_ETHER_HDR_LEN - PROX_RTE_ETHER_CRC_LEN)
 #endif
-				cfg->requested_rx_offload |= DEV_RX_OFFLOAD_JUMBO_FRAME;
+				cfg->requested_rx_offload |= RTE_ETH_RX_OFFLOAD_JUMBO_FRAME;
 		}
 	}
 
@@ -672,8 +672,8 @@ static int get_port_cfg(unsigned sindex, char *str, void *data)
 			return -1;
 		}
 		if (val) {
-			cfg->port_conf.rxmode.mq_mode = ETH_MQ_RX_RSS;
-			cfg->port_conf.rx_adv_conf.rss_conf.rss_hf = ETH_RSS_IPV4;
+			cfg->port_conf.rxmode.mq_mode = RTE_ETH_MQ_RX_RSS;
+			cfg->port_conf.rx_adv_conf.rss_conf.rss_hf = RTE_ETH_RSS_IPV4;
 		}
 	}
 	else if (STR_EQ(str, "rx_ring")) {

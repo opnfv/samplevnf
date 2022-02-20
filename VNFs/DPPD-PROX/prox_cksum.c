@@ -91,14 +91,14 @@ static inline void prox_write_tcp_pseudo_hdr(prox_rte_tcp_hdr *tcp, uint16_t len
 
 inline void prox_ip_udp_cksum(struct rte_mbuf *mbuf, prox_rte_ipv4_hdr *pip, uint16_t l2_len, uint16_t l3_len, int cksum_offload)
 {
-	prox_ip_cksum(mbuf, pip, l2_len, l3_len, cksum_offload & DEV_TX_OFFLOAD_IPV4_CKSUM);
+	prox_ip_cksum(mbuf, pip, l2_len, l3_len, cksum_offload & RTE_ETH_TX_OFFLOAD_IPV4_CKSUM);
 
 	uint32_t l4_len = rte_bswap16(pip->total_length) - l3_len;
 	if (pip->next_proto_id == IPPROTO_UDP) {
 		prox_rte_udp_hdr *udp = (prox_rte_udp_hdr *)(((uint8_t*)pip) + l3_len);
 #ifndef SOFT_CRC
-		if (cksum_offload & DEV_TX_OFFLOAD_UDP_CKSUM) {
-			mbuf->ol_flags |= PKT_TX_UDP_CKSUM;
+		if (cksum_offload & RTE_ETH_TX_OFFLOAD_UDP_CKSUM) {
+			mbuf->ol_flags |= RTE_MBUF_F_TX_UDP_CKSUM;
 			prox_write_udp_pseudo_hdr(udp, l4_len, pip->src_addr, pip->dst_addr);
 		} else
 #endif
@@ -106,9 +106,9 @@ inline void prox_ip_udp_cksum(struct rte_mbuf *mbuf, prox_rte_ipv4_hdr *pip, uin
 	} else if (pip->next_proto_id == IPPROTO_TCP) {
 		prox_rte_tcp_hdr *tcp = (prox_rte_tcp_hdr *)(((uint8_t*)pip) + l3_len);
 #ifndef SOFT_CRC
-		if (cksum_offload & DEV_TX_OFFLOAD_TCP_CKSUM) {
+		if (cksum_offload & RTE_ETH_TX_OFFLOAD_TCP_CKSUM) {
 			prox_write_tcp_pseudo_hdr(tcp, l4_len, pip->src_addr, pip->dst_addr);
-			mbuf->ol_flags |= PKT_TX_UDP_CKSUM;
+			mbuf->ol_flags |= RTE_MBUF_F_TX_UDP_CKSUM;
 		} else
 #endif
 		prox_tcp_cksum_sw(tcp, l4_len, pip->src_addr, pip->dst_addr);

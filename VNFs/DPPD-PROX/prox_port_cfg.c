@@ -414,20 +414,20 @@ void init_rte_dev(int use_dummy_devices)
 		}
 
 		// In DPDK 18.08 vmxnet3 reports it supports IPV4 checksum, but packets does not go through when IPv4 cksum is enabled
-		if ((!strcmp(port_cfg->short_name, "vmxnet3")) && (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_IPV4_CKSUM)) {
+		if ((!strcmp(port_cfg->short_name, "vmxnet3")) && (port_cfg->dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_IPV4_CKSUM)) {
 			plog_info("\t\tDisabling IPV4 cksum on vmxnet3\n");
-			port_cfg->disabled_tx_offload |= DEV_TX_OFFLOAD_IPV4_CKSUM;
+			port_cfg->disabled_tx_offload |= RTE_ETH_TX_OFFLOAD_IPV4_CKSUM;
 		}
-		if ((!strcmp(port_cfg->short_name, "vmxnet3")) && (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_UDP_CKSUM)) {
+		if ((!strcmp(port_cfg->short_name, "vmxnet3")) && (port_cfg->dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_UDP_CKSUM)) {
 			plog_info("\t\tDisabling UDP cksum on vmxnet3\n");
-			port_cfg->disabled_tx_offload |= DEV_TX_OFFLOAD_UDP_CKSUM;
+			port_cfg->disabled_tx_offload |= RTE_ETH_TX_OFFLOAD_UDP_CKSUM;
 		}
 		// Some OVS versions reports that they support UDP offload and no IPv4 offload, but fails when UDP offload is enabled
 		if ((!strcmp(port_cfg->short_name, "virtio")) &&
-			((port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_IPV4_CKSUM) == 0) &&
-			(port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_UDP_CKSUM)) {
+			((port_cfg->dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_IPV4_CKSUM) == 0) &&
+			(port_cfg->dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_UDP_CKSUM)) {
 			plog_info("\t\tDisabling UDP cksum on virtio\n");
-			port_cfg->disabled_tx_offload |= DEV_TX_OFFLOAD_UDP_CKSUM;
+			port_cfg->disabled_tx_offload |= RTE_ETH_TX_OFFLOAD_UDP_CKSUM;
 		}
 	}
 }
@@ -481,84 +481,84 @@ static void print_port_capa(struct prox_port_cfg *port_cfg)
 
 #if RTE_VERSION >= RTE_VERSION_NUM(18,8,0,1)
 	plog_info("\t\tRX offload capa = 0x%lx = ", port_cfg->dev_info.rx_offload_capa);
-	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_VLAN_STRIP)
+	if (port_cfg->dev_info.rx_offload_capa & RTE_ETH_RX_OFFLOAD_VLAN_STRIP)
 		plog_info("VLAN STRIP | ");
-	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_IPV4_CKSUM)
+	if (port_cfg->dev_info.rx_offload_capa & RTE_ETH_RX_OFFLOAD_IPV4_CKSUM)
 		plog_info("IPV4 CKSUM | ");
-	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_UDP_CKSUM)
+	if (port_cfg->dev_info.rx_offload_capa & RTE_ETH_RX_OFFLOAD_UDP_CKSUM)
 		plog_info("UDP CKSUM | ");
-	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_TCP_CKSUM)
+	if (port_cfg->dev_info.rx_offload_capa & RTE_ETH_RX_OFFLOAD_TCP_CKSUM)
 		plog_info("TCP CKSUM | ");
-	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_TCP_LRO)
+	if (port_cfg->dev_info.rx_offload_capa & RTE_ETH_RX_OFFLOAD_TCP_LRO)
 		plog_info("TCP LRO | ");
-	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_QINQ_STRIP)
+	if (port_cfg->dev_info.rx_offload_capa & RTE_ETH_RX_OFFLOAD_QINQ_STRIP)
 		plog_info("QINQ STRIP | ");
-	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_OUTER_IPV4_CKSUM)
+	if (port_cfg->dev_info.rx_offload_capa & RTE_ETH_RX_OFFLOAD_OUTER_IPV4_CKSUM)
 		plog_info("OUTER_IPV4_CKSUM | ");
-	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_MACSEC_STRIP)
+	if (port_cfg->dev_info.rx_offload_capa & RTE_ETH_RX_OFFLOAD_MACSEC_STRIP)
 		plog_info("MACSEC STRIP | ");
-	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_HEADER_SPLIT)
+	if (port_cfg->dev_info.rx_offload_capa & RTE_ETH_RX_OFFLOAD_HEADER_SPLIT)
 		plog_info("HEADER SPLIT | ");
-	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_VLAN_FILTER)
+	if (port_cfg->dev_info.rx_offload_capa & RTE_ETH_RX_OFFLOAD_VLAN_FILTER)
 		plog_info("VLAN FILTER | ");
-	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_VLAN_EXTEND)
+	if (port_cfg->dev_info.rx_offload_capa & RTE_ETH_RX_OFFLOAD_VLAN_EXTEND)
 		plog_info("VLAN EXTEND | ");
-	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_JUMBO_FRAME)
+	if (port_cfg->dev_info.rx_offload_capa & RTE_ETH_RX_OFFLOAD_JUMBO_FRAME)
 		plog_info("JUMBO FRAME | ");
-#if defined(DEV_RX_OFFLOAD_CRC_STRIP)
-	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_CRC_STRIP)
+#if defined(RTE_ETH_RX_OFFLOAD_CRC_STRIP)
+	if (port_cfg->dev_info.rx_offload_capa & RTE_ETH_RX_OFFLOAD_CRC_STRIP)
 		plog_info("CRC STRIP | ");
 #endif
-#if defined(DEV_RX_OFFLOAD_KEEP_CRC)
-	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_KEEP_CRC)
+#if defined(RTE_ETH_RX_OFFLOAD_KEEP_CRC)
+	if (port_cfg->dev_info.rx_offload_capa & RTE_ETH_RX_OFFLOAD_KEEP_CRC)
 		plog_info("KEEP CRC | ");
 #endif
-	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_SCATTER)
+	if (port_cfg->dev_info.rx_offload_capa & RTE_ETH_RX_OFFLOAD_SCATTER)
 		plog_info("SCATTER | ");
-	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_TIMESTAMP)
+	if (port_cfg->dev_info.rx_offload_capa & RTE_ETH_RX_OFFLOAD_TIMESTAMP)
 		plog_info("TIMESTAMP | ");
-	if (port_cfg->dev_info.rx_offload_capa & DEV_RX_OFFLOAD_SECURITY)
+	if (port_cfg->dev_info.rx_offload_capa & RTE_ETH_RX_OFFLOAD_SECURITY)
 		plog_info("SECURITY ");
 	plog_info("\n");
 
 	plog_info("\t\tTX offload capa = 0x%lx = ", port_cfg->dev_info.tx_offload_capa);
-	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_VLAN_INSERT)
+	if (port_cfg->dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_VLAN_INSERT)
 		plog_info("VLAN INSERT | ");
-	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_IPV4_CKSUM)
+	if (port_cfg->dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_IPV4_CKSUM)
 		plog_info("IPV4 CKSUM | ");
-	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_UDP_CKSUM)
+	if (port_cfg->dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_UDP_CKSUM)
 		plog_info("UDP CKSUM | ");
-	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_TCP_CKSUM)
+	if (port_cfg->dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_TCP_CKSUM)
 		plog_info("TCP CKSUM | ");
-	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_SCTP_CKSUM)
+	if (port_cfg->dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_SCTP_CKSUM)
 		plog_info("SCTP CKSUM | ");
-	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_TCP_TSO)
+	if (port_cfg->dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_TCP_TSO)
 		plog_info("TCP TS0 | ");
-	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_UDP_TSO)
+	if (port_cfg->dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_UDP_TSO)
 		plog_info("UDP TSO | ");
-	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_OUTER_IPV4_CKSUM)
+	if (port_cfg->dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_OUTER_IPV4_CKSUM)
 		plog_info("OUTER IPV4 CKSUM | ");
-	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_QINQ_INSERT)
+	if (port_cfg->dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_QINQ_INSERT)
 		plog_info("QINQ INSERT | ");
-	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_VXLAN_TNL_TSO)
+	if (port_cfg->dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_VXLAN_TNL_TSO)
 		plog_info("VLAN TNL TSO | ");
-	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_GRE_TNL_TSO)
+	if (port_cfg->dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_GRE_TNL_TSO)
 		plog_info("GRE TNL TSO | ");
-	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_IPIP_TNL_TSO)
+	if (port_cfg->dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_IPIP_TNL_TSO)
 		plog_info("IPIP TNL TSO | ");
-	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_GENEVE_TNL_TSO)
+	if (port_cfg->dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_GENEVE_TNL_TSO)
 		plog_info("GENEVE TNL TSO | ");
-	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_MACSEC_INSERT)
+	if (port_cfg->dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_MACSEC_INSERT)
 		plog_info("MACSEC INSERT | ");
-	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_MT_LOCKFREE)
+	if (port_cfg->dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_MT_LOCKFREE)
 		plog_info("MT LOCKFREE | ");
-	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_MULTI_SEGS)
+	if (port_cfg->dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_MULTI_SEGS)
 		plog_info("MULTI SEG | ");
-	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_SECURITY)
+	if (port_cfg->dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_SECURITY)
 		plog_info("SECURITY | ");
-	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_UDP_TNL_TSO)
+	if (port_cfg->dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_UDP_TNL_TSO)
 		plog_info("UDP TNL TSO | ");
-	if (port_cfg->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_IP_TNL_TSO)
+	if (port_cfg->dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_IP_TNL_TSO)
 		plog_info("IP TNL TSO | ");
 	plog_info("\n");
 
@@ -583,30 +583,30 @@ static void get_max_link_speed(struct prox_port_cfg *port_cfg)
 		// or rte_eth_link_get_nowait) might be reported too late
 		// and might result in wrong exrapolation, and hence should not be used
 		// for extrapolation purposes
-		if (port_cfg->dev_info.speed_capa & ETH_LINK_SPEED_100G)
-			port_cfg->max_link_speed = ETH_SPEED_NUM_100G;
-		else if (port_cfg->dev_info.speed_capa & ETH_LINK_SPEED_56G)
-			port_cfg->max_link_speed = ETH_SPEED_NUM_56G;
-		else if (port_cfg->dev_info.speed_capa & ETH_LINK_SPEED_50G)
-			port_cfg->max_link_speed = ETH_SPEED_NUM_50G;
-		else if (port_cfg->dev_info.speed_capa & ETH_LINK_SPEED_40G)
-			port_cfg->max_link_speed = ETH_SPEED_NUM_40G;
-		else if (port_cfg->dev_info.speed_capa & ETH_LINK_SPEED_25G)
-			port_cfg->max_link_speed = ETH_SPEED_NUM_25G;
-		else if (port_cfg->dev_info.speed_capa & ETH_LINK_SPEED_20G)
-			port_cfg->max_link_speed = ETH_SPEED_NUM_20G;
-		else if (port_cfg->dev_info.speed_capa & ETH_LINK_SPEED_10G)
-			port_cfg->max_link_speed = ETH_SPEED_NUM_10G;
-		else if (port_cfg->dev_info.speed_capa & ETH_LINK_SPEED_5G)
-			port_cfg->max_link_speed = ETH_SPEED_NUM_5G;
-		else if (port_cfg->dev_info.speed_capa & ETH_LINK_SPEED_2_5G)
-			port_cfg->max_link_speed = ETH_SPEED_NUM_2_5G;
-		else if (port_cfg->dev_info.speed_capa & ETH_LINK_SPEED_1G)
-			port_cfg->max_link_speed = ETH_SPEED_NUM_1G;
-		else if (port_cfg->dev_info.speed_capa & (ETH_LINK_SPEED_100M_HD | ETH_LINK_SPEED_100M))
-			port_cfg->max_link_speed = ETH_SPEED_NUM_100M;
-		else if (port_cfg->dev_info.speed_capa & (ETH_LINK_SPEED_10M_HD | ETH_LINK_SPEED_10M))
-			port_cfg->max_link_speed = ETH_SPEED_NUM_10M;
+		if (port_cfg->dev_info.speed_capa & RTE_ETH_LINK_SPEED_100G)
+			port_cfg->max_link_speed = RTE_ETH_SPEED_NUM_100G;
+		else if (port_cfg->dev_info.speed_capa & RTE_ETH_LINK_SPEED_56G)
+			port_cfg->max_link_speed = RTE_ETH_SPEED_NUM_56G;
+		else if (port_cfg->dev_info.speed_capa & RTE_ETH_LINK_SPEED_50G)
+			port_cfg->max_link_speed = RTE_ETH_SPEED_NUM_50G;
+		else if (port_cfg->dev_info.speed_capa & RTE_ETH_LINK_SPEED_40G)
+			port_cfg->max_link_speed = RTE_ETH_SPEED_NUM_40G;
+		else if (port_cfg->dev_info.speed_capa & RTE_ETH_LINK_SPEED_25G)
+			port_cfg->max_link_speed = RTE_ETH_SPEED_NUM_25G;
+		else if (port_cfg->dev_info.speed_capa & RTE_ETH_LINK_SPEED_20G)
+			port_cfg->max_link_speed = RTE_ETH_SPEED_NUM_20G;
+		else if (port_cfg->dev_info.speed_capa & RTE_ETH_LINK_SPEED_10G)
+			port_cfg->max_link_speed = RTE_ETH_SPEED_NUM_10G;
+		else if (port_cfg->dev_info.speed_capa & RTE_ETH_LINK_SPEED_5G)
+			port_cfg->max_link_speed = RTE_ETH_SPEED_NUM_5G;
+		else if (port_cfg->dev_info.speed_capa & RTE_ETH_LINK_SPEED_2_5G)
+			port_cfg->max_link_speed = RTE_ETH_SPEED_NUM_2_5G;
+		else if (port_cfg->dev_info.speed_capa & RTE_ETH_LINK_SPEED_1G)
+			port_cfg->max_link_speed = RTE_ETH_SPEED_NUM_1G;
+		else if (port_cfg->dev_info.speed_capa & (RTE_ETH_LINK_SPEED_100M_HD | RTE_ETH_LINK_SPEED_100M))
+			port_cfg->max_link_speed = RTE_ETH_SPEED_NUM_100M;
+		else if (port_cfg->dev_info.speed_capa & (RTE_ETH_LINK_SPEED_10M_HD | RTE_ETH_LINK_SPEED_10M))
+			port_cfg->max_link_speed = RTE_ETH_SPEED_NUM_10M;
 
 	}
 #endif
@@ -665,13 +665,13 @@ static void init_port(struct prox_port_cfg *port_cfg)
 	if (port_cfg->n_rxq > 1)  {
 		// Enable RSS if multiple receive queues
 		if (strcmp(port_cfg->short_name, "virtio")) {
-			port_cfg->port_conf.rxmode.mq_mode       		|= ETH_MQ_RX_RSS;
+			port_cfg->port_conf.rxmode.mq_mode       		|= RTE_ETH_MQ_RX_RSS;
 			port_cfg->port_conf.rx_adv_conf.rss_conf.rss_key 	= toeplitz_init_key;
 			port_cfg->port_conf.rx_adv_conf.rss_conf.rss_key_len 	= TOEPLITZ_KEY_LEN;
 #if RTE_VERSION >= RTE_VERSION_NUM(2,0,0,0)
-			port_cfg->port_conf.rx_adv_conf.rss_conf.rss_hf 	= ETH_RSS_IP|ETH_RSS_UDP;
+			port_cfg->port_conf.rx_adv_conf.rss_conf.rss_hf 	= RTE_ETH_RSS_IP|RTE_ETH_RSS_UDP;
 #else
-			port_cfg->port_conf.rx_adv_conf.rss_conf.rss_hf 	= ETH_RSS_IPV4|ETH_RSS_NONF_IPV4_UDP;
+			port_cfg->port_conf.rx_adv_conf.rss_conf.rss_hf 	= RTE_ETH_RSS_IPV4|ETH_RSS_NONF_IPV4_UDP;
 #endif
 		}
 	}
@@ -681,37 +681,37 @@ static void init_port(struct prox_port_cfg *port_cfg)
 	port_cfg->port_conf.rx_adv_conf.rss_conf.rss_hf &= port_cfg->dev_info.flow_type_rss_offloads;
 #endif
 	if (strcmp(port_cfg->short_name, "virtio")) {
-		plog_info("\t\t Enabling RSS rss_hf = 0x%lx (requested 0x%llx, supported 0x%lx)\n", port_cfg->port_conf.rx_adv_conf.rss_conf.rss_hf, ETH_RSS_IP|ETH_RSS_UDP, port_cfg->dev_info.flow_type_rss_offloads);
+		plog_info("\t\t Enabling RSS rss_hf = 0x%lx (requested 0x%llx, supported 0x%lx)\n", port_cfg->port_conf.rx_adv_conf.rss_conf.rss_hf, RTE_ETH_RSS_IP|RTE_ETH_RSS_UDP, port_cfg->dev_info.flow_type_rss_offloads);
 	} else {
 		plog_info("\t\t Not enabling RSS on virtio port");
 	}
 
 	// rxmode such as hw src strip
 #if RTE_VERSION >= RTE_VERSION_NUM(18,8,0,1)
-#if defined (DEV_RX_OFFLOAD_CRC_STRIP)
-	CONFIGURE_RX_OFFLOAD(DEV_RX_OFFLOAD_CRC_STRIP);
+#if defined (RTE_ETH_RX_OFFLOAD_CRC_STRIP)
+	CONFIGURE_RX_OFFLOAD(RTE_ETH_RX_OFFLOAD_CRC_STRIP);
 #endif
-#if defined (DEV_RX_OFFLOAD_KEEP_CRC)
-	CONFIGURE_RX_OFFLOAD(DEV_RX_OFFLOAD_KEEP_CRC);
+#if defined (RTE_ETH_RX_OFFLOAD_KEEP_CRC)
+	CONFIGURE_RX_OFFLOAD(RTE_ETH_RX_OFFLOAD_KEEP_CRC);
 #endif
-	CONFIGURE_RX_OFFLOAD(DEV_RX_OFFLOAD_JUMBO_FRAME);
-	CONFIGURE_RX_OFFLOAD(DEV_RX_OFFLOAD_VLAN_STRIP);
+	CONFIGURE_RX_OFFLOAD(RTE_ETH_RX_OFFLOAD_JUMBO_FRAME);
+	CONFIGURE_RX_OFFLOAD(RTE_ETH_RX_OFFLOAD_VLAN_STRIP);
 #else
-	if (port_cfg->requested_rx_offload & DEV_RX_OFFLOAD_CRC_STRIP) {
+	if (port_cfg->requested_rx_offload & RTE_ETH_RX_OFFLOAD_CRC_STRIP) {
 		port_cfg->port_conf.rxmode.hw_strip_crc = 1;
 	}
-	if (port_cfg->requested_rx_offload & DEV_RX_OFFLOAD_JUMBO_FRAME) {
+	if (port_cfg->requested_rx_offload & RTE_ETH_RX_OFFLOAD_JUMBO_FRAME) {
 		port_cfg->port_conf.rxmode.jumbo_frame = 1;
 	}
 #endif
 
 	// IPV4, UDP, SCTP Checksums
 #if RTE_VERSION >= RTE_VERSION_NUM(18,8,0,1)
-	CONFIGURE_TX_OFFLOAD(DEV_TX_OFFLOAD_IPV4_CKSUM);
-	CONFIGURE_TX_OFFLOAD(DEV_TX_OFFLOAD_UDP_CKSUM);
-	CONFIGURE_TX_OFFLOAD(DEV_TX_OFFLOAD_VLAN_INSERT);
+	CONFIGURE_TX_OFFLOAD(RTE_ETH_TX_OFFLOAD_IPV4_CKSUM);
+	CONFIGURE_TX_OFFLOAD(RTE_ETH_TX_OFFLOAD_UDP_CKSUM);
+	CONFIGURE_TX_OFFLOAD(RTE_ETH_TX_OFFLOAD_VLAN_INSERT);
 #else
-	if ((port_cfg->dev_info.tx_offload_capa & (DEV_TX_OFFLOAD_IPV4_CKSUM | DEV_TX_OFFLOAD_UDP_CKSUM)) == 0) {
+	if ((port_cfg->dev_info.tx_offload_capa & (RTE_ETH_TX_OFFLOAD_IPV4_CKSUM | RTE_ETH_TX_OFFLOAD_UDP_CKSUM)) == 0) {
 		port_cfg->tx_conf.txq_flags |= ETH_TXQ_FLAGS_NOOFFLOADS;
 		plog_info("\t\tDisabling TX offloads as pmd reports that it does not support them)\n");
 	}
@@ -722,7 +722,7 @@ static void init_port(struct prox_port_cfg *port_cfg)
 #endif
 	// Multi Segments
 #if RTE_VERSION >= RTE_VERSION_NUM(18,8,0,1)
-	CONFIGURE_TX_OFFLOAD(DEV_TX_OFFLOAD_MULTI_SEGS);
+	CONFIGURE_TX_OFFLOAD(RTE_ETH_TX_OFFLOAD_MULTI_SEGS);
 #else
 	if (!strcmp(port_cfg->short_name, "vmxnet3")) {
 		port_cfg->tx_conf.txq_flags |= ETH_TXQ_FLAGS_NOMULTSEGS;
@@ -740,7 +740,7 @@ static void init_port(struct prox_port_cfg *port_cfg)
 
 	// Refcount
 #if RTE_VERSION >= RTE_VERSION_NUM(18,8,0,1)
-	CONFIGURE_TX_OFFLOAD(DEV_TX_OFFLOAD_MBUF_FAST_FREE);
+	CONFIGURE_TX_OFFLOAD(RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE);
 #else
 	if (port_cfg->tx_conf.txq_flags & ETH_TXQ_FLAGS_NOREFCOUNT)
 		plog_info("\t\tEnabling No refcnt on port %d\n", port_id);
@@ -848,7 +848,7 @@ static void init_port(struct prox_port_cfg *port_cfg)
 	if (link.link_status) {
 		plog_info("Link Up - speed %'u Mbps - %s\n",
 			  link.link_speed,
-			  (link.link_duplex == ETH_LINK_FULL_DUPLEX) ?
+			  (link.link_duplex == RTE_ETH_LINK_FULL_DUPLEX) ?
 			  "full-duplex" : "half-duplex");
 	}
 	else {

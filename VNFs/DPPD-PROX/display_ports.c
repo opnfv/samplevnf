@@ -180,8 +180,8 @@ static void display_ports_draw_per_sec_stats(void)
 		struct percent rx_percent;
 		struct percent tx_percent;
 		if (strcmp(prox_port_cfg[port_id].short_name, "i40e_vf") == 0) {
-#if defined (DEV_RX_OFFLOAD_CRC_STRIP)
-			if (prox_port_cfg[port_id].requested_rx_offload & DEV_RX_OFFLOAD_CRC_STRIP) {
+#if defined (RTE_ETH_RX_OFFLOAD_CRC_STRIP)
+			if (prox_port_cfg[port_id].requested_rx_offload & RTE_ETH_RX_OFFLOAD_CRC_STRIP) {
 				rx_percent = calc_percent(last->rx_bytes - prev->rx_bytes + 20 * (last->rx_tot - prev->rx_tot), delta_t);
 				tx_percent = calc_percent(last->tx_bytes - prev->tx_bytes + 24 * (last->tx_tot - prev->tx_tot), delta_t);
 			} else {
@@ -189,7 +189,7 @@ static void display_ports_draw_per_sec_stats(void)
 				tx_percent = calc_percent(last->tx_bytes - prev->tx_bytes + 20 * (last->tx_tot - prev->tx_tot), delta_t);
 			}
 		} else {
-			if (prox_port_cfg[port_id].requested_rx_offload & DEV_RX_OFFLOAD_CRC_STRIP) {
+			if (prox_port_cfg[port_id].requested_rx_offload & RTE_ETH_RX_OFFLOAD_CRC_STRIP) {
 				rx_percent = calc_percent(last->rx_bytes - prev->rx_bytes + 24 * (last->rx_tot - prev->rx_tot), delta_t);
 				tx_percent = calc_percent(last->tx_bytes - prev->tx_bytes + 24 * (last->tx_tot - prev->tx_tot), delta_t);
 			} else {
@@ -198,8 +198,8 @@ static void display_ports_draw_per_sec_stats(void)
 			}
 		}
 #else
-#if defined DEV_RX_OFFLOAD_KEEP_CRC
-			if (prox_port_cfg[port_id].requested_rx_offload & DEV_RX_OFFLOAD_KEEP_CRC ) {
+#if defined RTE_ETH_RX_OFFLOAD_KEEP_CRC
+			if (prox_port_cfg[port_id].requested_rx_offload & RTE_ETH_RX_OFFLOAD_KEEP_CRC ) {
 				rx_percent = calc_percent(last->rx_bytes - prev->rx_bytes + 20 * (last->rx_tot - prev->rx_tot), delta_t);
 				tx_percent = calc_percent(last->tx_bytes - prev->tx_bytes + 20 * (last->tx_tot - prev->tx_tot), delta_t);
 			} else {
@@ -207,7 +207,7 @@ static void display_ports_draw_per_sec_stats(void)
 				tx_percent = calc_percent(last->tx_bytes - prev->tx_bytes + 24 * (last->tx_tot - prev->tx_tot), delta_t);
 			}
 		} else {
-			if (prox_port_cfg[port_id].requested_rx_offload & DEV_RX_OFFLOAD_KEEP_CRC ) {
+			if (prox_port_cfg[port_id].requested_rx_offload & RTE_ETH_RX_OFFLOAD_KEEP_CRC ) {
 				rx_percent = calc_percent(last->rx_bytes - prev->rx_bytes + 20 * (last->rx_tot - prev->rx_tot), delta_t);
 				tx_percent = calc_percent(last->tx_bytes - prev->tx_bytes + 20 * (last->tx_tot - prev->tx_tot), delta_t);
 			} else {
@@ -216,7 +216,7 @@ static void display_ports_draw_per_sec_stats(void)
 			}
 		}
 #else
-#error neither DEV_RX_OFFLOAD_CRC_STRIP or DEV_RX_OFFLOAD_KEEP_CRC is defined
+#error neither RTE_ETH_RX_OFFLOAD_CRC_STRIP or RTE_ETH_RX_OFFLOAD_KEEP_CRC is defined
 #endif
 #endif
 
