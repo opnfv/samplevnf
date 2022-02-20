@@ -26,6 +26,10 @@ project('dppd-prox', 'C',
 cc = meson.get_compiler('c')
 
 # Configure options for prox
+# Grab the DPDK version here "manually" as it is not available in the dpdk_dep
+# object
+dpdk_version = run_command('pkg-config', '--modversion', 'libdpdk').stdout()
+
 if get_option('bng_qinq').enabled()
 	add_project_arguments('-DUSE_QINQ', language: 'c')
 endif
@@ -38,8 +42,10 @@ if get_option('prox_stats').enabled()
 	add_project_arguments('-DPROX_STATS',  language: 'c')
 endif
 
+if dpdk_version.version_compare('<21.11.0')
 if get_option('hw_direct_stats').enabled()
 	add_project_arguments('-DPROX_HW_DIRECT_STATS',  language: 'c')
+endif
 endif
 
 if get_option('dbg')
@@ -132,10 +138,6 @@ deps = [dpdk_dep,
 	dl_dep,
 	lua_dep]
 
-# Grab the DPDK version here "manually" as it is not available in the dpdk_dep
-# object
-dpdk_version = run_command('pkg-config', '--modversion', 'libdpdk').stdout()
-
 # Explicitly add these to the dependency list
 deps += [cc.find_library('rte_bus_pci', required: true)]
 deps += [cc.find_library('rte_bus_vdev', required: true)]
@@ -150,7 +152,7 @@ sources = files(
 	'task_init.c', 'handle_aggregator.c', 'handle_nop.c', 'handle_irq.c',
 	'handle_arp.c', 'handle_impair.c', 'handle_lat.c', 'handle_qos.c',
 	'handle_qinq_decap4.c', 'handle_routing.c', 'handle_untag.c',
-	'handle_mplstag.c', 'handle_qinq_decap6.c', 'rw_reg.c',
+	'handle_mplstag.c', 'handle_qinq_decap6.c', 
 	'handle_lb_qinq.c', 'handle_lb_pos.c', 'handle_lb_net.c',
 	'handle_qinq_encap4.c', 'handle_qinq_encap6.c', 'handle_classify.c',
 	'handle_l2fwd.c', 'handle_swap.c', 'handle_police.c', 'handle_acl.c',
@@ -174,6 +176,10 @@ sources = files(
 	'genl4_stream_udp.c', 'cdf.c', 'stats.c', 'stats_cons_log.c',
 	'stats_cons_cli.c', 'stats_parser.c', 'hash_set.c', 'prox_lua.c',
 	'prox_malloc.c', 'prox_ipv6.c', 'prox_compat.c', 'handle_nsh.c')
+
+if dpdk_version.version_compare('<21.11.0')
+sources += files('rw_reg.c')
+endif
 
 # Include a couple of source files depending on DPDK support
 if cc.find_library('rte_pmd_aesni', required: false).found()

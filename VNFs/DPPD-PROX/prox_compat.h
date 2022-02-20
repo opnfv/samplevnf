@@ -210,7 +210,7 @@ typedef struct icmp_hdr prox_rte_icmp_hdr;
 #define PROX_RTE_IS_IPV4_MCAST IS_IPV4_MCAST
 #define prox_rte_is_same_ether_addr is_same_ether_addr
 #define prox_rte_is_zero_ether_addr is_zero_ether_addr
-#else
+#else //  >= 19.08
 
 #define PROX_RTE_ETHER_CRC_LEN RTE_ETHER_CRC_LEN
 #define PROX_RTE_ETHER_MIN_LEN RTE_ETHER_MIN_LEN
@@ -229,7 +229,16 @@ typedef struct icmp_hdr prox_rte_icmp_hdr;
 typedef struct rte_ipv6_hdr prox_rte_ipv6_hdr;
 typedef struct rte_ipv4_hdr prox_rte_ipv4_hdr;
 typedef struct rte_ether_addr prox_rte_ether_addr;
+#if RTE_VERSION < RTE_VERSION_NUM(21,11,0,0)
 typedef struct rte_ether_hdr prox_rte_ether_hdr;
+#else
+typedef struct prox_rte_ether_hdr
+{
+	struct rte_ether_addr d_addr; /**< Destination address. */
+	struct rte_ether_addr s_addr; /**< Source address. */
+	rte_be16_t ether_type; /**< Frame type. */
+} __rte_aligned(2) prox_rte_ether_hdr;
+#endif
 typedef struct rte_vlan_hdr prox_rte_vlan_hdr;
 typedef struct rte_vxlan_gpe_hdr prox_rte_vxlan_gpe_hdr;
 typedef struct rte_udp_hdr prox_rte_udp_hdr;
@@ -284,6 +293,11 @@ static int prox_rte_cryptodev_queue_pair_setup(uint8_t dev_id, uint16_t queue_pa
 #define prox_rte_eth_dev_count_avail() rte_eth_dev_count()
 #else
 #define prox_rte_eth_dev_count_avail() rte_eth_dev_count_avail()
+#endif
+
+#if RTE_VERSION < RTE_VERSION_NUM(21,11,0,0)
+#define RTE_MBUF_F_TX_IP_CKSUM PKT_TX_IP_CKSUM
+#define RTE_MBUF_F_TX_UDP_CKSUM PKT_TX_UDP_CKSUM
 #endif
 
 #endif // _PROX_COMPAT_H
