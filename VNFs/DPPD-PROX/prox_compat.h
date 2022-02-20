@@ -295,4 +295,9 @@ static int prox_rte_cryptodev_queue_pair_setup(uint8_t dev_id, uint16_t queue_pa
 #define prox_rte_eth_dev_count_avail() rte_eth_dev_count_avail()
 #endif
 
+#if RTE_VERSION < RTE_VERSION_NUM(21,11,0,0)
+#define RTE_MBUF_F_TX_IP_CKSUM PKT_TX_IP_CKSUM
+#define RTE_MBUF_F_TX_UDP_CKSUM PKT_TX_UDP_CKSUM
+#endif
+
 #endif // _PROX_COMPAT_H
