@@ -419,6 +419,7 @@ struct task_args *find_reachable_task_sending_to_port(struct task_args *from)
 	for (uint32_t i = 0; i < from->nb_txrings; ++i) {
 		ct = from->core_task_set[0].core_task[i];
 		dtarg = core_targ_get(ct.core, ct.task);
+		PROX_PANIC(from == dtarg, "Configuration error with core %d, task %d: sending to itself\n", ct.core, ct.task);
 		ret = find_reachable_task_sending_to_port(dtarg);
 		if (ret)
 			return ret;
