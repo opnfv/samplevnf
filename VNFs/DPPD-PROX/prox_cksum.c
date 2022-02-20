@@ -98,7 +98,7 @@ inline void prox_ip_udp_cksum(struct rte_mbuf *mbuf, prox_rte_ipv4_hdr *pip, uin
 		prox_rte_udp_hdr *udp = (prox_rte_udp_hdr *)(((uint8_t*)pip) + l3_len);
 #ifndef SOFT_CRC
 		if (cksum_offload & DEV_TX_OFFLOAD_UDP_CKSUM) {
-			mbuf->ol_flags |= PKT_TX_UDP_CKSUM;
+			mbuf->ol_flags |= RTE_MBUF_F_TX_UDP_CKSUM;
 			prox_write_udp_pseudo_hdr(udp, l4_len, pip->src_addr, pip->dst_addr);
 		} else
 #endif
@@ -108,7 +108,7 @@ inline void prox_ip_udp_cksum(struct rte_mbuf *mbuf, prox_rte_ipv4_hdr *pip, uin
 #ifndef SOFT_CRC
 		if (cksum_offload & DEV_TX_OFFLOAD_TCP_CKSUM) {
 			prox_write_tcp_pseudo_hdr(tcp, l4_len, pip->src_addr, pip->dst_addr);
-			mbuf->ol_flags |= PKT_TX_UDP_CKSUM;
+			mbuf->ol_flags |= RTE_MBUF_F_TX_UDP_CKSUM;
 		} else
 #endif
 		prox_tcp_cksum_sw(tcp, l4_len, pip->src_addr, pip->dst_addr);

@@ -42,7 +42,7 @@ static void prox_ip_cksum_hw(struct rte_mbuf *mbuf, uint16_t l2_len, uint16_t l3
 #else
 	mbuf->tx_offload = CALC_TX_OL(l2_len, l3_len);
 #endif
-	mbuf->ol_flags |= PKT_TX_IP_CKSUM;
+	mbuf->ol_flags |= RTE_MBUF_F_TX_IP_CKSUM;
 }
 
 void prox_ip_cksum_sw(prox_rte_ipv4_hdr *buf);
