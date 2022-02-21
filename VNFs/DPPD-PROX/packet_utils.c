@@ -546,7 +546,7 @@ void task_start_l3(struct task_base *tbase, struct task_args *targ)
 		if ((targ->local_ipv4 && port->ip_addr[0].ip) && (targ->local_prefix != port->ip_addr[0].prefix)) {
 			PROX_PANIC(1, "local_ipv4 prefix in core section (%d) differs from port section (%d)\n", targ->local_prefix, port->ip_addr[0].prefix);
 		}
-		if (!port->ip_addr[0].ip) {
+		if (!port->ip_addr[0].ip && targ->local_ipv4) {
 			port->ip_addr[0].ip = targ->local_ipv4;
 			port->ip_addr[0].prefix = targ->local_prefix;
 			port->n_vlans = 1;
@@ -554,7 +554,8 @@ void task_start_l3(struct task_base *tbase, struct task_args *targ)
 			plog_info("Setting port local_ipv4 from core %d local_ipv4 to "IPv4_BYTES_FMT"\n", tbase->l3.reachable_port_id, IP4(rte_be_to_cpu_32(port->ip_addr[0].ip)));
 		}
 		for (int vlan_id = 0; vlan_id < port->n_vlans; vlan_id++) {
-			register_ip_to_ctrl_plane(tbase->l3.tmaster, rte_be_to_cpu_32(port->ip_addr[vlan_id].ip), tbase->l3.reachable_port_id, targ->lconf->id, targ->id);
+			if (port->ip_addr[vlan_id].ip)
+				register_ip_to_ctrl_plane(tbase->l3.tmaster, rte_be_to_cpu_32(port->ip_addr[vlan_id].ip), tbase->l3.reachable_port_id, targ->lconf->id, targ->id);
         	}
 		if (strcmp(targ->route_table, "") != 0) {
 			struct lpm4 *lpm;

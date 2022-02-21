@@ -91,6 +91,7 @@ struct prox_port_cfg {
 	uint8_t virtual;
 	uint8_t all_rx_queues;
 	uint16_t n_vlans;
+	uint32_t v6_mask_length;
 };
 
 extern rte_atomic32_t lsc;
