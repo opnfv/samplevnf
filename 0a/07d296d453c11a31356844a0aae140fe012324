@@ -1,0 +1,8 @@
+Verified+1: jenkins-ci <jenkins-opnfv-ci@opnfv.org>
+Verified+1: Xavier Simonart <simonartxavier@gmail.com>
+Code-Review+2: Luc Provoost <luc.provoost@gmail.com>
+Submitted-by: Luc Provoost <luc.provoost@gmail.com>
+Submitted-at: Mon, 21 Feb 2022 08:26:20 +0000
+Reviewed-on: https://gerrit.opnfv.org/gerrit/c/samplevnf/+/73221
+Project: samplevnf
+Branch: refs/heads/master
