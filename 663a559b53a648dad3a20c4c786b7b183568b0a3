@@ -1,0 +1,67 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "bfaccbb8_d58b653c",
+        "filename": "VNFs/DPPD-PROX/meson.build",
+        "patchSetId": 1
+      },
+      "lineNbr": 45,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2022-02-23T08:58:01Z",
+      "side": 1,
+      "message": "With this if at this place, instead of below L46 together with an else block, the hw_direct_stats option is silently ignored with DPDK 21.11. The else block would allow warning the end-user at compile time that this option is not supported.",
+      "revId": "663a559b53a648dad3a20c4c786b7b183568b0a3",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "71d822c1_f353ff25",
+        "filename": "VNFs/DPPD-PROX/meson.build",
+        "patchSetId": 1
+      },
+      "lineNbr": 152,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2022-02-23T08:58:01Z",
+      "side": 1,
+      "message": "trailing whitespace",
+      "range": {
+        "startLine": 152,
+        "startChar": 44,
+        "endLine": 152,
+        "endChar": 45
+      },
+      "revId": "663a559b53a648dad3a20c4c786b7b183568b0a3",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "d76e6091_e41c7dea",
+        "filename": "VNFs/DPPD-PROX/prox_compat.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 235,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2022-02-23T08:58:01Z",
+      "side": 1,
+      "message": "We need prox_rte_ether_hdr as the typedef name on L240, but the struct itself could be anonymous.",
+      "range": {
+        "startLine": 235,
+        "startChar": 15,
+        "endLine": 235,
+        "endChar": 33
+      },
+      "revId": "663a559b53a648dad3a20c4c786b7b183568b0a3",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    }
+  ]
+}
