@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "bf3b3ad4_1a53628a",
+        "filename": "VNFs/DPPD-PROX/handle_gen.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1896,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2022-02-23T06:41:16Z",
+      "side": 1,
+      "message": "No problem with %03d for targ-\u003elconf-\u003eid, because it\u0027s an uint8_t.\nNo problem either with %02d for targ-\u003eid, although it\u0027s an uint32_t, because MAX_TASKS_PER_CORE is 8.",
+      "range": {
+        "startLine": 1896,
+        "startChar": 22,
+        "endLine": 1896,
+        "endChar": 31
+      },
+      "revId": "ba0370218cf07fd6dc2f0426d52d9987955ac2a2",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
