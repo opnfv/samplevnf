@@ -227,10 +227,10 @@ void init_rte_dev(int use_dummy_devices)
 		}
 
 		if (port_cfg->vdev[0]) {
-			char name[MAX_NAME_SIZE], tap[MAX_NAME_SIZE];
+			char name[MAX_NAME_BUFFER_SIZE], tap[MAX_NAME_SIZE];
 			snprintf(tap, MAX_NAME_SIZE, "net_tap%d", port_id);
 #if (RTE_VERSION > RTE_VERSION_NUM(17,5,0,1))
-			snprintf(name, MAX_NAME_SIZE, "iface=%s", port_cfg->vdev);
+			snprintf(name, MAX_NAME_BUFFER_SIZE, "iface=%s", port_cfg->vdev);
 			rc = rte_vdev_init(tap, name);
 #else
 			PROX_PANIC(1, "vdev not supported in DPDK < 17.05\n");
@@ -248,7 +248,7 @@ void init_rte_dev(int use_dummy_devices)
 			for (uint32_t tag_id = 0; tag_id < prox_port_cfg[port_id].n_vlans; tag_id++) {
 				prox_port_cfg[vdev_port_id].vlan_tags[tag_id] = prox_port_cfg[port_id].vlan_tags[tag_id];
 				char command[1024];
-				snprintf(prox_port_cfg[vdev_port_id].names[tag_id], MAX_NAME_SIZE, "%s_%d", port_cfg->vdev, prox_port_cfg[port_id].vlan_tags[tag_id]);
+				snprintf(prox_port_cfg[vdev_port_id].names[tag_id], MAX_NAME_BUFFER_SIZE, "%s_%d", port_cfg->vdev, prox_port_cfg[port_id].vlan_tags[tag_id]);
 				sprintf(command, "ip link add link %s name %s type vlan id %d", port_cfg->vdev, prox_port_cfg[vdev_port_id].names[tag_id], prox_port_cfg[port_id].vlan_tags[tag_id]);
 				system(command);
 				plog_info("\tRunning %s\n", command);
