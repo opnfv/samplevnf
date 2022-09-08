@@ -660,7 +660,7 @@ static int get_port_cfg(unsigned sindex, char *str, void *data)
 			if (cfg->port_conf.rxmode.max_rx_pkt_len > PROX_RTE_ETHER_MAX_LEN)
 #else
 			cfg->port_conf.rxmode.mtu = cfg->mtu;
-			if (cfg->port_conf.rxmode.mtu > PROX_RTE_ETHER_MAX_LEN - PROX_RTE_ETHER_HDR_LEN - PROX_RTE_ETHER_CRC_LEN)
+			if (cfg->port_conf.rxmode.mtu > PROX_MTU)
 #endif
 				cfg->requested_rx_offload |= RTE_ETH_RX_OFFLOAD_JUMBO_FRAME;
 		}
