@@ -141,10 +141,17 @@ void build_router_advertisement(struct rte_mbuf *mbuf, prox_rte_ether_addr *s_ad
 {
 	prox_rte_ether_hdr *peth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 	init_mbuf_seg(mbuf);
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+	mbuf->ol_flags &= ~(RTE_MBUF_F_TX_IP_CKSUM | RTE_MBUF_F_TX_UDP_CKSUM);  // Software calculates the checksum
+
+	memcpy(peth->dst_addr.addr_bytes, &prox_cfg.all_nodes_mac_addr, sizeof(prox_rte_ether_addr));
+	memcpy(peth->src_addr.addr_bytes, s_addr, sizeof(prox_rte_ether_addr));
+#else
 	mbuf->ol_flags &= ~(PKT_TX_IP_CKSUM|PKT_TX_UDP_CKSUM);  // Software calculates the checksum
 
 	memcpy(peth->d_addr.addr_bytes, &prox_cfg.all_nodes_mac_addr, sizeof(prox_rte_ether_addr));
 	memcpy(peth->s_addr.addr_bytes, s_addr, sizeof(prox_rte_ether_addr));
+#endif
 
 	prox_rte_ipv6_hdr *ipv6_hdr = prox_set_vlan_ipv6(peth, vlan);
 	ipv6_hdr->vtc_flow = 0x00000060;
@@ -191,10 +198,17 @@ void build_router_sollicitation(struct rte_mbuf *mbuf, prox_rte_ether_addr *s_ad
 	prox_rte_ether_hdr *peth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 
 	init_mbuf_seg(mbuf);
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+	mbuf->ol_flags &= ~(RTE_MBUF_F_TX_IP_CKSUM | RTE_MBUF_F_TX_UDP_CKSUM);  // Software calculates the checksum
+
+	memcpy(peth->dst_addr.addr_bytes, &prox_cfg.all_routers_mac_addr, sizeof(prox_rte_ether_addr));
+	memcpy(peth->src_addr.addr_bytes, s_addr, sizeof(prox_rte_ether_addr));
+#else
 	mbuf->ol_flags &= ~(PKT_TX_IP_CKSUM|PKT_TX_UDP_CKSUM);  // Software calculates the checksum
 
 	memcpy(peth->d_addr.addr_bytes, &prox_cfg.all_routers_mac_addr, sizeof(prox_rte_ether_addr));
 	memcpy(peth->s_addr.addr_bytes, s_addr, sizeof(prox_rte_ether_addr));
+#endif
 
 	prox_rte_ipv6_hdr *ipv6_hdr = prox_set_vlan_ipv6(peth, vlan);
 	ipv6_hdr->vtc_flow = 0x00000060;
@@ -225,10 +239,17 @@ void build_neighbour_sollicitation(struct rte_mbuf *mbuf, prox_rte_ether_addr *s
 	set_mcast_mac_from_ipv6(&mac_dst, dst);
 
 	init_mbuf_seg(mbuf);
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+	mbuf->ol_flags &= ~(RTE_MBUF_F_TX_IP_CKSUM | RTE_MBUF_F_TX_UDP_CKSUM);  // Software calculates the checksum
+
+	memcpy(peth->dst_addr.addr_bytes, &mac_dst, sizeof(prox_rte_ether_addr));
+	memcpy(peth->src_addr.addr_bytes, s_addr, sizeof(prox_rte_ether_addr));
+#else
 	mbuf->ol_flags &= ~(PKT_TX_IP_CKSUM|PKT_TX_UDP_CKSUM);  // Software calculates the checksum
 
 	memcpy(peth->d_addr.addr_bytes, &mac_dst, sizeof(prox_rte_ether_addr));
 	memcpy(peth->s_addr.addr_bytes, s_addr, sizeof(prox_rte_ether_addr));
+#endif
 
 	prox_rte_ipv6_hdr *ipv6_hdr = prox_set_vlan_ipv6(peth, vlan);
 
@@ -263,11 +284,26 @@ void build_neighbour_advertisement(struct task_base *tbase, struct rte_mbuf *mbu
 	uint8_t port_id = get_port(mbuf);
 
 	init_mbuf_seg(mbuf);
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+	mbuf->ol_flags &= ~(RTE_MBUF_F_TX_IP_CKSUM|RTE_MBUF_F_TX_UDP_CKSUM);  // Software calculates the checksum
+#else
 	mbuf->ol_flags &= ~(PKT_TX_IP_CKSUM|PKT_TX_UDP_CKSUM);  // Software calculates the checksum
+#endif
 
 	prox_rte_ipv6_hdr *ipv6_hdr = prox_set_vlan_ipv6(peth, vlan);
 
 	// If source mac is null, use all_nodes_mac_addr.
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+	if ((!sollicited) || (memcmp(peth->src_addr.addr_bytes, &null_addr, sizeof(struct ipv6_addr)) == 0)) {
+		memcpy(peth->dst_addr.addr_bytes, &prox_cfg.all_nodes_mac_addr, sizeof(prox_rte_ether_addr));
+		memcpy(ipv6_hdr->dst_addr, &prox_cfg.all_nodes_ipv6_mcast_addr, sizeof(struct ipv6_addr));
+	} else {
+		memcpy(peth->dst_addr.addr_bytes, peth->src_addr.addr_bytes, sizeof(prox_rte_ether_addr));
+		memcpy(ipv6_hdr->dst_addr, ipv6_hdr->src_addr, sizeof(struct ipv6_addr));
+	}
+
+	memcpy(peth->src_addr.addr_bytes, &task->internal_port_table[port_id].mac, sizeof(prox_rte_ether_addr));
+#else
 	if ((!sollicited) || (memcmp(peth->s_addr.addr_bytes, &null_addr, sizeof(struct ipv6_addr)) == 0)) {
 		memcpy(peth->d_addr.addr_bytes, &prox_cfg.all_nodes_mac_addr, sizeof(prox_rte_ether_addr));
 		memcpy(ipv6_hdr->dst_addr, &prox_cfg.all_nodes_ipv6_mcast_addr, sizeof(struct ipv6_addr));
@@ -277,7 +313,7 @@ void build_neighbour_advertisement(struct task_base *tbase, struct rte_mbuf *mbu
 	}
 
 	memcpy(peth->s_addr.addr_bytes, &task->internal_port_table[port_id].mac, sizeof(prox_rte_ether_addr));
-
+#endif
 	ipv6_hdr->vtc_flow = 0x00000060;
 	ipv6_hdr->payload_len = rte_cpu_to_be_16(sizeof(struct icmpv6_NA));
 	ipv6_hdr->proto = ICMPv6;

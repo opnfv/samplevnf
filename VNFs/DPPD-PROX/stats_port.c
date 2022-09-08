@@ -298,7 +298,11 @@ static void nic_read_stats(uint8_t port_id)
 					(20 * eth_stat.ipackets - 20 * (eth_stat.ierrors + eth_stat.imissed));
 #else
 #if defined (DEV_RX_OFFLOAD_KEEP_CRC)
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+			if (prox_port_cfg[port_id].requested_rx_offload & RTE_ETH_RX_OFFLOAD_KEEP_CRC)
+#else
 			if (prox_port_cfg[port_id].requested_rx_offload & DEV_RX_OFFLOAD_KEEP_CRC)
+#endif
 				stats->rx_bytes = eth_stat.ibytes +
 					(20 * eth_stat.ipackets - 20 * (eth_stat.ierrors + eth_stat.imissed));
 			else

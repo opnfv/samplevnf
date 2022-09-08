@@ -50,7 +50,11 @@
 static const struct rte_eth_conf default_port_conf = {
 	.rxmode = {
 		.mq_mode        = 0,
-		.max_rx_pkt_len = PROX_MTU + PROX_RTE_ETHER_HDR_LEN + PROX_RTE_ETHER_CRC_LEN
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+		.mtu = PROX_MTU,
+#else
+		.max_rx_pkt_len = PROX_MTU + PROX_RTE_ETHER_HDR_LEN + PROX_RTE_ETHER_CRC_LEN,
+#endif
 	},
 	.rx_adv_conf = {
 		.rss_conf = {
@@ -229,6 +233,10 @@ void set_port_defaults(void)
 #if defined (DEV_RX_OFFLOAD_CRC_STRIP)
 		prox_port_cfg[i].requested_rx_offload = DEV_RX_OFFLOAD_CRC_STRIP;
 #endif
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+		prox_port_cfg[i].requested_tx_offload = RTE_ETH_TX_OFFLOAD_IPV4_CKSUM | RTE_ETH_TX_OFFLOAD_UDP_CKSUM;
+#else
 		prox_port_cfg[i].requested_tx_offload = DEV_TX_OFFLOAD_IPV4_CKSUM | DEV_TX_OFFLOAD_UDP_CKSUM;
+#endif
 	}
 }

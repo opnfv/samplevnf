@@ -148,7 +148,11 @@ static void init_task_qinq_decap4(struct task_base *tbase, struct task_args *tar
 
 	struct prox_port_cfg *port = find_reachable_port(targ);
 	if (port) {
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+		task->offload_crc = port->requested_tx_offload & (RTE_ETH_TX_OFFLOAD_IPV4_CKSUM | RTE_ETH_TX_OFFLOAD_UDP_CKSUM);
+#else
 		task->offload_crc = port->requested_tx_offload & (DEV_TX_OFFLOAD_IPV4_CKSUM | DEV_TX_OFFLOAD_UDP_CKSUM);
+#endif
 	}
 
 	// By default, calling this function 1K times per second => 64K ARP per second max
@@ -470,8 +474,13 @@ static inline uint8_t gre_encap_route(uint32_t src_ipv4, struct rte_mbuf *mbuf, 
 	}
 	const uint8_t port_id = task->next_hops[next_hop_index].mac_port.out_idx;
 
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+	*((uint64_t *)(&packet->ether_hdr.dst_addr)) = task->next_hops[next_hop_index].mac_port_8bytes;
+	*((uint64_t *)(&packet->ether_hdr.src_addr)) = task->src_mac[task->next_hops[next_hop_index].mac_port.out_idx];
+#else
 	*((uint64_t *)(&packet->ether_hdr.d_addr)) = task->next_hops[next_hop_index].mac_port_8bytes;
 	*((uint64_t *)(&packet->ether_hdr.s_addr)) = task->src_mac[task->next_hops[next_hop_index].mac_port.out_idx];
+#endif
 
 #ifdef MPLS_ROUTING
 	packet->mpls_bytes = task->next_hops[next_hop_index].mpls | 0x00010000; // Set BoS to 1
