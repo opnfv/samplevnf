@@ -119,6 +119,7 @@ ncurses_dep = dependency('ncurses', required: true)
 ncursesw_dep = dependency('ncursesw', required: true)
 libedit_dep = dependency('libedit', required: true)
 math_dep = cc.find_library('m', required : false)
+dl_dep = cc.find_library('dl', required : true)
 
 deps = [dpdk_dep,
 	tinfo_dep,
@@ -128,6 +129,7 @@ deps = [dpdk_dep,
 	ncursesw_dep,
 	libedit_dep,
 	math_dep,
+	dl_dep,
 	lua_dep]
 
 # Grab the DPDK version here "manually" as it is not available in the dpdk_dep
