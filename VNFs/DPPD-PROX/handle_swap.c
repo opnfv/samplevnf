@@ -75,6 +75,23 @@ static void write_src_and_dst_mac(struct task_swap *task, struct rte_mbuf *mbuf)
               	rte_memcpy(hdr, task->src_dst_mac, sizeof(task->src_dst_mac));
 	} else {
 		hdr = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+		if (unlikely((task->flags & TASK_ARG_SRC_MAC_SET) == 0)) {
+			/* dst mac will be used as src mac */
+			prox_rte_ether_addr_copy(&hdr->dst_addr, &mac);
+		}
+
+		if (unlikely(task->flags & TASK_ARG_DST_MAC_SET))
+			prox_rte_ether_addr_copy((prox_rte_ether_addr *)&task->src_dst_mac[0], &hdr->dst_addr);
+		else
+			prox_rte_ether_addr_copy(&hdr->src_addr, &hdr->dst_addr);
+
+		if (likely(task->flags & TASK_ARG_SRC_MAC_SET)) {
+			prox_rte_ether_addr_copy((prox_rte_ether_addr *)&task->src_dst_mac[6], &hdr->src_addr);
+		} else {
+			prox_rte_ether_addr_copy(&mac, &hdr->src_addr);
+		}
+#else
 		if (unlikely((task->flags & TASK_ARG_SRC_MAC_SET) == 0)) {
 			/* dst mac will be used as src mac */
 			prox_rte_ether_addr_copy(&hdr->d_addr, &mac);
@@ -90,6 +107,7 @@ static void write_src_and_dst_mac(struct task_swap *task, struct rte_mbuf *mbuf)
 		} else {
 			prox_rte_ether_addr_copy(&mac, &hdr->s_addr);
 		}
+#endif
 	}
 }
 static inline void build_mcast_mac(uint32_t ip, prox_rte_ether_addr *dst_mac)
@@ -104,9 +122,15 @@ static inline void build_icmp_reply_message(struct task_base *tbase, struct rte_
 	struct task_swap *task = (struct task_swap *)tbase;
 	prox_rte_ether_hdr *hdr = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 	prox_rte_ether_addr dst_mac;
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+	prox_rte_ether_addr_copy(&hdr->src_addr, &dst_mac);
+	prox_rte_ether_addr_copy(&hdr->dst_addr, &hdr->src_addr);
+	prox_rte_ether_addr_copy(&dst_mac, &hdr->dst_addr);
+#else
 	prox_rte_ether_addr_copy(&hdr->s_addr, &dst_mac);
 	prox_rte_ether_addr_copy(&hdr->d_addr, &hdr->s_addr);
 	prox_rte_ether_addr_copy(&dst_mac, &hdr->d_addr);
+#endif
 	prox_rte_ipv4_hdr *ip_hdr = (prox_rte_ipv4_hdr *)(hdr + 1);
 	ip_hdr->dst_addr = ip_hdr->src_addr;
 	ip_hdr->src_addr = task->local_ipv4;
@@ -125,8 +149,13 @@ static inline void build_igmp_message(struct task_base *tbase, struct rte_mbuf *
         rte_pktmbuf_data_len(mbuf) = 46;
         init_mbuf_seg(mbuf);
 
-        prox_rte_ether_addr_copy(&dst_mac, &hdr->d_addr);
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+	prox_rte_ether_addr_copy(&dst_mac, &hdr->dst_addr);
+	prox_rte_ether_addr_copy((prox_rte_ether_addr *)&task->src_dst_mac[6], &hdr->src_addr);
+#else
+	prox_rte_ether_addr_copy(&dst_mac, &hdr->d_addr);
 	prox_rte_ether_addr_copy((prox_rte_ether_addr *)&task->src_dst_mac[6], &hdr->s_addr);
+#endif
 	hdr->ether_type = ETYPE_IPv4;
 
 	prox_rte_ipv4_hdr *ip_hdr = (prox_rte_ipv4_hdr *)(hdr + 1);
@@ -572,7 +601,11 @@ static void init_task_swap(struct task_base *tbase, struct task_args *targ)
 
 	struct prox_port_cfg *port = find_reachable_port(targ);
 	if (port) {
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+		task->offload_crc = port->requested_tx_offload & (RTE_ETH_TX_OFFLOAD_IPV4_CKSUM | RTE_ETH_TX_OFFLOAD_UDP_CKSUM);
+#else
 		task->offload_crc = port->requested_tx_offload & (DEV_TX_OFFLOAD_IPV4_CKSUM | DEV_TX_OFFLOAD_UDP_CKSUM);
+#endif
 	}
 	task->store_pkt_id = 0;
 	if (targ->store_max) {

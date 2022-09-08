@@ -167,7 +167,11 @@ static void init_task_ipv6_tun_base(struct task_ipv6_tun_base* tun_base, struct 
 
 	struct prox_port_cfg *port = find_reachable_port(targ);
 	if (port) {
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+		tun_base->offload_crc = port->requested_tx_offload & (RTE_ETH_TX_OFFLOAD_IPV4_CKSUM | RTE_ETH_TX_OFFLOAD_UDP_CKSUM);
+#else
 		tun_base->offload_crc = port->requested_tx_offload & (DEV_TX_OFFLOAD_IPV4_CKSUM | DEV_TX_OFFLOAD_UDP_CKSUM);
+#endif
 	}
 }
 
@@ -410,8 +414,13 @@ static inline uint8_t handle_ipv6_decap(struct task_ipv6_decap* ptask, struct rt
 	pip4 = (prox_rte_ipv4_hdr *)(peth + 1);
 
         // Restore Ethernet header
-        prox_rte_ether_addr_copy(&ptask->base.src_mac, &peth->s_addr);
-        prox_rte_ether_addr_copy(&ptask->dst_mac, &peth->d_addr);
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+	prox_rte_ether_addr_copy(&ptask->base.src_mac, &peth->src_addr);
+	prox_rte_ether_addr_copy(&ptask->dst_mac, &peth->dst_addr);
+#else
+	prox_rte_ether_addr_copy(&ptask->base.src_mac, &peth->s_addr);
+	prox_rte_ether_addr_copy(&ptask->dst_mac, &peth->d_addr);
+#endif
         peth->ether_type = ETYPE_IPv4;
 
 #ifdef GEN_DECAP_IPV6_TO_IPV4_CKSUM
@@ -459,8 +468,13 @@ static inline uint8_t handle_ipv6_encap(struct task_ipv6_encap* ptask, struct rt
 	peth = (prox_rte_ether_hdr *)rte_pktmbuf_prepend(rx_mbuf, extra_space);
 
 	// Ethernet Header
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+	prox_rte_ether_addr_copy(&ptask->base.src_mac, &peth->src_addr);
+	prox_rte_ether_addr_copy(&tun_dest->dst_mac, &peth->dst_addr);
+#else
 	prox_rte_ether_addr_copy(&ptask->base.src_mac, &peth->s_addr);
 	prox_rte_ether_addr_copy(&tun_dest->dst_mac, &peth->d_addr);
+#endif
 	peth->ether_type = ETYPE_IPv6;
 
 	// Set up IPv6 Header

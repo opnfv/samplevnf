@@ -57,9 +57,13 @@ static inline void build_arp_reply(prox_rte_ether_hdr *ether_hdr, prox_rte_ether
 {
 	uint32_t ip_source = arp->data.spa;
 
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+	memcpy(ether_hdr->dst_addr.addr_bytes, ether_hdr->src_addr.addr_bytes, sizeof(prox_rte_ether_addr));
+	memcpy(ether_hdr->src_addr.addr_bytes, s_addr, sizeof(prox_rte_ether_addr));
+#else
 	memcpy(ether_hdr->d_addr.addr_bytes, ether_hdr->s_addr.addr_bytes, sizeof(prox_rte_ether_addr));
 	memcpy(ether_hdr->s_addr.addr_bytes, s_addr, sizeof(prox_rte_ether_addr));
-
+#endif
 	arp->data.spa = arp->data.tpa;
 	arp->data.tpa = ip_source;
 	arp->oper = 0x200;
@@ -92,9 +96,13 @@ static inline void build_arp_request(struct rte_mbuf *mbuf, prox_rte_ether_addr 
 		rte_pktmbuf_pkt_len(mbuf) = 42;
 		rte_pktmbuf_data_len(mbuf) = 42;
 	}
-
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+	memcpy(&ether_hdr->dst_addr.addr_bytes, &mac_bcast, 6);
+	memcpy(&ether_hdr->src_addr.addr_bytes, src_mac, 6);
+#else
 	memcpy(&ether_hdr->d_addr.addr_bytes, &mac_bcast, 6);
 	memcpy(&ether_hdr->s_addr.addr_bytes, src_mac, 6);
+#endif
 	arp->htype = 0x100,
 	arp->ptype = 0x0008;
 	arp->hlen = 6;

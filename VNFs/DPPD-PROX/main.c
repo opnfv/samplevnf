@@ -307,7 +307,11 @@ static void configure_if_tx_queues(struct task_args *targ, uint8_t socket)
 		}
 #else
 		if (chain_flag_always_set(targ, TASK_FEATURE_TXQ_FLAGS_NOOFFLOADS)) {
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+			prox_port_cfg[if_port].requested_tx_offload &= ~(RTE_ETH_TX_OFFLOAD_IPV4_CKSUM | RTE_ETH_TX_OFFLOAD_UDP_CKSUM);
+#else
 			prox_port_cfg[if_port].requested_tx_offload &= ~(DEV_TX_OFFLOAD_IPV4_CKSUM | DEV_TX_OFFLOAD_UDP_CKSUM);
+#endif
 		}
 #endif
 	}
@@ -430,7 +434,11 @@ static void configure_tx_queue_flags(void)
                         use refcnt and per-queue all mbufs comes from the same mempool. */
                         if (chain_flag_never_set(targ, TASK_FEATURE_TXQ_FLAGS_REFCOUNT)) {
                                 if (chain_flag_never_set(targ, TASK_FEATURE_TXQ_FLAGS_MULTIPLE_MEMPOOL))
-                                        prox_port_cfg[if_port].requested_tx_offload |= DEV_TX_OFFLOAD_MBUF_FAST_FREE;
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+					prox_port_cfg[if_port].requested_tx_offload |= RTE_ETH_TX_OFFLOAD_MULTI_SEGS;
+#else
+					prox_port_cfg[if_port].requested_tx_offload |= DEV_TX_OFFLOAD_MULTI_SEGS;
+#endif
                         }
 #endif
                 }
@@ -455,7 +463,11 @@ static void configure_multi_segments(void)
 #else
 			// We enable "multi segment" if at least one task requires it in the chain of tasks.
 			if (chain_flag_sometimes_set(targ, TASK_FEATURE_TXQ_FLAGS_MULTSEGS)) {
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+				prox_port_cfg[if_port].requested_tx_offload |= RTE_ETH_TX_OFFLOAD_MULTI_SEGS;
+#else
 				prox_port_cfg[if_port].requested_tx_offload |= DEV_TX_OFFLOAD_MULTI_SEGS;
+#endif
 			}
 #endif
 		}

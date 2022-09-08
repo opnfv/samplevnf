@@ -43,6 +43,23 @@ static int handle_l2fwd_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, u
 	} else {
 		for (uint16_t j = 0; j < n_pkts; ++j) {
 			hdr = rte_pktmbuf_mtod(mbufs[j], prox_rte_ether_hdr *);
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+			if ((task->runtime_flags & (TASK_ARG_DO_NOT_SET_SRC_MAC|TASK_ARG_SRC_MAC_SET)) == 0) {
+				/* dst mac will be used as src mac */
+				prox_rte_ether_addr_copy(&hdr->dst_addr, &mac);
+			}
+
+			if (task->runtime_flags & TASK_ARG_DST_MAC_SET)
+				prox_rte_ether_addr_copy((prox_rte_ether_addr *)&task->src_dst_mac[0], &hdr->dst_addr);
+			else if ((task->runtime_flags & TASK_ARG_DO_NOT_SET_DST_MAC) == 0)
+				prox_rte_ether_addr_copy(&hdr->src_addr, &hdr->dst_addr);
+
+			if (task->runtime_flags & TASK_ARG_SRC_MAC_SET) {
+				prox_rte_ether_addr_copy((prox_rte_ether_addr *)&task->src_dst_mac[6], &hdr->src_addr);
+			} else if ((task->runtime_flags & TASK_ARG_DO_NOT_SET_SRC_MAC) == 0) {
+				prox_rte_ether_addr_copy(&mac, &hdr->src_addr);
+			}
+#else
 			if ((task->runtime_flags & (TASK_ARG_DO_NOT_SET_SRC_MAC|TASK_ARG_SRC_MAC_SET)) == 0) {
 				/* dst mac will be used as src mac */
 				prox_rte_ether_addr_copy(&hdr->d_addr, &mac);
@@ -58,6 +75,7 @@ static int handle_l2fwd_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, u
 			} else if ((task->runtime_flags & TASK_ARG_DO_NOT_SET_SRC_MAC) == 0) {
 				prox_rte_ether_addr_copy(&mac, &hdr->s_addr);
 			}
+#endif
 		}
 	}
 	return task->base.tx_pkt(&task->base, mbufs, n_pkts, NULL);

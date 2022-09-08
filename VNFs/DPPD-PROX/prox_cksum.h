@@ -42,7 +42,11 @@ static void prox_ip_cksum_hw(struct rte_mbuf *mbuf, uint16_t l2_len, uint16_t l3
 #else
 	mbuf->tx_offload = CALC_TX_OL(l2_len, l3_len);
 #endif
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+	mbuf->ol_flags |= RTE_MBUF_F_TX_IP_CKSUM;
+#else
 	mbuf->ol_flags |= PKT_TX_IP_CKSUM;
+#endif
 }
 
 void prox_ip_cksum_sw(prox_rte_ipv4_hdr *buf);

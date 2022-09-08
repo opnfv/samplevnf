@@ -178,16 +178,26 @@ static int handle_routing_bulk(struct task_base *tbase, struct rte_mbuf **mbufs,
 static void set_l2(struct task_routing *task, struct rte_mbuf *mbuf, uint8_t nh_idx)
 {
 	prox_rte_ether_hdr *peth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+	*((uint64_t *)(&peth->dst_addr)) = task->next_hops[nh_idx].mac_port_8bytes;
+	*((uint64_t *)(&peth->src_addr)) = task->src_mac[task->next_hops[nh_idx].mac_port.out_idx];
+#else
 	*((uint64_t *)(&peth->d_addr)) = task->next_hops[nh_idx].mac_port_8bytes;
 	*((uint64_t *)(&peth->s_addr)) = task->src_mac[task->next_hops[nh_idx].mac_port.out_idx];
+#endif
 }
 
 static void set_l2_mpls(struct task_routing *task, struct rte_mbuf *mbuf, uint8_t nh_idx)
 {
 	prox_rte_ether_hdr *peth = (prox_rte_ether_hdr *)rte_pktmbuf_prepend(mbuf, sizeof(struct mpls_hdr));
 
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+	*((uint64_t *)(&peth->dst_addr)) = task->next_hops[nh_idx].mac_port_8bytes;
+	*((uint64_t *)(&peth->src_addr)) = task->src_mac[task->next_hops[nh_idx].mac_port.out_idx];
+#else
 	*((uint64_t *)(&peth->d_addr)) = task->next_hops[nh_idx].mac_port_8bytes;
 	*((uint64_t *)(&peth->s_addr)) = task->src_mac[task->next_hops[nh_idx].mac_port.out_idx];
+#endif
 	/* MPLSU ether_type written as high word of 64bit src_mac prepared by init_task_routing */
 	struct mpls_hdr *mpls = (struct mpls_hdr *)(peth + 1);
 

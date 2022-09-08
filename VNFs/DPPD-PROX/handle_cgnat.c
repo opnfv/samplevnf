@@ -129,8 +129,13 @@ void task_cgnat_dump_private_hash(struct task_nat *task)
 static void set_l2(struct task_nat *task, struct rte_mbuf *mbuf, uint8_t nh_idx)
 {
 	prox_rte_ether_hdr *peth = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+	*((uint64_t *)(&peth->dst_addr)) = task->next_hops[nh_idx].mac_port_8bytes;
+	*((uint64_t *)(&peth->src_addr)) = task->src_mac[task->next_hops[nh_idx].mac_port.out_idx];
+#else
 	*((uint64_t *)(&peth->d_addr)) = task->next_hops[nh_idx].mac_port_8bytes;
 	*((uint64_t *)(&peth->s_addr)) = task->src_mac[task->next_hops[nh_idx].mac_port.out_idx];
+#endif
 }
 
 static uint8_t route_ipv4(struct task_nat *task, struct rte_mbuf *mbuf)
@@ -964,7 +969,11 @@ static void init_task_nat(struct task_base *tbase, struct task_args *targ)
 
 	struct prox_port_cfg *port = find_reachable_port(targ);
 	if (port) {
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+		task->offload_crc = port->requested_tx_offload & (RTE_ETH_TX_OFFLOAD_IPV4_CKSUM | RTE_ETH_TX_OFFLOAD_UDP_CKSUM);
+#else
 		task->offload_crc = port->requested_tx_offload & (DEV_TX_OFFLOAD_IPV4_CKSUM | DEV_TX_OFFLOAD_UDP_CKSUM);
+#endif
 	}
 }
 

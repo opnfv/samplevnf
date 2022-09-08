@@ -218,7 +218,11 @@ static int handle_bulk_random_drop(struct task_base *tbase, struct rte_mbuf **mb
 	}
 	if (task->flags & IMPAIR_SET_MAC) {
 		for (uint16_t i = 0; i < n_pkts; ++i) {
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+			prox_rte_ether_addr_copy((prox_rte_ether_addr *)&task->src_mac[0], &hdr[i]->src_addr);
+#else
 			prox_rte_ether_addr_copy((prox_rte_ether_addr *)&task->src_mac[0], &hdr[i]->s_addr);
+#endif
 			out[i] = rand_r(&task->seed) <= task->tresh_no_drop? 0 : OUT_DISCARD;
 		}
 	} else {
@@ -253,7 +257,11 @@ static int handle_bulk_impair(struct task_base *tbase, struct rte_mbuf **mbufs, 
 		/* We know n_pkts fits, no need to check for every packet */
 		for (i = 0; i < n_pkts; ++i) {
 			if (task->flags & IMPAIR_SET_MAC)
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+				prox_rte_ether_addr_copy((prox_rte_ether_addr *)&task->src_mac[0], &hdr[i]->src_addr);
+#else
 				prox_rte_ether_addr_copy((prox_rte_ether_addr *)&task->src_mac[0], &hdr[i]->s_addr);
+#endif
 			task->queue[task->queue_head].tsc = now + task->delay_time;
 			task->queue[task->queue_head].mbuf = mbufs[i];
 			task->queue_head = (task->queue_head + 1) & task->queue_mask;
@@ -262,7 +270,11 @@ static int handle_bulk_impair(struct task_base *tbase, struct rte_mbuf **mbufs, 
 		for (i = 0; i < n_pkts; ++i) {
 			if (((task->queue_head + 1) & task->queue_mask) != task->queue_tail) {
 				if (task->flags & IMPAIR_SET_MAC)
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+					prox_rte_ether_addr_copy((prox_rte_ether_addr *)&task->src_mac[0], &hdr[i]->src_addr);
+#else
 					prox_rte_ether_addr_copy((prox_rte_ether_addr *)&task->src_mac[0], &hdr[i]->s_addr);
+#endif
 				task->queue[task->queue_head].tsc = now + task->delay_time;
 				task->queue[task->queue_head].mbuf = mbufs[i];
 				task->queue_head = (task->queue_head + 1) & task->queue_mask;
@@ -370,7 +382,11 @@ static int handle_bulk_impair_random(struct task_base *tbase, struct rte_mbuf **
 			struct queue *queue = &task->buffer[idx];
 			if (((queue->queue_head + 1) & task->queue_mask) != queue->queue_tail) {
 				if (task->flags & IMPAIR_SET_MAC)
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+					prox_rte_ether_addr_copy((prox_rte_ether_addr *)&task->src_mac[0], &hdr[i]->src_addr);
+#else
 					prox_rte_ether_addr_copy((prox_rte_ether_addr *)&task->src_mac[0], &hdr[i]->s_addr);
+#endif
 				queue->queue_elem[queue->queue_head].mbuf = mbufs[i];
 				queue->queue_head = (queue->queue_head + 1) & task->queue_mask;
 				break;

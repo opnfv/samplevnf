@@ -89,6 +89,37 @@ static inline void prox_write_tcp_pseudo_hdr(prox_rte_tcp_hdr *tcp, uint16_t len
 	tcp->cksum = calc_pseudo_checksum(IPPROTO_TCP, len, src_ip_addr, dst_ip_addr);
 }
 
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+inline void prox_ip_udp_cksum(struct rte_mbuf *mbuf, prox_rte_ipv4_hdr *pip, uint16_t l2_len, uint16_t l3_len, int cksum_offload)
+{
+	prox_ip_cksum(mbuf, pip, l2_len, l3_len, cksum_offload & RTE_ETH_TX_OFFLOAD_IPV4_CKSUM);
+
+	uint32_t l4_len = rte_bswap16(pip->total_length) - l3_len;
+	if (pip->next_proto_id == IPPROTO_UDP) {
+		prox_rte_udp_hdr *udp = (prox_rte_udp_hdr *)(((uint8_t*)pip) + l3_len);
+#ifndef SOFT_CRC
+		if (cksum_offload & RTE_ETH_TX_OFFLOAD_UDP_CKSUM) {
+			mbuf->ol_flags |= RTE_MBUF_F_TX_UDP_CKSUM;
+			prox_write_udp_pseudo_hdr(udp, l4_len, pip->src_addr, pip->dst_addr);
+		} else
+#endif
+		prox_udp_cksum_sw(udp, l4_len, pip->src_addr, pip->dst_addr);
+	} else if (pip->next_proto_id == IPPROTO_TCP) {
+		prox_rte_tcp_hdr *tcp = (prox_rte_tcp_hdr *)(((uint8_t*)pip) + l3_len);
+#ifndef SOFT_CRC
+		if (cksum_offload & RTE_ETH_TX_OFFLOAD_TCP_CKSUM) {
+			prox_write_tcp_pseudo_hdr(tcp, l4_len, pip->src_addr, pip->dst_addr);
+			mbuf->ol_flags |= RTE_MBUF_F_TX_UDP_CKSUM;
+		} else
+#endif
+		prox_tcp_cksum_sw(tcp, l4_len, pip->src_addr, pip->dst_addr);
+	} else if (pip->next_proto_id == IPPROTO_IGMP) {
+		struct igmpv2_hdr *igmp = (struct igmpv2_hdr *)(((uint8_t*)pip) + l3_len);
+		// Not sure NIC can offload IGMP checkum => do it in software
+		prox_igmp_cksum_sw(igmp, l4_len);
+	}
+}
+#else
 inline void prox_ip_udp_cksum(struct rte_mbuf *mbuf, prox_rte_ipv4_hdr *pip, uint16_t l2_len, uint16_t l3_len, int cksum_offload)
 {
 	prox_ip_cksum(mbuf, pip, l2_len, l3_len, cksum_offload & DEV_TX_OFFLOAD_IPV4_CKSUM);
@@ -118,6 +149,7 @@ inline void prox_ip_udp_cksum(struct rte_mbuf *mbuf, prox_rte_ipv4_hdr *pip, uin
 		prox_igmp_cksum_sw(igmp, l4_len);
 	}
 }
+#endif
 
 static inline uint16_t checksum_byte_seq(uint16_t *buf, uint16_t len)
 {

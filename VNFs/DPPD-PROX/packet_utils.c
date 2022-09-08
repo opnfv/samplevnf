@@ -225,7 +225,11 @@ int write_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, uint32_t *ip_d
 {
 	const uint64_t hz = rte_get_tsc_hz();
 	struct ether_hdr_arp *packet = rte_pktmbuf_mtod(mbuf, struct ether_hdr_arp *);
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+	prox_rte_ether_addr *mac = &packet->ether_hdr.dst_addr;
+#else
 	prox_rte_ether_addr *mac = &packet->ether_hdr.d_addr;
+#endif
 	prox_next_hop_index_type next_hop_index;
 	static uint64_t last_tsc = 0, n_no_route = 0;
 
@@ -352,7 +356,11 @@ int write_ip6_dst_mac(struct task_base *tbase, struct rte_mbuf *mbuf, struct ipv
 {
 	const uint64_t hz = rte_get_tsc_hz();
 	prox_rte_ether_hdr *packet = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+	prox_rte_ether_addr *mac = &packet->dst_addr;
+#else
 	prox_rte_ether_addr *mac = &packet->d_addr;
+#endif
 	struct ipv6_addr *used_ip_src;
 
 	uint16_t len = rte_pktmbuf_pkt_len(mbuf);

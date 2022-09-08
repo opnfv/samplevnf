@@ -261,7 +261,11 @@ static inline void handle_arp_request(struct task_base *tbase, struct rte_mbuf *
 		plogx_dbg("\tMaster handling ARP request for ip "IPv4_BYTES_FMT" on port %d which supports random ip\n", IP4(key.ip), key.port);
 		struct rte_ring *ring = task->internal_port_table[port].ring;
 		create_mac(arp, &mac);
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+		mbuf->ol_flags &= ~(RTE_MBUF_F_TX_IP_CKSUM | RTE_MBUF_F_TX_UDP_CKSUM);
+#else
 		mbuf->ol_flags &= ~(PKT_TX_IP_CKSUM|PKT_TX_UDP_CKSUM);
+#endif
 		build_arp_reply(ether_hdr, &mac, arp);
 		tx_ring(tbase, ring, SEND_ARP_REPLY_FROM_MASTER, mbuf);
 		return;
@@ -276,7 +280,11 @@ static inline void handle_arp_request(struct task_base *tbase, struct rte_mbuf *
 		tx_drop(mbuf);
 	} else {
 		struct rte_ring *ring = task->internal_ip_table[ret].ring;
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+		mbuf->ol_flags &= ~(RTE_MBUF_F_TX_IP_CKSUM | RTE_MBUF_F_TX_UDP_CKSUM);
+#else
 		mbuf->ol_flags &= ~(PKT_TX_IP_CKSUM|PKT_TX_UDP_CKSUM);
+#endif
 		build_arp_reply(ether_hdr, &task->internal_ip_table[ret].mac, arp);
 		tx_ring(tbase, ring, SEND_ARP_REPLY_FROM_MASTER, mbuf);
 	}
@@ -341,7 +349,11 @@ static inline void handle_unknown_ip(struct task_base *tbase, struct rte_mbuf *m
 		return;
 	}
 	// We send an ARP request even if one was just sent (and not yet answered) by another task
-	mbuf->ol_flags &= ~(PKT_TX_IP_CKSUM|PKT_TX_UDP_CKSUM);
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+		mbuf->ol_flags &= ~(RTE_MBUF_F_TX_IP_CKSUM | RTE_MBUF_F_TX_UDP_CKSUM);
+#else
+		mbuf->ol_flags &= ~(PKT_TX_IP_CKSUM|PKT_TX_UDP_CKSUM);
+#endif
 	build_arp_request(mbuf, &task->internal_port_table[port].mac, ip_dst, ip_src, vlan);
 	tx_ring(tbase, ring, SEND_ARP_REQUEST_FROM_MASTER, mbuf);
 }
@@ -353,9 +365,15 @@ static inline void build_icmp_reply_message(struct task_base *tbase, struct rte_
 	key.port = mbuf->port;
 	prox_rte_ether_hdr *hdr = rte_pktmbuf_mtod(mbuf, prox_rte_ether_hdr *);
 	prox_rte_ether_addr dst_mac;
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+	prox_rte_ether_addr_copy(&hdr->src_addr, &dst_mac);
+	prox_rte_ether_addr_copy(&hdr->dst_addr, &hdr->src_addr);
+	prox_rte_ether_addr_copy(&dst_mac, &hdr->dst_addr);
+#else
 	prox_rte_ether_addr_copy(&hdr->s_addr, &dst_mac);
 	prox_rte_ether_addr_copy(&hdr->d_addr, &hdr->s_addr);
 	prox_rte_ether_addr_copy(&dst_mac, &hdr->d_addr);
+#endif
 	prox_rte_ipv4_hdr *ip_hdr = (prox_rte_ipv4_hdr *)(hdr + 1);
 	key.ip = ip_hdr->dst_addr;
 	ip_hdr->dst_addr = ip_hdr->src_addr;
@@ -370,7 +388,11 @@ static inline void build_icmp_reply_message(struct task_base *tbase, struct rte_
 		tx_drop(mbuf);
 	} else {
 		struct rte_ring *ring = task->internal_ip_table[ret].ring;
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+		mbuf->ol_flags &= ~(RTE_MBUF_F_TX_IP_CKSUM | RTE_MBUF_F_TX_UDP_CKSUM);
+#else
 		mbuf->ol_flags &= ~(PKT_TX_IP_CKSUM|PKT_TX_UDP_CKSUM);
+#endif
 		tx_ring(tbase, ring, SEND_ICMP_FROM_MASTER, mbuf);
 	}
 }

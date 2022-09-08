@@ -1004,7 +1004,11 @@ void cmd_set_vlan_offload(uint8_t port_id, unsigned int val)
 	}
 
 	plog_info("setting vlan offload to %d\n", val);
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+	if (val & ~(RTE_ETH_VLAN_STRIP_OFFLOAD | RTE_ETH_VLAN_FILTER_OFFLOAD | RTE_ETH_VLAN_EXTEND_OFFLOAD)) {
+#else
 	if (val & ~(ETH_VLAN_STRIP_OFFLOAD | ETH_VLAN_FILTER_OFFLOAD | ETH_VLAN_EXTEND_OFFLOAD)) {
+#endif
 		plog_info("wrong vlan offload value\n");
 	}
 	int ret = rte_eth_dev_set_vlan_offload(port_id, val);

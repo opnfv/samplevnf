@@ -1775,7 +1775,11 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 	struct prox_port_cfg *port = find_reachable_port(targ);
 	// TODO: check that all reachable ports have the same mtu...
 	if (port) {
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+		task->cksum_offload = port->requested_tx_offload & (RTE_ETH_TX_OFFLOAD_IPV4_CKSUM | RTE_ETH_TX_OFFLOAD_UDP_CKSUM);
+#else
 		task->cksum_offload = port->requested_tx_offload & (DEV_TX_OFFLOAD_IPV4_CKSUM | DEV_TX_OFFLOAD_UDP_CKSUM);
+#endif
 		task->port = port;
 		task->max_frame_size = port->mtu + PROX_RTE_ETHER_HDR_LEN + 2 * PROX_VLAN_TAG_SIZE;
 	} else {

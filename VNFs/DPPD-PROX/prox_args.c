@@ -618,10 +618,18 @@ static int get_port_cfg(unsigned sindex, char *str, void *data)
 #else
 #if defined (DEV_RX_OFFLOAD_KEEP_CRC)
 		if (val)
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+			cfg->requested_rx_offload &= ~RTE_ETH_RX_OFFLOAD_KEEP_CRC;
+#else
 			cfg->requested_rx_offload &= ~DEV_RX_OFFLOAD_KEEP_CRC;
+#endif
 		else
 #endif
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+			cfg->requested_rx_offload |= RTE_ETH_RX_OFFLOAD_KEEP_CRC;
+#else
 			cfg->requested_rx_offload |= DEV_RX_OFFLOAD_KEEP_CRC;
+#endif
 #endif
 
 	}
@@ -634,6 +642,15 @@ static int get_port_cfg(unsigned sindex, char *str, void *data)
 		if (parse_bool(&val, pkey)) {
 			return -1;
 		}
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+		if (val) {
+			cfg->requested_rx_offload |= RTE_ETH_RX_OFFLOAD_VLAN_STRIP;
+			cfg->requested_tx_offload |= RTE_ETH_TX_OFFLOAD_VLAN_INSERT;
+		} else {
+			cfg->requested_rx_offload &= ~RTE_ETH_RX_OFFLOAD_VLAN_STRIP;
+			cfg->requested_tx_offload &= ~RTE_ETH_TX_OFFLOAD_VLAN_INSERT;
+		}
+#else
 		if (val) {
 			cfg->requested_rx_offload |= DEV_RX_OFFLOAD_VLAN_STRIP;
 			cfg->requested_tx_offload |= DEV_TX_OFFLOAD_VLAN_INSERT;
@@ -641,6 +658,7 @@ static int get_port_cfg(unsigned sindex, char *str, void *data)
 			cfg->requested_rx_offload &= ~DEV_RX_OFFLOAD_VLAN_STRIP;
 			cfg->requested_tx_offload &= ~DEV_TX_OFFLOAD_VLAN_INSERT;
 		}
+#endif
 #else
 		plog_warn("vlan option not supported : update DPDK at least to 18.08 to support this option\n");
 #endif
@@ -652,6 +670,12 @@ static int get_port_cfg(unsigned sindex, char *str, void *data)
 		}
 		if (val) {
 			cfg->mtu = val;
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+			cfg->port_conf.rxmode.mtu = cfg->mtu;
+			if (cfg->port_conf.rxmode.mtu > PROX_MTU) {
+				cfg->requested_rx_offload |= DEV_RX_OFFLOAD_JUMBO_FRAME;
+			}
+#else
 			// A frame of 1526 bytes (1500 bytes mtu, 14 bytes hdr, 4 bytes crc and 8 bytes vlan)
 			// should not be considered as a jumbo frame. However rte_ethdev.c considers that
 			// the max_rx_pkt_len for a non jumbo frame is 1518
@@ -659,6 +683,7 @@ static int get_port_cfg(unsigned sindex, char *str, void *data)
 			if (cfg->port_conf.rxmode.max_rx_pkt_len > PROX_RTE_ETHER_MAX_LEN) {
 				cfg->requested_rx_offload |= DEV_RX_OFFLOAD_JUMBO_FRAME;
 			}
+#endif
 		}
 	}
 
@@ -668,8 +693,13 @@ static int get_port_cfg(unsigned sindex, char *str, void *data)
 			return -1;
 		}
 		if (val) {
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+			cfg->port_conf.rxmode.mq_mode = RTE_ETH_MQ_RX_RSS;
+			cfg->port_conf.rx_adv_conf.rss_conf.rss_hf = RTE_ETH_RSS_IPV4;
+#else
 			cfg->port_conf.rxmode.mq_mode = ETH_MQ_RX_RSS;
 			cfg->port_conf.rx_adv_conf.rss_conf.rss_hf = ETH_RSS_IPV4;
+#endif
 		}
 	}
 	else if (STR_EQ(str, "rx_ring")) {
@@ -2296,11 +2326,19 @@ int prox_setup_rte(const char *prog_name)
 	sprintf(rte_arg[++argc], "-c%s", tmp);
 	rte_argv[argc] = rte_arg[argc];
 #if RTE_VERSION >= RTE_VERSION_NUM(1,8,0,0)
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+	if (prox_cfg.flags & DSF_USE_DUMMY_CPU_TOPO)
+		sprintf(rte_arg[++argc], "--main-lcore=%u", 0);
+	else
+		sprintf(rte_arg[++argc], "--main-lcore=%u", prox_cfg.master);
+	rte_argv[argc] = rte_arg[argc];
+#else
 	if (prox_cfg.flags & DSF_USE_DUMMY_CPU_TOPO)
 		sprintf(rte_arg[++argc], "--master-lcore=%u", 0);
 	else
 		sprintf(rte_arg[++argc], "--master-lcore=%u", prox_cfg.master);
 	rte_argv[argc] = rte_arg[argc];
+#endif
 #else
 	/* For old DPDK versions, the master core had to be the first
 	   core. */
