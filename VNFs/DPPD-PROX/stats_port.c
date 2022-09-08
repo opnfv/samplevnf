@@ -18,9 +18,6 @@
 #include <stdio.h>
 
 #include <rte_version.h>
-#if RTE_VERSION >= RTE_VERSION_NUM(21,11,0,0)
-#include <ethdev_driver.h>	// Please configure DPDK with meson option -Denable_driver_sdk=true
-#endif
 #include <rte_ethdev.h>
 #include <rte_cycles.h>
 #include <rte_byteorder.h>
@@ -55,6 +52,59 @@
 
 static void ixgbe_read_stats(uint8_t port_id, struct port_stats_sample* stats, struct port_stats_sample *prev, int last_stat)
 {
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
+	uint64_t before, after;
+	unsigned i;
+	uint32_t reg_val;
+	struct rte_eth_stats stats_tmp;
+
+	rte_eth_stats_get(port_id, &stats_tmp);
+	stats->no_mbufs = stats_tmp.rx_nombuf;
+
+	/* Since we only read deltas from the NIC, we have to add to previous values
+	 * even though we actually substract again later to find out the rates!
+	 */
+	stats->ierrors = prev->ierrors;
+	stats->imissed = prev->imissed;
+	stats->rx_bytes = prev->rx_bytes;
+	stats->rx_tot = prev->rx_tot;
+	stats->tx_bytes = prev->tx_bytes;
+	stats->tx_tot = prev->tx_tot;
+
+	/* WARNING: In this implementation, we count as imiised only the "no descriptor"
+	 * missed packets cases and not the actual receive errors.
+	 */
+	before = rte_rdtsc();
+	for (i = 0; i < 8; i++) {
+		(void)read_reg(port_id, PROX_IXGBE_MPC(i), &reg_val);
+		stats->imissed += reg_val;
+	}
+
+	/* RX stats
+	 * This version reports the packets received by the NIC, regardless of whether they
+	 * reached the host or not, etc. (no need to add ierrors or imissedto this packet count)
+	 */
+	(void)read_reg(port_id, PROX_IXGBE_TPR, &reg_val);
+	stats->rx_tot += reg_val;
+
+	(void)read_reg(port_id, PROX_IXGBE_TORL, &reg_val);
+	stats->rx_bytes += reg_val;
+
+	(void)read_reg(port_id, PROX_IXGBE_TORH, &reg_val);
+	stats->rx_bytes += ((uint64_t)reg_val << 32);
+
+	/* TX stats */
+	/* opackets: */
+	(void)read_reg(port_id, PROX_IXGBE_GPTC, &reg_val);
+	stats->tx_tot += reg_val;
+	/* obytes: */
+	(void)read_reg(port_id, PROX_IXGBE_GOTCL, &reg_val);
+	stats->tx_bytes += reg_val;
+	(void)read_reg(port_id, PROX_IXGBE_GOTCH, &reg_val);
+	stats->tx_bytes += ((uint64_t)reg_val << 32);
+	after = rte_rdtsc();
+	stats->tsc = (before >> 1) + (after >> 1);
+#else
 	uint64_t before, after;
 	unsigned i;
 
@@ -112,6 +162,7 @@ static void ixgbe_read_stats(uint8_t port_id, struct port_stats_sample* stats, s
 	stats->tx_bytes += ((uint64_t)PROX_READ_REG(hw, PROX_IXGBE_GOTCH) << 32);
 	after = rte_rdtsc();
 	stats->tsc = (before >> 1) + (after >> 1);
+#endif
 }
 
 #endif
