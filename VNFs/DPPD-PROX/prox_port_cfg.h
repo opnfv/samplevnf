@@ -61,7 +61,7 @@ struct prox_port_cfg {
 	uint32_t  mtu;
 	enum addr_type    type;
 	prox_rte_ether_addr eth_addr;    /* port MAC address */
-	char names[PROX_MAX_VLAN_TAGS][MAX_NAME_SIZE];
+	char names[PROX_MAX_VLAN_TAGS][MAX_NAME_BUFFER_SIZE];
 	char vdev[MAX_NAME_SIZE];
 	char short_name[MAX_NAME_SIZE];
 	char driver_name[MAX_NAME_SIZE];
