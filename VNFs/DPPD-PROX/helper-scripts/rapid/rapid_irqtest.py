@@ -45,7 +45,7 @@ class IrqTest(RapidTest):
         max_loop_duration = 0
         machine_details = {}
         for machine in self.machines:
-            buckets=machine.socket.show_irq_buckets(1)
+            buckets=machine.socket.show_irq_buckets(machine.get_cores()[0])
             if max_loop_duration == 0:
                 # First time we go through the loop, we need to initialize
                 # result_details
