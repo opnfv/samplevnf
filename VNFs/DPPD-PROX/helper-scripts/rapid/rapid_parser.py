@@ -91,7 +91,7 @@ class RapidConfigParser(object):
                         'flowsize','warmupflowsize','warmuptime', 'steps']:
                     test[option] = int(testconfig.get(section, option))
                 elif option in ['startspeed', 'step', 'drop_rate_threshold',
-                        'lat_avg_threshold','lat_perc_threshold',
+                        'generator_threshold','lat_avg_threshold','lat_perc_threshold',
                         'lat_max_threshold','accuracy','maxr','maxz',
                         'ramp_step','warmupspeed','mis_ordered_threshold']:
                     test[option] = float(testconfig.get(section, option))
@@ -102,8 +102,9 @@ class RapidConfigParser(object):
             if test['test'] in ['flowsizetest','TST009test']:
                 if 'drop_rate_threshold' not in test.keys():
                     test['drop_rate_threshold'] = 0
-                latency_thresholds = ['lat_avg_threshold','lat_perc_threshold','lat_max_threshold','mis_ordered_threshold']
-                for threshold in latency_thresholds:
+                thresholds = ['generator_threshold','lat_avg_threshold', \
+                        'lat_perc_threshold','lat_max_threshold','mis_ordered_threshold']
+                for threshold in thresholds:
                     if threshold not in test.keys():
                         test[threshold] = inf
         test_params['tests'] = tests

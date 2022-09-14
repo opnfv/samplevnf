@@ -226,7 +226,14 @@ class FlowSizeTest(RapidTest):
                     # the drop rate is below a treshold, either we want that no
                     # packet has been lost during the test.
                     # This can be specified by putting 0 in the .test file
-                    elif ((iteration_data['drop_rate'] < self.test['drop_rate_threshold']) or (iteration_data['abs_dropped']==self.test['drop_rate_threshold']==0)) and (iteration_data['lat_avg']< self.test['lat_avg_threshold']) and (iteration_data['lat_perc']< self.test['lat_perc_threshold']) and (iteration_data['lat_max'] < self.test['lat_max_threshold'] and iteration_data['mis_ordered'] <= self.test['mis_ordered_threshold']):
+                    elif ((self.get_pps(speed,size) - iteration_data['pps_tx']) / self.get_pps(speed,size)) \
+                            < self.test['generator_threshold'] and \
+                         ((iteration_data['drop_rate'] < self.test['drop_rate_threshold']) or \
+                            (iteration_data['abs_dropped']==self.test['drop_rate_threshold']==0)) and \
+                         (iteration_data['lat_avg']< self.test['lat_avg_threshold']) and \
+                         (iteration_data['lat_perc']< self.test['lat_perc_threshold']) and \
+                         (iteration_data['lat_max'] < self.test['lat_max_threshold'] and \
+                            iteration_data['mis_ordered'] <= self.test['mis_ordered_threshold']):
                         end_data = copy.deepcopy(iteration_data)
                         end_prefix = copy.deepcopy(iteration_prefix)
                         success = True
