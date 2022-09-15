@@ -99,7 +99,7 @@ class RapidConfigParser(object):
                     test[option] = testconfig.get(section, option)
             tests.append(dict(test))
         for test in tests:
-            if test['test'] in ['flowsizetest','TST009test']:
+            if test['test'] in ['flowsizetest', 'TST009test', 'increment_till_fail']:
                 if 'drop_rate_threshold' not in test.keys():
                     test['drop_rate_threshold'] = 0
                 thresholds = ['generator_threshold','lat_avg_threshold', \
