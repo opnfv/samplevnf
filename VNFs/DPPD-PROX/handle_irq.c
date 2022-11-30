@@ -26,7 +26,10 @@
 #include "input.h"
 
 #define MAX_INTERRUPT_LENGTH	500000	/* Maximum length of an interrupt is (1 / MAX_INTERRUPT_LENGTH) seconds */
+
+uint64_t irq_bucket_maxtime_cycles[IRQ_BUCKETS_COUNT];
 uint64_t irq_bucket_maxtime_micro[] = {1,5,10,50,100,500,1000,5000,10000,50000,100000,500000,UINT64_MAX};
+
 /*
  *	This module is not handling any packets.
  *	It loops on rdtsc() and checks whether it has been interrupted

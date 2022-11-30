@@ -73,6 +73,8 @@ const char *actions_string[] = {
 
 };
 
+int (*handle_ctrl_plane)(struct task_base *tbase, struct rte_mbuf **mbuf, uint16_t n_pkts) = NULL;
+
 static struct my_arp_t arp_reply = {
 	.htype = 0x100,
 	.ptype = 8,
