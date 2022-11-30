@@ -51,7 +51,7 @@ struct irq_task_stats {
 	struct irq_rt_stats *stats;
 };
 
-uint64_t irq_bucket_maxtime_cycles[IRQ_BUCKETS_COUNT];
+extern uint64_t irq_bucket_maxtime_cycles[IRQ_BUCKETS_COUNT];
 extern uint64_t irq_bucket_maxtime_micro[];
 
 void stats_irq_reset(void);

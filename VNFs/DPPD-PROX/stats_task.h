@@ -18,6 +18,7 @@
 #define _STATS_TASK_H_
 
 #include <inttypes.h>
+#include <rte_common.h>
 
 #include "clock.h"
 

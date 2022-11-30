@@ -22,6 +22,8 @@
 #include "prox_globals.h"
 #include "lconf.h"
 
+uint64_t irq_bucket_maxtime_cycles[IRQ_BUCKETS_COUNT];
+
 static struct irq_task_stats   irq_task_stats_set[RTE_MAX_LCORE * MAX_TASKS_PER_CORE];
 static uint8_t nb_irq_tasks;
 

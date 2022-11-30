@@ -99,11 +99,11 @@ struct task_master {
 	struct pollfd route_fds;
 };
 
-const char *actions_string[MAX_ACTIONS];
+extern const char *actions_string[MAX_ACTIONS];
 
 void init_ctrl_plane(struct task_base *tbase);
 
-int (*handle_ctrl_plane)(struct task_base *tbase, struct rte_mbuf **mbuf, uint16_t n_pkts);
+extern int (*handle_ctrl_plane)(struct task_base *tbase, struct rte_mbuf **mbuf, uint16_t n_pkts);
 
 static inline void tx_drop(struct rte_mbuf *mbuf)
 {
