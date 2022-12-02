@@ -16,6 +16,24 @@
       "revId": "3fc6b4319626cc0bf274f4a3236166c7b0a249e0",
       "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "5be1e70d_2f1c2145",
+        "filename": "VNFs/DPPD-PROX/stats_irq.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 25,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2022-12-02T00:13:54Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "1b7f782e_d72b969f",
+      "revId": "3fc6b4319626cc0bf274f4a3236166c7b0a249e0",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
     }
   ]
 }
