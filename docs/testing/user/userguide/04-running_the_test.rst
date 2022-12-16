@@ -7,7 +7,7 @@
 Running the test
 ================
 .. _NFV-TST009: https://docbox.etsi.org/ISG/NFV/open/Publications_pdf/Specs-Reports/NFV-TST%20009v3.2.1%20-%20GS%20-%20NFVI_Benchmarks.pdf
-.. _TST009_Throughput_64B_64F.test: https://github.com/opnfv/samplevnf/blob/master/VNFs/DPPD-PROX/helper-scripts/rapid/TST009_Throughput_64B_64F.test
+.. _TST009_Throughput_64B_64F.test: https://github.com/opnfv/samplevnf/blob/master/VNFs/DPPD-PROX/helper-scripts/rapid/tests/TST009_Throughput_64B_64F.test
 .. _rapid_location: https://github.com/opnfv/samplevnf/blob/master/VNFs/DPPD-PROX/helper-scripts/rapid/
 
 Overview
@@ -124,6 +124,7 @@ not something to start with.
      gencores = [1]
      latcores = [3]
      #bucket_size_exp = 12
+
 testy
 ^^^^^
 In the testy sections, where y denotes the index of the test, the test that will

@@ -30,15 +30,17 @@ Prerequisites
 -------------
 
 Supported Test setup
-^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^
 The device under test (DUT) is an NFVI instance on which we can deploy PROX instances.
-A PROX instance is a machine that
+A PROX instance is a machine that:
+
   * has a management interface that can be reached from the test container
   * has one or more data plane interfaces on a dataplane network.
   * can be a container, a VM or a bare metal machine. We just need to be able to ssh into the
     PROX machine from the test container.
   * is optimized for data plane traffic.
   * will measure the throughput that is offered through its dataplane interface(s)
+
 There are no requirements on the NFVI instance itself. Of course, the measured throughput will
 depend heavily on the NFVI characteristics.
 In this release, we are supporting an automated deployment of the PROX instance on an NFVI that

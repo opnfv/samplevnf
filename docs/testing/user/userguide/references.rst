@@ -11,8 +11,8 @@ References
 OPNFV
 =====
 
-* Yardstick wiki: https://wiki.opnfv.org/yardstick
-* SampleVNF wiki: https://wiki.opnfv.org/samplevnf
+* Yardstick wiki: https://wiki-old.opnfv.org/display/yardstick
+* SampleVNF wiki: https://wiki-old.opnfv.org/display/SAM
 
 References used in Test Cases
 =============================
@@ -22,7 +22,7 @@ References used in Test Cases
 * DPDK: http://dpdk.org
 * DPDK supported NICs: http://dpdk.org/doc/nics
 * fdisk: http://www.tldp.org/HOWTO/Partition/fdisk_partitioning.html
-* fio: http://www.bluestop.org/fio/HOWTO.txt
+* fio: https://github.com/axboe/fio
 * free: http://manpages.ubuntu.com/manpages/trusty/en/man1/free.1.html
 * iperf3: https://iperf.fr/
 * Lmbench man-pages: http://manpages.ubuntu.com/manpages/trusty/lat_mem_rd.8.html
