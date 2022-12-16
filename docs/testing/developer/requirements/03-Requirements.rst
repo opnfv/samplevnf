@@ -13,7 +13,7 @@ Requirements
 .. _SampleVNF: https://wiki.opnfv.org/samplevnf
 .. _Technical_Briefs: https://wiki.opnfv.org/display/SAM/Technical+Briefs+of+VNFs
 
-Supported Test setup:
+Supported Test setup
 --------------------
 
 The device under test (DUT) consists of a system following

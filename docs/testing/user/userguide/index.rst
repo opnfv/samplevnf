@@ -10,7 +10,6 @@ SampleVNF User Guide
 
 .. toctree::
    :maxdepth: 4
-   :numbered:
 
    01-introduction.rst
    02-methodology.rst

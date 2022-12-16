@@ -6,7 +6,7 @@
 
 ====================================
 Get started as a SampleVNF developer
-===================================
+====================================
 
 .. _SampleVNF: https://wiki.opnfv.org/samplevnf
 .. _Gerrit: https://www.gerritcodereview.com/

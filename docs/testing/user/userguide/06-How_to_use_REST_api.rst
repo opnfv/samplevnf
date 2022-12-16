@@ -3,12 +3,12 @@
 .. http://creativecommons.org/licenses/by/4.0
 .. (c) opnfv, national center of scientific research "demokritos" and others.
 
-========================================================
+========
 REST API
-========================================================
+========
 
 Introduction
----------------
+------------
 As the internet industry progresses creating REST API becomes more concrete
 with emerging best Practices. RESTful web services don’t follow a prescribed
 standard except fpr the protocol that is used which is HTTP, its important
@@ -26,7 +26,7 @@ Here are important points to be considered:
    always same no matter how many times these operations are invoked.
  * PUT and POST operation are nearly same with the difference lying
    only in the result where PUT operation is idempotent and POST
-    operation can cause different result.
+   operation can cause different result.
 
 
 REST API in SampleVNF
@@ -45,7 +45,7 @@ REST api on VNF’s will help adapting with the new automation techniques
 being adapted in yardstick.
 
 Web server integration with VNF’s
-----------------------------------
+---------------------------------
 
 In order to implement REST api’s in VNF one of the first task is to
 identify a simple web server that needs to be integrated with VNF’s.
@@ -150,7 +150,7 @@ API Usage
 ---------
 
 Run time Usage
-^^^^^^^^^^^^^^
+==============
 
 An application(say vFW) with REST API support is run as follows
 with just PORT MASK as input. The following environment variables
@@ -182,6 +182,7 @@ samplevnf directory).
 
 2. Check the Link IP's using the REST API (vCGNAPT/vACL/vFW)
    ::
+
      e.g curl <IP>/vnf/config/link
 
      This would indicate the number of links enabled. You should enable all the links
@@ -194,6 +195,7 @@ samplevnf directory).
 
 3. Now that links are enabled we can configure IP's using link method as follows (vCGNAPT/vACL/vFW)
    ::
+
      e.g  curl -X POST -H "Content-Type:application/json" -d '{"ipv4":"<IP to be configured>","depth":"24"}'
      http://<IP>/vnf/config/link/0
      curl -X POST -H "Content-Type:application/json" -d '{"ipv4":"IP to be configured","depth":"24"}'
@@ -207,6 +209,7 @@ samplevnf directory).
 
 4. Adding arp entries we can use this method (vCGNAPT/vACL/vFW)
    ::
+
      /vnf/config/arp
 
      e.g
@@ -220,15 +223,17 @@ samplevnf directory).
 
 5. Adding route entries we can use this method (vCGNAPT/vACL/vFW)
    ::
+
      /vnf/config/route
 
      e.g curl -X POST -H "Content-Type:application/json" -d '{"type":"net", "depth":"8", "nhipv4":"202.16.100.20",
-                  "portid":"0"}' http://10.223.166.240/vnf/config/route
+                 "portid":"0"}' http://10.223.166.240/vnf/config/route
      curl -X POST -H "Content-Type:application/json" -d '{"type":"net", "depth":8", "nhipv4":"172.16.100.20",
                  "portid":"1"}' http://10.223.166.240/vnf/config/route
 
 5. In order to load the rules a script file needs to be posting a script.(vACL/vFW)
    ::
+
      /vnf/config/rules/load
 
      Typical example for loading a script file is shown below
@@ -239,12 +244,14 @@ samplevnf directory).
 
 6. The following REST api's for runtime configuring through a script (vCGNAPT Only)
    ::
+
      /vnf/config/rules/clear
      /vnf/config/nat
      /vnf/config/nat/load
 
 7. For debug purpose following REST API's could be used as described above.(vCGNAPT/vACL/vFW)
    ::
+
      /vnf/dbg
      e.g curl http://10.223.166.240/vnf/config/dbg
 
@@ -258,10 +265,12 @@ samplevnf directory).
 
 8. For stats we can use the following method (vCGNAPT/vACL/vFW)
    ::
+
      /vnf/stats
      e.g curl <IP>/vnf/stats
 
 9. For quittiong the application (vCGNAPT/vACL/vFW)
    ::
+
      /vnf/quit
      e.g curl <IP>/vnf/quit

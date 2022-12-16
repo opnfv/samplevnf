@@ -14,7 +14,7 @@ OPNFV Jerma Release
 
 
 OPNFV Hunter Release
-======================
+====================
 
 This Hunter release provides *SampleVNF* as a approx VNF repository for
 VNF/NFVI testing, characterization and OPNFV feature testing, automated on
@@ -30,7 +30,7 @@ OPNFV platform, including:
 
   * Results
 
-* Automated SampleVNF test suit in OPNFV Yardstick_ Project
+* Automated SampleVNF test suit in OPNFV Yardstick Project
 
 * SampleVNF source code
 
@@ -42,7 +42,7 @@ For Hunter release, the *SampleVNF* supported:
 | *CGNAPT*       | Carrier Grade Network Address and port Translation .5.0 |     v0.1.0        |
 +----------------+---------------------------------------------------------+-------------------+
 | *Prox*         | Packet pROcessing eXecution engine                      |     v0.40.0       |
-|                |  acts as traffic generator, L3FWD, L2FWD, BNG etc       |                   |
+|                | acts as traffic generator, L3FWD, L2FWD, BNG etc        |                   |
 +----------------+---------------------------------------------------------+-------------------+
 | *vACL*         | Access Control List                                     |     v0.1.0        |
 +----------------+---------------------------------------------------------+-------------------+
@@ -68,13 +68,15 @@ testing:
     * Network - rfc2544, rfc3511, latency, http_test etc
 
 
-The *SampleVNF* is developed in the OPNFV community, by the SampleVNF_ team.
+The *SampleVNF* is developed in the OPNFV community, by the SampleVNF team.
 The *Network Service Benchmarking* SampleVNF Characterization Testing tool is a part of the
 Yardstick Project.
 
 .. note:: The test case description template used for the SampleVNF in yardstick
-  test cases is based on the document ETSI-ISG NFV-TST001_; the results report template
+  test cases is based on the document `ETSI GS NFV-TST 001`_; the results report template
   used for the SampleVNF test results is based on the IEEE Std 829-2008.
+
+.. _ETSI GS NFV-TST 001: https://portal.etsi.org/webapp/workprogram/Report_WorkItem.asp?WKI_ID=46009
 
 
 Release Data
@@ -98,6 +100,7 @@ Release Data
 +--------------------------------------+--------------------------------------+
 | **Purpose of the delivery**          | Hunter alignment to Released         |
 |                                      | bug-fixes for the following:         |
+|                                      |                                      |
 |                                      | - Memory leak                        |
 |                                      | - minimum latency                    |
 |                                      | - Increase default mbuf size and     |
@@ -266,10 +269,10 @@ Open JIRA tickets
 Useful links
 ------------
 
- - wiki project page: https://wiki.opnfv.org/display/SAM
+ - wiki project page: https://wiki-old.opnfv.org/display/SAM
 
  - wiki SampleVNF Hunter release planing page: https://wiki.opnfv.org/display/SAM/G+-+Release+SampleVNF+planning
 
- - SampleVNF repo: https://git.opnfv.org/cgit/samplevnf
+ - SampleVNF repo: https://git.opnfv.org/samplevnf/
 
  - SampleVNF IRC chanel: #opnfv-samplevnf

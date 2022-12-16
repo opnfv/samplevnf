@@ -6,7 +6,7 @@
 SampleVNF test tesult document overview
 =======================================
 
-.. _`SampleVNF user guide`: artifacts.opnfv.org/samplevnf/docs/userguide/index.html
+.. _`SampleVNF user guide`: http://artifacts.opnfv.org/samplevnf/docs/testing_user_userguide/index.html
 
 This document provides an overview of the results of test cases developed by
 the OPNFV SampleVNF Project & test cases executed part of yardstick

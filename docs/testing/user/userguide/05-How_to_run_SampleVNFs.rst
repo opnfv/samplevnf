@@ -17,6 +17,7 @@ The device under test (DUT) consists of a system following;
   * Specific Intel Network Interface Cards (NICs)
   * BIOS settings noting those that updated from the basic settings
   * DPDK build configuration settings, and commands used for tests
+
 Connected to the DUT is an IXIA* or Software Traffic generator like pktgen or TRex,
 simulation platform to generate packet traffic to the DUT ports and
 determine the throughput/latency at the tester side.
@@ -103,17 +104,16 @@ The connectivity could be
      (TG_2(UDP_Replay) reflects all the traffic on the given port)
 
  * Bare-Metal
-   Refer: http://fast.dpdk.org/doc/pdf-guides/ to setup the DUT for VNF to run
+     Refer: http://fast.dpdk.org/doc/pdf-guides/ to setup the DUT for VNF to run
 
  * Standalone Virtualization - PHY-VM-PHY
+
    * SRIOV
-     Refer below link to setup sriov
-     https://software.intel.com/en-us/articles/using-sr-iov-to-share-an-ethernet-port-among-multiple-vms
+       https://software.intel.com/en-us/articles/using-sr-iov-to-share-an-ethernet-port-among-multiple-vms
 
    * OVS_DPDK
-     Refer below link to setup ovs-dpdk
-     http://docs.openvswitch.org/en/latest/intro/install/general/
-     http://docs.openvswitch.org/en/latest/intro/install/dpdk/
+       http://docs.openvswitch.org/en/latest/intro/install/general/
+       http://docs.openvswitch.org/en/latest/intro/install/dpdk/
 
  * Openstack
      Use any OPNFV installer to deploy the openstack.
@@ -132,19 +132,21 @@ Step 0: Preparing hardware connection
 Step 1: Setting up Traffic generator (TRex)
 
     TRex Software preparations
-    **************************
      * Install the OS (Bare metal Linux, not VM!)
      * Obtain the latest TRex package: wget https://trex-tgn.cisco.com/trex/release/latest
      * Untar the package: tar -xzf latest
      * Change dir to unzipped TRex
      * Create config file using command: sudo python dpdk_setup_ports.py -i
+
        In case of Ubuntu 16 need python3
+
        See paragraph config creation for detailed step-by-step
+
     (Refer: https://trex-tgn.cisco.com/trex/doc/trex_stateless_bench.html)
 
 
 Build SampleVNFs
------------------
+----------------
 
 Step 2: Procedure to build SampleVNFs
 
@@ -487,7 +489,7 @@ step 4: Run Test using traffic geneator
 
 
 UDP_Replay - How to run
-----------------------------------------
+-----------------------
 
 Step 3: Bind the datapath ports to DPDK
 
@@ -532,7 +534,7 @@ step 4: Run Test using traffic geneator
     For more details refer: https://trex-tgn.cisco.com/trex/doc/trex_stateless_bench.html
 
 PROX - How to run
-------------------
+-----------------
 
 Description
 ^^^^^^^^^^^
@@ -654,7 +656,7 @@ PROX COMMANDS AND SCREENS
   +----------------------------------------------+---------------------------------------------------------------------------+----------------------------+
   | version                                      | Show version                                                              |                            |
   +----------------------------------------------+---------------------------------------------------------------------------+----------------------------+
-  | port_stats <port id>                         |  Print rate for no_mbufs, ierrors, rx_bytes, tx_bytes, rx_pkts,           |                            |
+  | port_stats <port id>                         | Print rate for no_mbufs, ierrors, rx_bytes, tx_bytes, rx_pkts,            |                            |
   |                                              | tx_pkts and totals for RX, TX, no_mbufs ierrors for port <port id>        |                            |
   +----------------------------------------------+---------------------------------------------------------------------------+----------------------------+
 
@@ -941,7 +943,7 @@ PROX Compiation installation
 * cd samplevnf
 * export RTE_SDK=`pwd`/dpdk
 * export RTE_TARGET=x86_64-native-linuxapp-gcc
-* git clone http://dpdk.org/git/dpdk
+* git clone git://dpdk.org/dpdk
 * cd dpdk
 * git checkout v17.05
 * make install T=$RTE_TARGET
