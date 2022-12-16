@@ -17,6 +17,11 @@
 #ifndef _LCONF_H_
 #define _LCONF_H_
 
+#include <rte_common.h>
+#ifndef __rte_cache_aligned
+#include <rte_memory.h>
+#endif
+
 #include "task_init.h"
 #include "stats.h"
 

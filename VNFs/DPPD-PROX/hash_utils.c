@@ -14,6 +14,11 @@
 // limitations under the License.
 */
 
+#include <rte_common.h>
+#ifndef __rte_cache_aligned
+#include <rte_memory.h>
+#endif
+
 #include <string.h>
 #include <rte_hash_crc.h>
 #include <rte_table_hash.h>
