@@ -348,7 +348,7 @@ transmit takes packets from worker thread in a dedicated ring and sent to the
 hardware queue.
 
 Master pipeline
-^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^
 This component does not process any packets and should configure with Core 0,
 to save cores for other components which processes traffic. The component
 is responsible for:
@@ -359,7 +359,7 @@ is responsible for:
  4. ARP and ICMP are handled here.
 
 Load Balancer pipeline
-^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^
 Load balancer is part of the Multi-Threaded CGMAPT release which distributes
 the flows to Multiple ACL worker threads.
 
@@ -371,7 +371,7 @@ affinity of flows to  worker threads.
 Tuple can be modified/configured using configuration file
 
 vCGNAPT - Static
-------------------
+----------------
 
 The vCGNAPT component performs translation of private IP & port to public IP &
 port at egress side and public IP & port to private IP & port at Ingress side
@@ -383,7 +383,7 @@ match will be taken a default action. The default action may result in drop of
 the packets.
 
 vCGNAPT- Dynamic
------------------
+----------------
 
 The vCGNAPT component performs translation of private IP & port to public IP &
 port at egress side and public IP & port to private IP & port at Ingress side
@@ -399,11 +399,13 @@ Dynamic vCGNAPT acts as static one too, we can do NAT entries statically.
 Static NAT entries port range must not conflict to dynamic NAT port range.
 
 vCGNAPT Static Topology
-----------------------
+-----------------------
 
-IXIA(Port 0)-->(Port 0)VNF(Port 1)-->(Port 1) IXIA
+IXIA(Port 0)-->(Port 0)VNF(Port 1)-->(Port 1)IXIA
 operation:
+
   Egress --> The packets sent out from ixia(port 0) will be CGNAPTed to ixia(port 1).
+
   Igress --> The packets sent out from ixia(port 1) will be CGNAPTed to ixia(port 0).
 
 vCGNAPT Dynamic Topology (UDP_REPLAY)
@@ -411,9 +413,11 @@ vCGNAPT Dynamic Topology (UDP_REPLAY)
 
 IXIA(Port 0)-->(Port 0)VNF(Port 1)-->(Port 0)UDP_REPLAY
 operation:
+
   Egress --> The packets sent out from ixia will be CGNAPTed to L3FWD/L4REPLAY.
+
   Ingress --> The L4REPLAY upon reception of packets (Private to Public Network),
-                    will immediately replay back the traffic to IXIA interface. (Pub -->Priv).
+  will immediately replay back the traffic to IXIA interface. (Pub -->Priv).
 
 How to run L4Replay
 -------------------
@@ -431,7 +435,7 @@ vACL - Design
 =============
 
 Introduction
---------------
+------------
 This application implements Access Control List (ACL). ACL is typically used
 for rule based policy enforcement. It restricts access to a destination IP
 address/port based on various header fields, such as source IP address/port,
@@ -439,12 +443,12 @@ destination IP address/port and protocol. It is built on top of DPDK and uses
 the packet framework infrastructure.
 
 Scope
-------
+-----
 This application provides a standalone DPDK based high performance ACL Virtual
 Network Function implementation.
 
 High Level Design
-------------------
+-----------------
 The ACL Filter performs bulk filtering of incoming packets based on rules in
 current ruleset, discarding any packets not permitted by the rules. The
 mechanisms needed for building the rule database and performing lookups are
@@ -460,12 +464,12 @@ The Input and Output FIFOs will be implemented using DPDK Ring Buffers.
 
 The DPDK ACL example:
 
-http://dpdk.org/doc/guides/sample_app_ug/l3_forward_access_ctrl.html
+http://doc.dpdk.org/guides/sample_app_ug/l3_forward.html
 
 #figure-ipv4-acl-rule contains a suitable syntax and parser for ACL rules.
 
 Components of ACL
-------------------
+-----------------
 In ACL, each component is constructed as a packet framework. It includes
 Master pipeline component, driver, load balancer pipeline component and ACL
 worker pipeline component. A pipeline framework is a collection of input ports,
@@ -607,27 +611,33 @@ Edge Router has the following functionalities in Upstream.
     Update the packet color in MPLS EXP field in each MPLS header.
 
 Components of vPE
--------------------
+-----------------
 
 The vPE has downstream and upstream pipelines controlled by Master component.
-Edge router processes two different types of traffic through pipelines
-I.  Downstream (Core-to-Customer)
-  1.  Receives TCP traffic from core
-  2.  Routes the packet based on the routing rules
-  3.  Performs traffic scheduling based on the traffic profile
-    a.  Qos scheduling is performed using token bucket algorithm
-        SVLAN, CVLAN, DSCP fields are used to determine transmission priority.
-  4.  Appends QinQ label in each outgoing packet.
-II. Upstream (Customer-to-Core)
-  1.  Receives QinQ labelled TCP packets from Customer
-  2.  Removes the QinQ label
-  3.  Classifies the flow using QinQ label and apply Qos metering
-    a.  1st stage Qos metering is performed with flow ID using trTCM algorithm
-    b.  2nd stage Qos metering is performed with flow ID and traffic class using
-    trTCM algorithm
-    c.  traffic class maps to DSCP field in the packet.
-  4.  Routes the packet based on the routing rules
-  5.  Appends two MPLS labels in each outgoing packet.
+Edge router processes two different types of traffic through pipelines:
+
+I)  Downstream (Core-to-Customer)
+
+    1. Receives TCP traffic from core
+    2. Routes the packet based on the routing rules
+    3. Performs traffic scheduling based on the traffic profile
+
+       a. Qos scheduling is performed using token bucket algorithm.
+          SVLAN, CVLAN, DSCP fields are used to determine transmission priority.
+    4. Appends QinQ label in each outgoing packet.
+
+II) Upstream (Customer-to-Core)
+
+    1. Receives QinQ labelled TCP packets from Customer
+    2. Removes the QinQ label
+    3. Classifies the flow using QinQ label and apply Qos metering
+
+       a. 1st stage Qos metering is performed with flow ID using trTCM algorithm
+       b. 2nd stage Qos metering is performed with flow ID and traffic class using
+          trTCM algorithm
+       c. traffic class maps to DSCP field in the packet.
+    4. Routes the packet based on the routing rules
+    5. Appends two MPLS labels in each outgoing packet.
 
 Master Component
 ^^^^^^^^^^^^^^^^
@@ -635,7 +645,8 @@ Master Component
 The Master component is part of all the IP Pipeline applications. This
 component does not process any packets and should configure with Core0,
 to save cores for other components which processes traffic. The component
-is responsible for
+is responsible for:
+
  1. Initializing each component of the Pipeline application in different threads
  2. Providing CLI shell for the user
  3. Propagating the commands from user to the corresponding components.
@@ -656,7 +667,7 @@ To run the VNF, execute the following:
 
 
 Prox - Packet pROcessing eXecution engine
-==========================================
+=========================================
 
 Introduction
 ------------

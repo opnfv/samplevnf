@@ -380,7 +380,7 @@ This configuration doesn't require LOADB and TXRX pipelines
 
 
 vACL Config files
-----------------
+-----------------
 
 The reference configuration files explained here are for Software and Hardware
 loadbalancing with IPv4 traffic type and single port pair.
