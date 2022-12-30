@@ -497,8 +497,10 @@ static void print_port_capa(struct prox_port_cfg *port_cfg)
 		plog_info("OUTER_IPV4_CKSUM | ");
 	if (port_cfg->dev_info.rx_offload_capa & RTE_ETH_RX_OFFLOAD_MACSEC_STRIP)
 		plog_info("MACSEC STRIP | ");
+#if defined(RTE_ETH_RX_OFFLOAD_HEADER_SPLIT)
 	if (port_cfg->dev_info.rx_offload_capa & RTE_ETH_RX_OFFLOAD_HEADER_SPLIT)
 		plog_info("HEADER SPLIT | ");
+#endif
 	if (port_cfg->dev_info.rx_offload_capa & RTE_ETH_RX_OFFLOAD_VLAN_FILTER)
 		plog_info("VLAN FILTER | ");
 	if (port_cfg->dev_info.rx_offload_capa & RTE_ETH_RX_OFFLOAD_VLAN_EXTEND)

@@ -21,8 +21,12 @@
 #include <rte_ether.h>
 #include <rte_ethdev.h>
 #include <rte_version.h>
+#if RTE_VERSION >= RTE_VERSION_NUM(22,11,0,0)
+#include <bus_pci_driver.h>	// Please configure DPDK with meson option -Denable_driver_sdk=true
+#else
 #if RTE_VERSION >= RTE_VERSION_NUM(17,11,0,0)
 #include <rte_bus_pci.h>
+#endif
 #endif
 #include <rte_pci.h>
 
