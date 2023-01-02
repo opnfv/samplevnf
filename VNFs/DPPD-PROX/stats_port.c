@@ -18,6 +18,9 @@
 #include <stdio.h>
 
 #include <rte_version.h>
+#if RTE_VERSION >= RTE_VERSION_NUM(21,11,0,0)
+#include <ethdev_driver.h>	// Please configure DPDK with meson option -Denable_driver_sdk=true
+#endif
 #include <rte_ethdev.h>
 #include <rte_cycles.h>
 #include <rte_byteorder.h>

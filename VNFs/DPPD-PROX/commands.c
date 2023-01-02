@@ -935,7 +935,6 @@ void cmd_portinfo(int port_id, char *dst, size_t max_len)
 
 void cmd_read_reg(uint8_t port_id, unsigned int id)
 {
-#if RTE_VERSION < RTE_VERSION_NUM(21,11,0,0)
 	unsigned int val, rc;
 	if (!port_is_active(port_id)) {
 		return ;
@@ -947,9 +946,6 @@ void cmd_read_reg(uint8_t port_id, unsigned int id)
 	else {
 		plog_info("Register 0x%08X : %08X \n", id, val);
 	}
-#else
-	plog_err("cmd_read_reg(%d, %d) not supported on this dpdk version\n", port_id, id);
-#endif
 }
 
 void cmd_reset_port(uint8_t portid)
@@ -993,16 +989,12 @@ void cmd_multicast(uint8_t port_id, unsigned int val, prox_rte_ether_addr *mac)
 
 void cmd_write_reg(uint8_t port_id, unsigned int id, unsigned int val)
 {
-#if RTE_VERSION < RTE_VERSION_NUM(21,11,0,0)
 	if (!port_is_active(port_id)) {
 		return ;
 	}
 
 	plog_info("writing 0x%08X %08X\n", id, val);
 	write_reg(port_id, id, val);
-#else
-	plog_err("cmd_write_reg(%d, %d, %d) not supported on this dpdk version\n", port_id, id, val);
-#endif
 }
 
 void cmd_set_vlan_offload(uint8_t port_id, unsigned int val)

@@ -43,11 +43,7 @@ if get_option('prox_stats').enabled()
 endif
 
 if get_option('hw_direct_stats').enabled()
-if dpdk_version.version_compare('<21.11.0')
 	add_project_arguments('-DPROX_HW_DIRECT_STATS',  language: 'c')
-else
-	warning('hw_direct_stats not supported on this dpdk version')
-endif
 endif
 
 if get_option('dbg')
@@ -179,9 +175,7 @@ sources = files(
 	'stats_cons_cli.c', 'stats_parser.c', 'hash_set.c', 'prox_lua.c',
 	'prox_malloc.c', 'prox_ipv6.c', 'prox_compat.c', 'handle_nsh.c')
 
-if dpdk_version.version_compare('<21.11.0')
 sources += files('rw_reg.c')
-endif
 
 # Include a couple of source files depending on DPDK support
 if cc.find_library('rte_pmd_aesni', required: false).found()
