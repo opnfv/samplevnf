@@ -1,0 +1,8 @@
+Verified+1: jenkins-ci <jenkins-opnfv-ci@opnfv.org>
+Verified+1: Patrice Buriez <patrice.buriez@chenapan.org>
+Code-Review+2: Patrice Buriez <patrice.buriez@chenapan.org>
+Submitted-by: Patrice Buriez <patrice.buriez@chenapan.org>
+Submitted-at: Fri, 06 Jan 2023 21:26:33 +0000
+Reviewed-on: https://gerrit.opnfv.org/gerrit/c/samplevnf/+/73798
+Project: samplevnf
+Branch: refs/heads/master
