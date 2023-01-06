@@ -19,7 +19,7 @@
 
 /* PROGRAM_NAME defined through Makefile */
 #define VERSION_MAJOR 0      // Pre-production
-#define VERSION_MINOR 2005   // 20.05 i.e. May 2020
+#define VERSION_MINOR 2212   // 22.12 i.e. December 2022
 #define VERSION_REV   0
 
 static inline char *VERSION_STR(void)

@@ -24,74 +24,104 @@ finer grained network functions like QoS, Routing, load-balancing...
 
 Compiling and running this application
 --------------------------------------
-This application supports DPDK 16.04, 16.11, 16.11.1, 17.02, 17.05, 17.08, 
-17.11, 18.02, 18.05, 18.08, 18.11, 19.02, 19.05, 19.08, 19.11, 20.02 and
-20.05 20.11
+This application supports DPDK 16.04, 16.07, 16.11, 17.02, 17.05, 17.08,
+17.11, 18.02, 18.05, 18.08, 18.11, 19.02, 19.05, 19.08, 19.11, 20.02, 20.05,
+20.08, 20.11, 21.02, 21.05, 21.08, 21.11, 22.03, 22.07, 22.11
 
-Meson compilation
------------------
-Support for 'make' has been deprecated in DPDK from v20.11 onward.
+DPDK meson compilation
+----------------------
+Compilation with meson and ninja is supported since DPDK 18.02, while support
+for make has been removed in DPDK 20.11.
 
 Example: DPDK 20.11 installation with meson
 -------------------------------------------
+cd /your/path/for/dpdk/meson/compilation/
 git clone http://dpdk.org/git/dpdk-stable
+cd dpdk-stable/
 git checkout 20.11
-meson build
-cd build
+meson setup build
+# For DPDK 21.11 and above, please run:
+# meson setup -Denable_driver_sdk=true build            # instead, or
+# meson configure build/ -Denable_driver_sdk=true       # afterwards.
+cd build/
 ninja
-ninja install
-ldconfig
+sudo ninja install
+sudo ldconfig
 
-PROX meson compilation (From the root of this repo)
---------------------------------------------------
+PROX meson compilation
+----------------------
 Depending on the distribution in use the DPDK libraries will be installed in
-different locations. The 'PKG_CONFIG_PATH' environment variable is used to
+different locations. The PKG_CONFIG_PATH environment variable is used to
 point to the correct location.
 
-For RHEL/CentOS systems:
-export PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig
-meson build
-cd build
-ninja
+On RHEL/CentOS: export PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig
+On Ubuntu:      export PKG_CONFIG_PATH=/usr/local/lib/x86_64-linux-gnu/pkgconfig
 
-Additional options can be passed to the meson build system. See the
-'meson_options.txt' file for possible options
+cd /the/path/where/you/cloned/this/repo/
+cd VNFs/DPPD-PROX/
+meson setup build
+# Additional options can be specified on the 'meson setup' command line, or
+# using 'meson configure' afterwards. See the meson_options.txt file for
+# possible options.
+ninja -C build/
 
-Legacy Make compilation
------------------------
-The following commands assume that the following variables have been set:
+Legacy DPDK make compilation
+----------------------------
+Compilation with make has been supported until DPDK 20.08, and has been removed
+in DPDK 20.11.
 
-export RTE_SDK=/path/to/dpdk
-export RTE_TARGET=x86_64-native-linuxapp-gcc
+The following commands require that the following environment variables are
+properly defined, as shown in the examples below:
+- RTE_SDK:              absolute path to the DPDK sources directory,
+- RTE_TARGET:           target (arch-machine-execenv-toolchain format) for
+                        which we are building DPDK,
+- RTE_DEVEL_BUILD:      set it to 'n' to prevent warnings to be considered
+                        as errors when building DPDK inside a git tree.
 
-IPSec is only supported in PROX starting from DPDK 17.11
-It will only be compiled if CONFIG_RTE_LIBRTE_PMD_AESNI_MB is
-set in DPDK .config. This also requires AESNI_MULTI_BUFFER_LIB_PATH to point to
-the multi-buffer library which can be downloaded from 
-<https://github.com/01org/intel-ipsec-mb>. 
-See doc/guides/cryptodevs/aesni_mb.rst within dpdk for more details
+Configuration options can be defined, before building DPDK, by means of
+appending lines into the config/defconfig_$RTE_TARGET file.
 
-Example: DPDK 17.05 installation with make
+For example, IPSec is supported in PROX (handle_esp.c) since DPDK 17.11,
+although it has not been recently verified, but it only gets compiled when
+CONFIG_RTE_LIBRTE_PMD_AESNI_MB=y has been defined in DPDK configuration. It also
+requires AESNI_MULTI_BUFFER_LIB_PATH environment variable to point to the
+"Multi-Buffer Crypto for IPsec" library, which can be downloaded from
+https://github.com/intel/intel-ipsec-mb. See doc/guides/cryptodevs/aesni_mb.rst
+within DPDK sources directory for more details.
+
+Example: DPDK 20.05 installation with make
 ------------------------------------------
+cd /your/path/for/dpdk/make/compilation/
 git clone http://dpdk.org/git/dpdk
-cd dpdk
-git checkout v17.05
-make install T=$RTE_TARGET
+cd dpdk/
+git checkout v20.05
+export RTE_SDK=$PWD
+export RTE_TARGET=x86_64-native-linuxapp-gcc
+export RTE_DEVEL_BUILD=n
+# Edit config/defconfig_$RTE_TARGET file to define options as needed.
+make config T=$RTE_TARGET O=$RTE_TARGET
+make O=$RTE_TARGET
 
-PROX make compilation
-----------------
-The Makefile with this application expects RTE_SDK to point to the
-root directory of DPDK (e.g. export RTE_SDK=/root/dpdk). If RTE_TARGET
-has not been set, x86_64-native-linuxapp-gcc will be assumed.
+Legacy PROX make compilation
+----------------------------
+As explained above, PROX Makefile expects RTE_SDK to point to the DPDK sources
+directory. If RTE_TARGET is not set, it defaults to x86_64-native-linuxapp-gcc.
+
+cd /the/path/where/you/cloned/this/repo/
+cd VNFs/DPPD-PROX/
+export RTE_SDK=/your/path/for/dpdk/make/compilation/./dpdk/
+export RTE_TARGET=x86_64-native-linuxapp-gcc
+export RTE_DEVEL_BUILD=n
+make
 
 Running PROX
 ------------
-After DPDK has been set up, run make from the directory where you have
-extracted this application. A build directory will be created
-containing the PROX executable. The usage of the application is shown
-below. Note that this application assumes that all required ports have
-been bound to the DPDK provided igb_uio driver. Refer to the "Getting
-Started Guide - DPDK" document for more details.
+After DPDK has been installed and PROX has been compiled, the build subdirectory
+has been created and contains the PROX executable. The usage of the application
+is shown below. Note that this application assumes that all required ports have
+been bound to the DPDK provided igb_uio driver. Refer to the "Getting Started
+Guide" (http://doc.dpdk.org/guides/linux_gsg/ or doc/guides/linux_gsg/*.rst in
+DPDK sources directory) for more details.
 
 Usage: ./build/prox [-f CONFIG_FILE] [-l LOG_FILE] [-p] [-o DISPLAY] [-v] [-a|-e] \
 		[-m|-s|-i] [-n] [-w DEF] [-q] [-k] [-d] [-z] [-r VAL] [-u] [-t]
