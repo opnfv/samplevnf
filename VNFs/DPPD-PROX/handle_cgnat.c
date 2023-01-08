@@ -797,6 +797,7 @@ static int lua_to_hash_nat(struct task_args *targ, struct lua_State *L, enum lua
 		.key_len = sizeof(struct private_key),
 		.hash_func = rte_hash_crc,
 		.hash_func_init_val = 0,
+		.socket_id = rte_socket_id()
 	};
 	plogx_info("hash table name = %s\n", hash_params.name);
 	struct private_key private_key;

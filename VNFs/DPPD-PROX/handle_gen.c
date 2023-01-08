@@ -1,5 +1,6 @@
 /*
 // Copyright (c) 2010-2020 Intel Corporation
+// Copyright (c) 2023 luc.provoost@gmail.com
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -1906,6 +1907,7 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 		.key_len = sizeof(union ipv4_5tuple_host),
 		.hash_func = rte_hash_crc,
 		.hash_func_init_val = 0,
+		.socket_id = task->socket_id
 	};
 	plog_info("\t\thash table name = %s\n", hash_params.name);
 	task->flow_id_table = rte_hash_create(&hash_params);

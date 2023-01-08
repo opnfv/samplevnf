@@ -123,6 +123,7 @@ static int lua_to_hash_nat(struct lua_State *L, enum lua_place from, const char 
 		.key_len = sizeof(ip_from),
 		.hash_func = rte_hash_crc,
 		.hash_func_init_val = 0,
+		.socket_id = rte_socket_id()
 	};
 
 	ret_hash = rte_hash_create(&hash_params);
