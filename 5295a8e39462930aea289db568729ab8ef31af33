@@ -1,0 +1,262 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "68485585_1f1a65fd",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 2
+      },
+      "lineNbr": 10,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2023-01-08T13:21:45Z",
+      "side": 1,
+      "message": "sets",
+      "range": {
+        "startLine": 10,
+        "startChar": 0,
+        "endLine": 10,
+        "endChar": 3
+      },
+      "revId": "5295a8e39462930aea289db568729ab8ef31af33",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "1ba52a2d_7e083182",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 2
+      },
+      "lineNbr": 11,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2023-01-08T13:21:45Z",
+      "side": 1,
+      "message": "memory",
+      "range": {
+        "startLine": 11,
+        "startChar": 28,
+        "endLine": 11,
+        "endChar": 35
+      },
+      "revId": "5295a8e39462930aea289db568729ab8ef31af33",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "5b23a975_e64254bb",
+        "filename": "VNFs/DPPD-PROX/handle_cgnat.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 800,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2023-01-08T13:21:45Z",
+      "side": 1,
+      "message": "please append comma\nplease use \u0027socket\u0027 parameter instead...",
+      "range": {
+        "startLine": 800,
+        "startChar": 15,
+        "endLine": 800,
+        "endChar": 30
+      },
+      "revId": "5295a8e39462930aea289db568729ab8ef31af33",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "44e5b484_fcb29db4",
+        "filename": "VNFs/DPPD-PROX/handle_cgnat.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 809,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2023-01-08T13:21:45Z",
+      "side": 1,
+      "message": "...same as used here...",
+      "range": {
+        "startLine": 809,
+        "startChar": 114,
+        "endLine": 809,
+        "endChar": 120
+      },
+      "revId": "5295a8e39462930aea289db568729ab8ef31af33",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfeb1729_ba1f4230",
+        "filename": "VNFs/DPPD-PROX/handle_cgnat.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 890,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2023-01-08T13:21:45Z",
+      "side": 1,
+      "message": "...as provided here",
+      "range": {
+        "startLine": 890,
+        "startChar": 67,
+        "endLine": 890,
+        "endChar": 76
+      },
+      "revId": "5295a8e39462930aea289db568729ab8ef31af33",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "42ad3b78_43005ae8",
+        "filename": "VNFs/DPPD-PROX/handle_gen.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1910,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2023-01-08T13:21:45Z",
+      "side": 1,
+      "message": "please append comma",
+      "revId": "5295a8e39462930aea289db568729ab8ef31af33",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "bd91f3bd_bc39300f",
+        "filename": "VNFs/DPPD-PROX/handle_master.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 913,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2023-01-08T13:21:45Z",
+      "side": 1,
+      "message": "please append comma",
+      "revId": "5295a8e39462930aea289db568729ab8ef31af33",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "775d1a3b_39adc6ab",
+        "filename": "VNFs/DPPD-PROX/handle_nat.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 126,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2023-01-08T13:21:45Z",
+      "side": 1,
+      "message": "please append comma\nplease use \u0027socket\u0027 parameter instead...",
+      "range": {
+        "startLine": 126,
+        "startChar": 15,
+        "endLine": 126,
+        "endChar": 30
+      },
+      "revId": "5295a8e39462930aea289db568729ab8ef31af33",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "9b73bcac_b23a4dba",
+        "filename": "VNFs/DPPD-PROX/handle_nat.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 132,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2023-01-08T13:21:45Z",
+      "side": 1,
+      "message": "...same as used here...",
+      "range": {
+        "startLine": 132,
+        "startChar": 55,
+        "endLine": 132,
+        "endChar": 61
+      },
+      "revId": "5295a8e39462930aea289db568729ab8ef31af33",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7eabe77f_f72c31ff",
+        "filename": "VNFs/DPPD-PROX/handle_nat.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 171,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2023-01-08T13:21:45Z",
+      "side": 1,
+      "message": "...as provided here",
+      "range": {
+        "startLine": 171,
+        "startChar": 60,
+        "endLine": 171,
+        "endChar": 69
+      },
+      "revId": "5295a8e39462930aea289db568729ab8ef31af33",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3f84efdc_7f85e3fa",
+        "filename": "VNFs/DPPD-PROX/packet_utils.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 496,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2023-01-08T13:21:45Z",
+      "side": 1,
+      "message": "please append comma",
+      "revId": "5295a8e39462930aea289db568729ab8ef31af33",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "dc913827_e4a52aa9",
+        "filename": "VNFs/DPPD-PROX/prox_shared.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 58,
+      "author": {
+        "id": 7067
+      },
+      "writtenOn": "2023-01-08T13:21:45Z",
+      "side": 1,
+      "message": "OK here: shared hashes are created and accessed during the init phase only, so it makes sense to allocate them on the current socket, even for per-socket and per-core shared hashes, which properly hold per-socket and per-core void *data.",
+      "range": {
+        "startLine": 58,
+        "startChar": 19,
+        "endLine": 58,
+        "endChar": 34
+      },
+      "revId": "5295a8e39462930aea289db568729ab8ef31af33",
+      "serverId": "bbac25d2-bf60-4904-9ba8-a72fc000d6c5",
+      "unresolved": false
+    }
+  ]
+}
