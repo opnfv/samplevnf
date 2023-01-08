@@ -21,7 +21,7 @@ function convertIPToHex(ip)
     return "IP ADDRESS ERROR"
   end
 
-  local chunks = {ip:match("^(%d+)%.(%d+)%.(%d+)%.(%d+)(\/%d+)$")}
+  local chunks = {ip:match("^(%d+)%.(%d+)%.(%d+)%.(%d+)(/%d+)$")}
   if #chunks == 5 then
     for i,v in ipairs(chunks) do
       if i < 5 then
