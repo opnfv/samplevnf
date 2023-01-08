@@ -1,5 +1,6 @@
 /*
 // Copyright (c) 2010-2020 Intel Corporation
+// Copyright (c) 2023 luc.provoost@gmail.com
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -909,6 +910,7 @@ void init_ctrl_plane(struct task_base *tbase)
 		.entries = n_entries,
 		.hash_func = rte_hash_crc,
 		.hash_func_init_val = 0,
+		.socket_id = socket_id
 	};
 	if (prox_cfg.flags & DSF_L3_ENABLED) {
 		hash_params.key_len = sizeof(uint32_t);
