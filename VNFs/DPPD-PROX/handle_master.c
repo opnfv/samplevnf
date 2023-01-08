@@ -909,6 +909,7 @@ void init_ctrl_plane(struct task_base *tbase)
 		.entries = n_entries,
 		.hash_func = rte_hash_crc,
 		.hash_func_init_val = 0,
+		.socket_id = socket_id,
 	};
 	if (prox_cfg.flags & DSF_L3_ENABLED) {
 		hash_params.key_len = sizeof(uint32_t);

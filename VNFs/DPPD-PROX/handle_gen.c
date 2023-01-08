@@ -1906,6 +1906,7 @@ static void init_task_gen(struct task_base *tbase, struct task_args *targ)
 		.key_len = sizeof(union ipv4_5tuple_host),
 		.hash_func = rte_hash_crc,
 		.hash_func_init_val = 0,
+		.socket_id = task->socket_id,
 	};
 	plog_info("\t\thash table name = %s\n", hash_params.name);
 	task->flow_id_table = rte_hash_create(&hash_params);

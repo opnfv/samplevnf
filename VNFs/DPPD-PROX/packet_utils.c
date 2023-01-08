@@ -492,6 +492,7 @@ void task_init_l3(struct task_base *tbase, struct task_args *targ)
 		.key_len = sizeof(uint32_t),
 		.hash_func = rte_hash_crc,
 		.hash_func_init_val = 0,
+		.socket_id = socket_id,
 	};
 	if (targ->flags & TASK_ARG_L3) {
 		plog_info("\t\tInitializing L3 (IPv4)\n");

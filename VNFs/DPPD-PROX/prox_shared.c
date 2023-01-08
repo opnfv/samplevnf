@@ -55,6 +55,7 @@ static void prox_sh_create_hash(struct prox_shared *ps, size_t size)
 {
 	param.entries = size;
 	param.name = get_sh_name();
+	param.socket_id = rte_socket_id();
 	ps->hash = rte_hash_create(&param);
 	PROX_PANIC(ps->hash == NULL, "Failed to create hash table for shared data");
 	ps->size = size;
