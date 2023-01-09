@@ -170,10 +170,13 @@ class RapidConfigParser(object):
                 while True: 
                     dp_ip_key = 'dp_ip{}'.format(index)
                     dp_mac_key = 'dp_mac{}'.format(index)
-                    if dp_ip_key in machines[int(machine['dest_vm'])-1].keys() and \
-                            dp_mac_key in machines[int(machine['dest_vm'])-1].keys():
-                        dp_port = {'ip': machines[int(machine['dest_vm'])-1][dp_ip_key],
-                                'mac' : machines[int(machine['dest_vm'])-1][dp_mac_key]}
+                    if dp_ip_key in machines[int(machine['dest_vm'])-1].keys():
+                        if dp_mac_key in machines[int(machine['dest_vm'])-1].keys():
+                            dp_port = {'ip': machines[int(machine['dest_vm'])-1][dp_ip_key],
+                                    'mac' : machines[int(machine['dest_vm'])-1][dp_mac_key]}
+                        else:
+                            dp_port = {'ip': machines[int(machine['dest_vm'])-1][dp_ip_key],
+                                    'mac' : None}
                         dp_ports.append(dict(dp_port))
                         index += 1
                     else:

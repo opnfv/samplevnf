@@ -41,8 +41,12 @@ class RapidMachine(object):
         while True:
             ip_key = 'dp_ip{}'.format(index)
             mac_key = 'dp_mac{}'.format(index)
-            if ip_key in machine_params.keys() and mac_key in machine_params.keys():
-                dp_port = {'ip': machine_params[ip_key], 'mac' : machine_params[mac_key]}
+            if ip_key in machine_params.keys():
+                if mac_key in machine_params.keys():
+                    dp_port = {'ip': machine_params[ip_key],
+                            'mac' : machine_params[mac_key]}
+                else:
+                    dp_port = {'ip': machine_params[ip_key], 'mac' : None}
                 self.dp_ports.append(dict(dp_port))
                 self.dpdk_port_index.append(index - 1)
                 index += 1
@@ -55,7 +59,8 @@ class RapidMachine(object):
             PROXConfigfile =  open (self.machine_params['config_file'], 'r')
             PROXConfig = PROXConfigfile.read()
             PROXConfigfile.close()
-            self.all_tasks_for_this_cfg = set(re.findall("task\s*=\s*(\d+)",PROXConfig))
+            self.all_tasks_for_this_cfg = set(re.findall("task\s*=\s*(\d+)",
+                PROXConfig))
 
     def get_cores(self):
         return (self.machine_params['cores'])
@@ -77,18 +82,31 @@ class RapidMachine(object):
     def read_cpuset(self):
         """Read list of cpus on which we allowed to execute
         """
-        cmd = 'cat /sys/fs/cgroup/cpuset/cpuset.cpus'
+        cpu_set_file = '/sys/fs/cgroup/cpuset.cpus'
+        cmd = 'test -e {0} && echo exists'.format(cpu_set_file)
+        if (self._client.run_cmd(cmd).decode().rstrip()):
+            cmd = 'cat {}'.format(cpu_set_file)
+        else:
+            cpu_set_file = '/sys/fs/cgroup/cpuset/cpuset.cpus'
+            cmd = 'test -e {0} && echo exists'.format(cpu_set_file)
+            if (self._client.run_cmd(cmd).decode().rstrip()):
+                cmd = 'cat {}'.format(cpu_set_file)
+            else:
+                RapidLog.critical('{Cannot determine cpuset')
         cpuset_cpus = self._client.run_cmd(cmd).decode().rstrip()
-        RapidLog.debug('{} ({}): Allocated cpuset: {}'.format(self.name, self.ip, cpuset_cpus))
+        RapidLog.debug('{} ({}): Allocated cpuset: {}'.format(self.name,
+            self.ip, cpuset_cpus))
         self.cpu_mapping = self.expand_list_format(cpuset_cpus)
-        RapidLog.debug('{} ({}): Expanded cpuset: {}'.format(self.name, self.ip, self.cpu_mapping))
+        RapidLog.debug('{} ({}): Expanded cpuset: {}'.format(self.name,
+            self.ip, self.cpu_mapping))
 
         # Log CPU core mapping for user information
         cpu_mapping_str = ''
         for i in range(len(self.cpu_mapping)):
             cpu_mapping_str = cpu_mapping_str + '[' + str(i) + '->' + str(self.cpu_mapping[i]) + '], '
         cpu_mapping_str = cpu_mapping_str[:-2]
-        RapidLog.debug('{} ({}): CPU mapping: {}'.format(self.name, self.ip, cpu_mapping_str))
+        RapidLog.debug('{} ({}): CPU mapping: {}'.format(self.name, self.ip,
+            cpu_mapping_str))
 
     def remap_cpus(self, cpus):
         """Convert relative cpu ids provided as function parameter to match
@@ -108,12 +126,14 @@ class RapidMachine(object):
 
         if 'mcore' in self.machine_params.keys():
             cpus_remapped = self.remap_cpus(self.machine_params['mcore'])
-            RapidLog.debug('{} ({}): mcore {} remapped to {}'.format(self.name, self.ip, self.machine_params['mcore'], cpus_remapped))
+            RapidLog.debug('{} ({}): mcore {} remapped to {}'.format(self.name,
+                self.ip, self.machine_params['mcore'], cpus_remapped))
             self.machine_params['mcore'] = cpus_remapped
 
         if 'cores' in self.machine_params.keys():
             cpus_remapped = self.remap_cpus(self.machine_params['cores'])
-            RapidLog.debug('{} ({}): cores {} remapped to {}'.format(self.name, self.ip, self.machine_params['cores'], cpus_remapped))
+            RapidLog.debug('{} ({}): cores {} remapped to {}'.format(self.name,
+                self.ip, self.machine_params['cores'], cpus_remapped))
             self.machine_params['cores'] = cpus_remapped
 
     def devbind(self):
@@ -137,7 +157,16 @@ class RapidMachine(object):
                 LuaFile.write('local_ip{}="{}"\n'.format(index, dp_port['ip']))
                 LuaFile.write('local_hex_ip{}=convertIPToHex(local_ip{})\n'.format(index, index))
             if self.vim in ['kubernetes']:
-                LuaFile.write("eal=\"--file-prefix %s --pci-whitelist %s\"\n" % (self.name, self.machine_params['dp_pci_dev']))
+                cmd = 'pkg-config --modversion libdpdk'
+                dpdk_version = self._client.run_cmd(cmd).decode().rstrip()
+                if (dpdk_version >= '20.11.0'):
+                    allow_parameter = 'allow'
+                else:
+                    allow_parameter = 'pci-whitelist'
+                eal_line = 'eal=\"--file-prefix {} --{} {}\"\n'.format(
+                        self.name, allow_parameter,
+                        self.machine_params['dp_pci_dev'])
+                LuaFile.write(eal_line)
             else:
                 LuaFile.write("eal=\"\"\n")
             if 'mcore' in self.machine_params.keys():
@@ -150,7 +179,9 @@ class RapidMachine(object):
                 for index, dest_port in enumerate(self.machine_params['dest_ports'], start = 1):
                     LuaFile.write('dest_ip{}="{}"\n'.format(index, dest_port['ip']))
                     LuaFile.write('dest_hex_ip{}=convertIPToHex(dest_ip{})\n'.format(index, index))
-                    LuaFile.write('dest_hex_mac{}="{}"\n'.format(index , dest_port['mac'].replace(':',' ')))
+                    if dest_port['mac']:
+                        LuaFile.write('dest_hex_mac{}="{}"\n'.format(index,
+                            dest_port['mac'].replace(':',' ')))
             if 'gw_vm' in self.machine_params.keys():
                 for index, gw_ip in enumerate(self.machine_params['gw_ips'],
                         start = 1):
