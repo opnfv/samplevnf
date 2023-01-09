@@ -103,9 +103,12 @@ class prox_ctrl(object):
 
     def scp_put(self, src, dst):
         self._sshclient.scp_put(src, dst)
+        RapidLog.info("Copying from {} to {}:{}".format(src, self._ip, dst))
 
     def scp_get(self, src, dst):
         self._sshclient.scp_get('/home/' + self._user + src, dst)
+        RapidLog.info("Copying from {}:/home/{}{} to {}".format(self._ip,
+            self._user, src, dst))
 
 class prox_sock(object):
     def __init__(self, sock):
