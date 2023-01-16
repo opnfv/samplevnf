@@ -47,8 +47,10 @@ class prox_ctrl(object):
                 on %s, attempt: %d" % (self._ip, attempts))
         while True:
             try:
-                self.run_cmd('test -e /opt/rapid/system_ready_for_rapid')
-                break
+                if (self.run_cmd('test -e /opt/rapid/system_ready_for_rapid \
+                        && echo exists')):
+                    break
+                time.sleep(2)
             except RuntimeWarning as ex:
                 RapidLog.debug("RuntimeWarning %d:\n%s"
                     % (ex.returncode, ex.output.strip()))
