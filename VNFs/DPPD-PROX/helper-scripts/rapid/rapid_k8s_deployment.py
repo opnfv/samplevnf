@@ -121,6 +121,14 @@ class K8sDeployment:
             else:
                 pod_nodeselector_hostname = None
 
+            # Search for POD spec
+            if self._create_config.has_option("POD%d" % i,
+                                              "spec_file_name"):
+                pod_spec_file_name = self._create_config.get(
+                    "POD%d" % i, "spec_file_name")
+            else:
+                pod_spec_file_name = K8sDeployment.POD_YAML_TEMPLATE_FILE_NAME
+
             # Search for POD dataplane static IP
             if self._create_config.has_option("POD%d" % i,
                                               "dp_ip"):
@@ -139,6 +147,7 @@ class K8sDeployment:
 
             pod = Pod(pod_name, self._namespace)
             pod.set_nodeselector(pod_nodeselector_hostname)
+            pod.set_spec_file_name(pod_spec_file_name)
             pod.set_dp_ip(pod_dp_ip)
             pod.set_dp_subnet(pod_dp_subnet)
             pod.set_id(i)
@@ -157,7 +166,7 @@ class K8sDeployment:
         # Create PODs using template from yaml file
         for pod in self._pods:
             self._log.info("Creating POD %s...", pod.get_name())
-            pod.create_from_yaml(K8sDeployment.POD_YAML_TEMPLATE_FILE_NAME)
+            pod.create_from_yaml()
 
         # Wait for PODs to start
         for pod in self._pods:
