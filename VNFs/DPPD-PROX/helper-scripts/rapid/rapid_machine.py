@@ -43,8 +43,7 @@ class RapidMachine(object):
             mac_key = 'dp_mac{}'.format(index)
             if ip_key in machine_params.keys():
                 if mac_key in machine_params.keys():
-                    dp_port = {'ip': machine_params[ip_key],
-                            'mac' : machine_params[mac_key]}
+                    dp_port = {'ip': machine_params[ip_key], 'mac' : machine_params[mac_key]}
                 else:
                     dp_port = {'ip': machine_params[ip_key], 'mac' : None}
                 self.dp_ports.append(dict(dp_port))
@@ -59,8 +58,7 @@ class RapidMachine(object):
             PROXConfigfile =  open (self.machine_params['config_file'], 'r')
             PROXConfig = PROXConfigfile.read()
             PROXConfigfile.close()
-            self.all_tasks_for_this_cfg = set(re.findall("task\s*=\s*(\d+)",
-                PROXConfig))
+            self.all_tasks_for_this_cfg = set(re.findall("task\s*=\s*(\d+)",PROXConfig))
 
     def get_cores(self):
         return (self.machine_params['cores'])
@@ -94,19 +92,16 @@ class RapidMachine(object):
             else:
                 RapidLog.critical('{Cannot determine cpuset')
         cpuset_cpus = self._client.run_cmd(cmd).decode().rstrip()
-        RapidLog.debug('{} ({}): Allocated cpuset: {}'.format(self.name,
-            self.ip, cpuset_cpus))
+        RapidLog.debug('{} ({}): Allocated cpuset: {}'.format(self.name, self.ip, cpuset_cpus))
         self.cpu_mapping = self.expand_list_format(cpuset_cpus)
-        RapidLog.debug('{} ({}): Expanded cpuset: {}'.format(self.name,
-            self.ip, self.cpu_mapping))
+        RapidLog.debug('{} ({}): Expanded cpuset: {}'.format(self.name, self.ip, self.cpu_mapping))
 
         # Log CPU core mapping for user information
         cpu_mapping_str = ''
         for i in range(len(self.cpu_mapping)):
             cpu_mapping_str = cpu_mapping_str + '[' + str(i) + '->' + str(self.cpu_mapping[i]) + '], '
         cpu_mapping_str = cpu_mapping_str[:-2]
-        RapidLog.debug('{} ({}): CPU mapping: {}'.format(self.name, self.ip,
-            cpu_mapping_str))
+        RapidLog.debug('{} ({}): CPU mapping: {}'.format(self.name, self.ip, cpu_mapping_str))
 
     def remap_cpus(self, cpus):
         """Convert relative cpu ids provided as function parameter to match
@@ -126,14 +121,12 @@ class RapidMachine(object):
 
         if 'mcore' in self.machine_params.keys():
             cpus_remapped = self.remap_cpus(self.machine_params['mcore'])
-            RapidLog.debug('{} ({}): mcore {} remapped to {}'.format(self.name,
-                self.ip, self.machine_params['mcore'], cpus_remapped))
+            RapidLog.debug('{} ({}): mcore {} remapped to {}'.format(self.name, self.ip, self.machine_params['mcore'], cpus_remapped))
             self.machine_params['mcore'] = cpus_remapped
 
         if 'cores' in self.machine_params.keys():
             cpus_remapped = self.remap_cpus(self.machine_params['cores'])
-            RapidLog.debug('{} ({}): cores {} remapped to {}'.format(self.name,
-                self.ip, self.machine_params['cores'], cpus_remapped))
+            RapidLog.debug('{} ({}): cores {} remapped to {}'.format(self.name, self.ip, self.machine_params['cores'], cpus_remapped))
             self.machine_params['cores'] = cpus_remapped
 
     def devbind(self):
@@ -170,17 +163,20 @@ class RapidMachine(object):
             else:
                 LuaFile.write("eal=\"\"\n")
             if 'mcore' in self.machine_params.keys():
-                LuaFile.write('mcore="%s"\n'% ','.join(map(str, self.machine_params['mcore'])))
+                LuaFile.write('mcore="%s"\n'% ','.join(map(str,
+                    self.machine_params['mcore'])))
             if 'cores' in self.machine_params.keys():
-                LuaFile.write('cores="%s"\n'% ','.join(map(str, self.machine_params['cores'])))
+                LuaFile.write('cores="%s"\n'% ','.join(map(str,
+                    self.machine_params['cores'])))
             if 'ports' in self.machine_params.keys():
-                LuaFile.write('ports="%s"\n'% ','.join(map(str, self.machine_params['ports'])))
+                LuaFile.write('ports="%s"\n'% ','.join(map(str,
+                    self.machine_params['ports'])))
             if 'dest_ports' in self.machine_params.keys():
                 for index, dest_port in enumerate(self.machine_params['dest_ports'], start = 1):
                     LuaFile.write('dest_ip{}="{}"\n'.format(index, dest_port['ip']))
                     LuaFile.write('dest_hex_ip{}=convertIPToHex(dest_ip{})\n'.format(index, index))
                     if dest_port['mac']:
-                        LuaFile.write('dest_hex_mac{}="{}"\n'.format(index,
+                        LuaFile.write('dest_hex_mac{}="{}"\n'.format(index ,
                             dest_port['mac'].replace(':',' ')))
             if 'gw_vm' in self.machine_params.keys():
                 for index, gw_ip in enumerate(self.machine_params['gw_ips'],

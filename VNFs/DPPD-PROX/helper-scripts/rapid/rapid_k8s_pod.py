@@ -32,6 +32,7 @@ class Pod:
     _name = "pod"
     _namespace = "default"
     _nodeSelector_hostname = None
+    _spec_filename = None
     _last_status = None
     _id = None
     _admin_ip = None
@@ -56,10 +57,11 @@ class Pod:
         if self._ssh_client is not None:
             self._ssh_client.disconnect()
 
-    def create_from_yaml(self, file_name):
+    def create_from_yaml(self):
         """Load POD description from yaml file.
         """
-        with open(path.join(path.dirname(__file__), file_name)) as yaml_file:
+        with open(path.join(path.dirname(__file__),
+            self._spec_filename)) as yaml_file:
             self.body = yaml.safe_load(yaml_file)
 
             self.body["metadata"]["name"] = self._name
@@ -67,14 +69,16 @@ class Pod:
             if (self._nodeSelector_hostname is not None):
                 if ("nodeSelector" not in self.body["spec"]):
                     self.body["spec"]["nodeSelector"] = {}
-                self.body["spec"]["nodeSelector"]["kubernetes.io/hostname"] = self._nodeSelector_hostname
+                self.body["spec"]["nodeSelector"]["kubernetes.io/hostname"] = \
+                        self._nodeSelector_hostname
             self._log.debug("Creating POD, body:\n%s" % self.body)
 
             try:
                 self.k8s_CoreV1Api.create_namespaced_pod(body = self.body,
                                                 namespace = self._namespace)
             except client.rest.ApiException as e:
-                self._log.error("Couldn't create POD %s!\n%s\n" % (self._name, e))
+                self._log.error("Couldn't create POD %s!\n%s\n" % (self._name,
+                    e))
 
     def terminate(self):
         """Terminate POD. Close SSH connection.
@@ -203,6 +207,11 @@ class Pod:
         """Set hostname on which POD will be executed.
         """
         self._nodeSelector_hostname = hostname
+
+    def set_spec_file_name(self, file_name):
+        """Set pod spec filename.
+        """
+        self._spec_filename = file_name
 
     def set_ssh_credentials(self, user, rsa_private_key):
         """Set SSH credentials for the SSH connection to the POD.
