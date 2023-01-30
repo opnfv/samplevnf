@@ -64,7 +64,16 @@ class RapidTestManager(object):
         background_machines = []
         sut_machine = gen_machine = None
         configonly = test_params['configonly']
+        machine_names = []
+        machine_counter = {}
         for machine_params in test_params['machines']:
+            if machine_params['name'] not in machine_names:
+                machine_names.append(machine_params['name'])
+                machine_counter[machine_params['name']] = 1
+            else:
+                machine_counter[machine_params['name']] += 1
+                machine_params['name'] = '{}_{}'.format(machine_params['name'],
+                        machine_counter[machine_params['name']])
             if 'gencores' in machine_params.keys():
                 machine = RapidGeneratorMachine(test_params['key'],
                         test_params['user'], test_params['password'],
