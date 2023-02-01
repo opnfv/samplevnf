@@ -177,8 +177,24 @@ class Pod:
         self._sriov_vf = cmd_output.split(",")[0]
         self._log.debug("Using first SRIOV VF %s" % self._sriov_vf)
 
-        self._log.info("Getting MAC address for assigned SRIOV VF %s" % self._sriov_vf)
-        self._ssh_client.run_cmd("sudo /opt/rapid/port_info_app -n 4 -w %s" % self._sriov_vf)
+        # find DPDK version
+        self._log.info("Checking DPDK version for POD %s" % self._name)
+        ret = self._ssh_client.run_cmd("cat /opt/rapid/dpdk_version")
+        if ret != 0:
+            self._log.error("Failed to check DPDK version"
+                            "Error %s" % self._ssh_client.get_error())
+            return -1
+        dpdk_version = self._ssh_client.get_output().decode("utf-8").rstrip()
+        self._log.debug("DPDK version %s" % dpdk_version)
+        if (dpdk_version >= '20.11.0'):
+            allow_parameter = 'allow'
+        else:
+            allow_parameter = 'pci-whitelist'
+
+        self._log.info("Getting MAC address for assigned SRIOV VF %s" % \
+                self._sriov_vf)
+        self._ssh_client.run_cmd("sudo /opt/rapid/port_info_app -n 4 \
+                --{} {}".format(allow_parameter, self._sriov_vf))
         if ret != 0:
             self._log.error("Failed to get MAC address!"
                             "Error %s" % self._ssh_client.get_error())

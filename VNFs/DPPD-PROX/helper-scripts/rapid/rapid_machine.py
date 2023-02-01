@@ -150,7 +150,7 @@ class RapidMachine(object):
                 LuaFile.write('local_ip{}="{}"\n'.format(index, dp_port['ip']))
                 LuaFile.write('local_hex_ip{}=convertIPToHex(local_ip{})\n'.format(index, index))
             if self.vim in ['kubernetes']:
-                cmd = 'pkg-config --modversion libdpdk'
+                cmd = 'cat /opt/rapid/dpdk_version'
                 dpdk_version = self._client.run_cmd(cmd).decode().rstrip()
                 if (dpdk_version >= '20.11.0'):
                     allow_parameter = 'allow'
