@@ -111,7 +111,7 @@ class K8sDeployment:
                 pod_name = self._create_config.get(
                     "POD%d" % i, "name")
             else:
-                pod_name = "pod-rapid-%d" % i
+                pod_name = "prox-pod-%d" % i
 
             # Search for POD hostname
             if self._create_config.has_option("POD%d" % i,
