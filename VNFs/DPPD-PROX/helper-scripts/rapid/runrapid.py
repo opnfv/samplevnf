@@ -59,7 +59,6 @@ class RapidTestManager(object):
 
     def run_tests(self, test_params):
         test_params = RapidConfigParser.parse_config(test_params)
-        RapidLog.debug(test_params)
         monitor_gen = monitor_sut = False
         background_machines = []
         sut_machine = gen_machine = None
@@ -103,6 +102,7 @@ class RapidTestManager(object):
                         if machine_params['prox_socket']:
                             sut_machine = machine
             self.machines.append(machine)
+        RapidLog.debug(test_params)
         try:
             prox_executor = concurrent.futures.ThreadPoolExecutor(max_workers=len(self.machines))
             self.future_to_prox = {prox_executor.submit(machine.start_prox): machine for machine in self.machines}
