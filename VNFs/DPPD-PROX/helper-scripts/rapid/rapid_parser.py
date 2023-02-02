@@ -63,12 +63,6 @@ class RapidConfigParser(object):
         test_params['user'] = config.get('ssh', 'user')
         if config.has_option('ssh', 'key'):
             test_params['key'] = config.get('ssh', 'key')
-            if test_params['user'] in ['rapid']:
-                if test_params['key'] != 'rapid_rsa_key':
-                    RapidLog.debug(("Key file {} for user {} overruled by key file:"
-                            " rapid_rsa_key").format(test_params['key'],
-                            test_params['user']))
-                    test_params['key'] = 'rapid_rsa_key'
         else:
             test_params['key'] = None
         if config.has_option('ssh', 'password'):
