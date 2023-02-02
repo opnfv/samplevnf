@@ -32,7 +32,7 @@ class K8sDeployment:
     """
     LOG_FILE_NAME = "createrapidk8s.log"
     SSH_PRIVATE_KEY = "./rapid_rsa_key"
-    SSH_USER = "centos"
+    SSH_USER = "rapid"
 
     POD_YAML_TEMPLATE_FILE_NAME = "pod-rapid.yaml"
 
