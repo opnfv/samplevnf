@@ -261,6 +261,7 @@ class RapidTest(object):
                         'lat_perc' : '',
                         'lat_max' : '',
                         'abs_drop_rate' : '',
+                        'mis_ordered' : '',
                         'drop_rate' : ''}
                 RapidLog.info(self.report_result(flow_number, size,
                     iteration_data, iteration_prefix ))
@@ -346,6 +347,7 @@ class RapidTest(object):
                                 'lat_perc' : '',
                                 'lat_max' : '',
                                 'abs_drop_rate' : '',
+                                'mis_ordered' : '',
                                 'drop_rate' : ''}
                         RapidLog.info(self.report_result(flow_number, size, time_loop_data,
                             time_loop_prefix))
