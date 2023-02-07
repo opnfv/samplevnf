@@ -34,6 +34,9 @@ create_tun
 touch /opt/rapid/system_ready_for_rapid
 
 # Start SSH server in background
-/usr/sbin/sshd
+echo "mkdir -p /var/run/sshd" >> /etc/rc.local
+service ssh start
 
-exec sleep infinity
+echo "rapid ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+sleep infinity
