@@ -34,7 +34,6 @@
 #include "defines.h"
 #include <rte_ip.h>
 #include <rte_cryptodev.h>
-#include <rte_cryptodev_pmd.h>
 #include <rte_bus_vdev.h>
 #include "prox_port_cfg.h"
 #include "prox_compat.h"
@@ -163,27 +162,24 @@ static void init_task_esp_enc(struct task_base *tbase, struct task_args *targ)
 	char name[64];
 	sprintf(name, "core_%03u_crypto_pool", lcore_id);
 	task->crypto_op_pool = rte_crypto_op_pool_create(name, RTE_CRYPTO_OP_TYPE_SYMMETRIC,
-		8192, 128, MAXIMUM_IV_LENGTH, rte_socket_id());
+		targ->nb_mbuf, 128, MAXIMUM_IV_LENGTH, rte_socket_id());
 	PROX_PANIC(task->crypto_op_pool == NULL, "Can't create ENC CRYPTO_OP_POOL\n");
 
 	task->cdev_id = get_cdev_id();
 
 	struct rte_cryptodev_config cdev_conf;
 	cdev_conf.nb_queue_pairs = 2;
-	//cdev_conf.socket_id = SOCKET_ID_ANY;
 	cdev_conf.socket_id = rte_socket_id();
 	rte_cryptodev_configure(task->cdev_id, &cdev_conf);
 
 	unsigned int session_size = rte_cryptodev_sym_get_private_session_size(task->cdev_id);
 	plog_info("rte_cryptodev_sym_get_private_session_size=%d\n", session_size);
 	sprintf(name, "core_%03u_session_pool", lcore_id);
-	task->session_pool = rte_mempool_create(name,
+	task->session_pool = rte_cryptodev_sym_session_pool_create(name,
 				MAX_SESSIONS,
 				session_size,
 				POOL_CACHE_SIZE,
-				0, NULL, NULL, NULL,
-				NULL, rte_socket_id(),
-				0);
+				0, rte_socket_id());
 	PROX_PANIC(task->session_pool == NULL, "Failed rte_mempool_create\n");
 
 	task->qp_id=0;
@@ -227,18 +223,8 @@ static void init_task_esp_enc(struct task_base *tbase, struct task_args *targ)
 	auth_xform.auth.iv.offset = 0;
 	auth_xform.auth.iv.length = 0;
 
-	task->sess = rte_cryptodev_sym_session_create(task->session_pool);
-	PROX_PANIC(task->sess == NULL, "Failed to create ENC session\n");
-
-	ret = rte_cryptodev_sym_session_init(task->cdev_id, task->sess, &cipher_xform, task->session_pool);
-	PROX_PANIC(ret < 0, "Failed sym_session_init\n");
-
-	//TODO: doublecheck task->ops_burst lifecycle!
-	if (rte_crypto_op_bulk_alloc(task->crypto_op_pool,
-			RTE_CRYPTO_OP_TYPE_SYMMETRIC,
-			task->ops_burst, NUM_OPS) != NUM_OPS) {
-		PROX_PANIC(1, "Failed to allocate ENC crypto operations\n");
-	}
+	task->sess = rte_cryptodev_sym_session_create(task->cdev_id, &cipher_xform, task->session_pool);
+	PROX_PANIC(task->sess < 0, "Failed ENC sym_session_create\n");
 
 	task->local_ipv4 = rte_cpu_to_be_32(targ->local_ipv4);
 	task->remote_ipv4 = rte_cpu_to_be_32(targ->remote_ipv4);
@@ -264,7 +250,7 @@ static void init_task_esp_dec(struct task_base *tbase, struct task_args *targ)
 	char name[64];
 	sprintf(name, "core_%03u_crypto_pool", lcore_id);
 	task->crypto_op_pool = rte_crypto_op_pool_create(name, RTE_CRYPTO_OP_TYPE_SYMMETRIC,
-		8192, 128, MAXIMUM_IV_LENGTH, rte_socket_id());
+		targ->nb_mbuf, 128, MAXIMUM_IV_LENGTH, rte_socket_id());
 	PROX_PANIC(task->crypto_op_pool == NULL, "Can't create DEC CRYPTO_OP_POOL\n");
 
 	task->cdev_id = get_cdev_id();
@@ -277,13 +263,11 @@ static void init_task_esp_dec(struct task_base *tbase, struct task_args *targ)
 	unsigned int session_size = rte_cryptodev_sym_get_private_session_size(task->cdev_id);
 	plog_info("rte_cryptodev_sym_get_private_session_size=%d\n", session_size);
 	sprintf(name, "core_%03u_session_pool", lcore_id);
-	task->session_pool = rte_mempool_create(name,
+	task->session_pool = rte_cryptodev_sym_session_pool_create(name,
 				MAX_SESSIONS,
 				session_size,
 				POOL_CACHE_SIZE,
-				0, NULL, NULL, NULL,
-				NULL, rte_socket_id(),
-				0);
+				0, rte_socket_id());
 	PROX_PANIC(task->session_pool == NULL, "Failed rte_mempool_create\n");
 
 	task->qp_id=0;
@@ -326,18 +310,8 @@ static void init_task_esp_dec(struct task_base *tbase, struct task_args *targ)
 	auth_xform.auth.iv.offset = 0;
 	auth_xform.auth.iv.length = 0;
 
-	task->sess = rte_cryptodev_sym_session_create(task->session_pool);
-	PROX_PANIC(task->sess == NULL, "Failed to create ENC session\n");
-
-	ret = rte_cryptodev_sym_session_init(task->cdev_id, task->sess, &cipher_xform, task->session_pool);
-	PROX_PANIC(ret < 0, "Failed sym_session_init\n");
-
-	//TODO: doublecheck task->ops_burst lifecycle!
-	if (rte_crypto_op_bulk_alloc(task->crypto_op_pool,
-			RTE_CRYPTO_OP_TYPE_SYMMETRIC,
-			task->ops_burst, NUM_OPS) != NUM_OPS) {
-		PROX_PANIC(1, "Failed to allocate DEC crypto operations\n");
-	}
+	task->sess = rte_cryptodev_sym_session_create(task->cdev_id, &cipher_xform, task->session_pool);
+	PROX_PANIC(task->sess < 0, "Failed DEC sym_session_create\n");
 
 	task->local_ipv4 = rte_cpu_to_be_32(targ->local_ipv4);
 	//memcpy(&task->src_mac, &prox_port_cfg[task->base.tx_params_hw.tx_port_queue->port].eth_addr, sizeof(prox_rte_ether_addr));
@@ -625,65 +599,89 @@ static int handle_esp_enc_bulk(struct task_base *tbase, struct rte_mbuf **mbufs,
 {
 	struct task_esp_enc *task = (struct task_esp_enc *)tbase;
 	uint8_t out[MAX_PKT_BURST];
-	uint16_t i = 0, nb_rx = 0, nb_enc=0, j = 0;
+	uint8_t result;
+	uint16_t i = 0, nb_rx = 0, nb_enc=0, j = 0, idx = 0;
+	struct rte_mbuf *new_mbufs[MAX_PKT_BURST];
 
+	if (rte_crypto_op_bulk_alloc(task->crypto_op_pool,
+			RTE_CRYPTO_OP_TYPE_SYMMETRIC,
+			task->ops_burst, n_pkts) != n_pkts) {
+		PROX_PANIC(1, "Failed to allocate ENC crypto operations\n");
+	}
 	for (uint16_t j = 0; j < n_pkts; ++j) {
-		out[j] = handle_esp_ah_enc(task, mbufs[j], task->ops_burst[nb_enc]);
-		if (out[j] != OUT_DISCARD)
+		result = handle_esp_ah_enc(task, mbufs[j], task->ops_burst[nb_enc]);
+		if (result != OUT_DISCARD) {
 			++nb_enc;
+		}
+		else {
+			new_mbufs[idx] = mbufs[j];
+			out[idx] = result;
+			idx++;
+		}
+	}
+	if (nb_enc) {
+		if (rte_cryptodev_enqueue_burst(task->cdev_id, task->qp_id, task->ops_burst, nb_enc) != nb_enc) {
+			plog_info("Error enc enqueue_burst\n");
+			return -1;
+		}
 	}
 
-	if (rte_cryptodev_enqueue_burst(task->cdev_id, task->qp_id, task->ops_burst, nb_enc) != nb_enc) {
-		plog_info("Error enc enqueue_burst\n");
-		return -1;
+	nb_rx = rte_cryptodev_dequeue_burst(task->cdev_id, task->qp_id, task->ops_burst, MAX_PKT_BURST - idx);
+	for (uint16_t j = 0; j < nb_rx; ++j) {
+		new_mbufs[idx] = task->ops_burst[j]->sym->m_src;
+		out[idx] = 0;
+		rte_crypto_op_free(task->ops_burst[j]);
+		idx++;
 	}
-
-	do {
-		nb_rx = rte_cryptodev_dequeue_burst(task->cdev_id, task->qp_id,	task->ops_burst+i, nb_enc-i);
-		i += nb_rx;
-	} while (i < nb_enc);
-
-	return task->base.tx_pkt(&task->base, mbufs, n_pkts, out);
+	return task->base.tx_pkt(&task->base, new_mbufs, idx, out);
 }
 
 static int handle_esp_dec_bulk(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts)
 {
 	struct task_esp_dec *task = (struct task_esp_dec *)tbase;
 	uint8_t out[MAX_PKT_BURST];
-	uint16_t j, nb_dec=0, nb_rx=0;
+	uint8_t result;
+	uint16_t i = 0, nb_rx = 0, nb_dec=0, j = 0, idx = 0;
+	struct rte_mbuf *new_mbufs[MAX_PKT_BURST];
 
+	if (rte_crypto_op_bulk_alloc(task->crypto_op_pool,
+			RTE_CRYPTO_OP_TYPE_SYMMETRIC,
+			task->ops_burst, n_pkts) != n_pkts) {
+		PROX_PANIC(1, "Failed to allocate DEC crypto operations\n");
+	}
 	for (j = 0; j < n_pkts; ++j) {
-		out[j] = handle_esp_ah_dec(task, mbufs[j], task->ops_burst[nb_dec]);
-		if (out[j] != OUT_DISCARD)
+		result = handle_esp_ah_dec(task, mbufs[j], task->ops_burst[nb_dec]);
+		if (result != OUT_DISCARD)
 			++nb_dec;
-	}
-
-	if (rte_cryptodev_enqueue_burst(task->cdev_id, task->qp_id, task->ops_burst, nb_dec) != nb_dec) {
-		plog_info("Error dec enqueue_burst\n");
-		return -1;
-	}
-
-	j=0;
-	do {
-		nb_rx = rte_cryptodev_dequeue_burst(task->cdev_id, task->qp_id,
-					task->ops_burst+j, nb_dec-j);
-		j += nb_rx;
-	} while (j < nb_dec);
-
-	for (j = 0; j < nb_dec; ++j) {
-		if (task->ops_burst[j]->status != RTE_CRYPTO_OP_STATUS_SUCCESS){
-			plog_info("err: task->ops_burst[%d].status=%d\n", j, task->ops_burst[j]->status);
-			//!!!TODO!!! find mbuf and discard it!!!
-			//for now just send it further
-			//plogdx_info(mbufs[j], "RX: ");
+		else {
+			new_mbufs[idx] = mbufs[j];
+			out[idx] = result;
+			idx++;
 		}
+	}
+	if (nb_dec) {
+		if (rte_cryptodev_enqueue_burst(task->cdev_id, task->qp_id, task->ops_burst, nb_dec) != nb_dec) {
+			plog_info("Error dec enqueue_burst\n");
+			return -1;
+		}
+	}
+
+	nb_rx = rte_cryptodev_dequeue_burst(task->cdev_id, task->qp_id,
+				task->ops_burst, MAX_PKT_BURST - idx);
+
+	for (j = 0; j < nb_rx; ++j) {
+		new_mbufs[idx] = task->ops_burst[j]->sym->m_src;
 		if (task->ops_burst[j]->status == RTE_CRYPTO_OP_STATUS_SUCCESS) {
-			struct rte_mbuf *mbuf = task->ops_burst[j]->sym->m_src;
-			handle_esp_ah_dec_finish2(task, mbuf);//TODO set out[j] properly
+			out[idx] = handle_esp_ah_dec_finish2(task, new_mbufs[idx]);
 		}
+		else {
+			out[idx] = OUT_DISCARD;
+		}
+		rte_crypto_op_free(task->ops_burst[j]);
+		idx++;
 	}
 
-	return task->base.tx_pkt(&task->base, mbufs, n_pkts, out);
+	return task->base.tx_pkt(&task->base, new_mbufs, idx, out);
 }
 
 struct task_init task_init_esp_enc = {
@@ -695,7 +693,7 @@ struct task_init task_init_esp_enc = {
 };
 
 struct task_init task_init_esp_dec = {
-        .mode = ESP_ENC,
+        .mode = ESP_DEC,
         .mode_str = "esp_dec",
         .init = init_task_esp_dec,
         .handle = handle_esp_dec_bulk,
