@@ -192,10 +192,6 @@ static void init_task_esp_enc(struct task_base *tbase, struct task_args *targ)
 	int ret = rte_cryptodev_start(task->cdev_id);
 	PROX_PANIC(ret < 0, "Failed to start device\n");
 
-	struct rte_cryptodev *dev;
-	dev = rte_cryptodev_pmd_get_dev(task->cdev_id);
-	PROX_PANIC(dev->attached != RTE_CRYPTODEV_ATTACHED, "No ENC cryptodev attached\n");
-
 	//Setup Cipher Parameters
 	struct rte_crypto_sym_xform cipher_xform = {0};
 	struct rte_crypto_sym_xform auth_xform = {0};
@@ -279,10 +275,6 @@ static void init_task_esp_dec(struct task_base *tbase, struct task_args *targ)
 
 	int ret = rte_cryptodev_start(task->cdev_id);
 	PROX_PANIC(ret < 0, "Failed to start device\n");
-
-	struct rte_cryptodev *dev;
-	dev = rte_cryptodev_pmd_get_dev(task->cdev_id);
-	PROX_PANIC(dev->attached != RTE_CRYPTODEV_ATTACHED, "No ENC cryptodev attached\n");
 
 	//Setup Cipher Parameters
 	struct rte_crypto_sym_xform cipher_xform = {0};
