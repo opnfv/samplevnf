@@ -385,6 +385,11 @@ void init_rte_dev(int use_dummy_devices)
 		if ((ptr = strstr(port_cfg->short_name, "_pmd")) != NULL) {
 			*ptr = '\x0';
 		}
+		// Set socket for vdev device identical to socket of corresponding port
+		if (prox_port_cfg[port_id].is_vdev) {
+			prox_port_cfg[port_id].socket = prox_port_cfg[prox_port_cfg[port_id].dpdk_mapping].socket;
+			continue;
+		}
 
 #if RTE_VERSION < RTE_VERSION_NUM(18,5,0,0)
 		pci_dev = dev_info.pci_dev;
