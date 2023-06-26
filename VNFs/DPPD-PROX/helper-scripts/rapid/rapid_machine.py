@@ -160,6 +160,16 @@ class RapidMachine(object):
                 eal_line = 'eal=\"--file-prefix {}{} --{} {} --force-max-simd-bitwidth=512'.format(
                         self.name, str(uuid.uuid4()), allow_parameter,
                         self.machine_params['dp_pci_dev'])
+                looking_for_qat = True
+                index = 0
+                while (looking_for_qat):
+                    if  'qat_pci_dev{}'.format(index) in self.machine_params:
+                        eal_line += ' --{} {}'.format(allow_parameter,
+                            self.machine_params['qat_pci_dev{}'.format(index)])
+                        index += 1
+                    else:
+                        looking_for_qat = False
+                        eal_line += '"\n'
                 LuaFile.write(eal_line)
             else:
                 LuaFile.write("eal=\"\"\n")

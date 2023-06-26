@@ -50,6 +50,7 @@ class Pod:
         self._name = name
         self._namespace = namespace
         self._ssh_client = SSHClient(logger_name = logger_name)
+        self.qat_vf = []
 
     def __del__(self):
         """Destroy POD. Do a cleanup.
@@ -142,6 +143,9 @@ class Pod:
     def get_dp_pci_dev(self):
         return self._sriov_vf
 
+    def get_qat_pci_dev(self):
+        return self.qat_vf
+
     def get_id(self):
         return self._id
 
@@ -156,6 +160,28 @@ class Pod:
 
         self._last_status = pod.status.phase
         return self._last_status
+
+    def get_qat_dev(self):
+        """Get qat devices if any, assigned by k8s QAT device plugin.
+        """
+        self._log.info("Checking assigned QAT VF for POD %s" % self._name)
+        ret = self._ssh_client.run_cmd("cat /opt/rapid/k8s_qat_device_plugin_envs")
+        if ret != 0:
+            self._log.error("Failed to check assigned QAT VF!"
+                            "Error %s" % self._ssh_client.get_error())
+            return -1
+
+        cmd_output = self._ssh_client.get_output().decode("utf-8").rstrip()
+
+        if cmd_output:
+            self._log.debug("Before: Using QAT VF %s" % self.qat_vf)
+            self._log.debug("Environment variable %s" % cmd_output)
+            for line in cmd_output.splitlines():
+                self.qat_vf.append(line.split("=")[1])
+            self._log.debug("Using QAT VF %s" % self.qat_vf)
+        else:
+            self._log.debug("No QAT devices for this pod")
+            self.qat_vf = None
 
     def get_sriov_dev_mac(self):
         """Get assigned by k8s SRIOV network device plugin SRIOV VF devices.

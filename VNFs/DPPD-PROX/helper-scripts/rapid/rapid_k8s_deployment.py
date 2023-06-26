@@ -176,6 +176,7 @@ class K8sDeployment:
         for pod in self._pods:
             pod.set_ssh_credentials(K8sDeployment.SSH_USER, K8sDeployment.SSH_PRIVATE_KEY)
             pod.get_sriov_dev_mac()
+            pod.get_qat_dev()
 
     def save_runtime_config(self, config_file_name):
         self._log.info("Saving config %s for runrapid script...",
@@ -212,6 +213,10 @@ class K8sDeployment:
                                      "dp_mac1", pod.get_dp_mac())
             self._runtime_config.set("M%d" % pod.get_id(),
                                      "dp_pci_dev", pod.get_dp_pci_dev())
+            if (pod.get_qat_pci_dev()):
+                for qat_index, qat_device in enumerate(pod.get_qat_pci_dev()):
+                    self._runtime_config.set("M%d" % pod.get_id(),
+                                           "qat_pci_dev%d" % qat_index, qat_device)
             self._runtime_config.set("M%d" % pod.get_id(),
                                      "dp_ip1", pod.get_dp_ip() + "/" +
                                      pod.get_dp_subnet())

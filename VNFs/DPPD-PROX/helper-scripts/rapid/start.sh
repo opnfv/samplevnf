@@ -17,7 +17,8 @@
 
 function save_k8s_envs()
 {
-	printenv | grep "PCIDEVICE_INTEL_COM" > /opt/rapid/k8s_sriov_device_plugin_envs
+	printenv | grep "PCIDEVICE" > /opt/rapid/k8s_sriov_device_plugin_envs
+	printenv | grep "QAT[0-9]" > /opt/rapid/k8s_qat_device_plugin_envs
 }
 
 function create_tun()
