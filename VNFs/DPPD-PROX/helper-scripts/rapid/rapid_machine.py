@@ -20,6 +20,7 @@ from rapid_log import RapidLog
 from prox_ctrl import prox_ctrl
 import os
 import re
+import uuid
 
 class RapidMachine(object):
     """
@@ -156,8 +157,8 @@ class RapidMachine(object):
                     allow_parameter = 'allow'
                 else:
                     allow_parameter = 'pci-whitelist'
-                eal_line = 'eal=\"--file-prefix {} --{} {}\"\n'.format(
-                        self.name, allow_parameter,
+                eal_line = 'eal=\"--file-prefix {}{} --{} {} --force-max-simd-bitwidth=512'.format(
+                        self.name, str(uuid.uuid4()), allow_parameter,
                         self.machine_params['dp_pci_dev'])
                 LuaFile.write(eal_line)
             else:
