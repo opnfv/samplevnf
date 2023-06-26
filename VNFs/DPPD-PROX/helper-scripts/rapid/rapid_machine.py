@@ -130,6 +130,11 @@ class RapidMachine(object):
             RapidLog.debug('{} ({}): cores {} remapped to {}'.format(self.name, self.ip, self.machine_params['cores'], cpus_remapped))
             self.machine_params['cores'] = cpus_remapped
 
+        if 'altcores' in self.machine_params.keys():
+            cpus_remapped = self.remap_cpus(self.machine_params['altcores'])
+            RapidLog.debug('{} ({}): altcores {} remapped to {}'.format(self.name, self.ip, self.machine_params['altcores'], cpus_remapped))
+            self.machine_params['altcores'] = cpus_remapped
+
     def devbind(self):
         # Script to bind the right network interface to the poll mode driver
         for index, dp_port in enumerate(self.dp_ports, start = 1):
@@ -179,6 +184,9 @@ class RapidMachine(object):
             if 'cores' in self.machine_params.keys():
                 LuaFile.write('cores="%s"\n'% ','.join(map(str,
                     self.machine_params['cores'])))
+            if 'altcores' in self.machine_params.keys():
+                LuaFile.write('altcores="%s"\n'% ','.join(map(str,
+                    self.machine_params['altcores'])))
             if 'ports' in self.machine_params.keys():
                 LuaFile.write('ports="%s"\n'% ','.join(map(str,
                     self.machine_params['ports'])))
