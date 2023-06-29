@@ -21,7 +21,11 @@
 #include <rte_version.h>
 
 static const uint16_t rx_rings = 1, tx_rings = 1;
+#if RTE_VERSION < RTE_VERSION_NUM(21,11,0,0)
 static const struct rte_eth_conf port_conf = { .link_speeds = ETH_LINK_SPEED_AUTONEG };
+#else
+static const struct rte_eth_conf port_conf = { .link_speeds = RTE_ETH_LINK_SPEED_AUTONEG };
+#endif
 
 static inline int
 port_info(void)
