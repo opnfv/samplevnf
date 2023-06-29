@@ -427,7 +427,7 @@ static void init_task_esp_enc(struct task_base *tbase, struct task_args *targ)
 	struct task_esp *task = (struct task_esp *)tbase;
 	unsigned int session_size;
 
-	tbase->flags |= FLAG_NEVER_FLUSH;
+	tbase->flags |= TBASE_FLAG_NEVER_FLUSH;
 
 	uint8_t lcore_id = targ->lconf->id;
 	char name[64];
@@ -525,7 +525,7 @@ static void init_task_esp_dec(struct task_base *tbase, struct task_args *targ)
 	struct task_esp *task = (struct task_esp *)tbase;
 	unsigned int session_size;
 
-	tbase->flags |= FLAG_NEVER_FLUSH;
+	tbase->flags |= TBASE_FLAG_NEVER_FLUSH;
 
 	uint8_t lcore_id = targ->lconf->id;
 	char name[64];

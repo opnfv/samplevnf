@@ -286,7 +286,7 @@ void flush_queues_hw(struct task_base *tbase)
 		}
 	}
 
-	tbase->flags &= ~FLAG_TX_FLUSH;
+	tbase->flags &= ~TBASE_FLAG_TX_FLUSH;
 }
 
 void flush_queues_sw(struct task_base *tbase)
@@ -303,7 +303,7 @@ void flush_queues_sw(struct task_base *tbase)
 			ring_enq_drop(tbase->tx_params_sw.tx_rings[i], tbase->ws_mbuf->mbuf[i] + (cons & WS_MBUF_MASK), prod - cons, tbase);
 		}
 	}
-	tbase->flags &= ~FLAG_TX_FLUSH;
+	tbase->flags &= ~TBASE_FLAG_TX_FLUSH;
 }
 
 void flush_queues_no_drop_hw(struct task_base *tbase)
@@ -321,7 +321,7 @@ void flush_queues_no_drop_hw(struct task_base *tbase)
 		}
 	}
 
-	tbase->flags &= ~FLAG_TX_FLUSH;
+	tbase->flags &= ~TBASE_FLAG_TX_FLUSH;
 }
 
 void flush_queues_no_drop_sw(struct task_base *tbase)
@@ -338,7 +338,7 @@ void flush_queues_no_drop_sw(struct task_base *tbase)
 			ring_enq_no_drop(tbase->tx_params_sw.tx_rings[i], tbase->ws_mbuf->mbuf[i] + (cons & WS_MBUF_MASK), prod - cons, tbase);
 		}
 	}
-	tbase->flags &= ~FLAG_TX_FLUSH;
+	tbase->flags &= ~TBASE_FLAG_TX_FLUSH;
 }
 
 /* "try" functions try to send packets to sw/hw w/o failing or blocking;
@@ -427,7 +427,7 @@ int tx_pkt_no_drop_never_discard_hw1_thrpt_opt(struct task_base *tbase, struct r
                	cons = tbase->ws_mbuf->idx[0].cons;
 
 		if ((uint16_t)(prod - cons)){
-                	tbase->flags &= ~FLAG_TX_FLUSH;
+                	tbase->flags &= ~TBASE_FLAG_TX_FLUSH;
                 	tbase->ws_mbuf->idx[0].prod = 0;
                 	tbase->ws_mbuf->idx[0].cons = 0;
                 	ret+= txhw_no_drop(&tbase->tx_params_hw.tx_port_queue[0], tbase->ws_mbuf->mbuf[0] + (cons & WS_MBUF_MASK), (uint16_t)(prod - cons), tbase);
@@ -456,7 +456,7 @@ int tx_pkt_never_discard_hw1_thrpt_opt(struct task_base *tbase, struct rte_mbuf 
                	cons = tbase->ws_mbuf->idx[0].cons;
 
 		if ((uint16_t)(prod - cons)){
-                	tbase->flags &= ~FLAG_TX_FLUSH;
+                	tbase->flags &= ~TBASE_FLAG_TX_FLUSH;
                 	tbase->ws_mbuf->idx[0].prod = 0;
                 	tbase->ws_mbuf->idx[0].cons = 0;
                 	ret+= txhw_drop(&tbase->tx_params_hw.tx_port_queue[0], tbase->ws_mbuf->mbuf[0] + (cons & WS_MBUF_MASK), (uint16_t)(prod - cons), tbase);
@@ -595,7 +595,7 @@ int tx_pkt_no_drop_hw(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t
 		cons = tbase->ws_mbuf->idx[i].cons;
 
 		if (((uint16_t)(prod - cons)) >= MAX_PKT_BURST) {
-			tbase->flags &= ~FLAG_TX_FLUSH;
+			tbase->flags &= ~TBASE_FLAG_TX_FLUSH;
 			tbase->ws_mbuf->idx[i].cons = cons + MAX_PKT_BURST;
 			ret+= txhw_no_drop(&tbase->tx_params_hw.tx_port_queue[i], tbase->ws_mbuf->mbuf[i] + (cons & WS_MBUF_MASK), MAX_PKT_BURST, tbase);
 		}
@@ -616,7 +616,7 @@ int tx_pkt_no_drop_sw(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t
 		cons = tbase->ws_mbuf->idx[i].cons;
 
 		if (((uint16_t)(prod - cons)) >= MAX_PKT_BURST) {
-			tbase->flags &= ~FLAG_TX_FLUSH;
+			tbase->flags &= ~TBASE_FLAG_TX_FLUSH;
 			tbase->ws_mbuf->idx[i].cons = cons + MAX_PKT_BURST;
 			ret += ring_enq_no_drop(tbase->tx_params_sw.tx_rings[i], tbase->ws_mbuf->mbuf[i] + (cons & WS_MBUF_MASK), MAX_PKT_BURST, tbase);
 		}
@@ -637,7 +637,7 @@ int tx_pkt_hw(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts,
 		cons = tbase->ws_mbuf->idx[i].cons;
 
 		if (((uint16_t)(prod - cons)) >= MAX_PKT_BURST) {
-			tbase->flags &= ~FLAG_TX_FLUSH;
+			tbase->flags &= ~TBASE_FLAG_TX_FLUSH;
 			tbase->ws_mbuf->idx[i].cons = cons + MAX_PKT_BURST;
 			ret += txhw_drop(&tbase->tx_params_hw.tx_port_queue[i], tbase->ws_mbuf->mbuf[i] + (cons & WS_MBUF_MASK), MAX_PKT_BURST, tbase);
 		}
@@ -657,7 +657,7 @@ int tx_pkt_sw(struct task_base *tbase, struct rte_mbuf **mbufs, uint16_t n_pkts,
 		cons = tbase->ws_mbuf->idx[i].cons;
 
 		if (((uint16_t)(prod - cons)) >= MAX_PKT_BURST) {
-			tbase->flags &= ~FLAG_TX_FLUSH;
+			tbase->flags &= ~TBASE_FLAG_TX_FLUSH;
 			tbase->ws_mbuf->idx[i].cons = cons + MAX_PKT_BURST;
 			ret+= ring_enq_drop(tbase->tx_params_sw.tx_rings[i], tbase->ws_mbuf->mbuf[i] + (cons & WS_MBUF_MASK), MAX_PKT_BURST, tbase);
 		}

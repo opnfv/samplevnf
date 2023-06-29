@@ -56,11 +56,11 @@
 #define TASK_FEATURE_RX_ALL                    0x8000
 #define TASK_FEATURE_TXQ_FLAGS_MULTIPLE_MEMPOOL	0x20000
 
-#define FLAG_TX_FLUSH                  0x01
-#define FLAG_NEVER_FLUSH               0x02
+#define TBASE_FLAG_TX_FLUSH                  0x01
+#define TBASE_FLAG_NEVER_FLUSH               0x02
 // Task specific flags
-#define BASE_FLAG_LUT_QINQ_HASH       	0x08
-#define BASE_FLAG_LUT_QINQ_RSS       	0x10
+#define TBASE_FLAG_LUT_QINQ_HASH       	0x08
+#define TBASE_FLAG_LUT_QINQ_RSS       	0x10
 
 #define OUT_DISCARD 0xFF
 #define OUT_HANDLED 0xFE

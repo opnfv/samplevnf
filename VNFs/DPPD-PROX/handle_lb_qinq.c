@@ -104,9 +104,9 @@ static void init_task_lb_qinq(struct task_base *tbase, struct task_args *targ)
 	plog_info("\t\ttask_lb_qinq protocols_mask = 0x%x\n", task->protocols_mask);
 
 	if (targ->task_init->flag_features & TASK_FEATURE_LUT_QINQ_RSS)
-		tbase->flags |=  BASE_FLAG_LUT_QINQ_RSS;
+		tbase->flags |=  TBASE_FLAG_LUT_QINQ_RSS;
 	if (targ->task_init->flag_features & TASK_FEATURE_LUT_QINQ_HASH)
-		tbase->flags |=  BASE_FLAG_LUT_QINQ_HASH;
+		tbase->flags |=  TBASE_FLAG_LUT_QINQ_HASH;
 	plog_info("\t\ttask_lb_qinq flags = 0x%x\n", tbase->flags);
 }
 
@@ -275,7 +275,7 @@ struct cpe_packet {
 static inline uint8_t get_worker(struct task_lb_qinq *task, struct cpe_packet *packet)
 {
 	uint8_t worker = 0;
-	if (((struct task_base *)task)->flags & BASE_FLAG_LUT_QINQ_HASH) {
+	if (((struct task_base *)task)->flags & TBASE_FLAG_LUT_QINQ_HASH) {
 		// Load Balance on Hash of combination of cvlan and svlan
 		uint64_t qinq_net = packet->qd.qinq;
 		qinq_net = qinq_net & 0xFF0F0000FF0F0000;	// Mask Proto and QoS bits
@@ -286,7 +286,7 @@ static inline uint8_t get_worker(struct task_lb_qinq *task, struct cpe_packet *p
 			worker = rte_hash_crc(&qinq_net,8,0) % task->nb_worker_threads;
 		}
 		plogx_dbg("Sending packet svlan=%x, cvlan=%x, pseudo_qinq=%lx to worker %d\n", rte_bswap16(0xFF0F & packet->qp.qinq_hdr.svlan.vlan_tci), rte_bswap16(0xFF0F & packet->qp.qinq_hdr.cvlan.vlan_tci), qinq_net, worker);
-	} else if (((struct task_base *)task)->flags & BASE_FLAG_LUT_QINQ_RSS){
+	} else if (((struct task_base *)task)->flags & TBASE_FLAG_LUT_QINQ_RSS){
 		// Load Balance on rss of combination of cvlan and svlan
 		uint32_t qinq = (packet->qp.qinq_hdr.cvlan.vlan_tci & 0xFF0F) << 16;
 		uint32_t rss = toeplitz_hash((uint8_t *)&qinq, 4);

@@ -302,7 +302,7 @@ static size_t init_rx_tx_rings_ports(struct task_args *targ, struct task_base *t
 					tbase->tx_pkt = targ->nb_txrings ? tx_pkt_no_drop_never_discard_sw1 : tx_pkt_no_drop_never_discard_hw1_lat_opt;
 			}
 			if ((targ->nb_txrings) || ((targ->task_init->flag_features & TASK_FEATURE_THROUGHPUT_OPT) == 0))
-	        		tbase->flags |= FLAG_NEVER_FLUSH;
+	        		tbase->flags |= TBASE_FLAG_NEVER_FLUSH;
 			else
 				targ->lconf->flush_queues[targ->task] = flush_function(targ);
 		}
@@ -316,7 +316,7 @@ static size_t init_rx_tx_rings_ports(struct task_args *targ, struct task_base *t
 			else {
 				tbase->tx_pkt = targ->nb_txrings ? tx_pkt_no_drop_sw1 : tx_pkt_no_drop_hw1;
 			}
-	        	tbase->flags |= FLAG_NEVER_FLUSH;
+	        	tbase->flags |= TBASE_FLAG_NEVER_FLUSH;
 		}
 	}
 	else {
@@ -352,7 +352,7 @@ struct task_base *init_task_struct(struct task_args *targ)
 	offset += t->size;
 
 	if (targ->nb_txrings == 0 && targ->nb_txports == 0)
-		tbase->flags |= FLAG_NEVER_FLUSH;
+		tbase->flags |= TBASE_FLAG_NEVER_FLUSH;
 
 	offset = init_rx_tx_rings_ports(targ, tbase, offset);
 	tbase->aux = (struct task_base_aux *)(((uint8_t *)tbase) + offset);
