@@ -213,7 +213,6 @@ int thread_generic(struct lcore_cfg *lconf)
 					next[task_id] = t->handle_bulk(t, mbufs, nb_rx);
 				}
 			}
-
 		}
 	}
 	return 0;

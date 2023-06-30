@@ -116,7 +116,7 @@ static void check_mixed_normal_pipeline(void)
 	}
 }
 
-static void check_zero_rx(void)
+static void check_no_rx(void)
 {
 	struct lcore_cfg *lconf = NULL;
 	struct task_args *targ;
@@ -228,7 +228,7 @@ static void check_cfg_consistent(void)
 {
 	check_nb_mbuf();
 	check_missing_rx();
-	check_zero_rx();
+	check_no_rx();
 	check_mixed_normal_pipeline();
 }
 
