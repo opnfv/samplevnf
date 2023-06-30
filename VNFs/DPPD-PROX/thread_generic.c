@@ -211,9 +211,14 @@ int thread_generic(struct lcore_cfg *lconf)
 				nb_rx = t->rx_pkt(t, &mbufs);
 				if (likely(nb_rx || zero_rx[task_id])) {
 					next[task_id] = t->handle_bulk(t, mbufs, nb_rx);
+				} else if (t->flags & TBASE_FLAG_PKTS_IN_FLIGHT) {
+					// Even if there are no packets in the rx queue,
+					// the handle_bulk function is still called to
+					// deal with packets that are in flight and need
+					// processing
+					next[task_id] = t->handle_bulk(t, mbufs, 0);
 				}
 			}
-
 		}
 	}
 	return 0;

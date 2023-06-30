@@ -56,9 +56,10 @@
 #define TASK_FEATURE_RX_ALL                    0x8000
 #define TASK_FEATURE_TXQ_FLAGS_MULTIPLE_MEMPOOL	0x20000
 
-#define TBASE_FLAG_TX_FLUSH                  0x01
-#define TBASE_FLAG_NEVER_FLUSH               0x02
+#define TBASE_FLAG_TX_FLUSH             0x01
+#define TBASE_FLAG_NEVER_FLUSH          0x02
 // Task specific flags
+#define TBASE_FLAG_PKTS_IN_FLIGHT      	0x04
 #define TBASE_FLAG_LUT_QINQ_HASH       	0x08
 #define TBASE_FLAG_LUT_QINQ_RSS       	0x10
 

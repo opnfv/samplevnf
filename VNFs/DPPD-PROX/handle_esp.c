@@ -68,7 +68,8 @@ struct task_esp {
 	struct rte_mempool *session_pool;
 	struct rte_cryptodev_sym_session *sess;
 	struct rte_crypto_op *ops_burst[NUM_OPS];
-	unsigned len;
+	unsigned len; //number of ops ready to be enqueued
+	uint32_t pkts_in_flight; // difference between enqueued and dequeued
 	uint8_t (*handle_esp_finish)(struct task_esp *task,
 			struct rte_mbuf *mbuf, uint8_t status);
 	uint8_t (*handle_esp_ah)(struct task_esp *task, struct rte_mbuf *mbuf,
@@ -434,6 +435,7 @@ static void init_task_esp_enc(struct task_base *tbase, struct task_args *targ)
 	task->handle_esp_finish = handle_enc_finish;
 	task->handle_esp_ah = handle_esp_ah_enc;
 	task->len = 0;
+	task->pkts_in_flight = 0;
 	sprintf(name, "core_%03u_crypto_pool", lcore_id);
 	task->crypto_op_pool = rte_crypto_op_pool_create(name,
 			RTE_CRYPTO_OP_TYPE_SYMMETRIC, targ->nb_mbuf, 128,
@@ -532,6 +534,7 @@ static void init_task_esp_dec(struct task_base *tbase, struct task_args *targ)
 	task->handle_esp_finish = handle_dec_finish;
 	task->handle_esp_ah = handle_esp_ah_dec;
 	task->len = 0;
+	task->pkts_in_flight = 0;
 	sprintf(name, "core_%03u_crypto_pool", lcore_id);
 	task->crypto_op_pool = rte_crypto_op_pool_create(name,
 			RTE_CRYPTO_OP_TYPE_SYMMETRIC, targ->nb_mbuf, 128,
@@ -622,6 +625,7 @@ static int crypto_send_burst(struct task_esp *task, uint16_t n)
     unsigned i = 0;
     ret = rte_cryptodev_enqueue_burst(task->cdev_id,
             task->qp_id, task->ops_burst, n);
+    task->pkts_in_flight += ret;
     if (unlikely(ret < n)) {
 	for (i = 0; i < (n-ret); i++) {
 		mbufs[i] = task->ops_burst[ret + i]->sym->m_src;
@@ -644,46 +648,56 @@ static int handle_esp_bulk(struct task_base *tbase, struct rte_mbuf **mbufs,
 	struct rte_crypto_op *ops_burst[MAX_PKT_BURST];
 	int nbr_tx_pkt = 0;
 
-	if (rte_crypto_op_bulk_alloc(task->crypto_op_pool,
-			RTE_CRYPTO_OP_TYPE_SYMMETRIC,
-			ops_burst, n_pkts) != n_pkts) {
-		plog_info("Failed to allocate crypto operations, discarding \
-				%d packets\n", n_pkts);
-		for (j = 0; j < n_pkts; j++) {
-			out[j] = OUT_DISCARD;
-		}
-	        nbr_tx_pkt += task->base.tx_pkt(&task->base, mbufs, n_pkts,
-				out);
-	} 
-	else {
-		for (j = 0; j < n_pkts; j++) {
-			result = task->handle_esp_ah(task, mbufs[j],
-					ops_burst[j]);
-			if (result == 0) {
-				task->ops_burst[task->len] = ops_burst[j];
-				task->len++;
-				/* enough ops to be sent */
-				if (task->len == MAX_PKT_BURST) {
-					nbr_tx_pkt += crypto_send_burst(task,
-							(uint16_t) MAX_PKT_BURST);
-					task->len = 0;
+	if (likely(n_pkts != 0)) {
+		if (rte_crypto_op_bulk_alloc(task->crypto_op_pool,
+				RTE_CRYPTO_OP_TYPE_SYMMETRIC,
+				ops_burst, n_pkts) != n_pkts) {
+			plog_info("Failed to allocate crypto operations, discarding \
+					%d packets\n", n_pkts);
+			for (j = 0; j < n_pkts; j++) {
+				out[j] = OUT_DISCARD;
+			}
+			nbr_tx_pkt += task->base.tx_pkt(&task->base, mbufs, n_pkts,
+					out);
+		} 
+		else {
+			for (j = 0; j < n_pkts; j++) {
+				result = task->handle_esp_ah(task, mbufs[j],
+						ops_burst[j]);
+				if (result == 0) {
+					task->ops_burst[task->len] = ops_burst[j];
+					task->len++;
+					/* enough ops to be sent */
+					if (task->len == MAX_PKT_BURST) {
+						nbr_tx_pkt += crypto_send_burst(task,
+								(uint16_t) MAX_PKT_BURST);
+						task->len = 0;
+					}
+				}
+				else {
+					drop_mbufs[idx] = mbufs[j];
+					out[idx] = result;
+					idx++;
+					rte_crypto_op_free(ops_burst[j]);
+					plog_info("Failed handle_esp_ah for 1 \
+							packet\n");
 				}
 			}
-			else {
-				drop_mbufs[idx] = mbufs[j];
-				out[idx] = result;
-				idx++;
-				rte_crypto_op_free(ops_burst[j]);
-				plog_info("Failed handle_esp_ah for 1 \
-						packet\n");
-			}
+			if (idx) nbr_tx_pkt += task->base.tx_pkt(&task->base,
+					drop_mbufs, idx, out);
 		}
-		if (idx) nbr_tx_pkt += task->base.tx_pkt(&task->base,
-				drop_mbufs, idx, out);
+	} else if (task->len) {
+		// No packets where received on the rx queue, but this handle
+		// function was called anyway since some packets where not yet
+		// enqueued. Hence they get enqueued here in order to minimize
+		// latency or in case no new packets will arrive
+		nbr_tx_pkt += crypto_send_burst(task, task->len);
+		task->len = 0;
 	}
 	do {
 		nb_deq = rte_cryptodev_dequeue_burst(task->cdev_id,
 				task->qp_id, ops_burst, MAX_PKT_BURST);
+		task->pkts_in_flight -= nb_deq;
 		for (j = 0; j < nb_deq; j++) {
 			mbufs[j] = ops_burst[j]->sym->m_src;
 			out[j] = task->handle_esp_finish(task, mbufs[j],
@@ -693,6 +707,15 @@ static int handle_esp_bulk(struct task_base *tbase, struct rte_mbuf **mbufs,
 		nbr_tx_pkt += task->base.tx_pkt(&task->base, mbufs, nb_deq,
 				out);
 	} while (nb_deq == MAX_PKT_BURST);
+	// If packets are enqueued and not yet dequeued form the cryptodev
+	// queue, or if we received packets that we did not enqueue yet since
+	// we did not receive MAX_PKT_BURST, then this function needs to be
+	// called again, even if no packets are being received
+	if (task->len || task->pkts_in_flight) {
+		tbase->flags |= TBASE_FLAG_PKTS_IN_FLIGHT;
+	} else {
+		tbase->flags &= ~TBASE_FLAG_PKTS_IN_FLIGHT;
+	}
 	return nbr_tx_pkt;
 }
 
