@@ -178,7 +178,8 @@ sources = files(
 sources += files('rw_reg.c')
 
 # Include a couple of source files depending on DPDK support
-if cc.find_library('rte_pmd_aesni', required: false).found()
+if cc.find_library('rte_crypto_ipsec_mb', required: false).found()
+	add_project_arguments('-DRTE_LIBRTE_PMD_AESNI_MB',  language: 'c')
 	sources += files('handle_esp.c')
 else
 	warning('Building w/o IPSEC support')
