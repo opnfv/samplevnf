@@ -101,7 +101,7 @@ class K8sDeployment:
             self._log.error("No option namespace in DEFAULT section")
             return -1
 
-        self._log.debug("Using namespace %s" % self._total_number_of_pods)
+        self._log.debug("Using namespace %s" % self._namespace)
 
         # Parse [PODx] sections
         for i in range(1, int(self._total_number_of_pods) + 1):
