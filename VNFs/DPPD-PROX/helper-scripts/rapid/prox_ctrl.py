@@ -29,14 +29,17 @@ from rapid_log import RapidLog
 from rapid_sshclient import SSHClient
 
 class prox_ctrl(object):
-    def __init__(self, ip, key=None, user=None, password = None):
+    def __init__(self, ip, key=None, user=None, password = None, \
+            admin_port = 22, socket_port = 8474):
         self._ip   = ip
+        self._admin_port = admin_port
+        self._socket_port = socket_port
         self._key  = key
         self._user = user
         self._password = password
         self._proxsock = []
         self._sshclient = SSHClient(ip = ip, user = user, password = password,
-                rsa_private_key = key, timeout = None)
+                rsa_private_key = key, timeout = None, ssh_port = admin_port)
 
     def ip(self):
         return self._ip
@@ -65,8 +68,8 @@ class prox_ctrl(object):
 
     def connect_socket(self):
         attempts = 1
-        RapidLog.debug("Trying to connect to PROX (just launched) on %s, \
-                attempt: %d" % (self._ip, attempts))
+        RapidLog.debug("Trying to connect to PROX (just launched) on %s:%d, \
+                attempt: %d" % (self._ip, self._socket_port, attempts))
         sock = None
         while True:
             sock = self.prox_sock()
@@ -74,11 +77,11 @@ class prox_ctrl(object):
                 break
             attempts += 1
             if attempts > 20:
-                RapidLog.exception("Failed to connect to PROX on %s after %d \
-                        attempts" % (self._ip, attempts))
+                RapidLog.exception("Failed to connect to PROX on %s:%d after %d \
+                        attempts" % (self._ip, self._socket_port, attempts))
             time.sleep(2)
-            RapidLog.debug("Trying to connect to PROX (just launched) on %s, \
-                    attempt: %d" % (self._ip, attempts))
+            RapidLog.debug("Trying to connect to PROX (just launched) on %s:%d, \
+                    attempt: %d" % (self._ip, self._socket_port, attempts))
         RapidLog.info("Connected to PROX on %s" % self._ip)
         return sock
 
@@ -90,13 +93,13 @@ class prox_ctrl(object):
         self._sshclient.run_cmd(command)
         return self._sshclient.get_output()
 
-    def prox_sock(self, port=8474):
+    def prox_sock(self):
         """Connect to the PROX instance on remote system.
         Return a prox_sock object on success, None on failure.
         """
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            sock.connect((self._ip, port))
+            sock.connect((self._ip, self._socket_port))
             prox = prox_sock(sock)
             self._proxsock.append(prox)
             return prox

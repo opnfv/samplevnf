@@ -26,6 +26,7 @@ class SSHClient:
     _ip = None
     _user = None
     _rsa_private_key = None
+    _ssh_port = 22
     _timeout = None
     _ssh = None
     _connected = False
@@ -34,8 +35,9 @@ class SSHClient:
     _error = None
 
     def __init__(self, ip=None, user=None, rsa_private_key=None, timeout=15,
-            logger_name=None, password = None):
+            logger_name=None, password = None, ssh_port = 22):
         self._ip = ip
+        self._ssh_port = ssh_port
         self._user = user
         self._password = password
         self._rsa_private_key = rsa_private_key
@@ -46,11 +48,12 @@ class SSHClient:
 
         self._connected = False
 
-    def set_credentials(self, ip, user, rsa_private_key, password = None):
+    def set_credentials(self, ip, user, rsa_private_key, password = None, ssh_port = 22):
         self._ip = ip
         self._user = user
         self._password = password
         self._rsa_private_key = rsa_private_key
+        self._ssh_port = ssh_port
 
     def connect(self):
 
@@ -76,7 +79,7 @@ class SSHClient:
 
         try:
             self._ssh.connect(hostname = self._ip, username = self._user,
-                    password = self._password, pkey = private_key)
+                    password = self._password, pkey = private_key, port = self._ssh_port)
         except Exception as e:
             if (self._log is not None):
                 self._log.error("Failed to connect to the host! IP %s, user %s, RSA private key %s\n%s"

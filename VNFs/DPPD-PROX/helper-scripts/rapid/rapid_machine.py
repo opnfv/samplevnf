@@ -30,6 +30,8 @@ class RapidMachine(object):
             machine_params, configonly):
         self.name = machine_params['name']
         self.ip = machine_params['admin_ip']
+        self.admin_port = machine_params['admin_port']
+        self.socket_port = machine_params['socket_port']
         self.key = key
         self.user = user
         self.password = password
@@ -148,7 +150,7 @@ class RapidMachine(object):
                 RapidLog.debug('devbind.sh running for port {} on {} {}'.format(index, self.name, result))
 
     def generate_lua(self, appendix = ''):
-        self.LuaFileName = 'parameters-{}.lua'.format(self.ip)
+        self.LuaFileName = 'parameters-{}-{}.lua'.format(self.ip, self.admin_port)
         with open(self.LuaFileName, "w") as LuaFile:
             LuaFile.write('require "helper"\n')
             LuaFile.write('name="%s"\n'% self.name)
@@ -210,7 +212,7 @@ class RapidMachine(object):
     def start_prox(self, autostart=''):
         if self.machine_params['prox_socket']:
             self._client = prox_ctrl(self.ip, self.key, self.user,
-                    self.password)
+                    self.password, self.admin_port, self.socket_port)
             self._client.test_connection()
             if self.vim in ['OpenStack']:
                 self.devbind()

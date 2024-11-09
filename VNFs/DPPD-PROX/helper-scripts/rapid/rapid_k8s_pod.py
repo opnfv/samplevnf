@@ -43,14 +43,18 @@ class Pod:
 
     _sriov_vf = None
     _sriov_vf_mac = None
+    _ssh_port = 22
+    _socket_port = 8474
 
-    def __init__(self, name, namespace = "default", logger_name = "k8srapid"):
+    def __init__(self, name, pod_nodeport = None, namespace = "default",
+            logger_name = "k8srapid"):
         self._log = logging.getLogger(logger_name)
 
         self._name = name
         self._namespace = namespace
         self._ssh_client = SSHClient(logger_name = logger_name)
         self.qat_vf = []
+        self._pod_nodeport = pod_nodeport
 
     def __del__(self):
         """Destroy POD. Do a cleanup.
@@ -66,6 +70,7 @@ class Pod:
             self.body = yaml.safe_load(yaml_file)
 
             self.body["metadata"]["name"] = self._name
+            self.body["metadata"]["labels"] = {'app': self._pod_nodeport}
 
             if (self._nodeSelector_hostname is not None):
                 if ("nodeSelector" not in self.body["spec"]):
@@ -98,8 +103,17 @@ class Pod:
         """Check for admin IP address assigned by k8s.
         """
         try:
-            pod = self.k8s_CoreV1Api.read_namespaced_pod_status(name = self._name, namespace = self._namespace)
-            self._admin_ip = pod.status.pod_ip
+            if self._pod_nodeport:
+                service= self.k8s_CoreV1Api.read_namespaced_service_status(name = self._pod_nodeport, namespace = self._namespace)
+                self._admin_ip = service.spec.cluster_ip
+                for service_port in service.spec.ports:
+                    if service_port.name == 'control-port':
+                        self._ssh_port = service_port.node_port
+                    if service_port.name == 'socket-port':
+                        self._socket_port = service_port.node_port
+            else:
+                pod = self.k8s_CoreV1Api.read_namespaced_pod_status(name = self._name, namespace = self._namespace)
+                self._admin_ip = pod.status.pod_ip
         except client.rest.ApiException as e:
             self._log.error("Couldn't update POD %s admin IP!\n%s\n" % (self._name, e))
 
@@ -130,6 +144,12 @@ class Pod:
 
     def get_admin_ip(self):
         return self._admin_ip
+
+    def get_admin_port(self):
+        return self._ssh_port
+
+    def get_socket_port(self):
+        return self._socket_port
 
     def get_dp_ip(self):
         return self._dp_ip
@@ -261,4 +281,5 @@ class Pod:
         self.update_admin_ip()
         self._ssh_client.set_credentials(ip = self._admin_ip,
                                          user = user,
-                                         rsa_private_key = rsa_private_key)
+                                         rsa_private_key = rsa_private_key,
+                                         ssh_port = self._ssh_port)

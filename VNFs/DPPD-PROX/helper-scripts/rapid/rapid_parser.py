@@ -156,7 +156,10 @@ class RapidConfigParser(object):
             section = 'M%d'%machine_index[test_machine-1]
             options = config.options(section)
             for option in options:
-                machine[option] = config.get(section, option)
+                if option in ['admin_port','socket_port']:
+                    machine[option] = int(config.get(section, option))
+                else:
+                    machine[option] = config.get(section, option)
             machines.append(dict(machine))
         for machine in machines:
             dp_ports = []
