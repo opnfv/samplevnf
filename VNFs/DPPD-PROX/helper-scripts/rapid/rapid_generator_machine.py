@@ -103,12 +103,7 @@ class RapidGeneratorMachine(RapidMachine):
             self.machine_params['latcores'] = cpus_remapped
 
     def generate_lua(self):
-        appendix = 'gencores="%s"\n'% ','.join(map(str,
-            self.machine_params['gencores']))
-        appendix = appendix + 'latcores="%s"\n'% ','.join(map(str,
-            self.machine_params['latcores']))
-        appendix = (appendix +
-                'bucket_size_exp="{}"\n'.format(self.bucket_size_exp))
+        appendix = 'bucket_size_exp="{}"\n'.format(self.bucket_size_exp)
         if 'heartbeat' in self.machine_params.keys():
             appendix = (appendix +
                     'heartbeat="%s"\n'% self.machine_params['heartbeat'])
