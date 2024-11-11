@@ -1,0 +1,8 @@
+Code-Review+2: Luc Provoost <luc.provoost@gmail.com>
+Verified+1: Anuket Required GHA Bot <releng+anuket-required-gha@linuxfoundation.org>
+Verified+1: Luc Provoost <luc.provoost@gmail.com>
+Submitted-by: Luc Provoost <luc.provoost@gmail.com>
+Submitted-at: Mon, 11 Nov 2024 19:26:43 +0000
+Reviewed-on: https://gerrit.opnfv.org/gerrit/c/samplevnf/+/74648
+Project: samplevnf
+Branch: refs/heads/master
