@@ -83,17 +83,7 @@ class RapidMachine(object):
     def read_cpuset(self):
         """Read list of cpus on which we allowed to execute
         """
-        cpu_set_file = '/sys/fs/cgroup/cpuset.cpus'
-        cmd = 'test -e {0} && echo exists'.format(cpu_set_file)
-        if (self._client.run_cmd(cmd).decode().rstrip()):
-            cmd = 'cat {}'.format(cpu_set_file)
-        else:
-            cpu_set_file = '/sys/fs/cgroup/cpuset/cpuset.cpus'
-            cmd = 'test -e {0} && echo exists'.format(cpu_set_file)
-            if (self._client.run_cmd(cmd).decode().rstrip()):
-                cmd = 'cat {}'.format(cpu_set_file)
-            else:
-                RapidLog.critical('{Cannot determine cpuset')
+        cmd = "cat /proc/1/task/1/status | grep Cpus_allowed_list | awk '{print $2}'"
         cpuset_cpus = self._client.run_cmd(cmd).decode().rstrip()
         RapidLog.debug('{} ({}): Allocated cpuset: {}'.format(self.name, self.ip, cpuset_cpus))
         self.cpu_mapping = self.expand_list_format(cpuset_cpus)
