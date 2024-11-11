@@ -357,6 +357,10 @@ class RapidTest(object):
                         time_loop_data['Size'] = size
                         time_loop_data['RequestedSpeed'] = RapidTest.get_pps(speed, size)
                         _ = self.post_data(time_loop_data)
+            if 'power_helper' in self.test.keys():
+                iteration_data['Sys'],iteration_data['Cpu'],iteration_data['Ram'] = self.test['power_helper'].get_power()
+            else:
+                iteration_data['Sys'],iteration_data['Cpu'],iteration_data['Ram'] = 0,0,0
             end_bg_gen_stats = []
             for bg_gen_machine in self.background_machines:
                 bg_rx, bg_non_dp_rx, bg_tx, bg_non_dp_tx, _, _, bg_tsc, bg_hz = bg_gen_machine.core_stats()
