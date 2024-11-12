@@ -147,11 +147,9 @@ class RapidConfigParser(object):
                                 "Minimum Value for bucket_size_exp is 11")
                 else:
                     machine[option] = testconfig.get(section, option)
-                for key in ['prox_socket','prox_launch_exit']:
-                   if key not in machine.keys():
-                       machine[key] = True
-            if 'monitor' not in machine.keys():
-                machine['monitor'] = True
+            for key in ['prox_socket','prox_launch_exit','monitor']:
+               if key not in machine.keys():
+                   machine[key] = True
             section = 'M%d'%machine_index[test_machine-1]
             options = config.options(section)
             for option in options:
