@@ -28,13 +28,17 @@ RUN_CONFIG_FILE_NAME = "rapid.env"
 def main():
     # Parse command line arguments
     argparser = argparse.ArgumentParser()
+    argparser.add_argument("-k", "--kubeconfig", type = str, required = False,
+                           default = None,
+                           help = "Specify the kubeconfig to be used")
+
     argparser.add_argument("-c", "--clean", action = "store_true",
                            help = "Terminate pod-rapid-* PODs. "
                            "Clean up cluster before or after the testing.")
     args = argparser.parse_args()
 
     # Create a new deployment
-    deployment = K8sDeployment()
+    deployment = K8sDeployment(kubeconfig = args.kubeconfig)
 
     # Load config file with test environment description
     deployment.load_create_config(CREATE_CONFIG_FILE_NAME)

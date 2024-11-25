@@ -43,7 +43,7 @@ class K8sDeployment:
     _namespace = "rapid-testing"
     _pods = []
 
-    def __init__(self):
+    def __init__(self, kubeconfig = None):
         # Configure logger
         self._log = logging.getLogger("k8srapid")
         self._log.setLevel(logging.DEBUG)
@@ -66,7 +66,7 @@ class K8sDeployment:
 
         # Initialize k8s plugin
         try:
-            config.load_kube_config()
+            config.load_kube_config(config_file = kubeconfig)
         except:
             config.load_incluster_config()
 
