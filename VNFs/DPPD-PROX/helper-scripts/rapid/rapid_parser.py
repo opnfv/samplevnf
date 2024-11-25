@@ -16,7 +16,7 @@
 ## limitations under the License.
 ##
 
-from rapid_log import RapidLog 
+from .rapid_log import RapidLog 
 from past.utils import old_div
 try:
     import configparser

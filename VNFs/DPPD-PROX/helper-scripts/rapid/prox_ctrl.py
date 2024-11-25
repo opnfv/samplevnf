@@ -25,8 +25,8 @@ import os
 import time
 import subprocess
 import socket
-from rapid_log import RapidLog
-from rapid_sshclient import SSHClient
+from .rapid_log import RapidLog
+from .rapid_sshclient import SSHClient
 
 class prox_ctrl(object):
     def __init__(self, ip, key=None, user=None, password = None, \

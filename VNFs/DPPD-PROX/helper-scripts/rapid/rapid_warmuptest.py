@@ -19,8 +19,8 @@
 
 import sys
 import time
-from rapid_log import RapidLog
-from rapid_test import RapidTest
+from .rapid_log import RapidLog
+from .rapid_test import RapidTest
 
 class WarmupTest(RapidTest):
     """

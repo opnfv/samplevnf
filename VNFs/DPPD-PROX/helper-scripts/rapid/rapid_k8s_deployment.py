@@ -24,7 +24,7 @@ except ImportError:
 import logging
 from logging import handlers
 
-from rapid_k8s_pod import Pod
+from .rapid_k8s_pod import Pod
 
 class K8sDeployment:
     """Deployment class to create containers for test execution in Kubernetes

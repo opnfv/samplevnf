@@ -23,8 +23,8 @@ import time
 import os
 import copy
 from past.utils import old_div
-from rapid_log import RapidLog
-from rapid_log import bcolors
+from .rapid_log import RapidLog
+from .rapid_log import bcolors
 inf = float("inf")
 from datetime import datetime as dt
 

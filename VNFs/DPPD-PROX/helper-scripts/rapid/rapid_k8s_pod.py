@@ -19,7 +19,7 @@ import time, yaml
 import logging
 from kubernetes import client, config
 
-from rapid_sshclient import SSHClient
+from .rapid_sshclient import SSHClient
 
 class Pod:
     """Class which represents test pods.

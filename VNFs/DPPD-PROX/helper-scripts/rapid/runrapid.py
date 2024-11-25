@@ -26,18 +26,18 @@ import os
 import sys
 import concurrent.futures
 from concurrent.futures import ALL_COMPLETED
-from rapid_cli import RapidCli
-from rapid_log import RapidLog
-from rapid_parser import RapidConfigParser
-from rapid_defaults import RapidDefaults
-from rapid_machine import RapidMachine
-from rapid_generator_machine import RapidGeneratorMachine
-from rapid_flowsizetest import FlowSizeTest
-from rapid_corestatstest import CoreStatsTest
-from rapid_portstatstest import PortStatsTest
-from rapid_impairtest import ImpairTest
-from rapid_irqtest import IrqTest
-from rapid_warmuptest import WarmupTest
+from .rapid_cli import RapidCli
+from .rapid_log import RapidLog
+from .rapid_parser import RapidConfigParser
+from .rapid_defaults import RapidDefaults
+from .rapid_machine import RapidMachine
+from .rapid_generator_machine import RapidGeneratorMachine
+from .rapid_flowsizetest import FlowSizeTest
+from .rapid_corestatstest import CoreStatsTest
+from .rapid_portstatstest import PortStatsTest
+from .rapid_impairtest import ImpairTest
+from .rapid_irqtest import IrqTest
+from .rapid_warmuptest import WarmupTest
 
 class RapidTestManager(object):
     """

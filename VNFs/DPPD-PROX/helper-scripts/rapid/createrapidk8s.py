@@ -17,7 +17,7 @@
 ##
 
 import argparse
-from rapid_k8s_deployment import K8sDeployment
+from .rapid_k8s_deployment import K8sDeployment
 
 # Config file name for deployment creation
 CREATE_CONFIG_FILE_NAME = "rapid.pods"

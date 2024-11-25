@@ -22,9 +22,9 @@ import copy
 from math import ceil
 from statistics import mean
 from past.utils import old_div
-from rapid_log import RapidLog
-from rapid_log import bcolors
-from rapid_test import RapidTest
+from .rapid_log import RapidLog
+from .rapid_log import bcolors
+from .rapid_test import RapidTest
 inf = float("inf")
 
 class FlowSizeTest(RapidTest):

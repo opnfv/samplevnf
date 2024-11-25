@@ -20,9 +20,9 @@
 import sys
 import time
 import requests
-from rapid_log import RapidLog
-from rapid_log import bcolors
-from rapid_test import RapidTest
+from .rapid_log import RapidLog
+from .rapid_log import bcolors
+from .rapid_test import RapidTest
 from statistics import mean
 
 class ImpairTest(RapidTest):

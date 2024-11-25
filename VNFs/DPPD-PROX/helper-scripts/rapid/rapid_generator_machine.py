@@ -16,8 +16,8 @@
 ## limitations under the License.
 ##
 
-from rapid_log import RapidLog 
-from rapid_machine import RapidMachine
+from .rapid_log import RapidLog 
+from .rapid_machine import RapidMachine
 from math import ceil, log2
 
 

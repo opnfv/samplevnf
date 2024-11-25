@@ -21,8 +21,8 @@ from past.utils import old_div
 import sys
 import time
 import requests
-from rapid_log import RapidLog
-from rapid_test import RapidTest
+from .rapid_log import RapidLog
+from .rapid_test import RapidTest
 
 class IrqTest(RapidTest):
     """

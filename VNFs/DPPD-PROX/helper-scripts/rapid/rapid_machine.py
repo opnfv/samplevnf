@@ -16,8 +16,8 @@
 ## limitations under the License.
 ##
 
-from rapid_log import RapidLog 
-from prox_ctrl import prox_ctrl
+from .rapid_log import RapidLog 
+from .prox_ctrl import prox_ctrl
 import os
 import re
 import uuid
